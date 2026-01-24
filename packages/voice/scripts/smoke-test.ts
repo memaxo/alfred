@@ -1,5 +1,5 @@
-import { join } from "node:path";
 import { spawn } from "bun";
+import { join } from "node:path";
 
 const scriptPath = join(process.cwd(), "packages/voice/python/tts");
 const venvPython = join(process.cwd(), "packages/voice/.venv/bin/python");
@@ -12,9 +12,9 @@ async function runSmokeTest() {
   const proc = spawn({
     cmd: [venvPython, scriptPath],
     cwd: join(process.cwd(), "packages/voice"),
+    stderr: "pipe",
     stdin: "pipe",
     stdout: "pipe",
-    stderr: "pipe",
   });
 
   const stdoutReader = proc.stdout.getReader();
@@ -31,8 +31,8 @@ async function runSmokeTest() {
         }
         process.stderr.write(decoder.decode(value));
       }
-    } catch (e) {
-      console.error("Stderr read error:", e);
+    } catch (error) {
+      console.error("Stderr read error:", error);
     }
   })();
 
@@ -40,7 +40,7 @@ async function runSmokeTest() {
   const _requestId = 0;
 
   // Helper to send JSON
-  // biome-ignore lint/suspicious/noExplicitAny: Smoke test helper
+  // oxlint-disable noExplicitAny: Smoke test helper
   const send = (msg: any) => {
     const str = `${JSON.stringify(msg)}\n`;
     proc.stdin.write(str);
@@ -82,13 +82,13 @@ async function runSmokeTest() {
             const _t0 = Date.now();
             send({
               id: "test-1",
-              type: "synthesize",
               payload: {
                 text: "This is a smoke test for the dual backend architecture.",
                 voice:
                   "Realistic male voice in the 30s age with american accent.",
                 streaming: true,
               },
+              type: "synthesize",
             });
           }
 
@@ -105,13 +105,13 @@ async function runSmokeTest() {
                 const _t1 = Date.now();
                 send({
                   id: "test-2",
-                  type: "synthesize",
                   payload: {
                     text: "This is a smoke test for the dual backend architecture.",
                     voice:
                       "Realistic male voice in the 30s age with american accent.",
                     streaming: false,
                   },
+                  type: "synthesize",
                 });
               }
             }
@@ -128,13 +128,13 @@ async function runSmokeTest() {
             }
             process.exit(1);
           }
-        } catch (_e) {
+        } catch {
           console.error("Failed to parse line:", line);
         }
       }
     }
-  } catch (e) {
-    console.error("Stream error:", e);
+  } catch (error) {
+    console.error("Stream error:", error);
   }
 
   console.log("Smoke test complete.");

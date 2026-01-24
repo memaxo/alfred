@@ -1,6 +1,7 @@
-import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import type { WorkflowEventType } from "@alfred/db/schema/workflow";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 
 export type AtifSource = "user" | "agent" | "system";
 

@@ -1,4 +1,5 @@
 import type { Knowledge } from "./hypergraph.js";
+
 import { fact, knowledgeHash, nodeFromHash, relation } from "./hypergraph.js";
 
 /**

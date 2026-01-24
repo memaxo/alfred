@@ -4,6 +4,7 @@
  */
 
 import client from "prom-client";
+
 import { metricsRegistry } from "./registry";
 
 // Redis metrics (used by @alfred/auth)

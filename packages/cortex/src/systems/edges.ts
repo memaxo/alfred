@@ -5,11 +5,12 @@
  * along bezier curves.
  */
 
+import type { EdgeData, RenderSystem, Vec2 } from "../types";
+
 import { StorageBuffer, UniformBuffer } from "../buffer";
 import { computeEdgeControlPoints } from "../math/bezier";
 // Import shader source
 import edgeShaderSource from "../shaders/edges.wgsl?raw";
-import type { EdgeData, RenderSystem, Vec2 } from "../types";
 
 /** Particles per edge */
 const PARTICLES_PER_EDGE = 200;

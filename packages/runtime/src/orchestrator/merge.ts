@@ -1,6 +1,6 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import type { ConflictScanResult } from "@alfred/agent/orchestrator/multi/conflict";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
 import {
   aggregateConflictMarkers,
   countConflictMarkers,
@@ -16,11 +16,14 @@ import { plansPath } from "@alfred/agent/orchestrator/plans";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolGit } from "@alfred/agent/orchestrator/tool/git";
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type/plan";
-import { formatCodexRuntimeError } from "../utils/codex-error";
-import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
 import type { OrchestratorContext } from "./types";
 import type { WavesResult } from "./waves";
+
+import { formatCodexRuntimeError } from "../utils/codex-error";
+import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
 
 async function isGitWorkspace(workspace: string): Promise<boolean> {
   try {

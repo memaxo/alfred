@@ -4,14 +4,16 @@
  * Tests for the genui module: registry, interpreter, and validation.
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
 import type { UIComponent } from "@alfred/type/genui";
+
 import { isGenUIToolResult, isUIDataPart } from "@alfred/type/genui";
 import {
   validateUIComponent,
   validateUIDataPart,
 } from "@alfred/type/genui.zod";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { createElement } from "react";
+
 import { GenUIErrorBoundary, withGenUIErrorBoundary } from "../boundary";
 import { canRender, renderUISchema, validateRenderable } from "../interpreter";
 import {

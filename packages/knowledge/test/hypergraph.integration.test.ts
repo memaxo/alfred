@@ -1,7 +1,9 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type * as HypergraphBridge from "@alfred/agent/assistant/hypergraph-bridge";
+
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { and, count, eq } from "drizzle-orm";
+
 import {
   empty,
   fact,
@@ -18,13 +20,13 @@ const SHOULD_RUN = Boolean(process.env.RUN_DB_TESTS);
 let persistHypergraphToDb: HypergraphBridge["persistHypergraphToDb"];
 let loadHypergraphFromDb: HypergraphBridge["loadHypergraphFromDb"];
 let graphRepo: typeof import("@alfred/db/repo/graph");
-let db: typeof import("@alfred/db")["db"]; // NodePgDatabase
+let db: (typeof import("@alfred/db"))["db"]; // NodePgDatabase
 let dbInitialized = false;
 
 const timedFact = (content: string, tsValue: number): Knowledge => ({
   _: "fact",
-  content,
   confidence: toConfidence(0.85),
+  content,
   source: "integration",
   ts: timestamp(tsValue),
 });
@@ -36,7 +38,7 @@ beforeAll(async () => {
 
   // Import db module
   const dbModule = await import("@alfred/db");
-  db = dbModule.db;
+  ({ db } = dbModule);
 
   // Verify db has required methods (Postgres only)
   if (typeof db.delete !== "function") {
@@ -47,8 +49,8 @@ beforeAll(async () => {
   }
 
   const bridge = await import("@alfred/agent/assistant/hypergraph-bridge");
-  persistHypergraphToDb = bridge.persistHypergraphToDb;
-  loadHypergraphFromDb = bridge.loadHypergraphFromDb;
+  ({ persistHypergraphToDb } = bridge);
+  ({ loadHypergraphFromDb } = bridge);
 
   graphRepo = await import("@alfred/db/repo/graph");
   dbInitialized = true;
@@ -126,8 +128,8 @@ describeFn("hypergraph persistence integration", () => {
     }
 
     const neighbors = await graphRepo.getNeighbors(sourceRow.id, {
-      resource,
       direction: "out",
+      resource,
     });
 
     expect(neighbors.length).toBe(1);
@@ -140,8 +142,8 @@ describeFn("hypergraph persistence integration", () => {
     await persistHypergraphToDb(otherGraph, `${resource}-other`);
 
     const filtered = await graphRepo.getNeighbors(sourceRow.id, {
-      resource,
       direction: "out",
+      resource,
     });
     expect(filtered).toHaveLength(1);
   });

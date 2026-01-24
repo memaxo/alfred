@@ -1,4 +1,15 @@
 import nlp from "compromise";
+
+import type {
+  BaseView,
+  Entity,
+  EntityKind,
+  EntityMention,
+  MaybeMentionTerm,
+  MentionTerm,
+  SentenceJson,
+} from "./types.js";
+
 import {
   getLanguageFromExtension,
   isDevTool,
@@ -11,15 +22,6 @@ import {
   PERSON_TITLES,
   PLACE_TAGS,
 } from "../lexicon/index.js";
-import type {
-  BaseView,
-  Entity,
-  EntityKind,
-  EntityMention,
-  MaybeMentionTerm,
-  MentionTerm,
-  SentenceJson,
-} from "./types.js";
 import { asTextView } from "./types.js";
 
 /**

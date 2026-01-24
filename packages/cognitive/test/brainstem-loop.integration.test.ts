@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+
 import { BrainstemSupervisor } from "../src/brainstem";
 
 describe("BrainstemSupervisor Loop Detection Integration", () => {

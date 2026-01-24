@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+
+import { describe, expect, it } from "bun:test";
+
 import {
   codexEventsToUiMessage,
   codexEventToUiMessagePart,

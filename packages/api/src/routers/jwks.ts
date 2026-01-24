@@ -1,4 +1,5 @@
 import { getJWKS } from "@alfred/auth/jwks";
+
 import { publicProcedure, router } from "../trpc";
 
 export const jwksRouter = router({

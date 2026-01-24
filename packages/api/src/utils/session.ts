@@ -1,4 +1,5 @@
 import type { auth } from "@alfred/auth";
+
 import type { Context } from "../context";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;

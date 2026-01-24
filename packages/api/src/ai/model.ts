@@ -1,10 +1,11 @@
+import type { LanguageModel } from "ai";
+
 import {
   type ModelRef,
   type ModelRole,
   parseModelRef,
   toModelKey,
 } from "@alfred/type/model";
-import type { LanguageModel } from "ai";
 
 type ModelSource = "assistant" | "orchestrator";
 

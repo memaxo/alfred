@@ -1,10 +1,12 @@
+import type { UIMessage } from "@alfred/type/stream";
+import type { LanguageModel, ModelMessage, Tool } from "ai";
+
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { withBudget } from "@alfred/metrics/performance";
-import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
-import type { LanguageModel, ModelMessage, Tool } from "ai";
 import { validateUIMessages } from "ai";
+
 import {
   historyContextTierDropsTotal,
   historyContextTokensTotal,

@@ -1,5 +1,6 @@
 import { getOpenAI } from "@alfred/agent/v6";
 import { generateText } from "ai";
+
 import type { AgentOutcome } from "./agent.js";
 import type { FileChanges } from "./types.js";
 

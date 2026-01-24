@@ -4,7 +4,7 @@
  */
 
 import { logger } from "@alfred/logger";
-import { recordAudit } from "../../../utils/audit.js";
+
 import type {
   KnowledgeConnectInput,
   KnowledgeConnectOutput,
@@ -15,6 +15,8 @@ import type {
   KnowledgeQueryInput,
   KnowledgeQueryOutput,
 } from "./definition.js";
+
+import { recordAudit } from "../../../utils/audit.js";
 
 // Types for dynamic imports
 type NodeRow = {

@@ -7,6 +7,7 @@
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { randomUUID } from "node:crypto";
+
 import { createTestCaller } from "../utils/test-caller";
 
 // Mock the enrichment functions to track calls

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { initialAutonomy } from "../src/autonomy/update";
+
 import type { Plan } from "../src/plan/types";
+
+import { initialAutonomy } from "../src/autonomy/update";
 import {
   capturing,
   deciding,

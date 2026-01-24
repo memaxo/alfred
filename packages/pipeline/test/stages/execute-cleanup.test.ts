@@ -1,9 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   ensureServer,
   __internals as serverRegistry,
   stopAllServers,
 } from "@alfred/agent/orchestrator/tool/shared/server";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { createPipelineContext } from "../../src/context";
 import { DEFAULT_CONFIG } from "../../src/pipeline";
 import { ExecuteStage } from "../../src/stages/execute";

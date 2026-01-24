@@ -5,6 +5,8 @@
  * Manages render systems, frame graph, and 4D coordinate transforms.
  */
 
+import type { Camera, GlobalUniforms, OrbConfig, RenderSystem } from "./types";
+
 import { BufferPool, UniformBuffer } from "./buffer";
 import {
   createCamera,
@@ -12,7 +14,6 @@ import {
   type TemporalState,
 } from "./coordinate";
 import { LODManager } from "./lod";
-import type { Camera, GlobalUniforms, OrbConfig, RenderSystem } from "./types";
 
 /**
  * Engine configuration

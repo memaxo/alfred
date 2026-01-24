@@ -1,8 +1,9 @@
+import type { SchemaContext } from "@alfred/type/genui";
+
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { normalizeToUiMessagesAsync } from "@alfred/agent/utils/normalize-async";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { SchemaContext } from "@alfred/type/genui";
 import { makeEventId } from "@alfred/type/id";
 import { generateText } from "ai";
 

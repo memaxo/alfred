@@ -1,18 +1,23 @@
-import type { Snapshot, SnapshotReconstructor } from "@alfred/type/reconstruct";
+import {
+  type Snapshot,
+  type SnapshotReconstructor,
+} from "@alfred/type/reconstruct";
+
 import { applyTransition } from "../transition";
 import { idle, initialAutonomy } from "./factory";
-import type { AutonomyGradient, CognitiveState, Event } from "./types";
+import {
+  type AutonomyGradient,
+  type CognitiveState,
+  type Event,
+} from "./types";
 
 /**
  * Reconstructs CognitiveState from event streams.
  */
-export class CognitiveReconstructor
-  implements
-    SnapshotReconstructor<
-      CognitiveState & { autonomy: AutonomyGradient },
-      Event
-    >
-{
+export class CognitiveReconstructor implements SnapshotReconstructor<
+  CognitiveState & { autonomy: AutonomyGradient },
+  Event
+> {
   readonly initialState: CognitiveState & { autonomy: AutonomyGradient };
 
   constructor(now: number = Date.now()) {

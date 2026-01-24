@@ -1,8 +1,9 @@
+import type { DomainName } from "@alfred/type/preference";
+import type { UIMessage } from "@alfred/type/stream";
+
 import { cosineSimilarity } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
-import type { DomainName } from "@alfred/type/preference";
-import type { UIMessage } from "@alfred/type/stream";
 
 const DOMAIN_NAMES = [
   "general",

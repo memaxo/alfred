@@ -66,9 +66,8 @@ describe("Autonomy Calculator", () => {
     });
 
     it("calculates autonomy based on evidence", async () => {
-      const { initialAutonomy, updateAutonomy } = await import(
-        "@alfred/cognitive/state"
-      );
+      const { initialAutonomy, updateAutonomy } =
+        await import("@alfred/cognitive/state");
 
       const now = Date.now();
       let autonomy = initialAutonomy(now);
@@ -76,7 +75,7 @@ describe("Autonomy Calculator", () => {
       // Add positive evidence
       autonomy = updateAutonomy(now, autonomy, {
         _: "success",
-        reliability: 1.0,
+        reliability: 1,
       });
 
       expect(autonomy).toBeDefined();
@@ -85,9 +84,8 @@ describe("Autonomy Calculator", () => {
     });
 
     it("incorporates multiple evidence sources", async () => {
-      const { initialAutonomy, updateAutonomy } = await import(
-        "@alfred/cognitive/state"
-      );
+      const { initialAutonomy, updateAutonomy } =
+        await import("@alfred/cognitive/state");
 
       const now = Date.now();
       let autonomy = initialAutonomy(now);
@@ -200,9 +198,9 @@ describe("Autonomy Calculator", () => {
       // Verify that tool selection is adjusted based on autonomy level
       const autonomyLevel = 0.6;
       const availableTools = {
+        high: ["basic-read", "simple-write", "advanced-execute"],
         low: ["basic-read"],
         medium: ["basic-read", "simple-write"],
-        high: ["basic-read", "simple-write", "advanced-execute"],
       };
 
       let selectedTools: string[];
@@ -221,12 +219,12 @@ describe("Autonomy Calculator", () => {
   describe("Autonomy Metrics Tracking", () => {
     it("tracks autonomy level over time", () => {
       // Verify that autonomy level changes are tracked over time
-      const history: Array<{ timestamp: number; level: number }> = [];
+      const history: { timestamp: number; level: number }[] = [];
 
       const now = Date.now();
-      history.push({ timestamp: now, level: 0.3 });
-      history.push({ timestamp: now + 1000, level: 0.4 });
-      history.push({ timestamp: now + 2000, level: 0.5 });
+      history.push({ level: 0.3, timestamp: now });
+      history.push({ level: 0.4, timestamp: now + 1000 });
+      history.push({ level: 0.5, timestamp: now + 2000 });
 
       expect(history.length).toBe(3);
       expect(history[2].level).toBeGreaterThan(history[0].level);
@@ -246,9 +244,8 @@ describe("Autonomy Calculator", () => {
 
   describe("Confidence Tracking", () => {
     it("updates confidence based on evidence", async () => {
-      const { initialAutonomy, updateAutonomy } = await import(
-        "@alfred/cognitive/state"
-      );
+      const { initialAutonomy, updateAutonomy } =
+        await import("@alfred/cognitive/state");
 
       const now = Date.now();
       let autonomy = initialAutonomy(now);
@@ -258,7 +255,7 @@ describe("Autonomy Calculator", () => {
       // Add evidence
       autonomy = updateAutonomy(now, autonomy, {
         _: "success",
-        reliability: 1.0,
+        reliability: 1,
       });
 
       const finalConfidence = Number(autonomy.confidence);
@@ -292,15 +289,14 @@ describe("Autonomy Calculator", () => {
     });
 
     it("meets performance budget for updates", async () => {
-      const { initialAutonomy, updateAutonomy } = await import(
-        "@alfred/cognitive/state"
-      );
+      const { initialAutonomy, updateAutonomy } =
+        await import("@alfred/cognitive/state");
 
       const now = Date.now();
       const autonomy = initialAutonomy(now);
 
       const start = Date.now();
-      updateAutonomy(now + 100, autonomy, { _: "success", reliability: 1.0 });
+      updateAutonomy(now + 100, autonomy, { _: "success", reliability: 1 });
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(5); // Should complete in <5ms

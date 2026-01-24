@@ -6,14 +6,25 @@
 
 /** @jsxImportSource @opentui/react */
 
-import type { KeyEvent } from "@opentui/core";
+import { type KeyEvent } from "@opentui/core";
+import { SyntaxStyle, parseColor } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
-import type { ToolCallInfo } from "../../subscriptions/agentfs";
+
+import { type ToolCallInfo } from "../../subscriptions/agentfs";
 import { colors } from "../../theme";
 import { bold, dim, fg } from "../../typography";
 
-type ToolCallsPanelProps = {
+// Basic syntax style for JSON
+const jsonStyle = SyntaxStyle.fromStyles({
+  default: { fg: parseColor("#E6EDF3") },
+  keyword: { fg: parseColor("#FF7B72"), bold: true },
+  number: { fg: parseColor("#79C0FF") },
+  punctuation: { fg: parseColor("#F0F6FC") },
+  string: { fg: parseColor("#A5D6FF") },
+});
+
+interface ToolCallsPanelProps {
   width: number;
   height: number;
   focused: boolean;
@@ -22,7 +33,7 @@ type ToolCallsPanelProps = {
   error: string | null;
   x?: number;
   y?: number;
-};
+}
 
 export function ToolCallsPanel({
   width,
@@ -41,12 +52,18 @@ export function ToolCallsPanel({
 
   const statusIcon = (call: ToolCallInfo): string => {
     if (call.error) {
-      return fg(colors.error)("✗");
+      return "✗";
     }
-    return fg(colors.success)("✓");
+    if (!call.completed_at) {
+      return "⟳";
+    }
+    return "✓";
   };
 
   const formatDuration = (ms: number): string => {
+    if (!ms) {
+      return "...";
+    }
     if (ms < 1000) {
       return `${ms}ms`;
     }
@@ -65,6 +82,8 @@ export function ToolCallsPanel({
       }
 
       if (viewMode === "list") {
+        // Selection is now handled by <select> component if we use it,
+        // but for mixed layout (header + select) we might want to keep manual or wrap.
         if (event.name === "up" || event.name === "k") {
           setSelectedIndex((i) => Math.max(0, i - 1));
           return;
@@ -176,7 +195,9 @@ export function ToolCallsPanel({
             content={`${bold("Status:")} ${
               call.error
                 ? fg(colors.error)("Failed")
-                : fg(colors.success)("Success")
+                : !call.completed_at
+                  ? fg(colors.warning)("Running")
+                  : fg(colors.success)("Success")
             }`}
           />
           <text
@@ -185,30 +206,34 @@ export function ToolCallsPanel({
           <text
             content={`${bold("Started:")} ${new Date(call.started_at * 1000).toISOString()}`}
           />
-          <text
-            content={`${bold("Completed:")} ${new Date(call.completed_at * 1000).toISOString()}`}
-          />
+          {call.completed_at && (
+            <text
+              content={`${bold("Completed:")} ${new Date(call.completed_at * 1000).toISOString()}`}
+            />
+          )}
           {call.parameters !== undefined &&
             typeof call.parameters === "object" && (
               <>
                 <text content="" />
                 <text content={bold("Parameters:")} />
-                {JSON.stringify(call.parameters, null, 2)
-                  .split("\n")
-                  .map((line, i) => (
-                    <text content={dim(`  ${line}`)} key={i} />
-                  ))}
+                <code
+                  content={JSON.stringify(call.parameters, null, 2)}
+                  filetype="json"
+                  style={{ width: "100%" }}
+                  syntaxStyle={jsonStyle}
+                />
               </>
             )}
           {call.result !== undefined && !call.error && (
             <>
               <text content="" />
               <text content={bold("Result:")} />
-              {JSON.stringify(call.result, null, 2)
-                .split("\n")
-                .map((line, i) => (
-                  <text content={dim(`  ${line}`)} key={i} />
-                ))}
+              <code
+                content={JSON.stringify(call.result, null, 2)}
+                filetype="json"
+                style={{ width: "100%" }}
+                syntaxStyle={jsonStyle}
+              />
             </>
           )}
           {call.error && (
@@ -228,6 +253,12 @@ export function ToolCallsPanel({
   }
 
   // List view
+  const selectOptions = toolCalls.map((c) => ({
+    description: `${formatDuration(c.duration_ms)} | ${formatTime(c.started_at)}`,
+    name: `${statusIcon(c)} ${c.name.padEnd(16)}`,
+    value: c.id,
+  }));
+
   return (
     <box
       border
@@ -241,43 +272,41 @@ export function ToolCallsPanel({
       top={y}
       width={width}
     >
-      <scrollbox focused={focused}>
-        <text content={bold(dim("Tool Calls"))} />
-        <text content={dim("─".repeat(Math.min(20, width)))} />
-        <text content="" />
-        {toolCalls.length === 0 ? (
-          <text content={dim("  No tool calls recorded")} />
-        ) : (
-          <>
-            <text
-              content={dim(
-                "  Status     Tool               Duration    Time       "
-              )}
-            />
-            {toolCalls.map((call, i) => {
-              const isSelected = i === selectedIndex;
-              const status = statusIcon(call);
-              const toolName = call.name.padEnd(16);
-              const duration = formatDuration(call.duration_ms).padEnd(10);
-              const time = formatTime(call.started_at);
-              const prefix = isSelected ? bold(fg(colors.primary)(">")) : " ";
+      <text
+        content={bold(dim("  Status     Tool               Duration    Time"))}
+      />
+      <text content={dim("  " + "─".repeat(Math.min(50, width - 4)))} />
 
-              return (
-                <text
-                  content={`${prefix} ${status}  ${fg(colors.primary)(toolName)}  ${dim(duration)}  ${dim(time)}`}
-                  key={call.id}
-                />
-              );
-            })}
-            <text content="" />
-            <text
-              content={dim(
-                `  ${toolCalls.length} calls | [↑↓]nav [Enter/d]details`
-              )}
-            />
-          </>
-        )}
-      </scrollbox>
+      {toolCalls.length === 0 ? (
+        <text content={dim("  No tool calls recorded")} />
+      ) : (
+        <select
+          focused={focused}
+          height={height - 5}
+          onChange={(index: number) => {
+            setSelectedIndex(index);
+          }}
+          onSelect={(index: number) => {
+            setSelectedIndex(index);
+            setViewMode("detail");
+          }}
+          options={selectOptions}
+          selectedIndex={selectedIndex}
+          style={{
+            selectedBackgroundColor: "#1A1F29",
+            selectedTextColor: colors.primary,
+          }}
+          width={width - 2}
+        />
+      )}
+
+      <box style={{ bottom: 0, position: "absolute" }}>
+        <text
+          content={dim(
+            `  ${toolCalls.length} calls | [↑↓]nav [Enter/d]details`
+          )}
+        />
+      </box>
     </box>
   );
 }

@@ -1,7 +1,8 @@
+import type { ChunkSearchResult } from "@alfred/db/repo/rag";
+
 import * as graphRepo from "@alfred/db/repo/graph/index";
 import { findRagDocumentNode } from "@alfred/db/repo/graph/read";
 import { touchNodes } from "@alfred/db/repo/graph/write";
-import type { ChunkSearchResult } from "@alfred/db/repo/rag";
 import * as ragRepo from "@alfred/db/repo/rag";
 import {
   EMBEDDING_DIM,

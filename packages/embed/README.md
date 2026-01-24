@@ -16,6 +16,7 @@ bun run install-deps
 ```
 
 This will:
+
 - Create a virtual environment using UV
 - Install sentence-transformers, PyTorch, and dependencies
 - Automatically detect and configure GPU backend:
@@ -102,12 +103,12 @@ EMBED_PYTHON_PATH=python3
 
 ### Expected Latency
 
-| Operation | GPU (MPS on M4 Max) | CPU |
-|-----------|---------------------|-----|
-| Cold start (model load) | ~12-15s per worker | ~30-60s |
-| Single embed (512 tokens) | ~100-300ms | ~2-5s |
-| Batch embed (32 × 512 tokens) | ~2-5s | ~30-60s |
-| HNSW search (10k chunks) | ~3-8ms | ~3-8ms |
+| Operation                     | GPU (MPS on M4 Max) | CPU     |
+| ----------------------------- | ------------------- | ------- |
+| Cold start (model load)       | ~12-15s per worker  | ~30-60s |
+| Single embed (512 tokens)     | ~100-300ms          | ~2-5s   |
+| Batch embed (32 × 512 tokens) | ~2-5s               | ~30-60s |
+| HNSW search (10k chunks)      | ~3-8ms              | ~3-8ms  |
 
 **Validated on**: macOS 15.2, M4 Max, 128GB RAM, MPS backend
 
@@ -212,9 +213,9 @@ bun test
 ## Integration
 
 This package is integrated into:
+
 - `@alfred/rag` - Provides `embed()` and `embedMany()` functions
 - `@alfred/runtime` - RAG retrieval in context building
 - `@alfred/api` - Automatic note embedding on create/update
 
 See [`packages/rag/src/doc.ts`](../rag/src/doc.ts) for usage.
-

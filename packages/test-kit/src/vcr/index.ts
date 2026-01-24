@@ -27,11 +27,7 @@
  */
 
 export * from "./cassette";
-export {
-  loadCassette,
-  resolveCassettePath,
-  saveCassette,
-} from "./cassette";
+export { loadCassette, resolveCassettePath, saveCassette } from "./cassette";
 export * from "./hash";
 export { defaultMatcher, fuzzyMatcher, hashRequest } from "./hash";
 export * from "./recorder";

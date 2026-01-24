@@ -1,10 +1,10 @@
 // Import Redis mocks first - this sets up env vars and mocks before any other imports
 import "../redis/index";
-
 import { mock, vi } from "bun:test";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+
 import { registerMockReset } from "../bun/preload";
 import { createVCR, type VCRRecorder } from "../vcr";
 

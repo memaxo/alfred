@@ -3,9 +3,10 @@
  * Common patterns and mocks for router testing
  */
 
-import { mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
 import type { TRPCError } from "@trpc/server";
+
+import { mock, vi } from "bun:test";
 
 // Re-export Redis mocks from test-kit for convenience
 export {

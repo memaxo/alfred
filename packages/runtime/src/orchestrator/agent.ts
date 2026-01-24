@@ -1,13 +1,10 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { setTimeout as setNodeTimeout } from "node:timers";
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import type { Workspace } from "@alfred/agent/environment/types";
+import { type Workspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
-import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
-import type { AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
+import { type AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
 import {
   detectStuckWithContext,
   type TrackerContext,
@@ -20,15 +17,44 @@ import {
 } from "@alfred/agent/orchestrator/tool/shared/context";
 import { issueMcpSessionToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
-import type { RuntimeMcpServer } from "@alfred/mcp";
-import type { WorkflowEvent } from "@alfred/type/plan";
+import { type RuntimeMcpServer } from "@alfred/mcp";
+import { type WorkflowEvent } from "@alfred/type/plan";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { setTimeout as setNodeTimeout } from "node:timers";
+
 import { formatCodexRuntimeError } from "../utils/codex-error";
-import type { AsyncQueue } from "../utils/concurrency";
+import { type AsyncQueue } from "../utils/concurrency";
 import { appendDecisionEntry, appendPlanProgressEntry } from "./execplan";
 import { normalizeWorkingDirectory } from "./hydrate";
-import type { ProjectConfig } from "./types";
+import { type ProjectConfig } from "./types";
 
-export type RunAgentOptions = {
+function mapStatusForEnrichment(
+  status: string
+): "success" | "failure" | "stuck" | "timeout" | "escalated" | null {
+  switch (status) {
+    case "completed": {
+      return "success";
+    }
+    case "failed": {
+      return "failure";
+    }
+    case "stuck": {
+      return "stuck";
+    }
+    case "timeout": {
+      return "timeout";
+    }
+    case "escalated": {
+      return "escalated";
+    }
+    default: {
+      return null;
+    }
+  }
+}
+
+export interface RunAgentOptions {
   spec: AgentSpec;
   phaseId?: string; // New
   runId: string;
@@ -48,9 +74,9 @@ export type RunAgentOptions = {
     server: RuntimeMcpServer;
     url: string;
   };
-};
+}
 
-export type AgentOutcome = {
+export interface AgentOutcome {
   agentId: string;
   phaseId?: string; // New
   stuck: boolean;
@@ -67,7 +93,9 @@ export type AgentOutcome = {
     notes: string[];
     branch?: string;
   };
-};
+  /** Failure context for non-success outcomes (enrichment system) */
+  failureContext?: import("@alfred/type").FailureContext;
+}
 
 type AgentExecutor = "codex" | "droid" | "opencode";
 
@@ -182,9 +210,18 @@ export async function runAgent({
       return;
     }
 
-    const safeRunId = runId.replace(/[^a-zA-Z0-9-]/g, "-");
+    const safeRunId = runId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
     const absFile = path.join(absDir, safeRunId, "agentfs.db");
     return path.relative(repoBase, absFile);
+  })();
+
+  const agentfsBaseDbPathOverride = (() => {
+    const baseRunId = spec.agentfsBaseRunId?.trim();
+    if (!baseRunId || baseRunId === runId) {
+      return;
+    }
+    const safeBaseRunId = baseRunId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
+    return path.join(workspace, ".agentfs", safeBaseRunId, "agentfs.db");
   })();
 
   const agentfsProjectId = await (async () => {
@@ -223,7 +260,7 @@ export async function runAgent({
   })();
 
   const agentfsContainerNameOverride = agentfsProjectId
-    ? `alfred-agentfs-project-${agentfsProjectId.replace(/[^a-zA-Z0-9]/g, "-")}`
+    ? `alfred-agentfs-project-${agentfsProjectId.replaceAll(/[^a-zA-Z0-9]/g, "-")}`
     : undefined;
 
   try {
@@ -233,13 +270,14 @@ export async function runAgent({
       runId,
       workspace,
       {
-        agentfsOverlay: spec.agentfsOverlay,
+        agentfsBaseDbPath: agentfsBaseDbPathOverride,
         agentfsDbPath: agentfsDbPathOverride,
+        agentfsOverlay: spec.agentfsOverlay,
         authz,
-        containerName: agentfsContainerNameOverride,
-        retainContainer: Boolean(agentfsProjectId),
-        projectId: agentfsProjectId,
         containerKind: agentfsProjectId ? "agentfs_dev" : undefined,
+        containerName: agentfsContainerNameOverride,
+        projectId: agentfsProjectId,
+        retainContainer: Boolean(agentfsProjectId),
       }
     );
 
@@ -251,10 +289,10 @@ export async function runAgent({
     );
 
     logger.info("workspace_created", {
-      runId,
       agentId: spec.agentId,
       kind: spec.environment,
       root: workspaceEnv.root,
+      runId,
     });
 
     if (isAgentFSWorkspace(workspaceEnv)) {
@@ -286,9 +324,9 @@ export async function runAgent({
     }
   } catch (error) {
     logger.warn("workspace_creation_failed", {
-      runId,
       agentId: spec.agentId,
       error: error instanceof Error ? error.message : String(error),
+      runId,
     });
   }
 
@@ -316,7 +354,7 @@ export async function runAgent({
     );
   }
 
-  const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const safeAgentId = spec.agentId.replaceAll(/[^a-zA-Z0-9.-]/g, "_");
   const escalationFile = `ESCALATION-${safeAgentId}.md`;
 
   const clarifications = ((): Array<{ response: string }> | undefined => {
@@ -328,12 +366,12 @@ export async function runAgent({
     if (!Array.isArray(raw)) {
       return;
     }
-    const out: Array<{ response: string }> = [];
+    const out: { response: string }[] = [];
     for (const item of raw) {
       if (!item || typeof item !== "object") {
         continue;
       }
-      const response = (item as { response?: unknown }).response;
+      const { response } = item as { response?: unknown };
       if (typeof response === "string") {
         out.push({ response });
       }
@@ -370,24 +408,24 @@ export async function runAgent({
   // Phase 4: Test-Driven Development Loop
   if (spec.mandateTDD && projectConfig) {
     queue.enqueue({
-      type: "notice",
       message: "tdd_test_generation_started",
+      type: "notice",
     } as unknown as WorkflowEvent);
 
     await runTDDLoop(
       {
         agentId: spec.agentId,
-        sessionId: spec.sessionId,
-        workingDirectory: spec.workingDirectory,
-        execPlanPath: spec.execPlanPath,
-        requirement: task?.requirement ?? "",
-        auto: spec.auto === "read" ? "low" : spec.auto,
-        model: spec.model,
-        authz,
-        signal,
         agentfsDbPath,
+        authz,
+        auto: spec.auto === "read" ? "low" : spec.auto,
         context: spec.context,
+        execPlanPath: spec.execPlanPath,
+        model: spec.model,
+        requirement: task?.requirement ?? "",
+        sessionId: spec.sessionId,
+        signal,
         userId,
+        workingDirectory: spec.workingDirectory,
       },
       projectConfig,
       workspaceEnv,
@@ -431,10 +469,10 @@ export async function runAgent({
   }
   const agentSignal = agentAbortController.signal;
 
-  type McpEscalationState = {
+  interface McpEscalationState {
     input: import("@alfred/mcp").RuntimeMcpEscalationInput;
     receipt: import("@alfred/mcp").RuntimeMcpEscalationReceipt;
-  };
+  }
   let mcpEscalation: McpEscalationState | undefined;
 
   const mcpAbortDelayMs = (() => {
@@ -450,8 +488,6 @@ export async function runAgent({
   if (runtimeMcp && mcpToken) {
     runtimeMcp.server.registerSession(
       {
-        runId,
-        agentId: spec.agentId,
         abort: (reason) => {
           logger.info("runtime_mcp_abort_requested", {
             runId,
@@ -465,6 +501,7 @@ export async function runAgent({
           );
           t.unref();
         },
+        agentId: spec.agentId,
         onEscalate: (payload) => {
           mcpEscalation = {
             input: payload.input,
@@ -480,6 +517,7 @@ export async function runAgent({
             severity: payload.input.severity,
           } satisfies AgentEscalationEvent);
         },
+        runId,
       },
       { token: mcpToken }
     );
@@ -505,7 +543,7 @@ export async function runAgent({
   const codexHomeOnHost = path.resolve(
     workspace,
     ".agentfs",
-    runId.replace(/[^a-zA-Z0-9-]/g, "-"),
+    runId.replaceAll(/[^a-zA-Z0-9-]/g, "-"),
     "codex-home",
     safeAgentId
   );
@@ -526,9 +564,9 @@ export async function runAgent({
       await Bun.write(path.join(codexHomeOnHost, "config.toml"), configToml);
     } catch (error) {
       logger.warn("runtime_mcp_codex_home_write_failed", {
-        runId,
         agentId: spec.agentId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
   }
@@ -538,10 +576,10 @@ export async function runAgent({
     if (workspaceEnv) {
       try {
         await workspaceEnv.checkpoint("pre-agent");
-      } catch (err) {
+      } catch (error) {
         logger.warn("checkpoint_failed", {
           agentId: spec.agentId,
-          error: String(err),
+          error: String(error),
         });
       }
     }
@@ -586,8 +624,8 @@ export async function runAgent({
               },
               userId,
             },
-            writer,
             signal: agentSignal,
+            writer,
           });
 
         try {
@@ -601,8 +639,8 @@ export async function runAgent({
           ) {
             void Promise.resolve(
               writer.write?.({
-                type: "notice",
                 message: "executor_server_fallback_default",
+                type: "notice",
               })
             ).catch(() => {});
             await run("default");
@@ -614,19 +652,18 @@ export async function runAgent({
         if (execProfile === "server") {
           void Promise.resolve(
             writer.write?.({
-              type: "notice",
               message: "droid_server_profile_unsupported",
+              type: "notice",
             })
           ).catch(() => {});
         }
-        const { toolDroid } = await import(
-          "@alfred/agent/orchestrator/tool/droid"
-        );
+        const { toolDroid } =
+          await import("@alfred/agent/orchestrator/tool/droid");
 
         const droidHomeOnHost = path.resolve(
           workspace,
           ".agentfs",
-          runId.replace(/[^a-zA-Z0-9-]/g, "-"),
+          runId.replaceAll(/[^a-zA-Z0-9-]/g, "-"),
           "droid-home",
           safeAgentId
         );
@@ -635,12 +672,12 @@ export async function runAgent({
           const mcpJson = {
             mcpServers: {
               alfred_runtime: {
-                type: "http",
-                url: runtimeMcpUrlForExecutor,
+                disabled: false,
                 headers: {
                   authorization: `Bearer ${mcpToken}`,
                 },
-                disabled: false,
+                type: "http",
+                url: runtimeMcpUrlForExecutor,
               },
             },
           } as const;
@@ -654,9 +691,9 @@ export async function runAgent({
             );
           } catch (error) {
             logger.warn("runtime_mcp_droid_home_write_failed", {
-              runId,
               agentId: spec.agentId,
               error: error instanceof Error ? error.message : String(error),
+              runId,
             });
           }
         }
@@ -675,17 +712,27 @@ export async function runAgent({
                 }
               : undefined,
           },
-          writer,
           signal: agentSignal,
+          writer,
         });
       } else {
-        const { toolOpenCode } = await import(
-          "@alfred/agent/orchestrator/tool/opencode/index"
-        );
+        const { toolOpenCode } =
+          await import("@alfred/agent/orchestrator/tool/opencode/index");
+        const opencodeTransport = (() => {
+          const raw = process.env.ORCH_OPENCODE_TRANSPORT?.trim().toLowerCase();
+          if (raw === "http") {
+            return "http" as const;
+          }
+          if (raw === "acp") {
+            return "acp" as const;
+          }
+          return;
+        })();
         const run = (nextProfile: ExecProfile | undefined) =>
           toolOpenCode.execute({
             input: {
               action: "exec",
+              ...(opencodeTransport ? { transport: opencodeTransport } : {}),
               execProfile: nextProfile,
               prompt,
               auto: spec.auto,
@@ -711,8 +758,8 @@ export async function runAgent({
                     ]
                   : undefined,
             },
-            writer,
             signal: agentSignal,
+            writer,
           });
 
         try {
@@ -726,8 +773,8 @@ export async function runAgent({
           ) {
             void Promise.resolve(
               writer.write?.({
-                type: "notice",
                 message: "executor_server_fallback_default",
+                type: "notice",
               })
             ).catch(() => {});
             await run("default");
@@ -746,8 +793,8 @@ export async function runAgent({
 
       if (isAbort) {
         queue.enqueue({
-          type: "notice",
           message: `agent_interrupted_abort:${spec.agentId}`,
+          type: "notice",
         } as unknown as WorkflowEvent);
 
         const interruptedAt = Date.now();
@@ -760,15 +807,12 @@ export async function runAgent({
           mcpEscalation?.input.severity === "blocking";
         return {
           agentId: spec.agentId,
-          phaseId,
-          stuck: false,
-          status: wasBlockingEscalation ? "escalated" : "interrupted",
           durationSeconds: interruptedSeconds,
-          role: executor,
           escalation:
             wasBlockingEscalation && mcpEscalation
               ? `runtime_mcp_escalate:${mcpEscalation.input.reason}:${mcpEscalation.input.details}`
               : undefined,
+          phaseId,
           result: {
             summary: wasBlockingEscalation
               ? "agent escalated (runtime mcp)"
@@ -777,6 +821,9 @@ export async function runAgent({
             changes: [],
             notes: [],
           },
+          role: executor,
+          status: wasBlockingEscalation ? "escalated" : "interrupted",
+          stuck: false,
         };
       }
 
@@ -790,17 +837,17 @@ export async function runAgent({
           error: String(error),
         });
         queue.enqueue({
-          type: "notice",
           message: `agent_interrupted: ${String(error)}`,
+          type: "notice",
         } as unknown as WorkflowEvent);
 
         if (workspaceEnv) {
           try {
             await workspaceEnv.restore("pre-agent");
-          } catch (restoreErr) {
+          } catch (error) {
             logger.error("restore_failed_on_interrupt", {
               agentId: spec.agentId,
-              error: String(restoreErr),
+              error: String(error),
             });
           }
         }
@@ -812,11 +859,11 @@ export async function runAgent({
         );
         return {
           agentId: spec.agentId,
-          phaseId,
-          stuck: false,
-          status: "interrupted",
           durationSeconds: interruptDurationSeconds,
+          phaseId,
           role: executor,
+          status: "interrupted",
+          stuck: false,
         };
       }
 
@@ -825,15 +872,15 @@ export async function runAgent({
         const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
           formatCodexRuntimeError(error);
         queue.enqueue({
-          type: "notice",
           message: userMessage,
+          type: "notice",
         } as unknown as WorkflowEvent);
         logger.error("codex_agent_failed", {
           agentId: spec.agentId,
-          error: rawMessage,
           code,
-          needsElevation,
+          error: rawMessage,
           limitExceeded,
+          needsElevation,
         });
       } else {
         const message =
@@ -841,13 +888,13 @@ export async function runAgent({
             ? error.message
             : `agent_failed:${String(error)}`;
         queue.enqueue({
-          type: "notice",
           message: `${executor}_agent_failed:${message}`,
+          type: "notice",
         } as unknown as WorkflowEvent);
         logger.error("agent_failed", {
           agentId: spec.agentId,
-          executor,
           error: message,
+          executor,
         });
       }
 
@@ -857,10 +904,10 @@ export async function runAgent({
         });
         try {
           await workspaceEnv.restore("pre-agent");
-        } catch (restoreErr) {
+        } catch (error) {
           logger.error("restore_failed", {
             agentId: spec.agentId,
-            error: String(restoreErr),
+            error: String(error),
           });
         }
       }
@@ -878,11 +925,11 @@ export async function runAgent({
       trackerContextRef.current = updateTrackerWithContext(
         trackerContextRef.current,
         {
-          type: "agent/command",
           agentId: agentKey,
           command: "agent_finished",
           status: "completed",
           ts: finishedAt,
+          type: "agent/command",
         }
       );
     }
@@ -928,19 +975,19 @@ export async function runAgent({
 
             // Log deprecation warning for file-based escalation
             logger.warn("deprecated_file_escalation", {
-              runId,
-              userId,
               agentId: spec.agentId,
               message:
                 "File-based escalation is deprecated. Use the escalate tool for real-time escalation handling.",
+              runId,
+              userId,
             });
 
             logger.warn("agent_escalated", {
-              runId,
-              userId,
               agentId: spec.agentId,
               reason: escalationReason,
-              source: "file", // Indicate this came from deprecated file mechanism
+              runId,
+              source: "file",
+              userId, // Indicate this came from deprecated file mechanism
             });
 
             if (execPlanAbsolutePath) {
@@ -966,15 +1013,14 @@ export async function runAgent({
     // Extract learning data from AgentFS before cleanup
     if (isAgentFSWorkspace(workspaceEnv)) {
       try {
-        const { processForLearning } = await import(
-          "@alfred/agent/agentfs/learning-bridge"
-        );
+        const { processForLearning } =
+          await import("@alfred/agent/agentfs/learning-bridge");
         await processForLearning(workspaceEnv.dbPath).catch((error: Error) =>
           logger.warn("agentfs_learning_failed", {
-            runId,
-            userId,
             agentId: spec.agentId,
             error,
+            runId,
+            userId,
           })
         );
       } catch {
@@ -998,15 +1044,12 @@ export async function runAgent({
       Boolean(escalationReason);
     const effectiveStatus = hasBlockingEscalation ? "escalated" : status;
 
-    return {
+    const outcome: AgentOutcome = {
       agentId: spec.agentId,
-      phaseId,
-      stuck,
-      status: effectiveStatus,
       durationSeconds,
-      role: executor,
       escalation: hasAnyEscalation ? effectiveEscalation : undefined,
       escalationData: realTimeEscalationData,
+      phaseId,
       result: {
         summary: `${executor} agent execution`,
         artifacts: [],
@@ -1014,7 +1057,37 @@ export async function runAgent({
         notes: [],
         branch: workspaceEnv?.branch ?? undefined,
       },
+      role: executor,
+      status: effectiveStatus,
+      stuck,
     };
+
+    // Persist FailureContext to AgentFS KV for downstream enrichment.
+    if (isAgentFSWorkspace(workspaceEnv)) {
+      const mapped = mapStatusForEnrichment(effectiveStatus);
+      if (mapped && mapped !== "success") {
+        try {
+          const { finalizeOutcome } =
+            await import("@alfred/agent/orchestrator/outcome");
+          const enriched = await finalizeOutcome(
+            {
+              ...(outcome as unknown as import("@alfred/agent/orchestrator/outcome").AgentOutcome),
+              status: mapped,
+            },
+            workspaceEnv.getAgent()
+          );
+          outcome.failureContext = enriched.failureContext;
+        } catch (error) {
+          logger.debug("agent_failure_context_persist_failed", {
+            agentId: spec.agentId,
+            error: error instanceof Error ? error.message : String(error),
+            runId,
+          });
+        }
+      }
+    }
+
+    return outcome;
   } finally {
     signal.removeEventListener("abort", parentAbortListener);
     if (mcpToken && runtimeMcp) {
@@ -1028,7 +1101,7 @@ function buildAgentPrompt(
   task: SubTask | undefined,
   execPlanPromptPath: string,
   escalationFile: string,
-  clarifications?: Array<{ response: string }>
+  clarifications?: { response: string }[]
 ): string {
   const executor = normalizeAgentType(spec.agentType);
   const runtimeEscalateTool =
@@ -1119,20 +1192,20 @@ function createAgentWriter(
       if (isAgentEscalationEvent(chunk)) {
         logger.warn("agent_escalation_detected", {
           agentId: spec.agentId,
+          details: chunk.details.slice(0, 200),
           reason: chunk.reason,
-          severity: chunk.severity,
-          details: chunk.details.slice(0, 200), // Truncate for logging
+          severity: chunk.severity, // Truncate for logging
         });
 
         // Emit escalation event to workflow queue
         queue.enqueue({
-          type: "agent:escalate-request",
           agentId: spec.agentId,
-          reason: chunk.reason,
           details: chunk.details,
-          suggestions: chunk.suggestions,
+          reason: chunk.reason,
           severity: chunk.severity,
+          suggestions: chunk.suggestions,
           timestamp: Date.now(),
+          type: "agent:escalate-request",
         } as unknown as WorkflowEvent);
 
         // Invoke callback for immediate handling (e.g., abort signal)
@@ -1160,17 +1233,16 @@ function createAgentWriter(
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
-                type: "agent/thought",
                 agentId: spec.agentId,
                 text: typeof inner.content === "string" ? inner.content : "",
                 ts,
+                type: "agent/thought",
               }
             );
           } else if (innerType === "command") {
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
-                type: "agent/command",
                 agentId: spec.agentId,
                 command: typeof inner.command === "string" ? inner.command : "",
                 status:
@@ -1180,6 +1252,7 @@ function createAgentWriter(
                       ? "completed"
                       : "running",
                 ts,
+                type: "agent/command",
               }
             );
           } else if (innerType === "artifact") {
@@ -1187,11 +1260,11 @@ function createAgentWriter(
             trackerContextRef.current = updateTrackerWithContext(
               trackerContextRef.current,
               {
-                type: "agent/file",
                 agentId: spec.agentId,
-                path: filePath,
                 kind: typeof inner.kind === "string" ? inner.kind : "file",
+                path: filePath,
                 ts,
+                type: "agent/file",
               }
             );
             if (filePath) {
@@ -1205,9 +1278,9 @@ function createAgentWriter(
           }
         }
         queue.enqueue({
-          type: "event",
-          kind: "codex_event",
           data: payload,
+          kind: "codex_event",
+          type: "event",
         } as unknown as WorkflowEvent);
       } else if (type === "notice") {
         const message =
@@ -1217,13 +1290,13 @@ function createAgentWriter(
         trackerContextRef.current = updateTrackerWithContext(
           trackerContextRef.current,
           {
-            type: "notice",
             agentId: spec.agentId,
             message,
             ts: Date.now(),
+            type: "notice",
           }
         );
-        queue.enqueue({ type: "notice", message } as unknown as WorkflowEvent);
+        queue.enqueue({ message, type: "notice" } as unknown as WorkflowEvent);
       }
       return Promise.resolve();
     },

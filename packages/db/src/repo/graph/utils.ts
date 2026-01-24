@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import { memoryEdges } from "../../schema/graph";
+
 import type { EdgeRow, NodeRow } from "./types";
+
+import { memoryEdges } from "../../schema/graph";
 
 export function sanitize<T extends Record<string, unknown>>(
   input: Partial<T>

@@ -1,5 +1,6 @@
 // packages/plan/src/project/config.ts
 import path from "node:path";
+
 import type {
   PackageManager,
   ProjectConfig,

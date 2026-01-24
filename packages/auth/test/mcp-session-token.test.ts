@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+
 import { issueMcpSessionToken, verifyMcpSessionToken } from "../src/token";
 
 describe("MCP session tokens", () => {

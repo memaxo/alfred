@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { aggregateResearch } from "../research/aggregate.js";
+
 import type { ResearchResult, ResearchSource } from "../research/types.js";
+
+import { aggregateResearch } from "../research/aggregate.js";
 
 describe("Research Aggregation", () => {
   const mockExternal: ResearchSource[] = [

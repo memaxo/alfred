@@ -12,7 +12,10 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-type ThreadEvent = { type: string; [key: string]: unknown };
+interface ThreadEvent {
+  type: string;
+  [key: string]: unknown;
+}
 
 let pendingEvents: ThreadEvent[] = [];
 let shouldInvokeSpawn = false;
@@ -35,19 +38,18 @@ const getSessionMock = mock(() => {});
 const createSessionMock = mock(() => {});
 
 // Ensure the exec.ts dependency on definition.js is resolved to the TS module.
-const definitionModule = await import(
-  "../src/orchestrator/tool/codex/definition.ts"
-);
+const definitionModule =
+  await import("../src/orchestrator/tool/codex/definition.ts");
 beforeAll(() => {
   // Keep module mocks inside beforeAll so we don't poison unrelated test files
   // during Bun's initial module load pass.
   mock.module("../src/orchestrator/codex-session.js", () => ({
     assessSessionResumeEligibility: assessSessionResumeEligibilityMock,
     sessionManager: {
-      getSession: (...args: Parameters<typeof getSessionMock>) =>
-        getSessionMock(...args),
       createSession: (...args: Parameters<typeof createSessionMock>) =>
         createSessionMock(...args),
+      getSession: (...args: Parameters<typeof getSessionMock>) =>
+        getSessionMock(...args),
     },
   }));
 
@@ -72,8 +74,8 @@ beforeAll(() => {
         // Exercise the tool-provided spawn wrapper (docker/poof/host selection).
         // This lets tests assert docker `--workdir` behavior deterministically.
         const spawned = opts.spawn?.({
-          cmd: opts.cmd,
           args: ["--version"],
+          cmd: opts.cmd,
           env: opts.env,
         });
         if (
@@ -104,21 +106,19 @@ let codexServerInternals: typeof import("@alfred/agent/orchestrator/tool/codex/s
 
 beforeAll(async () => {
   mock.module("@alfred/db/repo/codex-learning", () => ({
-    buildCodexLearningContext: (
-      ...args: Parameters<typeof buildCodexLearningContextMock>
-    ) => buildCodexLearningContextMock(...args),
     buildCodexHeuristicContext: (
       ...args: Parameters<typeof buildCodexHeuristicContextMock>
     ) => buildCodexHeuristicContextMock(...args),
+    buildCodexLearningContext: (
+      ...args: Parameters<typeof buildCodexLearningContextMock>
+    ) => buildCodexLearningContextMock(...args),
   }));
 
-  ({ executeWithCodex } = await import(
-    "@alfred/agent/orchestrator/tool/codex/exec"
-  ));
+  ({ executeWithCodex } =
+    await import("@alfred/agent/orchestrator/tool/codex/exec"));
 
-  ({ __internals: codexServerInternals } = await import(
-    "@alfred/agent/orchestrator/tool/codex/server"
-  ));
+  ({ __internals: codexServerInternals } =
+    await import("@alfred/agent/orchestrator/tool/codex/server"));
 });
 
 beforeEach(() => {
@@ -167,17 +167,16 @@ describe("executeWithCodex artifacts", () => {
 
   it("returns collected artifacts and surfaces them in reasoning traces", async () => {
     setMockEvents([
-      { type: "thread.started", thread_id: "thread-event" },
+      { thread_id: "thread-event", type: "thread.started" },
       {
-        type: "item.completed",
         item: {
           id: "item-1",
           type: "agent_message",
           text: "File update complete",
         },
+        type: "item.completed",
       },
       {
-        type: "item.completed",
         item: {
           id: "item-2",
           type: "file_change",
@@ -187,22 +186,23 @@ describe("executeWithCodex artifacts", () => {
             { path: "README.md", kind: "add" },
           ],
         },
+        type: "item.completed",
       },
     ]);
 
     const result = await executeWithCodex({
       input: {
         action: "exec",
-        prompt: "summarize updates",
         auto: "read",
-        out: "text",
         cw: process.cwd(),
+        out: "text",
+        prompt: "summarize updates",
       },
     });
 
     expect(result.artifacts).toEqual([
-      { path: "src/app.ts", kind: "update" },
-      { path: "README.md", kind: "add" },
+      { kind: "update", path: "src/app.ts" },
+      { kind: "add", path: "README.md" },
     ]);
 
     expect(result.reasoning).toBeDefined();
@@ -217,16 +217,16 @@ describe("executeWithCodex prompt enrichment", () => {
     buildCodexLearningContextMock.mockResolvedValue("SIMILAR_CONTEXT");
     buildCodexHeuristicContextMock.mockResolvedValue("HEURISTICS_CONTEXT");
 
-    setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+    setMockEvents([{ thread_id: "thread-event", type: "thread.started" }]);
 
     const prompt = "resolve merge conflict markers";
     await executeWithCodex({
       input: {
         action: "exec",
-        prompt,
         auto: "read",
-        out: "text",
         cw: process.cwd(),
+        out: "text",
+        prompt,
       },
     });
 
@@ -259,18 +259,18 @@ describe("executeWithCodex container workdir", () => {
       process.env.PATH = `${binDir}${path.delimiter}${prevPath ?? ""}`;
 
       shouldInvokeSpawn = true;
-      setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+      setMockEvents([{ thread_id: "thread-event", type: "thread.started" }]);
 
       await executeWithCodex({
         input: {
           action: "exec",
-          execProfile: "default",
-          prompt: "noop",
           auto: "read",
-          out: "text",
-          cw: process.cwd(),
-          containerName: "alfred-agentfs-container-123",
           containerCw: "/workspace/.agent/worktrees/run/agent",
+          containerName: "alfred-agentfs-container-123",
+          cw: process.cwd(),
+          execProfile: "default",
+          out: "text",
+          prompt: "noop",
         },
       });
 
@@ -281,7 +281,7 @@ describe("executeWithCodex container workdir", () => {
       expect(argsText).toContain("alfred-agentfs-container-123");
     } finally {
       process.env.PATH = prevPath;
-      await rm(binDir, { recursive: true, force: true });
+      await rm(binDir, { force: true, recursive: true });
     }
   });
 });
@@ -304,7 +304,7 @@ describe("executeWithCodex execProfile defaults", () => {
         throw new Error("spawn_failed");
       });
 
-      setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+      setMockEvents([{ thread_id: "thread-event", type: "thread.started" }]);
 
       const notices: string[] = [];
       const writer = {
@@ -322,12 +322,12 @@ describe("executeWithCodex execProfile defaults", () => {
       await executeWithCodex({
         input: {
           action: "exec",
-          prompt: "noop",
           auto: "read",
-          out: "text",
-          cw: process.cwd(),
-          containerName: "alfred-agentfs-container-123",
           containerCw: "/workspace",
+          containerName: "alfred-agentfs-container-123",
+          cw: process.cwd(),
+          out: "text",
+          prompt: "noop",
         },
         writer,
       });
@@ -337,7 +337,7 @@ describe("executeWithCodex execProfile defaults", () => {
       process.env.PATH = prevPath;
       process.env.ORCH_EXEC_PROFILE_STRICT = undefined;
       codexServerInternals.resetSpawn();
-      await rm(binDir, { recursive: true, force: true });
+      await rm(binDir, { force: true, recursive: true });
     }
   });
 
@@ -356,18 +356,18 @@ describe("executeWithCodex execProfile defaults", () => {
         throw new Error("spawn_failed");
       });
 
-      setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+      setMockEvents([{ thread_id: "thread-event", type: "thread.started" }]);
 
       await expect(
         executeWithCodex({
           input: {
             action: "exec",
-            prompt: "noop",
             auto: "read",
-            out: "text",
-            cw: process.cwd(),
-            containerName: "alfred-agentfs-container-123",
             containerCw: "/workspace",
+            containerName: "alfred-agentfs-container-123",
+            cw: process.cwd(),
+            out: "text",
+            prompt: "noop",
           },
         })
       ).rejects.toThrow("codex_server_start_failed");
@@ -375,7 +375,7 @@ describe("executeWithCodex execProfile defaults", () => {
       process.env.PATH = prevPath;
       process.env.ORCH_EXEC_PROFILE_STRICT = undefined;
       codexServerInternals.resetSpawn();
-      await rm(binDir, { recursive: true, force: true });
+      await rm(binDir, { force: true, recursive: true });
     }
   });
 });
@@ -384,16 +384,16 @@ describe("executeWithCodex session security", () => {
   const cwd = process.cwd();
 
   it("throws when sessionId is provided without a userId", async () => {
-    setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+    setMockEvents([{ thread_id: "thread-event", type: "thread.started" }]);
 
     await expect(
       executeWithCodex({
         input: {
           action: "exec",
-          prompt: "ls",
           auto: "read",
-          out: "text",
           cw: cwd,
+          out: "text",
+          prompt: "ls",
           sessionId: "sess-no-user",
         },
       })
@@ -407,16 +407,16 @@ describe("executeWithCodex session security", () => {
       throw new Error("codex_session_forbidden");
     });
 
-    setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+    setMockEvents([{ thread_id: "thread-event", type: "thread.started" }]);
 
     await expect(
       executeWithCodex({
         input: {
           action: "exec",
-          prompt: "resume",
           auto: "read",
-          out: "text",
           cw: cwd,
+          out: "text",
+          prompt: "resume",
           sessionId: "shared-session",
           userId: "intruder",
         },
@@ -427,15 +427,15 @@ describe("executeWithCodex session security", () => {
   });
 
   it("binds new sessions to the requesting user", async () => {
-    setMockEvents([{ type: "thread.started", thread_id: "thread-created" }]);
+    setMockEvents([{ thread_id: "thread-created", type: "thread.started" }]);
 
     await executeWithCodex({
       input: {
         action: "exec",
-        prompt: "new session",
         auto: "read",
-        out: "text",
         cw: cwd,
+        out: "text",
+        prompt: "new session",
         sessionId: "fresh-session",
         userId: "owner-123",
       },
@@ -455,13 +455,13 @@ describe("executeWithCodex metadata and sessionState", () => {
 
   it("returns metadata in the result", async () => {
     setMockEvents([
-      { type: "thread.started", thread_id: "thread-meta-123" },
+      { thread_id: "thread-meta-123", type: "thread.started" },
       { type: "turn.started" },
       {
         type: "turn.completed",
         usage: {
-          input_tokens: 150,
           cached_input_tokens: 25,
+          input_tokens: 150,
           output_tokens: 200,
         },
       },
@@ -470,10 +470,10 @@ describe("executeWithCodex metadata and sessionState", () => {
     const result = await executeWithCodex({
       input: {
         action: "exec",
-        prompt: "test metadata",
         auto: "medium",
-        out: "text",
         cw: cwd,
+        out: "text",
+        prompt: "test metadata",
       },
     });
 
@@ -482,9 +482,9 @@ describe("executeWithCodex metadata and sessionState", () => {
     expect(result.metadata?.threadId).toBe("thread-meta-123");
     expect(result.metadata?.autonomyLevel).toBe("medium");
     expect(result.metadata?.tokenUsage).toEqual({
+      cachedInputTokens: 25,
       inputTokens: 150,
       outputTokens: 200,
-      cachedInputTokens: 25,
     });
     expect(result.metadata?.turnDurationMs).toBeGreaterThanOrEqual(0);
   });
@@ -495,16 +495,16 @@ describe("executeWithCodex metadata and sessionState", () => {
       reason: "missing-session",
     });
     setMockEvents([
-      { type: "thread.started", thread_id: "thread-session-456" },
+      { thread_id: "thread-session-456", type: "thread.started" },
     ]);
 
     const result = await executeWithCodex({
       input: {
         action: "exec",
-        prompt: "test session state",
         auto: "low",
-        out: "text",
         cw: cwd,
+        out: "text",
+        prompt: "test session state",
         sessionId: "session-xyz",
         userId: "user-abc",
       },
@@ -523,25 +523,25 @@ describe("executeWithCodex metadata and sessionState", () => {
     assessSessionResumeEligibilityMock.mockResolvedValue({
       canResume: true,
       session: {
-        sessionId: "resumable-session",
-        userId: "user-resume",
-        threadId: "existing-thread",
-        workingDirectory: cwd,
-        status: "active" as const,
         createdAt: new Date(),
-        lastAccessedAt: new Date(),
         expiresAt: new Date(Date.now() + 86_400_000),
+        lastAccessedAt: new Date(),
+        sessionId: "resumable-session",
+        status: "active" as const,
+        threadId: "existing-thread",
+        userId: "user-resume",
+        workingDirectory: cwd,
       },
     });
-    setMockEvents([{ type: "thread.started", thread_id: "existing-thread" }]);
+    setMockEvents([{ thread_id: "existing-thread", type: "thread.started" }]);
 
     const result = await executeWithCodex({
       input: {
         action: "exec",
-        prompt: "resume session",
         auto: "low",
-        out: "text",
         cw: cwd,
+        out: "text",
+        prompt: "resume session",
         sessionId: "resumable-session",
         userId: "user-resume",
       },
@@ -554,15 +554,15 @@ describe("executeWithCodex metadata and sessionState", () => {
   });
 
   it("handles missing token usage gracefully", async () => {
-    setMockEvents([{ type: "thread.started", thread_id: "thread-no-usage" }]);
+    setMockEvents([{ thread_id: "thread-no-usage", type: "thread.started" }]);
 
     const result = await executeWithCodex({
       input: {
         action: "exec",
-        prompt: "no usage data",
         auto: "read",
-        out: "text",
         cw: cwd,
+        out: "text",
+        prompt: "no usage data",
       },
     });
 

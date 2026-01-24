@@ -2,7 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "composite": false,
-    "noEmit": false
+    "noEmit": false,
+    "strictNullChecks": true
   },
   "references": []
 }

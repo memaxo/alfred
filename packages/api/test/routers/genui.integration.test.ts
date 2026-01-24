@@ -12,6 +12,8 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
+import type { UIComponent } from "@alfred/type/genui";
+
 import {
   afterAll,
   beforeAll,
@@ -21,7 +23,7 @@ import {
   it,
 } from "bun:test";
 import { randomUUID } from "node:crypto";
-import type { UIComponent } from "@alfred/type/genui";
+
 import { createTestCaller } from "../utils/trpc";
 
 describe("genui router", () => {

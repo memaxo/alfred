@@ -1,11 +1,12 @@
-import { randomUUID } from "node:crypto";
 import { generateObject } from "ai";
+import { randomUUID } from "node:crypto";
+
 import { getModelId, getOpenAI } from "../ai.js";
 import { intentParserOutputSchema } from "./schema.js";
-import type {
-  ClarificationQuestion,
-  Pattern,
-  WorkflowIntent,
+import {
+  type ClarificationQuestion,
+  type Pattern,
+  type WorkflowIntent,
 } from "./types.js";
 
 /**
@@ -32,9 +33,8 @@ export async function parseIntent(
   const model = getOpenAI()(getModelId());
 
   const result = await generateObject({
-    // biome-ignore lint/suspicious/noExplicitAny: AI SDK version mismatch across monorepo packages requires cast
+    // oxlint-disable noExplicitAny: AI SDK version mismatch across monorepo packages requires cast
     model: model as any,
-    schema: intentParserOutputSchema,
     prompt: `
       You are ALFRED's intent parser. Your job is to analyze user input and transform it into a structured intent for workflow planning.
       
@@ -59,6 +59,7 @@ export async function parseIntent(
       - "Create a new router and update the schema" -> Two intents
       - "Refactor the auth module and add tests" -> Two intents
     `,
+    schema: intentParserOutputSchema,
   });
 
   const output = result.object;
@@ -68,7 +69,7 @@ export async function parseIntent(
     const intents = output.multiIntent.parts.map((part) =>
       createIntentObject(part, context)
     );
-    return { type: "multiIntent", intents };
+    return { intents, type: "multiIntent" };
   }
 
   // Handle Ambiguity
@@ -76,12 +77,12 @@ export async function parseIntent(
     const questions: ClarificationQuestion[] = output.ambiguity.questions.map(
       (q) => ({
         id: randomUUID(),
-        question: q.question,
         options: q.options,
+        question: q.question,
         required: true,
       })
     );
-    return { type: "clarification", questions };
+    return { questions, type: "clarification" };
   }
 
   // Single Intent
@@ -90,17 +91,17 @@ export async function parseIntent(
   // Attach ambiguity if it's below the threshold but still noteworthy
   if (output.ambiguity.score > 0) {
     intent.ambiguity = {
-      score: output.ambiguity.score,
       questions: output.ambiguity.questions.map((q) => ({
         id: randomUUID(),
         question: q.question,
         options: q.options,
         required: true,
       })),
+      score: output.ambiguity.score,
     };
   }
 
-  return { type: "intent", intent };
+  return { intent, type: "intent" };
 }
 
 function createIntentObject(
@@ -114,16 +115,16 @@ function createIntentObject(
   }
 ): WorkflowIntent {
   return {
-    id: randomUUID(),
-    description,
-    source: context.source ?? "chat",
-    userId: context.userId,
-    timestamp: new Date(),
     context: {
       workspace: context.workspace,
       codebase: context.codebase,
       existingPatterns: context.existingPatterns ?? [],
       constraints: [],
     },
+    description,
+    id: randomUUID(),
+    source: context.source ?? "chat",
+    timestamp: new Date(),
+    userId: context.userId,
   };
 }

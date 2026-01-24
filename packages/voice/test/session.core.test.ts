@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { createVoiceSession, VoiceSessionError } from "../src/session";
+
 import type { PlatformAdapter, VoiceClient } from "../src/types";
+
+import { createVoiceSession, VoiceSessionError } from "../src/session";
 
 function createAdapter(): PlatformAdapter & {
   play: ReturnType<typeof vi.fn>;

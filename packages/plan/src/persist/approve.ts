@@ -1,5 +1,6 @@
-import { planRepo, workflowRepo } from "@alfred/db";
 import type { WorkflowPlan } from "@alfred/db/schema/plan";
+
+import { planRepo, workflowRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 
 /**

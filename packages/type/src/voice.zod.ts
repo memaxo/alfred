@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { uiMessageSchema } from "./stream.zod";
+
 import type { VoiceAssistantRaw } from "./voice";
+
+import { uiMessageSchema } from "./stream.zod";
 
 /**
  * Zod schema for VoiceStreamServerEvent

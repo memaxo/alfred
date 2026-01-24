@@ -1,11 +1,10 @@
-import { realpathSync } from "node:fs";
-import * as path from "node:path";
-import type { Workspace } from "@alfred/agent/environment/types";
-import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
+import { type Workspace } from "@alfred/agent/environment/types";
+import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
-import type {
-  AgentSpec,
-  WavePlan,
+import {
+  type AgentSpec,
+  type WavePlan,
 } from "@alfred/agent/orchestrator/multi/spawn";
 import {
   buildAgentSpec,
@@ -17,7 +16,10 @@ import {
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { rootPlanPath } from "@alfred/agent/orchestrator/plans";
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type/plan";
+import { type WorkflowEvent } from "@alfred/type/plan";
+import { realpathSync } from "node:fs";
+import * as path from "node:path";
+
 import { ContextBuilder } from "../context";
 import { AsyncQueue, pLimit } from "../utils/concurrency";
 import { type AgentOutcome, runAgent } from "./agent";
@@ -35,12 +37,16 @@ import {
 } from "./events.js";
 import { appendDecisionEntry, appendPlanProgressEntry } from "./execplan";
 import { flattenPhases } from "./flatten.js";
-import { formatHandoffPrompt, generateHandoff } from "./handoff.js";
+import {
+  buildStructuredHandoff,
+  formatHandoffPrompt,
+  generateHandoff,
+} from "./handoff.js";
 import { hydrateTrackerContext } from "./hydrate";
 import { suspendWorkflowForClarification } from "./suspend.js";
-import type { AgentHandoff, OrchestratorContext } from "./types";
+import { type AgentHandoff, type OrchestratorContext } from "./types";
 
-export type WavesResult = {
+export interface WavesResult {
   trackerContext: TrackerContext;
   allAgentOutcomes: AgentOutcome[];
   agentFileHints: Map<string, Set<string>>;
@@ -50,7 +56,7 @@ export type WavesResult = {
   interrupted?: boolean;
   escalated?: boolean;
   escalationReason?: string;
-};
+}
 
 export async function* runWaves(
   ctx: OrchestratorContext
@@ -104,13 +110,13 @@ export async function* runWaves(
       } as WorkflowEvent;
     } else if (input.context?.enable === false) {
       context = {
-        requirement: effectiveRequirement,
+        bundle: null,
         receipts: {
           code: [],
           created: new Date(),
           summary: "context_disabled",
         },
-        bundle: null,
+        requirement: effectiveRequirement,
         totalTokens: 0,
       };
       yield {
@@ -120,17 +126,17 @@ export async function* runWaves(
     } else {
       const builder = new ContextBuilder();
       context = await builder.build({
-        requirement: effectiveRequirement,
-        workspace,
-        repoBase: input.repoBase,
-        web: input.context?.web,
-        topK: input.context?.topK,
-        maxTokens: input.context?.maxTokens,
+        authz,
         exts: input.context?.exts,
         ignore: input.context?.ignore,
+        maxTokens: input.context?.maxTokens,
+        repoBase: input.repoBase,
+        requirement: effectiveRequirement,
         seeds: input.context?.seeds,
-        authz,
+        topK: input.context?.topK,
         userId,
+        web: input.context?.web,
+        workspace,
       });
     }
 
@@ -157,25 +163,25 @@ export async function* runWaves(
 
       yield {
         _: "notice",
-        message: "waves_using_phased_plan",
         data: { planId: ctx.plan.id, phaseCount: ctx.plan.phases.length },
+        message: "waves_using_phased_plan",
       } as any;
     } else {
       // Legacy/Generic Path
       subTasks = decomposeTask(input.requirement, {
-        requirement: effectiveRequirement,
         bundle: context.bundle,
+        requirement: effectiveRequirement,
       });
 
       if (subTasks.length === 0) {
         yield { _: "notice", message: "no_subtasks_to_execute" } as any;
         return {
-          trackerContext: createTrackerContext([]),
-          allAgentOutcomes: [],
-          agentFileHints,
-          activeWorkspaces,
           aborted: false,
+          activeWorkspaces,
+          agentFileHints,
+          allAgentOutcomes: [],
           interrupted: false,
+          trackerContext: createTrackerContext([]),
         };
       }
 
@@ -184,9 +190,9 @@ export async function* runWaves(
 
     if (waves.length === 0 && subTasks.length > 0) {
       waves.push({
-        id: "wave_0",
         agents: subTasks.map((t) => t.id),
         dependsOn: [],
+        id: "wave_0",
       });
     }
 
@@ -237,7 +243,7 @@ export async function* runWaves(
         break;
       }
 
-      const phaseId = wave.phaseId;
+      const { phaseId } = wave;
       if (ctx.plan && phaseId && !startedPhases.has(phaseId)) {
         const phase = ctx.plan.phases.find((p) => p.id === phaseId);
         if (phase) {
@@ -261,9 +267,9 @@ export async function* runWaves(
       }
 
       logger.info("multi_agent_wave_start", {
+        agentCount: wave.agents.length,
         runId,
         waveId: wave.id,
-        agentCount: wave.agents.length,
       });
 
       yield {
@@ -278,13 +284,13 @@ export async function* runWaves(
             return null;
           }
           const spec = buildAgentSpec(task, runId, workspace, {
-            auto: input.auto,
-            maxParallel,
             agentType: wave.agentType,
+            agentfsBaseRunId: input.agentfsBaseRunId,
+            auto: input.auto,
+            clarifications: (input as any).clarifications,
             handoff: previousHandoff
               ? formatHandoffPrompt(previousHandoff)
               : undefined,
-            clarifications: (input as any).clarifications,
             linear: input.linear
               ? {
                   issueId: input.linear.issueId,
@@ -293,6 +299,7 @@ export async function* runWaves(
                   authz: input.linear.authz,
                 }
               : undefined,
+            maxParallel,
           });
           agentSubTaskIds.set(spec.agentId, spec.subTaskId);
           return spec;
@@ -300,13 +307,13 @@ export async function* runWaves(
         .filter((spec: AgentSpec | null): spec is AgentSpec => spec !== null);
 
       yield {
-        type: "event",
-        kind: "data-wave-plan",
         data: {
           waveId: wave.id,
           agents: agentSpecs,
           dependsOn: wave.dependsOn,
         },
+        kind: "data-wave-plan",
+        type: "event",
       } as any;
 
       for (const spec of agentSpecs) {
@@ -329,22 +336,22 @@ export async function* runWaves(
         limit(async () => {
           try {
             return await runAgent({
-              spec,
-              phaseId,
-              runId,
-              workspace,
-              workspaceRoot,
-              subTaskById,
-              projectConfig,
               activeWorkspaces,
               agentFileHints,
-              rootExecPlanPath,
-              signal,
               authz,
-              userId,
-              trackerContextRef,
+              phaseId,
+              projectConfig,
               queue,
+              rootExecPlanPath,
+              runId,
               runtimeMcp: ctx.runtimeMcp,
+              signal,
+              spec,
+              subTaskById,
+              trackerContextRef,
+              userId,
+              workspace,
+              workspaceRoot,
             });
           } catch (error) {
             if (isAbortError(error)) {
@@ -354,24 +361,24 @@ export async function* runWaves(
               } as any);
               return {
                 agentId: spec.agentId,
-                phaseId,
-                stuck: false,
-                status: "interrupted",
                 durationSeconds: 0,
-                role: "codex",
                 escalation: undefined,
+                phaseId,
                 result: {
                   summary: "agent interrupted (abort)",
                   artifacts: [],
                   changes: [],
                   notes: [],
                 },
+                role: "codex",
+                status: "interrupted",
+                stuck: false,
               } as AgentOutcome;
             }
             logger.error("agent_unhandled_error", {
-              runId,
               agentId: spec.agentId,
               error: error instanceof Error ? error.message : String(error),
+              runId,
             });
             queue.enqueue({
               _: "notice",
@@ -379,18 +386,18 @@ export async function* runWaves(
             } as any);
             return {
               agentId: spec.agentId,
-              phaseId,
-              stuck: false,
-              status: "failed",
               durationSeconds: 0,
-              role: "codex",
               escalation: undefined,
+              phaseId,
               result: {
                 summary: "agent failed (unhandled error)",
                 artifacts: [],
                 changes: [],
                 notes: [],
               },
+              role: "codex",
+              status: "failed",
+              stuck: false,
             } as AgentOutcome;
           }
         })
@@ -407,24 +414,63 @@ export async function* runWaves(
 
       const agentOutcomes = await allAgentsDone;
 
+      // Build structured handoff for enrichment (non-blocking)
+      const nextWaveIndex = waves.indexOf(wave) + 1;
+      const nextWaveId = waves[nextWaveIndex]?.id ?? "final";
+      buildStructuredHandoff(wave.id, nextWaveId, agentOutcomes, workspace)
+        .then(async (handoff) => {
+          logger.debug("structured_handoff_built", {
+            decisionsCount: handoff.decisions.length,
+            filesCount: handoff.filesModified.length,
+            waveId: wave.id,
+          });
+
+          const agentfsWs = activeWorkspaces.find(isAgentFSWorkspace);
+          if (!agentfsWs) {
+            return;
+          }
+
+          try {
+            const { persistStructuredHandoff } =
+              await import("@alfred/agent/agentfs/enrichment");
+            await persistStructuredHandoff(
+              agentfsWs.getAgent(),
+              wave.id,
+              handoff
+            );
+            logger.debug("structured_handoff_persisted", { waveId: wave.id });
+          } catch (error) {
+            logger.debug("structured_handoff_persist_failed", {
+              waveId: wave.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })
+        .catch((error) => {
+          logger.warn("structured_handoff_build_failed", {
+            waveId: wave.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+
       // Check for clarifications
       for (const outcome of agentOutcomes) {
         const clarification = await detectClarification(outcome, ctx);
         if (clarification) {
           await suspendWorkflowForClarification(runId, clarification);
           yield {
-            type: "event",
-            kind: "clarification-requested",
             data: clarification,
+            kind: "clarification-requested",
+            type: "event",
           } as any;
           return {
-            trackerContext: trackerContextRef.current,
-            allAgentOutcomes,
-            agentFileHints,
-            activeWorkspaces,
             aborted: false,
+            activeWorkspaces,
+            agentFileHints,
+            allAgentOutcomes,
             interrupted: false,
             suspended: true,
+            trackerContext: trackerContextRef.current,
           } as any;
         }
       }
@@ -438,7 +484,7 @@ export async function* runWaves(
           const total = phaseTotalTasks.get(phaseId) ?? 1;
           const next = current + 1;
           phaseProgress.set(phaseId, next);
-          yield makePhaseProgressEvent(phaseId, Math.min(1.0, next / total));
+          yield makePhaseProgressEvent(phaseId, Math.min(1, next / total));
         }
       }
 
@@ -460,23 +506,23 @@ export async function* runWaves(
       } as any;
 
       logger.info("multi_agent_wave_result", {
-        runId,
-        waveId: wave.id,
-        status: anyStuck ? "partial" : "completed",
         agentCount: agentOutcomes.length,
         failedOrStuck: agentOutcomes.filter(
           (o) => o.stuck || o.status === "failed" || o.status === "stuck"
         ).length,
+        runId,
+        status: anyStuck ? "partial" : "completed",
+        waveId: wave.id,
       });
 
       yield {
-        type: "event",
-        kind: "wave-result",
         data: {
           waveId: wave.id,
           status: anyStuck ? "partial" : "completed",
           agents: agentOutcomes,
         },
+        kind: "wave-result",
+        type: "event",
       } as any;
 
       await appendPlanProgressEntry(
@@ -499,7 +545,7 @@ export async function* runWaves(
 
       const waveTotal = agentOutcomes.length;
       const waveFailedOrStuck = agentOutcomes.filter((o) => {
-        const status = o.status;
+        const { status } = o;
         return o.stuck || status === "failed" || status === "stuck";
       }).length;
 
@@ -523,8 +569,8 @@ export async function* runWaves(
           );
 
           yield makePhaseCompleteEvent(phaseId, {
-            status: anyStuck ? "partial" : "completed",
             outcomes: outcomesForPhase,
+            status: anyStuck ? "partial" : "completed",
           });
           completedPhases.add(phaseId);
         }
@@ -541,9 +587,9 @@ export async function* runWaves(
         );
 
         yield {
-          type: "event",
-          kind: "agent-handoff",
           data: previousHandoff,
+          kind: "agent-handoff",
+          type: "event",
         } as any;
       }
 
@@ -554,14 +600,14 @@ export async function* runWaves(
       if (waveFailRate > 0.5 || overallFailRate > 0.4) {
         abortedWave = {
           id: wave.id,
-          waveFailRate,
           overallFailRate,
+          waveFailRate,
         };
         logger.warn("multi_agent_wave_aborted", {
-          runId,
-          waveId: wave.id,
-          waveFailRate,
           overallFailRate,
+          runId,
+          waveFailRate,
+          waveId: wave.id,
         });
         break;
       }
@@ -569,13 +615,13 @@ export async function* runWaves(
 
     if (abortedWave) {
       yield {
-        type: "event",
-        kind: "wave-aborted",
         data: {
           waveId: abortedWave.id,
           waveFailRate: abortedWave.waveFailRate,
           overallFailRate: abortedWave.overallFailRate,
         },
+        kind: "wave-aborted",
+        type: "event",
       } as any;
 
       await appendDecisionEntry(
@@ -595,14 +641,14 @@ export async function* runWaves(
     }
 
     return {
-      trackerContext: trackerContextRef.current,
-      allAgentOutcomes,
-      agentFileHints,
-      activeWorkspaces,
       aborted: !!abortedWave,
-      interrupted: hasInterruptedAgents,
+      activeWorkspaces,
+      agentFileHints,
+      allAgentOutcomes,
       escalated: !!escalationTrigger,
       escalationReason: escalationTrigger?.reason,
+      interrupted: hasInterruptedAgents,
+      trackerContext: trackerContextRef.current,
     };
   } catch (error) {
     // If waves throw, merge/review will never run, so we must ensure workspaces

@@ -1,5 +1,7 @@
-import { deltaRepo } from "@alfred/db";
 import type { PipelineEvent } from "@alfred/pipeline";
+
+import { deltaRepo } from "@alfred/db";
+
 import { publishDelta } from "./notify";
 
 type EnsureRunDeltaArgs = {

@@ -1,12 +1,14 @@
+import type { SchemaContext, UIComponent } from "@alfred/type/genui";
+import type { ModelRole } from "@alfred/type/model";
+import type { ModelMessage } from "ai";
+
 import { logger } from "@alfred/logger";
 import {
   genuiSchemaGenerationDurationSeconds,
   genuiSchemaGenerationTotal,
 } from "@alfred/metrics/genui";
-import type { SchemaContext, UIComponent } from "@alfred/type/genui";
 import { uiComponentSchema } from "@alfred/type/genui.zod";
-import type { ModelRole } from "@alfred/type/model";
-import type { ModelMessage } from "ai";
+
 import { DefaultAIAdapter } from "./aigeneration";
 
 export type SchemaMeta = {

@@ -5,6 +5,8 @@
  * @see .ruler/55-llm-first-classification.md
  */
 
+import type { z } from "zod";
+
 import { logger } from "@alfred/logger";
 import {
   classificationBatchSize,
@@ -14,7 +16,6 @@ import {
   classificationTotal,
 } from "@alfred/metrics/classification";
 import { generateObject, type LanguageModel } from "ai";
-import type { z } from "zod";
 
 /**
  * Whether to use offline heuristic fallbacks instead of LLM classification.

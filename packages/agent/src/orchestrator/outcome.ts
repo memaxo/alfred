@@ -5,17 +5,29 @@
  * Consolidates outcome handling from runtime and pipeline.
  */
 
-import type { AgentEscalationReason } from "./tool/shared/context.js";
+import {
+  type FailureContext,
+  type LoopDetection,
+  type ReviewFailure,
+} from "@alfred/type";
+
+import {
+  buildFailureContext,
+  persistFailureContext,
+  type FailureContextInput,
+} from "../agentfs/enrichment.js";
+import { type AgentFSInterface } from "../agentfs/types.js";
+import { type AgentEscalationReason } from "./tool/shared/context.js";
 
 /**
  * Status values for agent execution outcomes.
  */
 export const AGENT_STATUS = {
-  SUCCESS: "success",
-  FAILURE: "failure",
   ESCALATED: "escalated",
-  TIMEOUT: "timeout",
+  FAILURE: "failure",
   STUCK: "stuck",
+  SUCCESS: "success",
+  TIMEOUT: "timeout",
 } as const;
 
 export type AgentStatus = (typeof AGENT_STATUS)[keyof typeof AGENT_STATUS];
@@ -23,7 +35,7 @@ export type AgentStatus = (typeof AGENT_STATUS)[keyof typeof AGENT_STATUS];
 /**
  * Detailed result from agent execution.
  */
-export type AgentResult = {
+export interface AgentResult {
   /** Human-readable summary of what the agent did */
   summary: string;
   /** Paths to artifacts created by the agent */
@@ -34,13 +46,13 @@ export type AgentResult = {
   notes: string[];
   /** Git branch if workspace was used */
   branch?: string;
-};
+}
 
 /**
  * Full agent execution outcome.
  * This is the canonical type used by runtime/orchestrator.
  */
-export type AgentOutcome = {
+export interface AgentOutcome {
   /** Unique identifier for this agent */
   agentId: string;
   /** Phase/stage ID during which agent executed */
@@ -64,28 +76,30 @@ export type AgentOutcome = {
   };
   /** Detailed execution result */
   result?: AgentResult;
-};
+  /** Failure context for non-success outcomes (enrichment system) */
+  failureContext?: FailureContext;
+}
 
 /**
  * Lightweight outcome for pipeline events.
  * Used in PipelineEvent["agent:complete"].
  */
-export type AgentOutcomeEvent = {
+export interface AgentOutcomeEvent {
   status: AgentStatus;
   durationMs: number;
   handoff?: string;
   error?: string;
-};
+}
 
 /**
  * Convert full AgentOutcome to lightweight event outcome.
  */
 export function toOutcomeEvent(outcome: AgentOutcome): AgentOutcomeEvent {
   return {
-    status: outcome.status,
     durationMs: outcome.durationSeconds * 1000,
-    handoff: outcome.result?.branch,
     error: outcome.escalation ?? (outcome.stuck ? "Agent stuck" : undefined),
+    handoff: outcome.result?.branch,
+    status: outcome.status,
   };
 }
 
@@ -99,17 +113,17 @@ export function createDefaultOutcome(
 ): AgentOutcome {
   return {
     agentId,
-    phaseId,
-    stuck: false,
-    status: AGENT_STATUS.SUCCESS,
     durationSeconds: 0,
-    role,
+    phaseId,
     result: {
       summary: "",
       artifacts: [],
       changes: [],
       notes: [],
     },
+    role,
+    status: AGENT_STATUS.SUCCESS,
+    stuck: false,
   };
 }
 
@@ -165,6 +179,147 @@ export function determineStatus(
   return AGENT_STATUS.FAILURE;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Failure Context Integration (Enrichment System)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Input for finalizing an outcome with failure context.
+ */
+export interface FinalizeOutcomeInput {
+  /** Loop detection result if available */
+  loopResult?: { loop: boolean; reason?: string; layer?: number };
+  /** Review failures (lint, test, typecheck) */
+  reviewFailures?: Array<{ check: string; evidence: string; file?: string }>;
+}
+
+/**
+ * Extract task ID from agent ID (format: runId:taskId).
+ */
+function extractTaskId(agentId: string): string {
+  const parts = agentId.split(":");
+  return parts.length > 1 ? (parts.at(-1) ?? agentId) : agentId;
+}
+
+/**
+ * Extract run ID from agent ID (format: runId:taskId).
+ */
+function extractRunId(agentId: string): string {
+  const parts = agentId.split(":");
+  return parts[0] ?? "";
+}
+
+/**
+ * Map AgentStatus to FailureContext status.
+ */
+function mapToFailureStatus(
+  status: AgentStatus
+): FailureContext["status"] | null {
+  switch (status) {
+    case AGENT_STATUS.FAILURE: {
+      return "failure";
+    }
+    case AGENT_STATUS.STUCK: {
+      return "stuck";
+    }
+    case AGENT_STATUS.ESCALATED: {
+      return "escalated";
+    }
+    case AGENT_STATUS.TIMEOUT: {
+      return "timeout";
+    }
+    default: {
+      return null;
+    }
+  }
+}
+
+/**
+ * Finalize an agent outcome, building and persisting failure context if needed.
+ *
+ * Call this after agent execution completes to:
+ * 1. Build aggregated failure context from all signals
+ * 2. Persist to AgentFS KV for downstream enrichment
+ * 3. Attach to outcome for immediate access
+ */
+export async function finalizeOutcome(
+  outcome: AgentOutcome,
+  agent: AgentFSInterface,
+  input?: FinalizeOutcomeInput
+): Promise<AgentOutcome> {
+  const failureStatus = mapToFailureStatus(outcome.status);
+
+  // Only build failure context for non-success outcomes
+  if (!failureStatus) {
+    return outcome;
+  }
+
+  const taskId = extractTaskId(outcome.agentId);
+  const runId = extractRunId(outcome.agentId);
+
+  // Build loop detections from input
+  const loopDetections: LoopDetection[] = [];
+  if (input?.loopResult?.loop && input.loopResult.reason) {
+    loopDetections.push({
+      layer: input.loopResult.layer ?? 0,
+      reason: input.loopResult.reason,
+      ts: Date.now(),
+    });
+  }
+
+  // Build review failures from input
+  const reviewFailures: ReviewFailure[] = (input?.reviewFailures ?? []).map(
+    (f) => ({
+      check: f.check,
+      evidence: f.evidence,
+      file: f.file,
+    })
+  );
+
+  // Build escalations from outcome
+  const escalations: FailureContext["escalations"] = [];
+  if (outcome.escalationData) {
+    escalations.push({
+      details: outcome.escalationData.details,
+      reason: outcome.escalationData.reason,
+      severity: outcome.escalationData.severity,
+      ts: Date.now(),
+    });
+  } else if (outcome.escalation) {
+    escalations.push({
+      details: outcome.escalation,
+      reason: "unknown",
+      severity: "warning",
+      ts: Date.now(),
+    });
+  }
+
+  const failureCtxInput: FailureContextInput = {
+    durationMs: outcome.durationSeconds * 1000,
+    escalations,
+    loopDetections,
+    reviewFailures,
+    stuckReason: outcome.stuck ? "Loop or stall detected" : undefined,
+  };
+
+  const failureContext = await buildFailureContext(
+    agent,
+    taskId,
+    runId,
+    failureStatus,
+    failureCtxInput
+  );
+
+  // Persist for downstream enrichment
+  await persistFailureContext(agent, failureContext);
+
+  // Return outcome with failure context attached
+  return {
+    ...outcome,
+    failureContext,
+  };
+}
+
 /**
  * Merge multiple agent outcomes into a summary.
  */
@@ -189,12 +344,12 @@ export function summarizeOutcomes(outcomes: AgentOutcome[]): {
   const totalDuration = outcomes.reduce((sum, o) => sum + o.durationSeconds, 0);
 
   return {
-    total: outcomes.length,
-    succeeded,
-    failed,
-    stuck,
-    escalated,
     avgDurationSeconds:
       outcomes.length > 0 ? totalDuration / outcomes.length : 0,
+    escalated,
+    failed,
+    stuck,
+    succeeded,
+    total: outcomes.length,
   };
 }

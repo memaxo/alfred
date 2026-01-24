@@ -1,6 +1,6 @@
-import { Buffer } from "node:buffer";
 import { logger } from "@alfred/logger";
 import { Decoder, Encoder } from "@evan/opus";
+import { Buffer } from "node:buffer";
 import { RTCPeerConnection, RtpHeader, RtpPacket } from "werift";
 
 type SpikeResult = {

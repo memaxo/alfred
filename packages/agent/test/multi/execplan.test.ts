@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+
 import {
   appendDecisionLogEntry,
   appendSurpriseEntry,
@@ -8,6 +8,7 @@ import {
   interpretExecPlan,
   planProgressUpdate,
 } from "@alfred/agent/orchestrator/multi/execplan";
+import { describe, expect, it } from "bun:test";
 
 describe("execplan.interpretExecPlan", () => {
   it("parses a complete plan", () => {

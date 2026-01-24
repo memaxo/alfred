@@ -1,11 +1,13 @@
 import { describe, expect, it } from "bun:test";
+
+import type { Knowledge } from "../src/hypergraph";
+
 import {
   calculateEffectiveHalfLife,
   decayConfidence,
   decayConfidenceAdaptive,
   getAccessMultiplier,
 } from "../src/compression";
-import type { Knowledge } from "../src/hypergraph";
 
 // Helper to create a fact with specific confidence
 function createFact(confidence: number): Knowledge {

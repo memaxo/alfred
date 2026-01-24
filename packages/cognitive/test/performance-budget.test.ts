@@ -1,5 +1,6 @@
-import { describe, expect, it } from "bun:test";
 import { benchmarkOperation } from "@alfred/test-kit";
+import { describe, expect, it } from "bun:test";
+
 import {
   calculateError,
   idle,

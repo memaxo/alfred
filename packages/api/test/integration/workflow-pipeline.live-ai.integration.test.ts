@@ -8,8 +8,9 @@
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { beforeEach, describe, expect, it } from "bun:test";
 import type { PipelineEvent } from "@alfred/pipeline";
+
+import { beforeEach, describe, expect, it } from "bun:test";
 
 let WorkflowTestHarness: typeof import("../utils/workflow-server").WorkflowTestHarness;
 let toObservable: typeof import("../utils/stream").toObservable;

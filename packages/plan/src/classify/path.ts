@@ -6,6 +6,7 @@
  */
 
 import type { LanguageModel } from "ai";
+
 import { z } from "zod";
 
 import { classifyBatch, OFFLINE_MODE } from "./index.js";

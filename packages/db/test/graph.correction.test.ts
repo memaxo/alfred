@@ -1,5 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";

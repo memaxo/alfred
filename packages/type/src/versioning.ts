@@ -1,9 +1,9 @@
-import type { EventEnvelope } from "./envelope";
+import { type EventEnvelope } from "./envelope";
 
 /**
  * A migration function transforms an event from version V to V+1.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Migrations operate on arbitrary shapes
+// oxlint-disable noExplicitAny: Migrations operate on arbitrary shapes
 export type EventMigration = (event: any) => any;
 
 /**
@@ -22,7 +22,7 @@ export const LATEST_EVENT_VERSION = 1;
 /**
  * Migrates an event envelope to the latest version.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Generic event envelope migration
+// oxlint-disable noExplicitAny: Generic event envelope migration
 export function migrateEvent(envelope: EventEnvelope<any>): EventEnvelope<any> {
   let current = envelope;
 
@@ -40,9 +40,9 @@ export function migrateEvent(envelope: EventEnvelope<any>): EventEnvelope<any> {
 /**
  * Deserializes a JSON string into a migrated EventEnvelope.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Generic event envelope deserialization
+// oxlint-disable noExplicitAny: Generic event envelope deserialization
 export function deserializeWithMigration(json: string): EventEnvelope<any> {
-  // biome-ignore lint/suspicious/noExplicitAny: Generic event envelope deserialization
+  // oxlint-disable noExplicitAny: Generic event envelope deserialization
   const envelope = JSON.parse(json) as EventEnvelope<any>;
   return migrateEvent(envelope);
 }

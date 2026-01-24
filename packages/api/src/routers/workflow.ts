@@ -2,6 +2,7 @@ import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { workflowCompilationRouter } from "./workflow/compilation";
@@ -108,119 +109,6 @@ const workflowPhaseRouter = router({
 
 export const workflowRouter = router({
   // Phase-level APIs for staged execution
-  phase: workflowPhaseRouter,
-
-  compilation: workflowCompilationRouter,
-
-  start: workflowStartProcedure,
-
-  streamPipeline: workflowStreamPipelineProcedure,
-
-  resume: authedProcedure
-    .use(rateLimit)
-    .input(
-      z.object({
-        runId: z.string().min(1),
-        clarificationId: z.string().uuid().optional(), // New: resume from clarification
-        response: z.string().optional(), // New: response to clarification
-        event: z
-          .enum([
-            "deploy-authz",
-            "linear-authz",
-            "bio-authz",
-            "mfa-authz",
-            "human-authz",
-          ])
-          .optional(),
-        authz: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const session = ctx.session;
-      if (!session?.user?.id) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
-      // Handle clarification resume
-      if (input.clarificationId && input.response) {
-        try {
-          const { resumeWorkflowAfterClarification } = await import(
-            "@alfred/runtime/orchestrator/resume"
-          );
-          await resumeWorkflowAfterClarification(
-            input.runId,
-            input.clarificationId,
-            input.response
-          );
-          return { ok: true };
-        } catch (error) {
-          throw toTRPCError(error, "workflow_resume_failed");
-        }
-      }
-
-      // Handle existing obligation resume
-      if (input.event && input.authz) {
-        try {
-          const { runRegistry } = await import(
-            "@alfred/agent/workflow/registry"
-          );
-          const delivered = await runRegistry.dispatchResume(input.runId, {
-            event: input.event,
-            authz: input.authz,
-          });
-
-          if (!delivered) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "run_not_found",
-            });
-          }
-        } catch (error) {
-          const { StreamNotAttachedError } = await import(
-            "@alfred/agent/workflow/session-recovery"
-          );
-          if (error instanceof StreamNotAttachedError) {
-            throw new TRPCError({
-              code: "PRECONDITION_FAILED",
-              message: "stream_not_attached",
-            });
-          }
-          throw toTRPCError(error, "workflow_resume_failed");
-        }
-        {
-          const run = await workflowRepo.getRun(input.runId);
-          const { recordAudit } = await import("@alfred/agent/utils/audit");
-          await recordAudit({
-            userId: session.user.id,
-            projectId: run?.projectId ?? undefined,
-            action: "workflow.resume",
-            resource: { kind: "workflow", id: input.runId },
-            decision: "allow",
-            context: { event: input.event },
-          });
-        }
-        return { ok: true };
-      }
-
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "invalid_resume_payload",
-      });
-    }),
-
-  get: authedProcedure
-    .input(z.object({ runId: z.string().min(1) }))
-    .query(async ({ input }) => {
-      const run = await workflowRepo.getRun(input.runId);
-      if (!run) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
-      }
-      return run;
-    }),
-
   cancel: authedProcedure
     .input(z.object({ runId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
@@ -258,13 +146,125 @@ export const workflowRouter = router({
       return { cancelled: true };
     }),
 
+  compilation: workflowCompilationRouter,
+
   events: workflowEventsProcedure,
 
-  reasoning: workflowReasoningProcedure,
+  get: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const run = await workflowRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+      }
+      return run;
+    }),
 
   listRuns: workflowListRunsProcedure,
 
+  phase: workflowPhaseRouter,
+
+  reasoning: workflowReasoningProcedure,
+
   replay: workflowReplayProcedure,
+
+  resume: authedProcedure
+    .use(rateLimit)
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        clarificationId: z.string().uuid().optional(), // New: resume from clarification
+        response: z.string().optional(), // New: response to clarification
+        event: z
+          .enum([
+            "deploy-authz",
+            "linear-authz",
+            "bio-authz",
+            "mfa-authz",
+            "human-authz",
+          ])
+          .optional(),
+        authz: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      // Handle clarification resume
+      if (input.clarificationId && input.response) {
+        try {
+          const { resumeWorkflowAfterClarification } =
+            await import("@alfred/runtime/orchestrator/resume");
+          await resumeWorkflowAfterClarification(
+            input.runId,
+            input.clarificationId,
+            input.response
+          );
+          return { ok: true };
+        } catch (error) {
+          throw toTRPCError(error, "workflow_resume_failed");
+        }
+      }
+
+      // Handle existing obligation resume
+      if (input.event && input.authz) {
+        try {
+          const { runRegistry } =
+            await import("@alfred/agent/workflow/registry");
+          const delivered = await runRegistry.dispatchResume(input.runId, {
+            event: input.event,
+            authz: input.authz,
+          });
+
+          if (!delivered) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "run_not_found",
+            });
+          }
+        } catch (error) {
+          const { StreamNotAttachedError } =
+            await import("@alfred/agent/workflow/session-recovery");
+          if (error instanceof StreamNotAttachedError) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "stream_not_attached",
+            });
+          }
+          throw toTRPCError(error, "workflow_resume_failed");
+        }
+        {
+          const run = await workflowRepo.getRun(input.runId);
+          const { recordAudit } = await import("@alfred/agent/utils/audit");
+          await recordAudit({
+            userId: session.user.id,
+            projectId: run?.projectId ?? undefined,
+            action: "workflow.resume",
+            resource: { kind: "workflow", id: input.runId },
+            decision: "allow",
+            context: { event: input.event },
+          });
+        }
+        return { ok: true };
+      }
+
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "invalid_resume_payload",
+      });
+    }),
+
+  resumePipeline: workflowResumePipelineProcedure,
+
+  start: workflowStartProcedure,
+
+  streamPipeline: workflowStreamPipelineProcedure,
 
   suspend: authedProcedure
     .input(z.object({ runId: z.string().min(1) }))
@@ -279,6 +279,4 @@ export const workflowRouter = router({
         message: "run_not_found_or_not_suspendable",
       });
     }),
-
-  resumePipeline: workflowResumePipelineProcedure,
 });

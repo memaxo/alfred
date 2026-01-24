@@ -1,8 +1,9 @@
-import { randomUUID } from "node:crypto";
+import type { Workspace } from "@alfred/agent/environment/types";
+
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import type { Workspace } from "@alfred/agent/environment/types";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { randomUUID } from "node:crypto";
 
 /**
  * Workspace kind for Codex live testing.

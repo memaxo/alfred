@@ -4,6 +4,9 @@
  */
 
 import { join } from "node:path";
+
+import type { EmbedConfig } from "./types";
+
 import { getEmbedConfig } from "./config";
 import {
   embedRequestsDropped,
@@ -15,7 +18,6 @@ import {
 } from "./metrics";
 import { EmbedProcess } from "./process";
 import { EmbedQueue, type QueueConfig, type QueueStats } from "./queue";
-import type { EmbedConfig } from "./types";
 
 export type PoolConfig = EmbedConfig & {
   /** Enable request queuing and batching (default: true) */

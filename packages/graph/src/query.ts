@@ -1,9 +1,9 @@
 import * as graphRepo from "@alfred/db/repo/graph";
-import type { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import type {
-  Hypergraph,
-  Knowledge,
-  NodeId,
+import { type memoryEdges, type memoryNodes } from "@alfred/db/schema/graph";
+import {
+  type Hypergraph,
+  type Knowledge,
+  type NodeId,
 } from "@alfred/knowledge/hypergraph";
 import {
   execute as executeDatalog,
@@ -11,43 +11,48 @@ import {
   parse as parseQuery,
 } from "@alfred/knowledge/query";
 import { embed as ragEmbed, retrieve as ragRetrieve } from "@alfred/rag";
-import type { UnifiedEdge, UnifiedNode, UnifiedNodeKind } from "./unified.js";
+
+import {
+  type UnifiedEdge,
+  type UnifiedNode,
+  type UnifiedNodeKind,
+} from "./unified.js";
 
 type DbNode = typeof memoryNodes.$inferSelect;
 type DbEdge = typeof memoryEdges.$inferSelect;
 
 export type QueryKind = "traverse" | "path" | "datalog" | "semantic";
 
-export type TraverseQuery = {
+export interface TraverseQuery {
   kind: "traverse";
   nodeId: string;
   direction?: "in" | "out" | "both";
   resource?: string;
   edgeKind?: string;
   limit?: number;
-};
+}
 
-export type PathQuery = {
+export interface PathQuery {
   kind: "path";
   fromId: string;
   toId: string;
   maxDepth?: number;
   resource?: string;
-};
+}
 
-export type DatalogQuery = {
+export interface DatalogQuery {
   kind: "datalog";
   query: string;
   resource?: string;
-};
+}
 
-export type SemanticQuery = {
+export interface SemanticQuery {
   kind: "semantic";
   text: string;
   topK?: number;
   preferRag?: boolean;
   resource?: string;
-};
+}
 
 export type UnifiedQuery =
   | TraverseQuery
@@ -55,26 +60,31 @@ export type UnifiedQuery =
   | DatalogQuery
   | SemanticQuery;
 
-export type UnifiedQueryResult = {
+export interface UnifiedQueryResult {
   nodes: UnifiedNode[];
   edges?: UnifiedEdge[];
-};
+}
 
 export function runQuery(
   query: UnifiedQuery,
   context: { graph?: Hypergraph; resource?: string }
 ): Promise<UnifiedQueryResult> {
   switch (query.kind) {
-    case "traverse":
+    case "traverse": {
       return runTraverse(query, context.resource);
-    case "path":
+    }
+    case "path": {
       return runPath(query, context.resource);
-    case "datalog":
+    }
+    case "datalog": {
       return Promise.resolve(runDatalog(query, context.graph));
-    case "semantic":
+    }
+    case "semantic": {
       return runSemantic(query, context);
-    default:
+    }
+    default: {
       return Promise.resolve({ nodes: [], edges: [] });
+    }
   }
 }
 
@@ -92,12 +102,12 @@ async function runTraverse(
   for (const neighbor of neighbors) {
     nodeIds.add(neighbor.otherNodeId);
   }
-  const subgraph = await graphRepo.getSubgraph(Array.from(nodeIds), resource);
+  const subgraph = await graphRepo.getSubgraph([...nodeIds], resource);
   const nodeMap = mapNodes(subgraph.nodes);
   const edges = neighbors.map(({ edge }) => mapEdgeRow(edge));
   return {
-    nodes: Array.from(nodeMap.values()),
     edges,
+    nodes: Array.from(nodeMap.values()),
   };
 }
 
@@ -112,7 +122,7 @@ async function runPath(
     resource
   );
   if (path.length === 0) {
-    return { nodes: [], edges: [] };
+    return { edges: [], nodes: [] };
   }
   const nodeIds = path.map((entry) => entry.nodeId);
   const requiredEdgeIds = path.at(-1)?.via ?? [];
@@ -122,8 +132,8 @@ async function runPath(
     .filter((edge) => requiredEdgeIds.includes(edge.id))
     .map((edge) => mapEdgeRow(edge));
   return {
-    nodes: Array.from(nodeMap.values()),
     edges,
+    nodes: Array.from(nodeMap.values()),
   };
 }
 
@@ -148,8 +158,8 @@ function runDatalog(
     }
   }
   return {
-    nodes: Array.from(nodes.values()),
     edges: Array.from(edges.values()),
+    nodes: Array.from(nodes.values()),
   };
 }
 
@@ -216,7 +226,7 @@ function mapNodes(rows: DbNode[]): Map<string, UnifiedNode> {
 
 function mapNodeRow(row: DbNode): UnifiedNode {
   const kind = (row.kind as UnifiedNodeKind) ?? "other";
-  // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+  // oxlint-disable noExplicitAny: Internal PG driver row structure
   const props: any = row.properties ?? undefined;
   return {
     id: { dbId: row.id },
@@ -229,11 +239,11 @@ function mapNodeRow(row: DbNode): UnifiedNode {
 function mapEdgeRow(row: DbEdge): UnifiedEdge {
   return {
     id: row.id,
+    kind: row.kind,
+    properties: row.metadata ?? undefined,
     source: { dbId: row.fromId },
     target: { dbId: row.toId },
-    kind: row.kind,
     weight: row.weight ?? undefined,
-    properties: row.metadata ?? undefined,
   };
 }
 
@@ -247,9 +257,9 @@ function appendKnowledgeEntry(
   if (knowledge._ === "relation") {
     const edge: UnifiedEdge = {
       id,
+      kind: knowledge.kind,
       source: { hgHash: knowledge.from as unknown as string },
       target: { hgHash: knowledge.to as unknown as string },
-      kind: knowledge.kind,
       weight: knowledge.weight,
     };
     edgeMap.set(id, edge);
@@ -274,14 +284,18 @@ function mapKnowledgeNode(id: string, knowledge: Knowledge): UnifiedNode {
 
 function getKnowledgeLabel(knowledge: Knowledge): string {
   switch (knowledge._) {
-    case "fact":
+    case "fact": {
       return knowledge.content;
-    case "insight":
+    }
+    case "insight": {
       return knowledge.conclusion;
-    case "pattern":
+    }
+    case "pattern": {
       return knowledge.rule;
-    default:
+    }
+    default: {
       return knowledge._;
+    }
   }
 }
 
@@ -289,23 +303,27 @@ function buildKnowledgeProperties(
   knowledge: Knowledge
 ): Record<string, unknown> | undefined {
   switch (knowledge._) {
-    case "fact":
+    case "fact": {
       return {
         confidence: knowledge.confidence,
         source: knowledge.source,
         ts: knowledge.ts,
       };
-    case "insight":
+    }
+    case "insight": {
       return {
         derived: knowledge.derived,
         confidence: knowledge.confidence,
       };
-    case "pattern":
+    }
+    case "pattern": {
       return {
         examples: knowledge.examples,
         accuracy: knowledge.accuracy,
       };
-    default:
+    }
+    default: {
       return;
+    }
   }
 }

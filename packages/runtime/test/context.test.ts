@@ -5,6 +5,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
+
 import { ContextBuilder } from "../src/context";
 
 describe("ContextBuilder", () => {

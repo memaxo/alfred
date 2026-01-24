@@ -1,5 +1,15 @@
 import nlp from "compromise";
+
 import type { Knowledge } from "../hypergraph.js";
+import type {
+  EntityKind,
+  EntityMention,
+  ExtractedFact,
+  ExtractionResult,
+  SentenceJson,
+  TextView,
+} from "./types.js";
+
 import { fact, knowledgeHash, nodeFromHash, relation } from "../hypergraph.js";
 import { applyTopicBoost, detectTopics } from "../lexicon/domains.js";
 import { cacheExtraction, getCachedExtraction } from "./cache.js";
@@ -12,14 +22,6 @@ import {
 } from "./entities.js";
 import { extractRelations } from "./relations.js";
 import { extractTemporal } from "./temporal.js";
-import type {
-  EntityKind,
-  EntityMention,
-  ExtractedFact,
-  ExtractionResult,
-  SentenceJson,
-  TextView,
-} from "./types.js";
 import { asTextView } from "./types.js";
 
 /**

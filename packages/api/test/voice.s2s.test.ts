@@ -1,3 +1,4 @@
+import { parsePersonaTelemetry } from "@alfred/persona";
 import {
   afterAll,
   afterEach,
@@ -9,7 +10,7 @@ import {
   vi,
 } from "bun:test";
 import { Buffer } from "node:buffer";
-import { parsePersonaTelemetry } from "@alfred/persona";
+
 import {
   mockPolicyAudit,
   resetAllMocks,

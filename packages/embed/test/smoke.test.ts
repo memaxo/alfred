@@ -4,6 +4,7 @@
  */
 
 import { afterAll, describe, expect, test } from "bun:test";
+
 import { EMBEDDING_DIM, embed, shutdown } from "../src/index";
 
 const RUN_EMBED_MODEL_TESTS = process.env.RUN_EMBED_MODEL_TESTS === "1";

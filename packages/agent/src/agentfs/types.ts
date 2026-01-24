@@ -5,11 +5,13 @@
  * adapted for ALFRED's conventions.
  */
 
+type BufferEncoding = NodeJS.BufferEncoding;
+
 /**
  * Tool call record from AgentFS audit trail.
  * Corresponds to the `tool_calls` table in AgentFS schema.
  */
-export type AgentFSToolCall = {
+export interface AgentFSToolCall {
   id: number;
   name: string;
   parameters?: unknown;
@@ -18,35 +20,35 @@ export type AgentFSToolCall = {
   started_at: number; // Unix timestamp (seconds)
   completed_at: number; // Unix timestamp (seconds)
   duration_ms: number;
-};
+}
 
 /**
  * Aggregated tool call statistics.
  */
-export type AgentFSToolCallStats = {
+export interface AgentFSToolCallStats {
   name: string;
   total_calls: number;
   successful: number;
   failed: number;
   avg_duration_ms: number;
-};
+}
 
 /**
  * Key-value entry from AgentFS kv_store.
  * Note: The SDK returns a simpler format, timestamps may be optional.
  */
-export type AgentFSKVEntry = {
+export interface AgentFSKVEntry {
   key: string;
   value: unknown; // JSON-deserialized
   created_at?: number; // Unix timestamp (optional in some SDK versions)
   updated_at?: number; // Unix timestamp (optional in some SDK versions)
-};
+}
 
 /**
  * File stat information from AgentFS virtual filesystem.
  * Mirrors POSIX stat structure.
  */
-export type AgentFSStats = {
+export interface AgentFSStats {
   ino: number;
   mode: number;
   nlink: number;
@@ -59,46 +61,52 @@ export type AgentFSStats = {
   isFile(): boolean;
   isDirectory(): boolean;
   isSymbolicLink(): boolean;
-};
+}
 
 /**
  * Directory entry from AgentFS virtual filesystem.
  */
-export type AgentFSDirEntry = {
+export interface AgentFSDirEntry {
   name: string;
   ino: number;
   parentIno: number;
-};
+}
 
 /**
  * AgentFS workspace configuration.
  */
-export type AgentFSWorkspaceConfig = {
+export interface AgentFSWorkspaceConfig {
   /** Enable overlay mode over base directory (copy-on-write) */
   overlay?: boolean;
   /** Custom database path (default: .agentfs/{runId}/agentfs.db) */
   dbPath?: string;
   /** Chunk size for file storage (default: 4096) */
   chunkSize?: number;
-};
+}
 
 /**
  * AgentFS initialization options.
  */
-export type AgentFSInitOptions = {
+export interface AgentFSInitOptions {
   /** Agent identifier */
   id: string;
   /** Database file path */
   path?: string;
   /** Base directory for overlay mode */
   base?: string;
-};
+}
 
 /**
  * AgentFS SDK interface (subset used by ALFRED).
  * Full interface available in agentfs-sdk package.
  */
-export type AgentFSInterface = {
+export type AgentFSReadFileOptions =
+  | BufferEncoding
+  | {
+      encoding?: BufferEncoding;
+    };
+
+export interface AgentFSInterface {
   /** Key-value store operations */
   kv: {
     set(key: string, value: unknown): Promise<void>;
@@ -110,7 +118,10 @@ export type AgentFSInterface = {
   /** Filesystem operations */
   fs: {
     writeFile(path: string, content: string | Buffer): Promise<void>;
-    readFile(path: string): Promise<string>;
+    readFile(
+      path: string,
+      options?: AgentFSReadFileOptions
+    ): Promise<string | Buffer>;
     readdir(path: string): Promise<string[]>;
     deleteFile(path: string): Promise<void>;
     stat(path: string): Promise<AgentFSStats>;
@@ -140,17 +151,17 @@ export type AgentFSInterface = {
 
   /** Diff operations */
   diff(): Promise<AgentFSChange[]>;
-};
+}
 
 /**
  * Filesystem change record from AgentFS.
  */
-export type AgentFSChange = {
+export interface AgentFSChange {
   path: string;
   type: "created" | "modified" | "deleted";
   size?: number;
   mtime?: number;
-};
+}
 
 /**
  * Environment kind for codex run recording.
@@ -161,7 +172,7 @@ export type AgentFSEnvironmentKind = "agentfs";
 /**
  * AgentFS run metadata for codex recording.
  */
-export type AgentFSRunMetadata = {
+export interface AgentFSRunMetadata {
   environmentKind: AgentFSEnvironmentKind;
   agentfsDbPath?: string;
   agentfsRunId?: string;
@@ -169,4 +180,4 @@ export type AgentFSRunMetadata = {
   poofUpperDir?: string;
   /** @deprecated Removed in agentfs migration */
   poofProfile?: string;
-};
+}

@@ -16,7 +16,8 @@ import {
 } from "@alfred/type/preference";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import type { Context } from "../context";
+
+import { type Context } from "../context";
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
@@ -27,8 +28,8 @@ function mapPreferenceResource(
 ) {
   const userId = ctx.session?.user?.id ?? "anonymous";
   return {
-    kind: "preference" as const,
     id: userId,
+    kind: "preference" as const,
   };
 }
 
@@ -118,9 +119,8 @@ async function invalidateUserPreferenceCache(
   userId: string,
   projectId?: string
 ): Promise<void> {
-  const { invalidatePreferenceCache } = await import(
-    "@alfred/agent/preference/loader"
-  );
+  const { invalidatePreferenceCache } =
+    await import("@alfred/agent/preference/loader");
   if (projectId) {
     await invalidatePreferenceCache(userId, projectId);
     return;
@@ -132,7 +132,7 @@ export const preferenceRouter = router({
   list: authedProcedure
     .input(preferenceListSchema.optional())
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -158,7 +158,7 @@ export const preferenceRouter = router({
     )
     .input(preferenceSetSchema)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -175,7 +175,7 @@ export const preferenceRouter = router({
             session.user.id,
             input.key,
             value,
-            input.confidence ?? 1.0,
+            input.confidence ?? 1,
             input.source ?? "user",
             input.projectId
           )
@@ -183,7 +183,7 @@ export const preferenceRouter = router({
             session.user.id,
             input.key,
             value,
-            input.confidence ?? 1.0,
+            input.confidence ?? 1,
             input.source ?? "user"
           );
 
@@ -201,7 +201,7 @@ export const preferenceRouter = router({
     )
     .input(preferenceDeleteSchema)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -238,11 +238,8 @@ export const preferenceRouter = router({
     )
     .input(
       z.object({
-        projectId: z.string().uuid().optional(),
-        messageId: z.string().min(1),
         conversationId: z.string().min(1).optional(),
-        rating: z.number().int().min(1).max(5).optional(),
-        tags: z.array(z.string().min(1)).optional(),
+        messageId: z.string().min(1),
         preferenceUpdates: z
           .record(z.string(), z.unknown())
           .refine(
@@ -271,10 +268,13 @@ export const preferenceRouter = router({
               }
             }
           }),
+        projectId: z.string().uuid().optional(),
+        rating: z.number().int().min(1).max(5).optional(),
+        tags: z.array(z.string().min(1)).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -285,8 +285,8 @@ export const preferenceRouter = router({
       ensureObligations(ctx);
 
       const ownedMessage = await ensureMessageOwnership({
-        userId: session.user.id,
         messageId: input.messageId,
+        userId: session.user.id,
       });
 
       let updated = 0;
@@ -354,14 +354,14 @@ export const preferenceRouter = router({
     )
     .input(
       z.object({
-        projectId: z.string().uuid().optional(),
-        originalMessageId: z.string().min(1),
         correctedMessageId: z.string().min(1),
         correctionType: z.enum(["verbosity", "tone", "format", "content"]),
+        originalMessageId: z.string().min(1),
+        projectId: z.string().uuid().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -373,18 +373,17 @@ export const preferenceRouter = router({
 
       const [original, corrected] = await Promise.all([
         ensureMessageOwnership({
-          userId: session.user.id,
           messageId: input.originalMessageId,
+          userId: session.user.id,
         }),
         ensureMessageOwnership({
-          userId: session.user.id,
           messageId: input.correctedMessageId,
+          userId: session.user.id,
         }),
       ]);
 
-      const { inferPreferenceFromCorrection } = await import(
-        "@alfred/agent/preference/inference"
-      );
+      const { inferPreferenceFromCorrection } =
+        await import("@alfred/agent/preference/inference");
       const inferred = await inferPreferenceFromCorrection(
         conversationRepo.messageRowToUIMessage(original),
         conversationRepo.messageRowToUIMessage(corrected),
@@ -431,13 +430,13 @@ export const preferenceRouter = router({
     )
     .input(
       z.object({
-        text: z.string().min(1).max(1000),
         correctDomain: z.string().min(1).max(100),
         incorrectDomain: z.string().min(1).max(100).optional(),
+        text: z.string().min(1).max(1000),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -448,9 +447,8 @@ export const preferenceRouter = router({
       ensureObligations(ctx);
 
       {
-        const { learnDomainCorrection } = await import(
-          "@alfred/agent/orchestrator/learning-worker"
-        );
+        const { learnDomainCorrection } =
+          await import("@alfred/agent/orchestrator/learning-worker");
         await learnDomainCorrection(
           input.text,
           input.correctDomain,

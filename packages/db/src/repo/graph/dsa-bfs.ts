@@ -14,8 +14,9 @@
  * 4. Can terminate early when confidence threshold met
  */
 
-import { cosineSimilarity } from "./scoring";
 import type { NodeRow } from "./types";
+
+import { cosineSimilarity } from "./scoring";
 
 /**
  * Priority queue node for DSA-BFS traversal

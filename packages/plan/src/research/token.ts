@@ -1,5 +1,6 @@
-import { createTokenEstimator } from "./token-utils.js";
 import type { ResearchSource } from "./types.js";
+
+import { createTokenEstimator } from "./token-utils.js";
 
 const estimator = createTokenEstimator();
 

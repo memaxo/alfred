@@ -4,6 +4,7 @@
  */
 
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+
 import {
   bigint,
   boolean,
@@ -16,6 +17,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { user } from "./auth";
 import { workflowPlans } from "./plan";
 import { projects } from "./project";

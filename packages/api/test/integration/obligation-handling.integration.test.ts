@@ -15,9 +15,9 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
+import { type WorkflowEvent } from "@alfred/type";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import path from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
 
 const cassettePath = path.join(
   import.meta.dir,
@@ -38,9 +38,8 @@ async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
     const { approvals, auditLogs } = await import("@alfred/db/schema/policy");
-    const { workflowEvents, workflowRuns } = await import(
-      "@alfred/db/schema/workflow"
-    );
+    const { workflowEvents, workflowRuns } =
+      await import("@alfred/db/schema/workflow");
     await db.delete(approvals);
     await db.delete(auditLogs);
     await db.delete(workflowEvents);
@@ -81,6 +80,13 @@ describe("Obligation Handling Integration", () => {
         // This test requires full workflow event infrastructure with obligation emission
         // In SQLite, workflow events may not include obligation type
         const harness = new WorkflowTestHarness({
+          obligations: [
+            {
+              type: "biometric",
+              reason: "elevated_autonomy",
+              metadata: { autonomy: "medium", required: "passkey" },
+            },
+          ],
           user: {
             id: "bio-obligation-workflow-user",
             email: "bio-obligation@test.local",
@@ -93,13 +99,6 @@ describe("Obligation Handling Integration", () => {
               "workflow.resume",
             ],
           },
-          obligations: [
-            {
-              type: "biometric",
-              reason: "elevated_autonomy",
-              metadata: { autonomy: "medium", required: "passkey" },
-            },
-          ],
         });
 
         await harness.reset();
@@ -108,9 +107,9 @@ describe("Obligation Handling Integration", () => {
         const events: WorkflowEvent[] = [];
 
         const subscription = await caller.stream({
-          requirement: "Elevated task requiring biometric",
           auto: "medium" as const,
           mode: "sequential" as const,
+          requirement: "Elevated task requiring biometric",
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -120,6 +119,16 @@ describe("Obligation Handling Integration", () => {
           }, 10_000);
 
           const sub = observable.subscribe({
+            complete: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
+            },
+            error: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
+            },
             next: (event) => {
               events.push(event);
               // Check for obligation event
@@ -137,16 +146,6 @@ describe("Obligation Handling Integration", () => {
                 }
               }
             },
-            error: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
-            },
-            complete: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
-            },
           });
         });
 
@@ -162,6 +161,13 @@ describe("Obligation Handling Integration", () => {
       "blocks workflow execution until biometric satisfied",
       async () => {
         const harness = new WorkflowTestHarness({
+          obligations: [
+            {
+              type: "biometric",
+              reason: "biometric_not_satisfied",
+              metadata: {},
+            },
+          ],
           user: {
             id: "bio-blocked-user",
             email: "bio-blocked@test.local",
@@ -174,13 +180,6 @@ describe("Obligation Handling Integration", () => {
               "workflow.resume",
             ],
           },
-          obligations: [
-            {
-              type: "biometric",
-              reason: "biometric_not_satisfied",
-              metadata: {},
-            },
-          ],
         });
 
         await harness.reset();
@@ -190,9 +189,9 @@ describe("Obligation Handling Integration", () => {
         let _runId: string | undefined;
 
         const subscription = await caller.stream({
-          requirement: "Task blocked by biometric",
           auto: "medium" as const,
           mode: "sequential" as const,
+          requirement: "Task blocked by biometric",
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -200,21 +199,21 @@ describe("Obligation Handling Integration", () => {
           const timeout = setTimeout(() => resolve(), 8000);
 
           const sub = observable.subscribe({
-            next: (event) => {
-              events.push(event);
-              if (event._ === "run" && (event as { id?: string }).id) {
-                _runId = (event as { id: string }).id;
-              }
+            complete: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
             },
             error: () => {
               clearTimeout(timeout);
               sub.unsubscribe?.();
               resolve();
             },
-            complete: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
+            next: (event) => {
+              events.push(event);
+              if (event._ === "run" && (event as { id?: string }).id) {
+                _runId = (event as { id: string }).id;
+              }
             },
           });
         });
@@ -231,6 +230,17 @@ describe("Obligation Handling Integration", () => {
       "requires passkey MFA for medium autonomy",
       async () => {
         const harness = new WorkflowTestHarness({
+          obligations: [
+            {
+              type: "biometric",
+              reason: "medium_autonomy_requires_passkey",
+              metadata: {
+                autonomy: "medium",
+                required: "passkey",
+                reason: "Security policy",
+              },
+            },
+          ],
           user: {
             id: "passkey-autonomy-user",
             email: "passkey@test.local",
@@ -243,17 +253,6 @@ describe("Obligation Handling Integration", () => {
               "workflow.resume",
             ],
           },
-          obligations: [
-            {
-              type: "biometric",
-              reason: "medium_autonomy_requires_passkey",
-              metadata: {
-                autonomy: "medium",
-                required: "passkey",
-                reason: "Security policy",
-              },
-            },
-          ],
         });
 
         await harness.reset();
@@ -262,9 +261,9 @@ describe("Obligation Handling Integration", () => {
         const events: WorkflowEvent[] = [];
 
         const subscription = await caller.stream({
-          requirement: "Medium autonomy task",
           auto: "medium" as const,
           mode: "sequential" as const,
+          requirement: "Medium autonomy task",
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -272,18 +271,18 @@ describe("Obligation Handling Integration", () => {
           const timeout = setTimeout(() => resolve(), 8000);
 
           const sub = observable.subscribe({
-            next: (event) => {
-              events.push(event);
+            complete: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
             },
             error: () => {
               clearTimeout(timeout);
               sub.unsubscribe?.();
               resolve();
             },
-            complete: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
+            next: (event) => {
+              events.push(event);
             },
           });
         });
@@ -300,6 +299,16 @@ describe("Obligation Handling Integration", () => {
       "initiates approval workflow for elevated operations",
       async () => {
         const harness = new WorkflowTestHarness({
+          obligations: [
+            {
+              type: "human",
+              reason: "admin_approval_required",
+              metadata: {
+                action: "workflow.plan",
+                requiredBy: "admin",
+              },
+            },
+          ],
           user: {
             id: "approval-workflow-user",
             email: "approval@test.local",
@@ -312,16 +321,6 @@ describe("Obligation Handling Integration", () => {
               "workflow.resume",
             ],
           },
-          obligations: [
-            {
-              type: "human",
-              reason: "admin_approval_required",
-              metadata: {
-                action: "workflow.plan",
-                requiredBy: "admin",
-              },
-            },
-          ],
         });
 
         await harness.reset();
@@ -330,9 +329,9 @@ describe("Obligation Handling Integration", () => {
         const events: WorkflowEvent[] = [];
 
         const subscription = await caller.stream({
-          requirement: "Operation requiring admin approval",
           auto: "medium" as const,
           mode: "sequential" as const,
+          requirement: "Operation requiring admin approval",
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -340,18 +339,18 @@ describe("Obligation Handling Integration", () => {
           const timeout = setTimeout(() => resolve(), 8000);
 
           const sub = observable.subscribe({
-            next: (event) => {
-              events.push(event);
+            complete: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
             },
             error: () => {
               clearTimeout(timeout);
               sub.unsubscribe?.();
               resolve();
             },
-            complete: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
+            next: (event) => {
+              events.push(event);
             },
           });
         });
@@ -363,7 +362,7 @@ describe("Obligation Handling Integration", () => {
         expect(obligationEvents.length).toBeGreaterThan(0);
 
         const humanObligations = obligationEvents.flatMap((e) => {
-          const evt = e as { obligations?: Array<{ type: string }> };
+          const evt = e as { obligations?: { type: string }[] };
           return evt.obligations?.filter((o) => o.type === "human") ?? [];
         });
         expect(humanObligations.length).toBeGreaterThan(0);
@@ -375,17 +374,16 @@ describe("Obligation Handling Integration", () => {
     it.skipIf(isUsingSqlite)(
       "stores approval request in database",
       async () => {
-        const { createApproval, getPendingApprovals } = await import(
-          "@alfred/db/repo/policy"
-        );
+        const { createApproval, getPendingApprovals } =
+          await import("@alfred/db/repo/policy");
 
         // Create an approval
         const approval = await createApproval({
-          userId: "approval-db-user",
           action: "workflow.delete",
+          expiresAt: new Date(Date.now() + 300_000),
           resource: "workflow:123",
           traceId: "test-trace-123",
-          expiresAt: new Date(Date.now() + 300_000), // 5 minutes
+          userId: "approval-db-user", // 5 minutes
         });
 
         expect(approval).toBeDefined();
@@ -400,16 +398,15 @@ describe("Obligation Handling Integration", () => {
     );
 
     it.skipIf(isUsingSqlite)("approves pending request", async () => {
-      const { createApproval, getApproval, approveApproval } = await import(
-        "@alfred/db/repo/policy"
-      );
+      const { createApproval, getApproval, approveApproval } =
+        await import("@alfred/db/repo/policy");
 
       const approval = await createApproval({
-        userId: "approve-test-user",
         action: "workflow.deploy",
+        expiresAt: new Date(Date.now() + 300_000),
         resource: "workflow:456",
         traceId: "test-trace-456",
-        expiresAt: new Date(Date.now() + 300_000),
+        userId: "approve-test-user",
       });
 
       expect(approval.status).toBe("pending");
@@ -426,16 +423,15 @@ describe("Obligation Handling Integration", () => {
     });
 
     it.skipIf(isUsingSqlite)("denies pending request", async () => {
-      const { createApproval, getApproval, denyApproval } = await import(
-        "@alfred/db/repo/policy"
-      );
+      const { createApproval, getApproval, denyApproval } =
+        await import("@alfred/db/repo/policy");
 
       const approval = await createApproval({
-        userId: "deny-test-user",
         action: "workflow.delete",
+        expiresAt: new Date(Date.now() + 300_000),
         resource: "workflow:789",
         traceId: "test-trace-789",
-        expiresAt: new Date(Date.now() + 300_000),
+        userId: "deny-test-user",
       });
 
       // Deny
@@ -453,6 +449,7 @@ describe("Obligation Handling Integration", () => {
   describe("Resume Workflow After Obligation", () => {
     it("resumes workflow after obligation satisfaction", async () => {
       const harness = new WorkflowTestHarness({
+        obligations: [],
         user: {
           id: "resume-obligation-user",
           email: "resume@test.local",
@@ -464,8 +461,7 @@ describe("Obligation Handling Integration", () => {
             "workflow.read",
             "workflow.resume",
           ],
-        },
-        obligations: [], // No obligations - simulate satisfied state
+        }, // No obligations - simulate satisfied state
       });
 
       await harness.reset();
@@ -475,9 +471,9 @@ describe("Obligation Handling Integration", () => {
 
       // Start workflow
       const subscription = await caller.stream({
-        requirement: "Task to resume",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Task to resume",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -485,20 +481,20 @@ describe("Obligation Handling Integration", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
 
         const sub = observable.subscribe({
-          next: (event) => {
-            if (event._ === "run" && (event as { id?: string }).id) {
-              runId = (event as { id: string }).id;
-            }
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
           },
           error: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
+          next: (event) => {
+            if (event._ === "run" && (event as { id?: string }).id) {
+              runId = (event as { id: string }).id;
+            }
           },
         });
       });
@@ -514,6 +510,7 @@ describe("Obligation Handling Integration", () => {
 
     it("maintains state across obligation satisfaction", async () => {
       const harness = new WorkflowTestHarness({
+        obligations: [],
         user: {
           id: "state-resume-user",
           email: "state-resume@test.local",
@@ -526,7 +523,6 @@ describe("Obligation Handling Integration", () => {
             "workflow.resume",
           ],
         },
-        obligations: [],
       });
 
       await harness.reset();
@@ -535,9 +531,9 @@ describe("Obligation Handling Integration", () => {
 
       // Start workflow
       const sub1 = await caller.stream({
-        requirement: "State preservation test",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "State preservation test",
       });
       const obs1 = toObservable<WorkflowEvent>(sub1);
 
@@ -548,21 +544,21 @@ describe("Obligation Handling Integration", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
 
         const sub = obs1.subscribe({
-          next: (event) => {
-            events.push(event);
-            if (event._ === "run" && (event as { id?: string }).id) {
-              runId = (event as { id: string }).id;
-            }
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
           },
           error: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
+          next: (event) => {
+            events.push(event);
+            if (event._ === "run" && (event as { id?: string }).id) {
+              runId = (event as { id: string }).id;
+            }
           },
         });
       });
@@ -584,6 +580,10 @@ describe("Obligation Handling Integration", () => {
       "handles multiple concurrent obligations",
       async () => {
         const harness = new WorkflowTestHarness({
+          obligations: [
+            { type: "biometric", reason: "reason1", metadata: {} },
+            { type: "human", reason: "reason2", metadata: {} },
+          ],
           user: {
             id: "concurrent-obligation-user",
             email: "concurrent@test.local",
@@ -596,10 +596,6 @@ describe("Obligation Handling Integration", () => {
               "workflow.resume",
             ],
           },
-          obligations: [
-            { type: "biometric", reason: "reason1", metadata: {} },
-            { type: "human", reason: "reason2", metadata: {} },
-          ],
         });
 
         await harness.reset();
@@ -608,9 +604,9 @@ describe("Obligation Handling Integration", () => {
         const events: WorkflowEvent[] = [];
 
         const subscription = await caller.stream({
-          requirement: "Concurrent obligations test",
           auto: "medium" as const,
           mode: "sequential" as const,
+          requirement: "Concurrent obligations test",
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -618,18 +614,18 @@ describe("Obligation Handling Integration", () => {
           const timeout = setTimeout(() => resolve(), 8000);
 
           const sub = observable.subscribe({
-            next: (event) => {
-              events.push(event);
+            complete: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
             },
             error: () => {
               clearTimeout(timeout);
               sub.unsubscribe?.();
               resolve();
             },
-            complete: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
+            next: (event) => {
+              events.push(event);
             },
           });
         });
@@ -648,26 +644,25 @@ describe("Obligation Handling Integration", () => {
     async () => {
       await resetTables();
 
-      const { createApproval, getPendingApprovals } = await import(
-        "@alfred/db/repo/policy"
-      );
+      const { createApproval, getPendingApprovals } =
+        await import("@alfred/db/repo/policy");
 
       // Create first approval
       await createApproval({
-        userId: "duplicate-obligation-user",
         action: "workflow.delete",
+        expiresAt: new Date(Date.now() + 300_000),
         resource: "workflow:duplicate",
         traceId: "duplicate-trace",
-        expiresAt: new Date(Date.now() + 300_000),
+        userId: "duplicate-obligation-user",
       });
 
       // Try to create duplicate
       await createApproval({
-        userId: "duplicate-obligation-user",
         action: "workflow.delete",
+        expiresAt: new Date(Date.now() + 300_000),
         resource: "workflow:duplicate",
         traceId: "duplicate-trace",
-        expiresAt: new Date(Date.now() + 300_000),
+        userId: "duplicate-obligation-user",
       });
 
       // Both should exist (no duplicate prevention enforced at DB level)
@@ -679,17 +674,16 @@ describe("Obligation Handling Integration", () => {
 
 describe("Obligation Timeout Handling", () => {
   it.skipIf(isUsingSqlite)("expires obligations after timeout", async () => {
-    const { createApproval, expireApprovals, getApproval } = await import(
-      "@alfred/db/repo/policy"
-    );
+    const { createApproval, expireApprovals, getApproval } =
+      await import("@alfred/db/repo/policy");
 
     // Create approval with very short expiration
     const approval = await createApproval({
-      userId: "timeout-user",
       action: "workflow.deploy",
+      expiresAt: new Date(Date.now() - 1000),
       resource: "workflow:timeout",
       traceId: "timeout-trace",
-      expiresAt: new Date(Date.now() - 1000), // Already expired
+      userId: "timeout-user", // Already expired
     });
 
     expect(approval.status).toBe("pending");
@@ -706,17 +700,16 @@ describe("Obligation Timeout Handling", () => {
 });
 
 it.skipIf(isUsingSqlite)("skips non-expired obligations", async () => {
-  const { createApproval, expireApprovals } = await import(
-    "@alfred/db/repo/policy"
-  );
+  const { createApproval, expireApprovals } =
+    await import("@alfred/db/repo/policy");
 
   // Create approval with future expiration
   await createApproval({
-    userId: "non-expired-user",
     action: "workflow.create",
+    expiresAt: new Date(Date.now() + 300_000),
     resource: "workflow:non-expired",
     traceId: "non-expired-trace",
-    expiresAt: new Date(Date.now() + 300_000),
+    userId: "non-expired-user",
   });
 
   // Run expiration
@@ -730,6 +723,7 @@ it.skipIf(isUsingSqlite)("skips non-expired obligations", async () => {
 describe("Error Handling", () => {
   it("handles obligation validation errors", async () => {
     const harness = new WorkflowTestHarness({
+      obligations: [],
       user: {
         id: "obligation-error-user",
         email: "obligation-error@test.local",
@@ -741,8 +735,7 @@ describe("Error Handling", () => {
           "workflow.read",
           "workflow.resume",
         ],
-      },
-      obligations: [], // Invalid obligations would be filtered out
+      }, // Invalid obligations would be filtered out
     });
 
     await harness.reset();
@@ -751,9 +744,9 @@ describe("Error Handling", () => {
 
     // Should handle gracefully
     const sub = await caller.stream({
-      requirement: "Error handling test",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Error handling test",
     });
     const observable = toObservable<WorkflowEvent>(sub);
 
@@ -761,17 +754,17 @@ describe("Error Handling", () => {
       const timeout = setTimeout(() => resolve(), 8000);
 
       const sub = observable.subscribe({
-        next: () => {},
-        error: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
-        },
         complete: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
+        error: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        next: () => {},
       });
     });
 
@@ -786,21 +779,21 @@ describe("Error Handling", () => {
 
     // Create an approval
     const _approval = await createApproval({
-      userId: "audit-obligation-user",
       action: "workflow.admin",
+      expiresAt: new Date(Date.now() + 300_000),
       resource: "workflow:audit",
       traceId: "audit-obligation-trace",
-      expiresAt: new Date(Date.now() + 300_000),
+      userId: "audit-obligation-user",
     });
 
     // Audit log should be created on obligation
     const auditLog = await createAuditLog({
-      userId: "audit-obligation-user",
       action: "workflow.admin",
-      resource: { kind: "workflow", id: "workflow:audit" },
       decision: "allow",
-      traceId: "audit-obligation-trace",
       obligations: [{ type: "human", reason: "admin_approval", metadata: {} }],
+      resource: { kind: "workflow", id: "workflow:audit" },
+      traceId: "audit-obligation-trace",
+      userId: "audit-obligation-user",
     });
 
     expect(auditLog).toBeDefined();

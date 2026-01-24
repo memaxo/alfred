@@ -5,6 +5,7 @@ installAuthTokenMock();
 
 import { describe, expect, it, mock } from "bun:test";
 import path from "node:path";
+
 import { AgentFSWorkspace } from "../src/environment/agentfs";
 import { executeWithOpenCode } from "../src/orchestrator/tool/opencode/exec";
 import {

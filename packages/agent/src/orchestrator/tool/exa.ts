@@ -12,6 +12,7 @@ import type {
   ExaSearchResult,
   ExaSearchType,
 } from "@alfred/type";
+
 import Exa from "exa-js";
 
 let cachedClient: Exa | null = null;

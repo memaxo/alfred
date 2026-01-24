@@ -1,16 +1,18 @@
-import { randomUUID } from "node:crypto";
-import { recordAudit } from "@alfred/agent/utils/audit";
-import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import type { Obligation } from "@alfred/type";
+
+import { recordAudit } from "@alfred/agent/utils/audit";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import {
   registerRunHandle,
   unregisterRunHandle,
 } from "@alfred/agent/workflow/session-recovery";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { Obligation } from "@alfred/type";
 import { resolveObligationResumeEvents } from "@alfred/type";
+import { randomUUID } from "node:crypto";
+
 import {
   workflowObligationDurationSeconds,
   workflowObligationSuspensionsTotal,

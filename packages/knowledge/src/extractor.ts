@@ -14,11 +14,7 @@ export {
   extractEntities,
   isStopword,
 } from "./extract/entities.js";
-export {
-  extract,
-  type KnowledgeEntry,
-  toKnowledge,
-} from "./extract/facts.js";
+export { extract, type KnowledgeEntry, toKnowledge } from "./extract/facts.js";
 export { inferPattern } from "./extract/patterns.js";
 export {
   enrichReasoningContext,

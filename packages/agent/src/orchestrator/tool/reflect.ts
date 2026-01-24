@@ -1,6 +1,7 @@
-import { join, resolve } from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { join, resolve } from "node:path";
 import { z } from "zod";
+
 import type { ToolExecuteArgs } from "./shared/context.js";
 
 const reflectInputSchema = z.object({

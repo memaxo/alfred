@@ -4,6 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+
 import {
   type EmbeddingInput,
   type EmbeddingModelConfig,

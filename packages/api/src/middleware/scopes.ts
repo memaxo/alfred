@@ -7,7 +7,9 @@
 
 import { hasAllScopes, hasScope, isAdminScope } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+
 import type { Context } from "../context";
+
 import { t } from "../trpc";
 import { getSessionUser, getSessionUserScopes } from "../utils/session";
 

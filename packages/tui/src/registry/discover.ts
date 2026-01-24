@@ -6,7 +6,9 @@
 
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
+
 import type { CliManifest, PackageInfo, RegisteredPackage } from "./manifest";
+
 import { isValidManifest } from "./manifest";
 
 // ─── Constants ────────────────────────────────────────────────────────────────

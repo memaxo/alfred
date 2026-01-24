@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
+
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
 describe("shortcuts router", () => {

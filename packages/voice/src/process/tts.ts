@@ -1,7 +1,9 @@
 import { join } from "node:path";
+
+import type { SupertonicTTS } from "./supertonic";
+
 import { Process, type ProcessConfig, resolveVoiceDir } from "./base";
 import { Maya } from "./maya";
-import type { SupertonicTTS } from "./supertonic";
 
 // Re-export ProcessConfig for use in other packages
 export type { ProcessConfig };

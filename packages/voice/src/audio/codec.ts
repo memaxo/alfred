@@ -1,4 +1,5 @@
 import type { Buffer } from "node:buffer";
+
 import { decodeOpus } from "./opus";
 import {
   PCM_BIT_DEPTH,

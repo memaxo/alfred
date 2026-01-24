@@ -16,13 +16,15 @@
 import { LoopDetector, type LoopResult } from "@alfred/cognitive";
 import { logger } from "@alfred/logger";
 import { z } from "zod";
+
+import type { ToolWriter } from "../tool/shared/context.js";
+
 import { type CodexToolInput, toolCodex } from "../tool/codex/index.js";
 import { type DroidToolInput, toolDroid } from "../tool/droid.js";
 import {
   type OpenCodeToolInput,
   toolOpenCode,
 } from "../tool/opencode/index.js";
-import type { ToolWriter } from "../tool/shared/context.js";
 import {
   recordRalphCompletion,
   recordRalphIteration,

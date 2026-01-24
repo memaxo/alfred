@@ -1,8 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import type { PipelineEvent } from "../../src/events";
-import type { PipelineConfig, PipelineContext } from "../../src/pipeline";
+
+import { type PipelineEvent } from "../../src/events";
+import { type PipelineConfig, type PipelineContext } from "../../src/pipeline";
 import { DEFAULT_CONFIG } from "../../src/pipeline";
-import type { AgentOutcome, ExecuteOutput } from "../../src/stages/types";
+import { type AgentOutcome, type ExecuteOutput } from "../../src/stages/types";
 
 /**
  * Review Stage Tests
@@ -24,15 +25,15 @@ function createMockContext(
   const config = { ...DEFAULT_CONFIG, ...overrides.config };
 
   return {
-    runId: "test-run-1",
-    requirement: "test requirement",
-    workspace: "/tmp/test-workspace",
-    userId: "test-user",
-    signal: new AbortController().signal,
     config,
     emit: (event: PipelineEvent) => events.push(event),
     get: <T>(key: string) => storage.get(key) as T | undefined,
+    requirement: "test requirement",
+    runId: "test-run-1",
     set: (key: string, value: unknown) => storage.set(key, value),
+    signal: new AbortController().signal,
+    userId: "test-user",
+    workspace: "/tmp/test-workspace",
   };
 }
 
@@ -44,20 +45,20 @@ function createMockExecuteOutput(
   for (const [taskId, partial] of outcomesList) {
     outcomes.set(taskId, {
       agentId: partial.agentId ?? `agent-${taskId}`,
-      phaseId: partial.phaseId ?? "execute",
-      stuck: partial.stuck ?? false,
-      status: partial.status ?? "success",
       durationSeconds: partial.durationSeconds ?? 10,
-      role: partial.role ?? "agent",
       escalation: partial.escalation,
+      phaseId: partial.phaseId ?? "execute",
       result: partial.result,
+      role: partial.role ?? "agent",
+      status: partial.status ?? "success",
+      stuck: partial.stuck ?? false,
     });
   }
 
   return {
-    outcomes,
     fileChanges: [],
     handoffs: [],
+    outcomes,
   };
 }
 
@@ -87,13 +88,13 @@ describe("ReviewStage", () => {
   describe("Event Types", () => {
     it("defines review:check event structure", () => {
       const event: PipelineEvent = {
-        type: "review:check",
         check: {
           name: "Agent task-1",
           passed: true,
           message: "Completed successfully",
         },
         timestamp: Date.now(),
+        type: "review:check",
       };
 
       expect(event.type).toBe("review:check");
@@ -102,10 +103,10 @@ describe("ReviewStage", () => {
 
     it("defines review:fix-start event structure", () => {
       const event: PipelineEvent = {
-        type: "review:fix-start",
         attempt: 1,
         maxAttempts: 3,
         timestamp: Date.now(),
+        type: "review:fix-start",
       };
 
       expect(event.type).toBe("review:fix-start");
@@ -115,10 +116,10 @@ describe("ReviewStage", () => {
 
     it("defines review:fix-complete event structure", () => {
       const event: PipelineEvent = {
-        type: "review:fix-complete",
         attempt: 1,
         success: true,
         timestamp: Date.now(),
+        type: "review:fix-complete",
       };
 
       expect(event.type).toBe("review:fix-complete");
@@ -134,9 +135,9 @@ describe("ReviewStage", () => {
       // Simulate what review stage does
       const gateState = {
         checks: [{ id: "task-1", type: "agent_completion", status: "passed" }],
+        minimumRequired: 1,
         planInitialized: false,
         planRequired: false,
-        minimumRequired: 1,
       };
       ctx.set("reviewGateState", gateState);
 
@@ -157,8 +158,8 @@ describe("ReviewStage", () => {
       const ctx = createMockContext({ storage });
 
       const reviewOutput = {
-        checks: [{ name: "test", passed: true }],
         allPassed: true,
+        checks: [{ name: "test", passed: true }],
         fixAttempts: 0,
       };
       ctx.set("reviewOutput", reviewOutput);
@@ -189,8 +190,8 @@ describe("ReviewStage", () => {
     it("handles mixed outcomes", () => {
       const input = createMockExecuteOutput([
         ["task-1", { status: "success" }],
-        ["task-2", { status: "failure", escalation: "Test failed" }],
-        ["task-3", { status: "escalated", escalation: "Need review" }],
+        ["task-2", { escalation: "Test failed", status: "failure" }],
+        ["task-3", { escalation: "Need review", status: "escalated" }],
       ]);
 
       expect(input.outcomes.size).toBe(3);
@@ -229,9 +230,9 @@ describe("ReviewStage", () => {
             evidence: "Error occurred",
           },
         ],
+        minimumRequired: 1,
         planInitialized: true,
         planRequired: false,
-        minimumRequired: 1,
       };
 
       // Should be JSON-serializable
@@ -246,9 +247,9 @@ describe("ReviewStage", () => {
       const storage = new Map<string, unknown>();
       const savedState = {
         checks: [{ id: "task-1", type: "agent_completion", status: "passed" }],
+        minimumRequired: 0,
         planInitialized: false,
         planRequired: false,
-        minimumRequired: 0,
       };
       storage.set("reviewGateState", savedState);
 
@@ -283,14 +284,13 @@ describe("ReviewStage", () => {
 
   describe("Fixer Loop Integration", () => {
     it("builds correct fixer subtask", async () => {
-      const { buildFixerSubTask } = await import(
-        "@alfred/agent/orchestrator/multi/review"
-      );
+      const { buildFixerSubTask } =
+        await import("@alfred/agent/orchestrator/multi/review");
 
       const subtask = buildFixerSubTask({
         attempt: 1,
-        summary: "Fix tests",
         relevantFiles: ["file1.ts"],
+        summary: "Fix tests",
       });
 
       expect(subtask.id).toBe("fixer01");

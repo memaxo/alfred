@@ -1,8 +1,8 @@
-import { describe, expect, it } from "bun:test";
 import {
   aggregateConflictMarkers,
   countConflictMarkers,
 } from "@alfred/agent/orchestrator/multi/conflict";
+import { describe, expect, it } from "bun:test";
 
 describe("conflict.countConflictMarkers", () => {
   it("returns 0 for empty content", () => {

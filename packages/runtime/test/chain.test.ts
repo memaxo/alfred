@@ -1,7 +1,9 @@
-import { describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
+
 import { tool } from "ai";
+import { describe, expect, it } from "bun:test";
 import { z } from "zod";
+
 import { executeToolGraph, type ToolGraph } from "../src/chain";
 
 async function drain<T>(

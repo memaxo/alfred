@@ -6,8 +6,9 @@ import type {
   ModelMessage,
   ToolSet,
 } from "ai";
-import { generateObject, generateText } from "ai";
 import type { z } from "zod";
+
+import { generateObject, generateText } from "ai";
 
 export type DefaultAIAdapterOpts = {
   userId?: string;

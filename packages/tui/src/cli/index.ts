@@ -1,5 +1,6 @@
 import { appRouter } from "@alfred/api/router";
 import { trpcCli } from "trpc-cli";
+
 import { authCommands } from "../commands/auth";
 import { initializeRegistry } from "../registry";
 import { setupCompletions } from "./completions";

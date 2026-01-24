@@ -1,3 +1,4 @@
+import { spawn } from "bun";
 import {
   accessSync,
   chmodSync,
@@ -11,7 +12,6 @@ import {
 } from "node:fs";
 import os from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { spawn } from "bun";
 
 // ============================================================================
 // TRACKED SANDBOX CLEANUP (process exit handlers)

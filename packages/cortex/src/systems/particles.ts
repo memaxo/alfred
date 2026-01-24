@@ -5,10 +5,11 @@
  * Uses double-buffering for ping-pong compute updates.
  */
 
+import type { RenderSystem, Vec2 } from "../types";
+
 import { DoubleBuffer, UniformBuffer } from "../buffer";
 // Import shader source
 import particleShaderSource from "../shaders/particles.wgsl?raw";
-import type { RenderSystem, Vec2 } from "../types";
 
 /** Particle system configuration */
 export type ParticleSystemConfig = {

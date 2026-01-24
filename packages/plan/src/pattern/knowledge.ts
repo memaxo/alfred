@@ -1,5 +1,6 @@
-import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import type { WorkflowPattern } from "@alfred/db/repo/pattern";
+
+import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import { logger } from "@alfred/logger";
 
 /**

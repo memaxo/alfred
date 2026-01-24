@@ -8,6 +8,7 @@ import {
   type CompressionConfig,
   DEFAULT_COMPRESSION_CONFIG,
 } from "@alfred/knowledge/compression";
+
 import {
   recordCompressionCycle,
   recordCompressionNodeUpdate,

@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+
 import { redactEventData, redactSecrets } from "../../../utils/redaction.js";
 import { truncateToBytes } from "./truncate.js";
 

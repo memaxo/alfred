@@ -3,9 +3,10 @@
  * Manages individual Python compression worker process with IPC
  */
 
+import { type Subprocess, spawn } from "bun";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { type Subprocess, spawn } from "bun";
+
 import type {
   CompressRequest,
   CompressResponse,

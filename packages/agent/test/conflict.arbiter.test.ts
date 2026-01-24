@@ -1,9 +1,10 @@
+import { createTestSandbox } from "@alfred/test-kit";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { createTestSandbox } from "@alfred/test-kit";
+
 import { conflictArbiter } from "../src/orchestrator/conflict";
 import { toolCodex } from "../src/orchestrator/tool/codex/index.js";
 

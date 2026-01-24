@@ -1,5 +1,6 @@
-import { describe, expect, it } from "bun:test";
 import { BUDGET_DEFAULTS, benchmarkOperation } from "@alfred/test-kit";
+import { describe, expect, it } from "bun:test";
+
 import { empty, fact, relation } from "../src/hypergraph";
 
 // budget: graph-lookup

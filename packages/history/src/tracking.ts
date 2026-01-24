@@ -7,16 +7,17 @@
  * @module @alfred/history/tracking
  */
 
-import type { ModelProvider } from "@alfred/type/model";
+import { type ModelProvider } from "@alfred/type/model";
 import { Counter, Gauge, Histogram, Registry } from "prom-client";
-import { type CalculatedBudget, calculateBudget } from "./calculator";
+
+import { calculateBudget, type CalculatedBudget } from "./calculator";
 import { getModelSpec } from "./registry";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type UsageRecord = {
+export interface UsageRecord {
   id: string;
   timestamp: Date;
   modelId: string;
@@ -28,9 +29,9 @@ export type UsageRecord = {
   costUsd: number;
   latencyMs: number;
   metadata?: Record<string, unknown>;
-};
+}
 
-export type SessionSummary = {
+export interface SessionSummary {
   sessionId: string;
   startTime: Date;
   endTime?: Date;
@@ -43,26 +44,26 @@ export type SessionSummary = {
   avgLatencyMs: number;
   modelBreakdown: Map<string, ModelUsage>;
   budgetStatus: BudgetStatus;
-};
+}
 
-export type ModelUsage = {
+export interface ModelUsage {
   modelId: string;
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
   turnCount: number;
-};
+}
 
-export type BudgetStatus = {
+export interface BudgetStatus {
   budgetUsd: number;
   usedUsd: number;
   remainingUsd: number;
   percentUsed: number;
   status: "healthy" | "warning" | "critical" | "exceeded";
   projectedTurnsRemaining: number;
-};
+}
 
-export type TrackingConfig = {
+export interface TrackingConfig {
   /** Session identifier */
   sessionId: string;
   /** USD budget limit */
@@ -73,7 +74,7 @@ export type TrackingConfig = {
   verbose?: boolean;
   /** Custom Prometheus registry */
   registry?: Registry;
-};
+}
 
 // ============================================================================
 // Prometheus Metrics
@@ -84,86 +85,86 @@ const defaultRegistry = new Registry();
 export const trackingMetrics = {
   // Token counters
   inputTokens: new Counter({
-    name: "alfred_tokens_input_total",
     help: "Total input tokens processed",
     labelNames: ["provider", "model", "session"],
+    name: "alfred_tokens_input_total",
     registers: [defaultRegistry],
   }),
 
   outputTokens: new Counter({
-    name: "alfred_tokens_output_total",
     help: "Total output tokens generated",
     labelNames: ["provider", "model", "session"],
+    name: "alfred_tokens_output_total",
     registers: [defaultRegistry],
   }),
 
   cachedTokens: new Counter({
-    name: "alfred_tokens_cached_total",
     help: "Total cached input tokens (prompt cache hits)",
     labelNames: ["provider", "model", "session"],
+    name: "alfred_tokens_cached_total",
     registers: [defaultRegistry],
   }),
 
   reasoningTokens: new Counter({
-    name: "alfred_tokens_reasoning_total",
     help: "Total reasoning tokens (o1/R1 models)",
     labelNames: ["provider", "model", "session"],
+    name: "alfred_tokens_reasoning_total",
     registers: [defaultRegistry],
   }),
 
   // Cost tracking
   costUsd: new Counter({
-    name: "alfred_cost_usd_total",
     help: "Total cost in USD",
     labelNames: ["provider", "model", "session"],
+    name: "alfred_cost_usd_total",
     registers: [defaultRegistry],
   }),
 
   budgetRemaining: new Gauge({
-    name: "alfred_budget_remaining_usd",
     help: "Remaining budget in USD",
     labelNames: ["session"],
+    name: "alfred_budget_remaining_usd",
     registers: [defaultRegistry],
   }),
 
   budgetUtilization: new Gauge({
-    name: "alfred_budget_utilization_percent",
     help: "Budget utilization percentage",
     labelNames: ["session"],
+    name: "alfred_budget_utilization_percent",
     registers: [defaultRegistry],
   }),
 
   // Latency
   requestLatency: new Histogram({
-    name: "alfred_request_latency_ms",
+    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
     help: "Request latency in milliseconds",
     labelNames: ["provider", "model"],
-    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10_000, 30_000],
+    name: "alfred_request_latency_ms",
     registers: [defaultRegistry],
   }),
 
   // Context utilization
   contextUtilization: new Histogram({
-    name: "alfred_context_utilization_percent",
+    buckets: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
     help: "Context window utilization percentage",
     labelNames: ["model"],
-    buckets: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    name: "alfred_context_utilization_percent",
     registers: [defaultRegistry],
   }),
 
   // Budget alerts
   budgetAlerts: new Counter({
-    name: "alfred_budget_alerts_total",
     help: "Budget alert events",
     labelNames: ["session", "alert_type"],
+    name: "alfred_budget_alerts_total",
     registers: [defaultRegistry],
   }),
 
   // Turn counter
   turns: new Counter({
-    name: "alfred_turns_total",
     help: "Total conversation turns",
     labelNames: ["provider", "model", "session"],
+    name: "alfred_turns_total",
     registers: [defaultRegistry],
   }),
 };
@@ -189,14 +190,14 @@ export class UsageTracker {
 
   constructor(config: TrackingConfig) {
     this.sessionId = config.sessionId;
-    this.budgetUsd = config.budgetUsd ?? Number.POSITIVE_INFINITY;
+    this.budgetUsd = config.budgetUsd ?? Infinity;
     this.startTime = new Date();
     this.verbose = config.verbose ?? false;
 
     // Calculate budget for primary model
     this.budget = calculateBudget({
-      modelId: config.modelId ?? "openai/gpt-4o",
       budgetUsd: this.budgetUsd,
+      modelId: config.modelId ?? "openai/gpt-4o",
     });
 
     // Initialize budget gauge
@@ -234,17 +235,17 @@ export class UsageTracker {
     );
 
     const record: UsageRecord = {
-      id: `${this.sessionId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      timestamp: new Date(),
-      modelId: params.modelId,
-      provider,
-      inputTokens: params.inputTokens,
-      outputTokens: params.outputTokens,
       cachedTokens: params.cachedTokens ?? 0,
-      reasoningTokens: params.reasoningTokens ?? 0,
       costUsd,
+      id: `${this.sessionId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      inputTokens: params.inputTokens,
       latencyMs: params.latencyMs,
       metadata: params.metadata,
+      modelId: params.modelId,
+      outputTokens: params.outputTokens,
+      provider,
+      reasoningTokens: params.reasoningTokens ?? 0,
+      timestamp: new Date(),
     };
 
     this.records.push(record);
@@ -281,10 +282,10 @@ export class UsageTracker {
     const spec = getModelSpec(modelId);
     if (!spec) {
       // Fallback pricing
-      return (inputTokens / 1_000_000) * 1.0 + (outputTokens / 1_000_000) * 3.0;
+      return (inputTokens / 1_000_000) * 1 + (outputTokens / 1_000_000) * 3;
     }
 
-    const pricing = spec.pricing;
+    const { pricing } = spec;
 
     // Non-cached input cost
     const nonCachedInput = Math.max(0, inputTokens - cachedTokens);
@@ -319,10 +320,10 @@ export class UsageTracker {
       existing.turnCount += 1;
     } else {
       this.modelUsage.set(record.modelId, {
-        modelId: record.modelId,
-        inputTokens: record.inputTokens,
-        outputTokens: record.outputTokens,
         costUsd: record.costUsd,
+        inputTokens: record.inputTokens,
+        modelId: record.modelId,
+        outputTokens: record.outputTokens,
         turnCount: 1,
       });
     }
@@ -333,8 +334,8 @@ export class UsageTracker {
    */
   private updateMetrics(record: UsageRecord): void {
     const labels = {
-      provider: record.provider,
       model: record.modelId,
+      provider: record.provider,
       session: this.sessionId,
     };
 
@@ -352,7 +353,7 @@ export class UsageTracker {
     }
 
     trackingMetrics.requestLatency.observe(
-      { provider: record.provider, model: record.modelId },
+      { model: record.modelId, provider: record.provider },
       record.latencyMs
     );
 
@@ -384,18 +385,18 @@ export class UsageTracker {
 
     if (percentUsed >= 100) {
       trackingMetrics.budgetAlerts.inc({
-        session: this.sessionId,
         alert_type: "exceeded",
+        session: this.sessionId,
       });
     } else if (percentUsed >= 90) {
       trackingMetrics.budgetAlerts.inc({
-        session: this.sessionId,
         alert_type: "critical",
+        session: this.sessionId,
       });
     } else if (percentUsed >= 75) {
       trackingMetrics.budgetAlerts.inc({
-        session: this.sessionId,
         alert_type: "warning",
+        session: this.sessionId,
       });
     }
   }
@@ -426,17 +427,15 @@ export class UsageTracker {
         : this.budget.estimatedCostPerTurn.typicalCostUsd;
 
     const projectedTurnsRemaining =
-      avgCostPerTurn > 0
-        ? Math.floor(remainingUsd / avgCostPerTurn)
-        : Number.POSITIVE_INFINITY;
+      avgCostPerTurn > 0 ? Math.floor(remainingUsd / avgCostPerTurn) : Infinity;
 
     return {
       budgetUsd: this.budgetUsd,
-      usedUsd,
-      remainingUsd,
       percentUsed,
-      status,
       projectedTurnsRemaining,
+      remainingUsd,
+      status,
+      usedUsd,
     };
   }
 
@@ -465,19 +464,19 @@ export class UsageTracker {
       this.records.length > 0 ? totalLatency / this.records.length : 0;
 
     return {
-      sessionId: this.sessionId,
-      startTime: this.startTime,
+      avgLatencyMs,
+      budgetStatus: this.getBudgetStatus(),
       endTime:
         this.records.length > 0 ? this.records.at(-1)?.timestamp : undefined,
+      modelBreakdown: new Map(this.modelUsage),
+      sessionId: this.sessionId,
+      startTime: this.startTime,
+      totalCachedTokens,
+      totalCostUsd: this.totalCostUsd,
       totalInputTokens,
       totalOutputTokens,
-      totalCachedTokens,
       totalReasoningTokens,
-      totalCostUsd: this.totalCostUsd,
       turnCount: this.records.length,
-      avgLatencyMs,
-      modelBreakdown: new Map(this.modelUsage),
-      budgetStatus: this.getBudgetStatus(),
     };
   }
 
@@ -529,16 +528,16 @@ export class UsageTracker {
       `Session: ${summary.sessionId}`,
       `Duration: ${this.formatDuration(summary.startTime, summary.endTime)}`,
       `Turns: ${summary.turnCount}`,
-      "",
-      "Token Usage:",
+      ``,
+      `Token Usage:`,
       `  Input:     ${formatK(summary.totalInputTokens)}`,
       `  Output:    ${formatK(summary.totalOutputTokens)}`,
       `  Cached:    ${formatK(summary.totalCachedTokens)} (${((summary.totalCachedTokens / Math.max(1, summary.totalInputTokens)) * 100).toFixed(1)}% cache hit)`,
       `  Reasoning: ${formatK(summary.totalReasoningTokens)}`,
-      "",
+      ``,
       `Cost: ${formatUsd(summary.totalCostUsd)}`,
       `Avg Latency: ${summary.avgLatencyMs.toFixed(0)}ms`,
-      "",
+      ``,
       `Budget Status: ${summary.budgetStatus.status.toUpperCase()}`,
     ];
 
@@ -551,7 +550,7 @@ export class UsageTracker {
     }
 
     if (summary.modelBreakdown.size > 1) {
-      lines.push("", "Model Breakdown:");
+      lines.push(``, `Model Breakdown:`);
       for (const [modelId, usage] of summary.modelBreakdown) {
         lines.push(
           `  ${modelId}: ${usage.turnCount} turns, ${formatK(usage.inputTokens + usage.outputTokens)} tokens, ${formatUsd(usage.costUsd)}`
@@ -617,7 +616,7 @@ export function removeTracker(sessionId: string): void {
  * Get all active session IDs.
  */
 export function getActiveSessions(): string[] {
-  return Array.from(trackers.keys());
+  return [...trackers.keys()];
 }
 
 /**
@@ -646,8 +645,8 @@ export function getAggregateStats(): {
   return {
     activeSessions: trackers.size,
     totalCostUsd,
-    totalTurns,
     totalInputTokens,
     totalOutputTokens,
+    totalTurns,
   };
 }

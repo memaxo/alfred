@@ -4,6 +4,7 @@
  */
 
 import { eq } from "drizzle-orm";
+
 import { db } from "../client";
 import { linearInstallations } from "../schema/linear";
 

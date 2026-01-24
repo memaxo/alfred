@@ -8,7 +8,8 @@
     "rootDir": "src",
     "composite": true,
     "jsx": "react-jsx",
-    "lib": ["ES2022", "DOM"]
+    "lib": ["ES2022", "DOM"],
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["dist", "**/*.test.ts", "**/*.test.tsx"],

@@ -1,9 +1,10 @@
 import type { StructuredPlan } from "../generate/types.js";
 import type { WorkflowIntent } from "../intent/types.js";
 import type { ResearchResult } from "../research/types.js";
+import type { CritiqueOptions, PlanCritiqueResult } from "./types.js";
+
 import { generateCritique } from "./generate.js";
 import { revisePlan } from "./revise.js";
-import type { CritiqueOptions, PlanCritiqueResult } from "./types.js";
 import { validatePlan } from "./validate.js";
 
 /**

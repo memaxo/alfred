@@ -2,6 +2,7 @@
 // Full Linear integration lives in the API layer and DB repos.
 
 import { logger } from "@alfred/logger";
+
 import { withLinearRetry } from "./linear-retry";
 import { getLinearMetrics } from "./linearmetrics";
 import { toolTicket } from "./tool/ticket";

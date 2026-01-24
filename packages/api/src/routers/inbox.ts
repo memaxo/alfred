@@ -1,8 +1,10 @@
 import type { InboxRow } from "@alfred/db/repo/sense";
+
 import { listInbox } from "@alfred/db/repo/sense";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 
 export type InboxEvent =

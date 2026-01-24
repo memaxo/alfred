@@ -10,8 +10,18 @@
  * @module @alfred/agent/agentfs
  */
 
+export * from "./enrichment.js";
+export * from "./keys.js";
 export * from "./learning-bridge.js";
 export * from "./metrics.js";
+export {
+  buildLiveErrorContext,
+  clearOldLiveErrors,
+  getLiveErrorsForTool,
+  getToolFailureSummary,
+  isToolFailing,
+  // Note: emitLiveError and getLiveErrors are exported from enrichment.js
+} from "./stream.js";
 export * from "./types.js";
 export {
   AgentFSError,

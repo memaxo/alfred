@@ -1,8 +1,10 @@
 import { logger } from "@alfred/logger";
+
+import type { ResearchResult } from "./types.js";
+
 import { deduplicateSources } from "./dedupe.js";
 import { type PriorityMode, prioritizeSources } from "./prioritize.js";
 import { researchResultSchema } from "./schema.js";
-import type { ResearchResult } from "./types.js";
 
 /**
  * Combine external and internal research into a unified ResearchResult

@@ -1,3 +1,5 @@
+import type { Subprocess } from "bun";
+
 import {
   accessSync,
   chmodSync,
@@ -7,9 +9,10 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Subprocess } from "bun";
-import { ensureFdInheritable } from "./fd.js";
+
 import type { DirectoryHandle } from "./filesystem.js";
+
+import { ensureFdInheritable } from "./fd.js";
 
 const WRAPPER_ENV_OVERRIDE = "ORCH_SECURE_SPAWN_WRAPPER";
 const FD_ENV = "ALFRED_CWD_FD";

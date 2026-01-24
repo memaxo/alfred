@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+
 import type { LearnedPattern } from "./types.js";
 
 /**

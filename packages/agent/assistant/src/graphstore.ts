@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
 import {
   enrichReasoningContext,
   extractReasoning,
   type KnowledgeEntry,
   toKnowledge,
 } from "@alfred/knowledge/extractor";
+import { createHash } from "node:crypto";
 
 type NodeSeed = {
   resource: string;

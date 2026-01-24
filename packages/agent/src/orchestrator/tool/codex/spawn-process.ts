@@ -9,8 +9,10 @@
  * Use AgentFS for filesystem isolation with audit trails.
  */
 
-import path from "node:path";
 import type { SpawnFn } from "@alfred/codex";
+
+import path from "node:path";
+
 import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import { CodexError } from "./error.js";
 import { resolveExecutable } from "./policy.js";

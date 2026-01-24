@@ -1,20 +1,21 @@
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { accessSync, constants as fsConstants } from "node:fs";
 import path from "node:path";
 import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import type { DirectoryHandle } from "../../security/filesystem.js";
+
+import { type DirectoryHandle } from "../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
   openDirectorySecure,
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
-import { withPolicyApproval } from "./approval.js";
-import type { ToolWriter } from "./shared/context.js";
+import { withPolicyApproval, type AITool } from "./approval.js";
+import { type ToolWriter } from "./shared/context.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -33,9 +34,9 @@ function assertAllowedDirectory(candidate: string) {
       error instanceof DirectoryAccessError &&
       error.code === "not_directory"
     ) {
-      throw new Error("git_invalid_cwd_not_directory");
+      throw new Error("git_invalid_cwd_not_directory", { cause: error });
     }
-    throw new Error("git_invalid_cwd");
+    throw new Error("git_invalid_cwd", { cause: error });
   } finally {
     handle?.close();
   }
@@ -51,9 +52,9 @@ function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
       error instanceof DirectoryAccessError &&
       error.code === "not_directory"
     ) {
-      throw new Error("git_invalid_cwd_not_directory");
+      throw new Error("git_invalid_cwd_not_directory", { cause: error });
     }
-    throw new Error("git_invalid_cwd");
+    throw new Error("git_invalid_cwd", { cause: error });
   }
 }
 
@@ -94,15 +95,15 @@ const gitInputSchema = z.object({
     "fetch",
     "reset.hard",
   ]),
-  cw: z.string().optional(),
-  base: z.string().optional(),
-  name: z.string().optional(),
-  path: z.string().optional(),
-  message: z.string().optional(),
-  remote: z.string().optional(),
-  ref: z.string().optional(),
-  noFF: z.boolean().optional(),
   authz: z.string().optional(),
+  base: z.string().optional(),
+  cw: z.string().optional(),
+  message: z.string().optional(),
+  name: z.string().optional(),
+  noFF: z.boolean().optional(),
+  path: z.string().optional(),
+  ref: z.string().optional(),
+  remote: z.string().optional(),
   timeoutSec: z
     .number()
     .int()
@@ -127,8 +128,8 @@ async function enforcePolicy(input: GitInput, cwd: string) {
   const { claims } = await requireToolScopesAndPolicy(input.authz, scopes, {
     action: `git.${input.action}`,
     resource: {
-      kind: "repo",
       id: cwd,
+      kind: "repo",
     },
   });
 
@@ -153,21 +154,21 @@ async function runGit({
 }) {
   const command = resolveExecutable("git");
   const proc = spawnWithSecureCwd({
-    cwdHandle,
-    cmd: command,
     args,
+    cmd: command,
+    cwdHandle,
     env: {
       PATH: process.env.PATH ?? "",
     },
-    stdout: "pipe",
     stderr: "pipe",
     stdin: "ignore",
+    stdout: "pipe",
   });
 
   const accumulator = {
-    stdout: "",
-    stderr: "",
     capturedBytes: 0,
+    stderr: "",
+    stdout: "",
     truncated: false,
   };
 
@@ -178,7 +179,7 @@ async function runGit({
       // noop
     }
     void Promise.resolve(
-      writer?.write?.({ type: "notice", message: "git_timeout" })
+      writer?.write?.({ message: "git_timeout", type: "notice" })
     ).catch(() => {});
   }, timeoutSec * 1000);
 
@@ -206,7 +207,7 @@ async function runGit({
             }
           }
 
-          void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+          void Promise.resolve(writer?.write?.({ text, type: "stdout" })).catch(
             () => {}
           );
         }
@@ -233,7 +234,7 @@ async function runGit({
           if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
             accumulator.stderr += text;
           }
-          void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(
+          void Promise.resolve(writer?.write?.({ text, type: "stderr" })).catch(
             () => {}
           );
         }
@@ -255,14 +256,14 @@ async function runGit({
 
   if (accumulator.truncated) {
     void Promise.resolve(
-      writer?.write?.({ type: "notice", message: "git_output_truncated" })
+      writer?.write?.({ message: "git_output_truncated", type: "notice" })
     ).catch(() => {});
   }
 
   return {
     exitCode,
-    stdout: accumulator.stdout.trim(),
     stderr: accumulator.stderr.trim(),
+    stdout: accumulator.stdout.trim(),
   };
 }
 
@@ -274,14 +275,8 @@ function ensure(value: string | undefined, error: string): string {
 }
 
 export const toolGit = {
-  name: "git",
   description:
     "Safe git operations (branch, worktree, commit, push, merge) under cwd sandbox.",
-  inputSchema: gitInputSchema,
-  outputSchema: z.object({
-    ok: z.boolean(),
-    details: z.unknown().optional(),
-  }),
   execute: async ({
     input,
     writer,
@@ -522,30 +517,39 @@ export const toolGit = {
       cwdHandle.close();
     }
   },
+  inputSchema: gitInputSchema,
+  name: "git",
+  outputSchema: z.object({
+    ok: z.boolean(),
+    details: z.unknown().optional(),
+  }),
 };
 
 const aiToolGitBase = {
-  name: toolGit.name,
   description: toolGit.description,
-  parameters: toolGit.inputSchema,
-  inputSchema: toolGit.inputSchema,
   execute: async (input: GitInput) => toolGit.execute({ input }),
+  inputSchema: toolGit.inputSchema,
+  name: toolGit.name,
+  parameters: toolGit.inputSchema,
 };
 
-export const aiToolGit = withPolicyApproval(aiToolGitBase, (input) => {
-  const scopes = READ_ONLY_ACTIONS.has(input.action)
-    ? ["repo.read"]
-    : ["repo.write"];
-  return {
-    action: `git.${input.action}`,
-    resource: {
-      kind: "repo",
-      id: input.cw ? path.resolve(input.cw) : "cwd",
-    },
-    scopes,
-    authz: input.authz,
-  };
-});
+export const aiToolGit: AITool<GitInput, any> = withPolicyApproval(
+  aiToolGitBase,
+  (input) => {
+    const scopes = READ_ONLY_ACTIONS.has(input.action)
+      ? ["repo.read"]
+      : ["repo.write"];
+    return {
+      action: `git.${input.action}`,
+      authz: input.authz,
+      resource: {
+        kind: "repo",
+        id: input.cw ? path.resolve(input.cw) : "cwd",
+      },
+      scopes,
+    };
+  }
+);
 
 export type ToolGit = typeof toolGit;
 

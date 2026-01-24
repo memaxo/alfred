@@ -1,23 +1,23 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   __internals,
   buildAgentSpec,
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
 import { subtaskPlanPath } from "@alfred/agent/orchestrator/plans";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const makeTask = (id: string, deps: string[] = [], priority = 1): SubTask => ({
-  id,
-  title: id,
-  requirement: "",
-  deps,
-  priority,
   acceptance: [],
+  deps,
   filesHint: [],
+  id,
+  priority,
+  requirement: "",
+  title: id,
 });
 
 const originalUseContainers = process.env.ORCH_USE_CONTAINERS;
@@ -28,7 +28,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  rmSync(testDir, { recursive: true, force: true });
+  rmSync(testDir, { force: true, recursive: true });
 });
 
 afterEach(() => {
@@ -44,10 +44,10 @@ describe("buildAgentSpec", () => {
     const spec = buildAgentSpec(makeTask("sub-1"), "run-123", testDir, {
       auto: "medium",
       linear: {
+        authz: "token",
         issueId: "ISS-1",
         sessionId: "LIN-1",
         space: "focus",
-        authz: "token",
       },
     });
 
@@ -59,22 +59,20 @@ describe("buildAgentSpec", () => {
     expect(spec.context.relevantFiles).toEqual([]);
     expect(spec.context.linearSessionId).toBe("LIN-1");
     expect(spec.context.linearSpace).toBe("focus");
-    // Production default is container isolation
-    expect(spec.environment).toBe("container");
+    expect(spec.environment).toBe("agentfs");
   });
 
   it("uses container isolation by default", () => {
     const spec = buildAgentSpec(makeTask("sub-2"), "run-456", testDir, {
       maxParallel: 4,
     });
-    // Production default is always container, regardless of parallelism
-    expect(spec.environment).toBe("container");
+    expect(spec.environment).toBe("agentfs");
   });
 
-  it("confirms container environment with ORCH_USE_CONTAINERS=1", () => {
+  it("confirms agentfs environment with ORCH_USE_CONTAINERS=1", () => {
     process.env.ORCH_USE_CONTAINERS = "1";
     const spec = buildAgentSpec(makeTask("sub-3"), "run-789", testDir);
-    expect(spec.environment).toBe("container");
+    expect(spec.environment).toBe("agentfs");
   });
 });
 

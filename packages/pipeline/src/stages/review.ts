@@ -1,9 +1,14 @@
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type";
+import { type WorkflowEvent } from "@alfred/type";
+
 import { createEvent } from "../events";
-import type { PipelineContext, PipelineStage } from "../pipeline";
-import type { SerializableValue } from "../snapshot";
-import type { ExecuteOutput, ReviewCheck, ReviewOutput } from "./types";
+import { type PipelineContext, type PipelineStage } from "../pipeline";
+import { type SerializableValue } from "../snapshot";
+import {
+  type ExecuteOutput,
+  type ReviewCheck,
+  type ReviewOutput,
+} from "./types";
 
 /**
  * Review Stage
@@ -37,8 +42,8 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
   ): Promise<ReviewOutput> {
     ctx.emit(
       createEvent("stage:progress", {
-        stage: "review",
         message: "Running quality checks",
+        stage: "review",
       })
     );
 
@@ -54,8 +59,8 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
     if (savedGateState) {
       gate.restore(savedGateState);
       logger.info("review_gate_restored", {
-        runId: ctx.runId,
         checkCount: savedGateState.checks?.length ?? 0,
+        runId: ctx.runId,
       });
     }
 
@@ -75,9 +80,9 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       // Save gate state metadata (not full serialization)
       const gateSummary = gate.summary();
       ctx.set("reviewGateSummary", {
-        totalChecks: gateSummary.length,
         passedChecks: gateSummary.filter((c) => c.status === "passed").length,
         satisfied: gate.isSatisfied(),
+        totalChecks: gateSummary.length,
       });
 
       // Fixer loop (if enabled and gate not satisfied)
@@ -89,30 +94,30 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       // Final gate state metadata
       const finalSummary = gate.summary();
       ctx.set("reviewGateSummary", {
-        totalChecks: finalSummary.length,
         passedChecks: finalSummary.filter((c) => c.status === "passed").length,
         satisfied: gate.isSatisfied(),
+        totalChecks: finalSummary.length,
       });
       ctx.set("fixAttempts", fixAttempts);
 
       logger.info("review_stage_complete", {
-        runId: ctx.runId,
         allPassed: gate.isSatisfied(),
-        fixAttempts,
         checkCount: gate.summary().length,
+        fixAttempts,
+        runId: ctx.runId,
       });
     } catch (error) {
       logger.error("review_stage_failed", {
-        runId: ctx.runId,
         error: error instanceof Error ? error.message : String(error),
+        runId: ctx.runId,
       });
     }
 
     // Convert gate summary to ReviewCheck format
     const checks: ReviewCheck[] = gate.summary().map((check) => ({
+      message: check.evidence,
       name: check.id,
       passed: check.status === "passed",
-      message: check.evidence,
     }));
 
     // Store gate state for resume (serializable)
@@ -125,8 +130,8 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
 
     // Store output for resume
     const reviewOutput: ReviewOutput = {
-      checks,
       allPassed: gate.isSatisfied(),
+      checks,
       fixAttempts,
     };
     // Don't store review output - checks array contains data that's not guaranteed serializable
@@ -146,19 +151,19 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       const passed = outcome.status === "success";
 
       gate.recordCheck({
-        id: taskId,
-        type: "agent_completion",
-        status: passed ? "passed" : "failed",
         evidence: outcome.escalation ?? outcome.result?.summary,
+        id: taskId,
+        status: passed ? "passed" : "failed",
+        type: "agent_completion",
       });
 
       // Emit check event
       ctx.emit(
         createEvent("review:check", {
           check: {
+            message: outcome.escalation ?? outcome.result?.summary,
             name: `Agent ${taskId}`,
             passed,
-            message: outcome.escalation ?? outcome.result?.summary,
           },
         })
       );
@@ -178,12 +183,10 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
     let attempts = startAttempts;
 
     // Import fixer utilities
-    const { buildFixerSubTask, buildReviewPlan } = await import(
-      "@alfred/agent/orchestrator/multi/review"
-    );
-    const { buildAgentSpec } = await import(
-      "@alfred/agent/orchestrator/multi/spawn"
-    );
+    const { buildFixerSubTask, buildReviewPlan } =
+      await import("@alfred/agent/orchestrator/multi/review");
+    const { buildAgentSpec } =
+      await import("@alfred/agent/orchestrator/multi/spawn");
     const { runAgent } = await import("@alfred/runtime/orchestrator/agent");
     const { AsyncQueue } = await import("@alfred/runtime/utils/concurrency");
 
@@ -199,9 +202,9 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
       );
 
       logger.info("review_fixer_attempt", {
-        runId: ctx.runId,
         attempt: attempts,
         maxAttempts,
+        runId: ctx.runId,
       });
 
       try {
@@ -219,8 +222,8 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         // Build fixer subtask
         const fixerSubTask = buildFixerSubTask({
           attempt: attempts,
-          summary: plan.summary ?? summary,
           relevantFiles: files,
+          summary: plan.summary ?? summary,
         });
 
         // Build agent spec
@@ -246,19 +249,17 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         })();
         try {
           await runAgent({
-            spec: fixerSpec,
-            phaseId: "review-fixer",
-            runId: ctx.runId,
-            workspace: ctx.workspace,
-            workspaceRoot: ctx.workspace,
-            subTaskById: new Map(),
-            projectConfig: ctx.get("projectConfig") ?? null,
             activeWorkspaces: [],
             agentFileHints: new Map(),
-            rootExecPlanPath: ctx.get<string>("rootPlanPath") ?? "",
-            signal: ctx.signal,
             authz: ctx.get("authz"),
-            userId: ctx.userId,
+            phaseId: "review-fixer",
+            projectConfig: ctx.get("projectConfig") ?? null,
+            queue,
+            rootExecPlanPath: ctx.get<string>("rootPlanPath") ?? "",
+            runId: ctx.runId,
+            signal: ctx.signal,
+            spec: fixerSpec,
+            subTaskById: new Map(),
             trackerContextRef: {
               current: {
                 state: { agents: {}, waves: {} },
@@ -274,7 +275,9 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
                 },
               },
             },
-            queue,
+            userId: ctx.userId,
+            workspace: ctx.workspace,
+            workspaceRoot: ctx.workspace,
           });
         } finally {
           queue.close();
@@ -286,10 +289,10 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         // For now, we mark the attempt and let the next iteration re-evaluate
         for (const check of failedChecks) {
           gate.recordCheck({
-            id: check.id,
-            type: check.type,
-            status: "pending",
             attempt: attempts,
+            id: check.id,
+            status: "pending",
+            type: check.type,
           });
         }
 
@@ -304,16 +307,16 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         // Save gate state metadata after each attempt
         const attemptSummary = gate.summary();
         ctx.set("reviewGateSummary", {
-          totalChecks: attemptSummary.length,
+          lastAttempt: attempts,
           passedChecks: attemptSummary.filter((c) => c.status === "passed")
             .length,
           satisfied: gate.isSatisfied(),
-          lastAttempt: attempts,
+          totalChecks: attemptSummary.length,
         });
 
         logger.info("review_fixer_complete", {
-          runId: ctx.runId,
           attempt: attempts,
+          runId: ctx.runId,
           success,
         });
       } catch (error) {
@@ -325,9 +328,9 @@ export class ReviewStage implements PipelineStage<ExecuteOutput, ReviewOutput> {
         );
 
         logger.error("review_fixer_failed", {
-          runId: ctx.runId,
           attempt: attempts,
           error: error instanceof Error ? error.message : String(error),
+          runId: ctx.runId,
         });
       }
     }

@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
   afterEach,
   beforeEach,
@@ -7,7 +8,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { TRPCError } from "@trpc/server";
+
 import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 

@@ -6,10 +6,12 @@
  */
 
 import type { LanguageModel } from "ai";
+
 import { z } from "zod";
 
-import { classifyBatch, OFFLINE_MODE } from "../classify/index.js";
 import type { SubTask } from "./types.js";
+
+import { classifyBatch, OFFLINE_MODE } from "../classify/index.js";
 
 /**
  * Phase group result

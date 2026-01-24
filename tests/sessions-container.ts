@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
+import { spawn } from "bun";
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "bun";
+
 import { ContainerWorkspace } from "../packages/agent/src/environment/container";
 
 async function runCommand(args: string[], options: { cwd?: string } = {}) {

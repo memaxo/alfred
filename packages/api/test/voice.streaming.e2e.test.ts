@@ -1,7 +1,8 @@
+import { installVoiceTestPools } from "@alfred/test-kit/voice/runtime-fixture";
 import { afterAll, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { Buffer } from "node:buffer";
 import { createServer } from "node:net";
-import { installVoiceTestPools } from "@alfred/test-kit/voice/runtime-fixture";
+
 import "./utils/mock-metrics";
 
 // Define mocks BEFORE any imports

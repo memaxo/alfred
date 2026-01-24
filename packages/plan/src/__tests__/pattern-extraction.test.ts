@@ -1,5 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
+
 import type { StructuredPlan } from "../generate/types.js";
+
 import { extractPatternFromRun } from "../pattern/extract.js";
 
 // Mock AI and DB

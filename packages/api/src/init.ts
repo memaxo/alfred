@@ -1,5 +1,6 @@
 import { logger } from "@alfred/logger";
 import { startDefaultMetrics } from "@alfred/metrics/default";
+
 import { initMetricsHooks } from "./metrics";
 import {
   isDbAvailable,
@@ -55,19 +56,17 @@ export function initApiServices(): void {
 
   // Initialize compression worker (if enabled)
   void (async () => {
-    const { compressionWorkerOverrides } = await import(
-      "@alfred/agent/orchestrator/config"
-    );
-    const { startCompressionWorker, stopCompressionWorker } = await import(
-      "@alfred/agent/orchestrator/compression-worker"
-    );
+    const { compressionWorkerOverrides } =
+      await import("@alfred/agent/orchestrator/config");
+    const { startCompressionWorker, stopCompressionWorker } =
+      await import("@alfred/agent/orchestrator/compression-worker");
     stopCompressionWorkerFn = stopCompressionWorker;
     const compressionConfig = compressionWorkerOverrides();
     if (compressionConfig.enabled) {
       startCompressionWorker(compressionConfig);
       logger.info("compression_worker_init", {
-        message: "Compression worker started",
         intervalMs: compressionConfig.intervalMs,
+        message: "Compression worker started",
       });
     } else {
       logger.info("compression_worker_disabled", {
@@ -86,9 +85,8 @@ export function initApiServices(): void {
   // Initialize learning worker (if enabled via env)
   if (process.env.ENABLE_LEARNING_WORKER === "1") {
     void (async () => {
-      const { startLearningWorker, stopLearningWorker } = await import(
-        "@alfred/agent/orchestrator/learning-worker"
-      );
+      const { startLearningWorker, stopLearningWorker } =
+        await import("@alfred/agent/orchestrator/learning-worker");
       stopLearningWorkerFn = stopLearningWorker;
       startLearningWorker();
       logger.info("learning_worker_init", {
@@ -230,9 +228,8 @@ export function initApiServices(): void {
     process.env.WORKTREE_PREVIEW_CLEANUP_ROOT ?? process.cwd();
 
   void (async () => {
-    const { flushPreviewCleanupBacklog } = await import(
-      "@alfred/agent/orchestrator/tool/worktree"
-    );
+    const { flushPreviewCleanupBacklog } =
+      await import("@alfred/agent/orchestrator/tool/worktree");
     flushPreviewCleanupBacklog(cleanupRoot)
       .then((count) => {
         if (count > 0) {
@@ -255,9 +252,8 @@ export function initApiServices(): void {
 
   worktreeCleanupInterval = setInterval(() => {
     void (async () => {
-      const { flushPreviewCleanupBacklog } = await import(
-        "@alfred/agent/orchestrator/tool/worktree"
-      );
+      const { flushPreviewCleanupBacklog } =
+        await import("@alfred/agent/orchestrator/tool/worktree");
       flushPreviewCleanupBacklog(cleanupRoot)
         .then((count) => {
           if (count > 0) {

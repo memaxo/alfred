@@ -1,4 +1,6 @@
-import { setTimeout as delay } from "node:timers/promises";
+import type { ReviewCheckStatus } from "@alfred/agent/workflow/review-gate";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+
 import {
   commentOnLinearIssue,
   emitLinearActivity,
@@ -9,9 +11,8 @@ import {
   setLinearSessionExternalUrl,
   setLinearStarted,
 } from "@alfred/agent/orchestrator/linear";
-import type { ReviewCheckStatus } from "@alfred/agent/workflow/review-gate";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { logger } from "@alfred/logger";
+import { setTimeout as delay } from "node:timers/promises";
 
 function resolveExternalUrlBase(): string | null {
   return (

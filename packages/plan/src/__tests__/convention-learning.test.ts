@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { learnProjectConventions } from "../project/conventions.js";
 
 // Mock AI and DB

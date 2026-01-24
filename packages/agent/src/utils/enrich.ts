@@ -6,13 +6,16 @@
  * appropriate UIComponent schemas.
  */
 
-import { randomUUID } from "node:crypto";
-import { logger } from "@alfred/logger";
 import type { SchemaContext } from "@alfred/type/genui";
-import { isGenUIToolResult } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
-import { SchemaGenerator } from "../services/schema";
+
+import { logger } from "@alfred/logger";
+import { isGenUIToolResult } from "@alfred/type/genui";
+import { randomUUID } from "node:crypto";
+
 import type { ToolResultShape } from "./normalize";
+
+import { SchemaGenerator } from "../services/schema";
 
 type MessagePart = UIMessage["parts"][number];
 

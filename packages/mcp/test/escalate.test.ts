@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from "bun:test";
 import { issueMcpSessionToken } from "@alfred/auth/token";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import { afterEach, describe, expect, it } from "bun:test";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+
 import { RuntimeMcpServer } from "../src";
 
 describe("RuntimeMcpServer (runtime MCP)", () => {

@@ -1,13 +1,16 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
 import { generateConflictExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/conflict";
 import { plansPath } from "@alfred/agent/orchestrator/plans";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type/plan";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+import type { OrchestratorContext } from "./types";
+
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
-import type { OrchestratorContext } from "./types";
 
 export async function* runConflictPhase(
   ctx: OrchestratorContext,

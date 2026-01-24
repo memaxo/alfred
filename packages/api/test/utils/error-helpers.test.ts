@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
 import { TRPCError } from "@trpc/server";
+import { describe, expect, test } from "bun:test";
+
 import { assertResourceAccess } from "../../src/utils/error-helpers";
 
 describe("assertResourceAccess", () => {

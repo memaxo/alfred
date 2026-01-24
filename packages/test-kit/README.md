@@ -24,7 +24,7 @@ describe("My Test", () => {
   it("writes files safely", () => {
     // All files go to /tmp/my-test-xxxxx/
     writeFileSync(sandbox.path("file.txt"), "content");
-    
+
     // Create subdirectories
     const venvDir = sandbox.mkdir(".venv/bin");
   });

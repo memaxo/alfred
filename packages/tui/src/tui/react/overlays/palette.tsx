@@ -8,10 +8,13 @@
 /** @jsxImportSource @opentui/react */
 
 import type { KeyEvent } from "@opentui/core";
+
 import { TextAttributes } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
+
 import type { Command } from "../../input/commands";
+
 import { searchCommands } from "../../input/commands";
 
 export type CommandPaletteProps = {

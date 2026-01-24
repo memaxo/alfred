@@ -2,8 +2,9 @@
  * Autonomy gradient update with instrumentation
  */
 
-import { cognitiveAutonomyUpdateDuration } from "../metrics.js";
 import type { Physiology } from "../physiology/types.js";
+
+import { cognitiveAutonomyUpdateDuration } from "../metrics.js";
 import {
   autonomy,
   CONFIDENCE_DECAY_RATE,

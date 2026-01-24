@@ -18,6 +18,8 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
+import { type WorkflowEvent } from "@alfred/type";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   afterAll,
   afterEach,
@@ -28,8 +30,6 @@ import {
   it,
 } from "bun:test";
 import path from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 
 // VCR for AI provider responses
 const cassettePath = path.join(
@@ -75,8 +75,8 @@ const completeEvent = (outcome: any) =>
 const interruptEvent = (reason: string) =>
   ({
     _: "interrupt",
-    reason,
     priority: 1,
+    reason,
     ts: now(),
   }) as any;
 
@@ -86,12 +86,10 @@ const stream = (suffix: string) => `wf-cog-${suffix}-${now()}`;
 async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { cognitiveEvents, cognitiveSnapshots } = await import(
-      "@alfred/db/schema/cognitive"
-    );
-    const { workflowEvents, workflowRuns } = await import(
-      "@alfred/db/schema/workflow"
-    );
+    const { cognitiveEvents, cognitiveSnapshots } =
+      await import("@alfred/db/schema/cognitive");
+    const { workflowEvents, workflowRuns } =
+      await import("@alfred/db/schema/workflow");
     await db.delete(cognitiveEvents);
     await db.delete(cognitiveSnapshots);
     await db.delete(workflowEvents);
@@ -135,8 +133,8 @@ describe("Workflow → Cognitive Integration", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "wf-cog-test-user",
         email: "wf-cog@test.local",
+        id: "wf-cog-test-user",
         name: "Workflow Cognitive Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -167,26 +165,26 @@ describe("Workflow → Cognitive Integration", () => {
       const events: WorkflowEvent[] = [];
 
       const subscription = await caller.stream({
-        requirement: "Execute task from cognitive loop",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Execute task from cognitive loop",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => resolve(), 10_000);
         const sub = observable.subscribe({
-          next: (event) => events.push(event),
-          error: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
-          },
           complete: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          next: (event) => events.push(event),
         });
       });
 
@@ -206,7 +204,7 @@ describe("Workflow → Cognitive Integration", () => {
       );
 
       // Simulate workflow completion
-      const outcome = { _: "success" as const, result: "done", duration: 500 };
+      const outcome = { _: "success" as const, duration: 500, result: "done" };
       const cogResult = await runCognitiveLoop(
         ctx,
         streamId,
@@ -258,11 +256,11 @@ describe("Workflow → Cognitive Integration", () => {
       // Multiple transitions drain energy
       for (let i = 0; i < 5; i++) {
         const result = applyTransition(state, auto, inputEvent(`task-${i}`));
-        state = result.state;
+        ({ state } = result);
       }
 
       // Energy should have decreased
-      expect(state.physiology.energy).toBeLessThan(1.0);
+      expect(state.physiology.energy).toBeLessThan(1);
     });
 
     it("high frustration triggers conservative workflow mode", async () => {
@@ -383,7 +381,7 @@ describe("Workflow → Cognitive Integration", () => {
         typeof interruptPayload === "object" &&
         "data" in interruptPayload
       ) {
-        const data = (interruptPayload as any).data;
+        const { data } = interruptPayload as any;
         expect(data.reason).toContain("boredom_loop_detected");
         expect(data.priority).toBe(2); // Supervisor interrupts use priority 2
       }
@@ -402,8 +400,8 @@ describe("Workflow → Cognitive Integration", () => {
 
       const successOutcome = {
         _: "success" as const,
-        result: "completed",
         duration: 100,
+        result: "completed",
       };
       const result = await runCognitiveLoop(
         ctx,
@@ -504,7 +502,7 @@ describe("Cognitive → Workflow Integration", () => {
       const result = await runCognitiveLoop(
         ctx,
         streamId,
-        completeEvent({ _: "success", result: "done", duration: 100 })
+        completeEvent({ _: "success", duration: 100, result: "done" })
       );
 
       expect(result.state._).toBe("reflecting");
@@ -547,8 +545,8 @@ describe("Cross-Boundary Event Flow", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "cross-boundary-user",
         email: "cross@test.local",
+        id: "cross-boundary-user",
         name: "Cross Boundary Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -569,7 +567,7 @@ describe("Cross-Boundary Event Flow", () => {
     await runCognitiveLoop(
       ctx,
       cogStreamId,
-      completeEvent({ _: "success", result: "done", duration: 50 })
+      completeEvent({ _: "success", duration: 50, result: "done" })
     );
 
     // Workflow events
@@ -577,26 +575,26 @@ describe("Cross-Boundary Event Flow", () => {
     const workflowEvents: WorkflowEvent[] = [];
 
     const subscription = await caller.stream({
-      requirement: "Workflow task",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Workflow task",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => resolve(), 10_000);
       const sub = observable.subscribe({
-        next: (event) => workflowEvents.push(event),
-        error: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
-        },
         complete: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
+        error: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        next: (event) => workflowEvents.push(event),
       });
     });
 
@@ -624,29 +622,29 @@ describe("Cross-Boundary Event Flow", () => {
     let runId: string | undefined;
 
     const subscription = await caller.stream({
-      requirement: "Consistency workflow",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Consistency workflow",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => resolve(), 10_000);
       const sub = observable.subscribe({
-        next: (event) => {
-          if (event._ === "run" && (event as any).id) {
-            runId = (event as any).id;
-          }
+        complete: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
         },
         error: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
-        complete: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
+        next: (event) => {
+          if (event._ === "run" && (event as any).id) {
+            runId = (event as any).id;
+          }
         },
       });
     });
@@ -659,7 +657,7 @@ describe("Cross-Boundary Event Flow", () => {
     const cogEnd = await runCognitiveLoop(
       ctx,
       streamId,
-      completeEvent({ _: "success", result: runId, duration: 100 })
+      completeEvent({ _: "success", duration: 100, result: runId })
     );
     expect(cogEnd.state._).toBe("reflecting");
   });

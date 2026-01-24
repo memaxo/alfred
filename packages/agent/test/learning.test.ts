@@ -1,4 +1,3 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
@@ -6,10 +5,12 @@ import {
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
-import type {
-  LearnMistakeInput,
-  LearnPatternInput,
-  LearnRecordInput,
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+
+import {
+  type LearnMistakeInput,
+  type LearnPatternInput,
+  type LearnRecordInput,
 } from "../src/orchestrator/tool/learning/definition";
 
 // Install shared mocks
@@ -33,13 +34,12 @@ mock.module("@alfred/learning/self_supervision", () => ({
 const mockEmbedMany = mock();
 const mockCosineSimilarity = mock();
 mock.module("@alfred/embed", () => ({
-  embedMany: mockEmbedMany,
   cosineSimilarity: mockCosineSimilarity,
+  embedMany: mockEmbedMany,
 }));
 
-const { toolLearnMistake, toolLearnPattern, toolLearnRecord } = await import(
-  "../src/orchestrator/tool/learning"
-);
+const { toolLearnMistake, toolLearnPattern, toolLearnRecord } =
+  await import("../src/orchestrator/tool/learning");
 
 describe("Learning Tools", () => {
   beforeEach(() => {
@@ -50,13 +50,13 @@ describe("Learning Tools", () => {
     mockCosineSimilarity.mockReset();
 
     mockRequireToolScopesAndPolicy.mockResolvedValue({
-      decision: { allow: true },
       claims: {
         sub: "test-user",
         scopes: ["learning.write"],
         elevated: true,
         mfa: "passkey",
       },
+      decision: { allow: true },
     });
 
     mockUpsertNodes.mockResolvedValue(
@@ -78,10 +78,10 @@ describe("Learning Tools", () => {
       );
 
       const input: LearnRecordInput = {
-        workflowId: "run-123",
-        outcome: "success",
         actual: "Completed successfully",
         authz: "Bearer token",
+        outcome: "success",
+        workflowId: "run-123",
       };
 
       const result = await toolLearnRecord.execute({ input });
@@ -92,7 +92,7 @@ describe("Learning Tools", () => {
         ["learning.write"],
         expect.objectContaining({
           action: "learning.record",
-          resource: { kind: "learning", id: "runtime:run-123" },
+          resource: { id: "runtime:run-123", kind: "learning" },
         })
       );
     });
@@ -105,21 +105,21 @@ describe("Learning Tools", () => {
       mockSupervise.mockReturnValue([
         {
           node: {
-            id: "insight-1",
-            derived: [],
             conclusion: "Prediction error detected",
             confidence: 0.5,
+            derived: [],
+            id: "insight-1",
           },
           replace: false,
         },
       ]);
 
       const input: LearnRecordInput = {
-        workflowId: "run-123",
-        outcome: "failure",
-        expected: "Should have succeeded",
         actual: "Failed due to error",
         authz: "Bearer token",
+        expected: "Should have succeeded",
+        outcome: "failure",
+        workflowId: "run-123",
       };
 
       await toolLearnRecord.execute({ input });
@@ -135,21 +135,21 @@ describe("Learning Tools", () => {
       mockSupervise.mockReturnValue([
         {
           node: {
-            id: "insight-1",
-            derived: [],
             conclusion: "High prediction error: workflow failed unexpectedly",
             confidence: 0.8,
+            derived: [],
+            id: "insight-1",
           },
           replace: false,
         },
       ]);
 
       const input: LearnRecordInput = {
-        workflowId: "run-456",
-        outcome: "failure",
-        expected: "Complete success with all tests passing",
         actual: "Complete failure with all tests failing",
         authz: "Bearer token",
+        expected: "Complete success with all tests passing",
+        outcome: "failure",
+        workflowId: "run-456",
       };
 
       const result = await toolLearnRecord.execute({ input });
@@ -165,11 +165,11 @@ describe("Learning Tools", () => {
 
       // Use identical strings to ensure zero error (below 0.15 threshold)
       const input: LearnRecordInput = {
-        workflowId: "run-789",
-        outcome: "success",
-        expected: "Tests pass",
         actual: "Tests pass",
         authz: "Bearer token",
+        expected: "Tests pass",
+        outcome: "success",
+        workflowId: "run-789",
       };
 
       await toolLearnRecord.execute({ input });
@@ -185,10 +185,10 @@ describe("Learning Tools", () => {
       mockSupervise.mockReturnValue([
         {
           node: {
-            id: "insight-1",
             conclusion: "Valid insight",
             confidence: 0.5,
             derived: [],
+            id: "insight-1",
           },
           replace: false,
         },
@@ -213,11 +213,11 @@ describe("Learning Tools", () => {
       ]);
 
       const input: LearnRecordInput = {
-        workflowId: "run-filter",
-        outcome: "failure",
-        expected: "Success",
         actual: "Failure",
         authz: "Bearer token",
+        expected: "Success",
+        outcome: "failure",
+        workflowId: "run-filter",
       };
 
       await toolLearnRecord.execute({ input });
@@ -235,12 +235,12 @@ describe("Learning Tools", () => {
       );
 
       const input: LearnPatternInput = {
-        description: "Deploy to staging with safe checks",
-        toolSequence: ["git_status", "git_diff", "bun_test"],
-        context: { env: "staging" },
-        confidence: 0.9,
-        domain: "git",
         authz: "Bearer token",
+        confidence: 0.9,
+        context: { env: "staging" },
+        description: "Deploy to staging with safe checks",
+        domain: "git",
+        toolSequence: ["git_status", "git_diff", "bun_test"],
       };
 
       const result = await toolLearnPattern.execute({ input });
@@ -252,7 +252,7 @@ describe("Learning Tools", () => {
         ["learning.write"],
         expect.objectContaining({
           action: "learning.pattern",
-          resource: { kind: "learning", id: "git" },
+          resource: { id: "git", kind: "learning" },
         })
       );
     });
@@ -265,12 +265,12 @@ describe("Learning Tools", () => {
       );
 
       const input: LearnMistakeInput = {
-        mistake: "Used force push on shared branch",
-        correction: "Reverted and used a new branch + PR",
-        context: { repo: "alfred" },
-        severity: "high",
-        domain: "git",
         authz: "Bearer token",
+        context: { repo: "alfred" },
+        correction: "Reverted and used a new branch + PR",
+        domain: "git",
+        mistake: "Used force push on shared branch",
+        severity: "high",
       };
 
       const result = await toolLearnMistake.execute({ input });
@@ -282,7 +282,7 @@ describe("Learning Tools", () => {
         ["learning.write"],
         expect.objectContaining({
           action: "learning.mistake",
-          resource: { kind: "learning", id: "git" },
+          resource: { id: "git", kind: "learning" },
         })
       );
     });

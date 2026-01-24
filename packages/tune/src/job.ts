@@ -1,7 +1,8 @@
-import { runMlxFineTune } from "./backends/mlx";
 import type { FineTuneBackend, FineTuneConfig } from "./config";
-import { fineTuneRunDurationSeconds, fineTuneRunsTotal } from "./metrics";
 import type { FineTuneJobOptions, FineTuneRunResult } from "./run-types";
+
+import { runMlxFineTune } from "./backends/mlx";
+import { fineTuneRunDurationSeconds, fineTuneRunsTotal } from "./metrics";
 
 type BackendRunner = (
   config: FineTuneConfig,

@@ -1,8 +1,10 @@
 import { logger } from "@alfred/logger";
 import { detectProject } from "@alfred/plan";
-import { createEvent } from "../events";
+
 import type { PipelineContext, PipelineStage } from "../pipeline";
 import type { InitOutput, PipelineInput } from "./types";
+
+import { createEvent } from "../events";
 
 export class InitStage implements PipelineStage<PipelineInput, InitOutput> {
   readonly name = "init" as const;

@@ -1,10 +1,4 @@
-import { cosineSimilarity } from "@alfred/embed";
 import type { Hypergraph, NodeId } from "@alfred/knowledge";
-import {
-  detectContradiction,
-  extractReasoning,
-} from "@alfred/knowledge/extractor";
-import { embed } from "@alfred/rag";
 import type {
   CaptureResult,
   CognitiveConfidence,
@@ -21,6 +15,13 @@ import type {
   KnowledgeRelation,
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
+
+import { cosineSimilarity } from "@alfred/embed";
+import {
+  detectContradiction,
+  extractReasoning,
+} from "@alfred/knowledge/extractor";
+import { embed } from "@alfred/rag";
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 

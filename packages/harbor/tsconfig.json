@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

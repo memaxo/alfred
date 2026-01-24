@@ -4,6 +4,7 @@
  */
 
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
 import { projects } from "./project";
 
 // Index coverage: migrations 0041+ provide audit log and approval indexes.

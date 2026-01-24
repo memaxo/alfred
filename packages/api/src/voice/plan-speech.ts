@@ -5,8 +5,10 @@
  * optimized for TTS synthesis and voice interaction.
  */
 
-import { type HonorificPreference, renderHonorific } from "@alfred/persona";
 import type { Phase, StructuredPlan } from "@alfred/plan";
+
+import { type HonorificPreference, renderHonorific } from "@alfred/persona";
+
 import type { VoiceWorkflowVerbosity } from "./preferences.js";
 
 /**

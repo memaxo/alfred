@@ -6,4 +6,3 @@ Internal wrapper around TanStack Pacer used to standardize debouncing, throttlin
 
 - `@alfred/pacer` - Core utilities (non-React).
 - `@alfred/pacer/react` - React adapter exports (hooks + helpers).
-

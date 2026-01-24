@@ -22,7 +22,7 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
    - Operation: `stt`, `tts`, `start`, `resume`, `cancel`, `query`, `ingest`, `extract`, etc.
    - Reason: `failed`, `timeout`, `unauthorized`, `invalid_input`, `not_found`, etc.
 
-4. **Non-fatal errors.** Log errors even if they don't break the flow. Use structured logging with context (runId, eventType, error message).
+5. **Non-fatal errors.** Log errors even if they don't break the flow. Use structured logging with context (runId, eventType, error message).
 
 6. **Error messages.** Structure messages for clients:
    - User-facing: `"session_required"` (no internals)
@@ -36,11 +36,12 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 9. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
 
 10. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
-   - Database unavailable: Return empty/null data instead of crashing
-   - External services down: Skip optional features, log warnings
-   - Use `isDbConnectionError()` type guard to classify DB errors
-   - Wrap route handlers with try-catch for graceful degradation
-   - Never throw unhandled errors during SSR (crashes entire page render)
+
+- Database unavailable: Return empty/null data instead of crashing
+- External services down: Skip optional features, log warnings
+- Use `isDbConnectionError()` type guard to classify DB errors
+- Wrap route handlers with try-catch for graceful degradation
+- Never throw unhandled errors during SSR (crashes entire page render)
 
 11. **Graceful degradation.** When external dependencies are unavailable:
     - Check availability before initializing services (`isDbAvailable()`, `isUvAvailable()`)
@@ -70,5 +71,3 @@ Wrap handlers with try-catch and use `isDbConnectionError()` to return graceful 
 Check availability before starting services using `isDbAvailable()` or `isUvAvailable()`. Skip non-critical services with warnings instead of crashing on startup.
 
 See `.ruler/graceful-degradation.md` for detailed patterns.
-
-

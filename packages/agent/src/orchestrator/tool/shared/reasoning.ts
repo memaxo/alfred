@@ -13,19 +13,19 @@ const DEFAULT_REASONING_CAP_BYTES =
 /**
  * Accumulator for reasoning traces during tool execution
  */
-export type ReasoningAccumulator = {
+export interface ReasoningAccumulator {
   traces: Array<{ text: string; timestamp: number }>;
   storedBytes: number;
   truncated: boolean;
-};
+}
 
 /**
  * Create a fresh reasoning accumulator
  */
 export function createReasoningAccumulator(): ReasoningAccumulator {
   return {
-    traces: [],
     storedBytes: 0,
+    traces: [],
     truncated: false,
   };
 }
@@ -51,7 +51,7 @@ export function appendReasoningTrace(
 
   const timestamp = ts ?? Date.now();
   const buffer = Buffer.from(reasoningText);
-  const byteLength = buffer.byteLength;
+  const { byteLength } = buffer;
 
   if (acc.truncated) {
     acc.storedBytes += byteLength;
@@ -109,7 +109,7 @@ export function extractReasoningText(item: unknown): string | null {
         if (!entry || typeof entry !== "object") {
           return [];
         }
-        const text = (entry as { text?: unknown }).text;
+        const { text } = entry as { text?: unknown };
         return typeof text === "string" ? text : [];
       })
       .filter((part): part is string => typeof part === "string");
@@ -146,11 +146,10 @@ export async function persistReasoning(
 
   try {
     // Dynamic import to avoid circular dependencies
-    const { persistReasoning: graphPersist } = await import(
-      "../../../../assistant/src/graphstore"
-    );
+    const { persistReasoning: graphPersist } =
+      await import("../../../../assistant/src/graphstore");
     await graphPersist(resource, traces, ctx);
-  } catch (_error) {}
+  } catch {}
 }
 
 function trimBufferToUtf8Boundary(
@@ -165,7 +164,7 @@ function trimBufferToUtf8Boundary(
 
   while (end > 0) {
     try {
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(
+      const text = new TextDecoder("utf8", { fatal: true }).decode(
         buffer.subarray(0, end)
       );
       return { text, usedBytes: end };

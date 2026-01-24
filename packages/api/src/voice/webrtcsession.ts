@@ -1,10 +1,10 @@
-import { Buffer } from "node:buffer";
-import { logger } from "@alfred/logger";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type {
   VoiceStreamServerEvent,
   VoiceStreamSurface,
 } from "@alfred/type/voice";
+
+import { logger } from "@alfred/logger";
 import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
 import { resamplePcm16Mono } from "@alfred/voice/audio";
 import {
@@ -16,6 +16,7 @@ import {
   voiceWebrtcSessionsCurrent,
 } from "@alfred/voice/metrics";
 import { Decoder, Encoder } from "@evan/opus";
+import { Buffer } from "node:buffer";
 import {
   type RTCDataChannel,
   type RTCIceCandidateInit,
@@ -25,6 +26,7 @@ import {
   RtpHeader,
   RtpPacket,
 } from "werift";
+
 import { runAssistantForVoice } from "./assistant";
 import { getVoicePools } from "./pools";
 import {

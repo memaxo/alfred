@@ -1,11 +1,13 @@
 import * as chrono from "chrono-node";
-import { RECURRENCE_REGEX } from "../lexicon/index.js";
-import { clampConfidence } from "./entities.js";
+
 import type {
   ChronoResult,
   TemporalExpression,
   TemporalPrecision,
 } from "./types.js";
+
+import { RECURRENCE_REGEX } from "../lexicon/index.js";
+import { clampConfidence } from "./entities.js";
 
 /**
  * Extract temporal expressions (dates, durations, sequences) from text.

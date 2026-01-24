@@ -6,12 +6,6 @@
  * to commands, panels, and health checks.
  */
 
-import {
-  discoverAndLoadManifests,
-  discoverPackages,
-  findPackagesDir,
-  loadManifest,
-} from "./discover";
 import type {
   CliManifest,
   CommandDef,
@@ -22,6 +16,13 @@ import type {
   SubscriptionDef,
   TuiPanelDef,
 } from "./manifest";
+
+import {
+  discoverAndLoadManifests,
+  discoverPackages,
+  findPackagesDir,
+  loadManifest,
+} from "./discover";
 
 // Re-export types
 export type {

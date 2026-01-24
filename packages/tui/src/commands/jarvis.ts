@@ -1,4 +1,5 @@
-import type { UIMessage } from "@alfred/type/stream";
+import { type UIMessage } from "@alfred/type/stream";
+
 import { playAudioBase64 } from "../cli/audio";
 import { createCliContext } from "../cli/context";
 
@@ -28,9 +29,9 @@ async function speakText(
   const { appRouter } = await import("@alfred/api/router");
   const caller = appRouter.createCaller(ctx);
   const audio = await caller.voice.ttsSynthesize({
+    format: "wav",
     text,
     voice: "alloy",
-    format: "wav",
   });
   if (!audio?.audioBase64) {
     return;
@@ -42,16 +43,14 @@ async function speakText(
 }
 
 async function selectJarvisGreeting(): Promise<string> {
-  const { selectGreeting } = await import(
-    "@alfred/agent/assistant/src/jarvis-persona"
-  );
+  const { selectGreeting } =
+    await import("@alfred/agent/assistant/src/jarvis-persona");
   return selectGreeting(new Date().getHours());
 }
 
 async function selectJarvisStatusOpener(): Promise<string> {
-  const { selectTransition } = await import(
-    "@alfred/agent/assistant/src/jarvis-persona"
-  );
+  const { selectTransition } =
+    await import("@alfred/agent/assistant/src/jarvis-persona");
   return selectTransition("status");
 }
 
@@ -80,17 +79,17 @@ async function fetchHealthSummary(): Promise<{
     }
 
     if (!apiOk) {
-      return { overall: "critical", line: "API unreachable." };
+      return { line: "API unreachable.", overall: "critical" };
     }
     if (!depsOk) {
-      return { overall: "critical", line: "Dependency health check failing." };
+      return { line: "Dependency health check failing.", overall: "critical" };
     }
     if (redis !== "ok") {
-      return { overall: "degraded", line: "Redis degraded." };
+      return { line: "Redis degraded.", overall: "degraded" };
     }
-    return { overall: "nominal", line: "All systems nominal." };
+    return { line: "All systems nominal.", overall: "nominal" };
   } catch {
-    return { overall: "unknown", line: "Unable to reach health endpoints." };
+    return { line: "Unable to reach health endpoints.", overall: "unknown" };
   }
 }
 
@@ -117,8 +116,8 @@ Runs a quick JARVIS-styled assistant query (prints text; optionally speaks via l
   const caller = appRouter.createCaller(ctx);
   const message: UIMessage = {
     id: `cli-${Date.now()}`,
-    role: "user",
     parts: [{ type: "text", text: query }],
+    role: "user",
   };
   const result = await caller.assistant.generate({
     messages: [message] as unknown[],

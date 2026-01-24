@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
+
 import { extractCodeEntities } from "../src/extract/entities";
 import {
   detectContradiction,

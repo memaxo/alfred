@@ -28,71 +28,72 @@ export type TextView = BaseView & {
   normalize(options?: { whitespace?: boolean; case?: boolean }): TextView;
 };
 
-export const asTextView = (view: BaseView): TextView =>
-  view as unknown as TextView;
+export function asTextView(view: BaseView): TextView {
+  return view as unknown as TextView;
+}
 
-export type TermJson = {
+export interface TermJson {
   text?: string;
   tags?: string[];
   index?: [number, number];
-};
+}
 
-export type SentenceJson = {
+export interface SentenceJson {
   text?: string;
   terms?: TermJson[];
-};
+}
 
-export type VerbJson = {
+export interface VerbJson {
   terms?: TermJson[];
   verb?: {
     infinitive?: string;
     root?: string;
   };
   text?: string;
-};
+}
 
-export type NumberJson = {
+export interface NumberJson {
   number?: number;
   text?: string;
-};
+}
 
 export type EntityKind = "person" | "place" | "organization" | "unknown";
 
-export type EntityMention = {
+export interface EntityMention {
   text: string;
   sentence: number;
   start: number;
   end: number;
-};
+}
 
-export type Entity = {
+export interface Entity {
   label: string;
   canonical: string;
   kind: EntityKind;
   confidence: number;
   mentions: EntityMention[];
   isPronoun?: boolean;
-};
+}
 
-export type RelationTriple = {
+export interface RelationTriple {
   source: string;
   relation: string;
   target: string;
   sentence: number;
   evidence: string;
   confidence: number;
-};
+}
 
-export type Contradiction = {
+export interface Contradiction {
   pair: [string, string];
   reason: "negation" | "antonym" | "numeric";
   focus?: string;
   confidence: number;
-};
+}
 
 export type TemporalPrecision = "year" | "month" | "day" | "time";
 
-export type TemporalExpression = {
+export interface TemporalExpression {
   raw: string;
   type: "instant" | "range" | "recurring";
   normalized: {
@@ -103,17 +104,17 @@ export type TemporalExpression = {
   precision?: TemporalPrecision;
   recurrence?: string;
   confidence: number;
-};
+}
 
-export type ExtractedFact = {
+export interface ExtractedFact {
   content: string;
   confidence: number;
   source: string;
   entities: string[];
   relations: RelationTriple[];
-};
+}
 
-export type ExtractionResult = {
+export interface ExtractionResult {
   facts: ExtractedFact[];
   entities: Set<string>;
   entityDetails: Entity[];
@@ -126,18 +127,18 @@ export type ExtractionResult = {
   hasCodeBlock: boolean;
   /** Primary domain for this extraction */
   primaryDomain: string | null;
-};
+}
 
-export type MentionTerm = {
+export interface MentionTerm {
   text: string;
   index?: [number, number];
   tags?: string[];
-};
+}
 
-export type MaybeMentionTerm = {
+export interface MaybeMentionTerm {
   text?: string;
   index?: [number, number];
   tags?: string[];
-};
+}
 
 export type MentionRecord = EntityMention & { entity: Entity };

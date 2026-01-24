@@ -2,22 +2,28 @@ export type HonorificPreference = "sir" | "madam" | "neutral";
 
 export function renderHonorific(pref: HonorificPreference): string {
   switch (pref) {
-    case "sir":
+    case "sir": {
       return "Sir";
-    case "madam":
+    }
+    case "madam": {
       return "Madam";
-    case "neutral":
+    }
+    case "neutral": {
       return "Sir/Madam";
+    }
   }
 }
 
-export function applyHonorific(text: string, pref: HonorificPreference): string {
+export function applyHonorific(
+  text: string,
+  pref: HonorificPreference
+): string {
   const t = text.trim();
   if (!t) {
     return t;
   }
   const h = renderHonorific(pref);
-  return `${t.replace(/\s+/g, " ")} ${h}.`;
+  return `${t.replaceAll(/\s+/g, " ")} ${h}.`;
 }
 
 export function parseHonorificPreference(
@@ -42,4 +48,3 @@ export function parseHonorificPreference(
   }
   return fallback;
 }
-

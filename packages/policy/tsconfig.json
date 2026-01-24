@@ -5,7 +5,8 @@
     "declarationMap": false,
     "sourceMap": false,
     "outDir": "dist",
-    "composite": true
+    "composite": true,
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],

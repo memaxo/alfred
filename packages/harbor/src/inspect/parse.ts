@@ -3,6 +3,7 @@
  */
 
 import * as fs from "node:fs";
+
 import type { AtifTrajectory } from "../types.js";
 
 /**

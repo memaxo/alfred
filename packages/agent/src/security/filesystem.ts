@@ -7,6 +7,7 @@ import {
   realpathSync,
 } from "node:fs";
 import path from "node:path";
+
 import { directoryFdPath, ensureFdInheritable, pathFromFd } from "./fd.js";
 
 export type PathResolutionOptions = {

@@ -1,12 +1,23 @@
 import { logger } from "@alfred/logger";
-import type {
-  ContextBundle,
-  DecomposeContext,
-  SubTask,
-  SubTaskId,
+import { type FailureContext, type StructuredHandoff } from "@alfred/type";
+import {
+  type ContextBundle,
+  type DecomposeContext,
+  type SubTask,
+  type SubTaskId,
 } from "@alfred/type/plan";
 
 import { classifyPath, type PathBucket } from "../classify/index.js";
+import {
+  addHandoffContext,
+  addUpstreamFailures,
+  applyEnrichmentToTask,
+  enrichTasks,
+  queryTaskEnrichment,
+  type EnrichmentOptions,
+  type EnrichmentSource,
+} from "../enrich/index.js";
+import { propagateUpstreamFailures } from "../enrich/propagate.js";
 
 // Type alias for backward compatibility
 type Bucket = PathBucket;
@@ -52,7 +63,7 @@ function stableId(seed: string): SubTaskId {
   // FNV-1a hash (32-bit)
   let h = 2_166_136_261; // FNV offset basis
   for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
+    h ^= seed.codePointAt(i);
     h = (h * 16_777_619) >>> 0; // FNV prime, ensure unsigned 32-bit
   }
   // Convert to hex and take first 8 characters (matching previous format)
@@ -85,8 +96,8 @@ function truncateSubtasksIfNeeded(
 
   logger.warn("decomposition_truncated", {
     originalCount,
-    truncatedCount: MAX_SUBTASKS,
     reason,
+    truncatedCount: MAX_SUBTASKS,
   });
 
   const metric = getDecompositionTruncatedMetric();
@@ -147,13 +158,13 @@ export function decomposeTask(
     const id = stableId(`${baseRequirement}|root`);
     return [
       {
-        id,
-        title: baseRequirement.slice(0, 80),
-        requirement: baseRequirement,
-        deps: [],
-        priority: 1,
         acceptance: ["Changes implemented and tests passing."],
+        deps: [],
         filesHint: [],
+        id,
+        priority: 1,
+        requirement: baseRequirement,
+        title: baseRequirement.slice(0, 80),
       },
     ];
   }
@@ -171,7 +182,7 @@ export function decomposeTask(
           truncateSubtasksIfNeeded(semanticTasks, "semantic")
         );
       }
-    } catch (_e) {
+    } catch {
       // Fallback to legacy bucket heuristic if semantic fails
     }
   }
@@ -179,12 +190,12 @@ export function decomposeTask(
   const buckets: Record<Bucket, Set<string>> = {
     backend: new Set<string>(),
     frontend: new Set<string>(),
-    test: new Set<string>(),
     misc: new Set<string>(),
+    test: new Set<string>(),
   };
 
   for (const file of files) {
-    const path = file.path;
+    const { path } = file;
     if (!path || typeof path !== "string") {
       continue;
     }
@@ -192,41 +203,41 @@ export function decomposeTask(
     buckets[bucket].add(normalisePrefix(path));
   }
 
-  type PartialTask = {
+  interface PartialTask {
     kind: Bucket;
     title: string;
     acceptance: string[];
-  };
+  }
 
   const partials: PartialTask[] = [];
 
   if (buckets.backend.size > 0) {
     partials.push({
-      kind: "backend",
-      title: "Backend changes",
       acceptance: [
         "Server builds and runs.",
         "Endpoints updated and tests passing.",
       ],
+      kind: "backend",
+      title: "Backend changes",
     });
   }
 
   if (buckets.frontend.size > 0) {
     partials.push({
-      kind: "frontend",
-      title: "Frontend changes",
       acceptance: [
         "UI builds and renders.",
         "Primary flows work without errors.",
       ],
+      kind: "frontend",
+      title: "Frontend changes",
     });
   }
 
   if (buckets.test.size > 0) {
     partials.push({
+      acceptance: ["Relevant tests written and passing."],
       kind: "test",
       title: "Tests and validation",
-      acceptance: ["Relevant tests written and passing."],
     });
   }
 
@@ -240,13 +251,13 @@ export function decomposeTask(
     );
     return [
       {
-        id,
-        title: baseRequirement.slice(0, 80),
-        requirement: baseRequirement,
-        deps: [],
-        priority: 1,
         acceptance: ["Changes implemented and tests passing."],
+        deps: [],
         filesHint: prefixHints,
+        id,
+        priority: 1,
+        requirement: baseRequirement,
+        title: baseRequirement.slice(0, 80),
       },
     ];
   }
@@ -256,15 +267,15 @@ export function decomposeTask(
   const taskFor: Record<Bucket, SubTaskId | null> = {
     backend: null,
     frontend: null,
-    test: null,
     misc: null,
+    test: null,
   };
 
   const frontendDependsOnBackend =
     buckets.backend.size > 0 && buckets.frontend.size > 0;
 
   for (const partial of partials) {
-    const prefixes = Array.from(buckets[partial.kind]).sort();
+    const prefixes = [...buckets[partial.kind]].toSorted();
     const hint = prefixes.length > 0 ? prefixes : ["."];
     const seed = `${baseRequirement}|${partial.kind}|${hint.join(",")}`;
     const id = stableId(seed);
@@ -277,25 +288,29 @@ export function decomposeTask(
 
     const priority = (() => {
       switch (partial.kind) {
-        case "backend":
+        case "backend": {
           return 1;
-        case "frontend":
+        }
+        case "frontend": {
           return 0.9;
-        case "test":
+        }
+        case "test": {
           return 0.8;
-        default:
+        }
+        default: {
           return 0.5;
+        }
       }
     })();
 
     const subTask: SubTask = {
-      id,
-      title: partial.title,
-      requirement: baseRequirement,
-      deps,
-      priority,
       acceptance: partial.acceptance,
+      deps,
       filesHint: hint,
+      id,
+      priority,
+      requirement: baseRequirement,
+      title: partial.title,
     };
 
     result.push(subTask);
@@ -333,4 +348,113 @@ export const __internals = {
   normalisePrefix,
   stableId,
   uniq,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enriched Decomposition
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Options for task decomposition with enrichment.
+ */
+export interface DecomposeWithEnrichmentOptions {
+  /** Enable enrichment from prior executions and heuristics */
+  enableEnrichment?: boolean;
+  /** Run ID for this decomposition */
+  runId?: string;
+  /** Resource identifier for similarity matching */
+  resource?: string;
+  /** Custom enrichment source (for testing) */
+  enrichmentSource?: EnrichmentSource;
+  /** Map of failed task IDs to their failure contexts */
+  upstreamFailures?: Map<string, FailureContext>;
+  /** Structured handoff from previous wave */
+  handoff?: StructuredHandoff;
+  /** Maximum similar executions to include (default: 3) */
+  maxSimilarExecutions?: number;
+  /** Maximum heuristics to include (default: 5) */
+  maxHeuristics?: number;
+}
+
+/**
+ * Decompose a task with enrichment from prior runs.
+ *
+ * This is the enhanced version of decomposeTask that:
+ * 1. Performs standard decomposition
+ * 2. Queries enrichment data (similar executions, heuristics)
+ * 3. Propagates upstream failure context
+ * 4. Injects handoff context from previous waves
+ * 5. Applies all enrichment to task requirements
+ */
+export async function decomposeTaskWithEnrichment(
+  requirement: string,
+  context: DecomposeContext,
+  options?: DecomposeWithEnrichmentOptions
+): Promise<SubTask[]> {
+  // Standard decomposition
+  let tasks = decomposeTask(requirement, context);
+
+  // Skip enrichment if disabled or missing required context
+  if (!options?.enableEnrichment) {
+    return tasks;
+  }
+
+  const { runId } = options;
+  const { resource } = options;
+
+  // Propagate upstream failures first (modifies metadata)
+  if (options.upstreamFailures && options.upstreamFailures.size > 0) {
+    tasks = propagateUpstreamFailures(tasks, options.upstreamFailures, {
+      includeTransitive: true,
+      maxUpstreamFailures: 5,
+    });
+  }
+
+  // If we have run context, query and apply enrichment
+  if (runId && resource) {
+    const enrichmentOpts: EnrichmentOptions = {
+      maxHeuristics: options.maxHeuristics ?? 5,
+      maxSimilarExecutions: options.maxSimilarExecutions ?? 3,
+      resource,
+      runId,
+    };
+
+    tasks = await enrichTasks(tasks, enrichmentOpts, options.enrichmentSource);
+  }
+
+  // Apply handoff context to all tasks if provided
+  if (options.handoff) {
+    tasks = tasks.map((task) => {
+      // Query existing enrichment or create minimal one
+      const existingEnrichment = {
+        relevantHeuristics: [],
+        similarExecutions: [],
+        taskId: task.id,
+        ts: Date.now(),
+        upstreamFailures: (task.metadata?.upstreamFailures as any[]) ?? [],
+      };
+
+      const withHandoff = addHandoffContext(
+        existingEnrichment,
+        options.handoff!
+      );
+      return applyEnrichmentToTask(task, withHandoff);
+    });
+  }
+
+  return tasks;
+}
+
+/**
+ * Re-export enrichment utilities for external use.
+ */
+export {
+  addHandoffContext,
+  addUpstreamFailures,
+  applyEnrichmentToTask,
+  enrichTasks,
+  propagateUpstreamFailures,
+  queryTaskEnrichment,
+  type EnrichmentOptions,
+  type EnrichmentSource,
 };

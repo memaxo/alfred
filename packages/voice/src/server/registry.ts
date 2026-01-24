@@ -1,6 +1,8 @@
 import { logger as globalLogger } from "@alfred/logger";
+
 import type { STTPool } from "../process/stt";
 import type { TTSPool } from "../process/tts";
+
 import { type VoiceLogger, VoiceSession } from "./session";
 
 const defaultLogger: VoiceLogger = globalLogger;

@@ -7,12 +7,15 @@
 /** @jsxImportSource @opentui/react */
 
 import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
+
 import type {
   CognitiveState,
   CognitiveTransition,
 } from "../../subscriptions/cognitive";
+
 import {
   autonomyColor,
   colors,

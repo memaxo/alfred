@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { __internals } from "../src/orchestrator/tool/browser";
 
 describe("browser tool internals", () => {

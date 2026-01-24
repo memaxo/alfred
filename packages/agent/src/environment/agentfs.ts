@@ -22,26 +22,28 @@
  * and stores all state in a single portable SQLite file.
  */
 
-import { mkdir, stat } from "node:fs/promises";
-import path from "node:path";
 import { logger } from "@alfred/logger";
+import { randomUUID } from "node:crypto";
+import { copyFile, lstat, mkdir, rename, stat } from "node:fs/promises";
+import path from "node:path";
+
 import {
   agentfsCheckpointsTotal,
   agentfsDbSizeBytes,
   agentfsExecutionDurationSeconds,
   agentfsExecutionsTotal,
 } from "../agentfs/metrics.js";
-import type {
-  AgentFSChange,
-  AgentFSInterface,
-  AgentFSToolCall,
-  AgentFSToolCallStats,
-  AgentFSWorkspaceConfig,
+import {
+  type AgentFSChange,
+  type AgentFSInterface,
+  type AgentFSToolCall,
+  type AgentFSToolCallStats,
+  type AgentFSWorkspaceConfig,
 } from "../agentfs/types.js";
 import { AlfredAgentFS } from "../agentfs/wrapper.js";
 import { toolDocker } from "../orchestrator/tool/docker.js";
-import type { ProjectConfig } from "../utils/project-detector.js";
-import type { ExecOptions, ExecResult, Workspace } from "./types.js";
+import { type ProjectConfig } from "../utils/project-detector.js";
+import { type ExecOptions, type ExecResult, type Workspace } from "./types.js";
 
 /**
  * Extended config for AgentFS workspace with Docker options.
@@ -49,6 +51,8 @@ import type { ExecOptions, ExecResult, Workspace } from "./types.js";
 export interface AgentFSWorkspaceConfigExtended extends AgentFSWorkspaceConfig {
   /** Docker image to use (default: alfred-agentfs:codex) */
   image?: string;
+  /** Optional base AgentFS DB path to copy from before first open (run-to-run sharing). */
+  baseDbPath?: string;
   /** Authorization token for Docker operations */
   authz?: string;
   /** Override Docker container name (default: per-run) */
@@ -89,17 +93,21 @@ export class AgentFSWorkspace implements Workspace {
     private readonly config: AgentFSWorkspaceConfigExtended = {}
   ) {
     // agentfs-sdk requires IDs to match /^[a-zA-Z0-9_-]+$/
-    this._agentfsId = id.replace(/[^a-zA-Z0-9_-]/g, "-");
+    this._agentfsId = id.replaceAll(/[^a-zA-Z0-9_-]/g, "-");
 
     // Default path: .agentfs/{runId}/agentfs.db (single DB per run)
     this._dbPath =
       config.dbPath ??
-      path.join(".agentfs", runId.replace(/[^a-zA-Z0-9-]/g, "-"), "agentfs.db");
+      path.join(
+        ".agentfs",
+        runId.replaceAll(/[^a-zA-Z0-9-]/g, "-"),
+        "agentfs.db"
+      );
 
     // Docker container configuration
     this._containerName =
       config.containerName ??
-      `alfred-agentfs-${runId.replace(/[^a-zA-Z0-9]/g, "-")}`;
+      `alfred-agentfs-${runId.replaceAll(/[^a-zA-Z0-9]/g, "-")}`;
     this._image =
       config.image ?? process.env.ORCH_DOCKER_IMAGE ?? "alfred-agentfs:codex";
     this._authz = config.authz;
@@ -107,7 +115,7 @@ export class AgentFSWorkspace implements Workspace {
   }
 
   private async recordProjectContainer(): Promise<void> {
-    const projectId = this.config.projectId;
+    const { projectId } = this.config;
     const kind = this.config.containerKind;
     if (!(projectId && kind)) {
       return;
@@ -121,22 +129,57 @@ export class AgentFSWorkspace implements Workspace {
     }
 
     try {
-      const { upsertProjectContainer } = await import(
-        "@alfred/db/repo/container"
-      );
+      const { upsertProjectContainer } =
+        await import("@alfred/db/repo/container");
       await upsertProjectContainer({
-        projectId,
-        kind,
-        name: this._containerName,
         containerId: this._containerId,
-        status: "active",
+        kind,
         metadata: {
           image: this._image,
         },
+        name: this._containerName,
+        projectId,
+        status: "active",
       });
     } catch {
       // ignore container tracking failures
     }
+  }
+
+  private async materializeBaseDb(): Promise<void> {
+    const baseDbPath = this.config.baseDbPath?.trim();
+    if (!baseDbPath) {
+      return;
+    }
+
+    const dstAbs = path.resolve(this._dbPath);
+    try {
+      await stat(dstAbs);
+      return;
+    } catch {
+      // proceed
+    }
+
+    const repoAbs = path.resolve(this.repoBase);
+    const baseAbs = path.resolve(baseDbPath);
+    const rel = path.relative(repoAbs, baseAbs);
+    const segs = rel.split(path.sep);
+
+    if (segs.length < 3 || segs[0] !== ".agentfs" || segs.includes("..")) {
+      throw new Error("agentfs_base_db_invalid");
+    }
+
+    const st = await lstat(baseAbs).catch(() => null);
+    if (!st) {
+      throw new Error("agentfs_base_db_missing");
+    }
+    if (st.isSymbolicLink() || !st.isFile()) {
+      throw new Error("agentfs_base_db_invalid");
+    }
+
+    const tmp = `${dstAbs}.tmp-${randomUUID()}`;
+    await copyFile(baseAbs, tmp);
+    await rename(tmp, dstAbs);
   }
 
   /** Workspace root on the host filesystem */
@@ -190,6 +233,8 @@ export class AgentFSWorkspace implements Workspace {
     const dbDir = path.dirname(path.resolve(this._dbPath));
     await mkdir(dbDir, { recursive: true });
 
+    await this.materializeBaseDb();
+
     // Step 1: Create/reuse Docker container
     await this.initializeContainer();
 
@@ -210,11 +255,11 @@ export class AgentFSWorkspace implements Workspace {
     this._initialized = true;
 
     logger.info("agentfs_workspace_initialized", {
-      runId: this.runId,
       agentId: this.id,
       containerId: this._containerId,
       containerName: this._containerName,
       dbPath: this._dbPath,
+      runId: this.runId,
     });
   }
 
@@ -228,9 +273,9 @@ export class AgentFSWorkspace implements Workspace {
       const inspectResult = await toolDocker.execute({
         input: {
           action: "inspect",
-          name: this._containerName,
           authz: this._authz,
           cw: absRepoBase,
+          name: this._containerName,
         },
       });
 
@@ -242,9 +287,9 @@ export class AgentFSWorkspace implements Workspace {
           await toolDocker.execute({
             input: {
               action: "start",
-              name: this._containerName,
               authz: this._authz,
               cw: absRepoBase,
+              name: this._containerName,
             },
           });
         }
@@ -269,38 +314,38 @@ export class AgentFSWorkspace implements Workspace {
     // - Per-run AgentFS directory mounted at /agentfs (durable session DB)
     // - /workspace reserved for the AgentFS CoW view (wired in later step)
     try {
-      const runDir = this.runId.replace(/[^a-zA-Z0-9-]/g, "-");
+      const runDir = this.runId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
       const agentfsHostDir = path.resolve(absRepoBase, ".agentfs", runDir);
       await mkdir(agentfsHostDir, { recursive: true });
 
       const runResult = await toolDocker.execute({
         input: {
           action: "run",
-          tag: this._image,
-          name: this._containerName,
           addHosts:
             process.platform === "linux"
               ? ["host.docker.internal:host-gateway"]
               : undefined,
-          volumes: [
-            `${absRepoBase}:/workspace.base:ro`,
-            `${agentfsHostDir}:/agentfs`,
-          ],
-          devices: ["/dev/fuse"],
+          authz: this._authz,
           capAdd: ["SYS_ADMIN"],
+          cw: absRepoBase,
+          devices: ["/dev/fuse"],
+          name: this._containerName,
           resources: {
             cpus: 1.0,
             memory: "1g",
           },
-          authz: this._authz,
-          cw: absRepoBase,
+          tag: this._image,
+          volumes: [
+            `${absRepoBase}:/workspace.base:ro`,
+            `${agentfsHostDir}:/agentfs`,
+          ],
         },
       });
 
       logger.debug("agentfs_container_run_result", {
-        ok: runResult.ok,
         containerId: runResult.details?.containerId,
         name: runResult.details?.name,
+        ok: runResult.ok,
       });
 
       if (!runResult.ok) {
@@ -330,8 +375,8 @@ export class AgentFSWorkspace implements Workspace {
       // Possible race condition - another agent created the container
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.debug("agentfs_container_create_error", {
-        error: errorMsg,
         containerName: this._containerName,
+        error: errorMsg,
       });
       // Re-throw if it's not a race condition (e.g., actual failure)
       if (
@@ -349,9 +394,9 @@ export class AgentFSWorkspace implements Workspace {
     const retryInspect = await toolDocker.execute({
       input: {
         action: "inspect",
-        name: this._containerName,
         authz: this._authz,
         cw: absRepoBase,
+        name: this._containerName,
       },
     });
 
@@ -362,9 +407,9 @@ export class AgentFSWorkspace implements Workspace {
         await toolDocker.execute({
           input: {
             action: "start",
-            name: this._containerName,
             authz: this._authz,
             cw: absRepoBase,
+            name: this._containerName,
           },
         });
       }
@@ -420,9 +465,9 @@ export class AgentFSWorkspace implements Workspace {
         await toolDocker.execute({
           input: {
             action: "rm",
-            name: this._containerName,
             authz: this._authz,
             cw: this.repoBase,
+            name: this._containerName,
           },
         });
         logger.debug("agentfs_container_removed", {
@@ -446,7 +491,8 @@ export class AgentFSWorkspace implements Workspace {
   async checkpoint(label: string): Promise<void> {
     const agent = this.requireAgent();
 
-    const snapshotPath = `${this._dbPath}.checkpoint-${label.replace(/[^a-zA-Z0-9-]/g, "-")}`;
+    const safeLabel = label.replaceAll(/[^a-zA-Z0-9-]/g, "-");
+    const snapshotPath = `${this._dbPath}.checkpoint-${safeLabel}`;
 
     // SQLite VACUUM INTO creates an atomic snapshot
     const didVacuum = await (async () => {
@@ -455,7 +501,7 @@ export class AgentFSWorkspace implements Workspace {
         return false;
       }
       const maybe = db as { exec?: unknown; run?: unknown };
-      const escapedPath = snapshotPath.replace(/'/g, "''");
+      const escapedPath = snapshotPath.replaceAll(/'/g, "''");
       if (typeof maybe.exec === "function") {
         try {
           await (maybe.exec as (sql: string) => unknown)(
@@ -516,7 +562,7 @@ export class AgentFSWorkspace implements Workspace {
           throw new Error("agentfs_checkpoint_snapshot_db_unsupported");
         }
 
-        const sqlIdent = (value: string) => `"${value.replace(/"/g, '""')}"`;
+        const sqlIdent = (value: string) => `"${value.replaceAll(/"/g, '""')}"`;
 
         const srcSql = src as unknown as {
           exec: (sql: string) => Promise<void>;
@@ -543,7 +589,7 @@ export class AgentFSWorkspace implements Workspace {
 
         try {
           for (const row of tables) {
-            const name = row.name;
+            const { name } = row;
             if (typeof name !== "string") {
               continue;
             }
@@ -582,13 +628,13 @@ export class AgentFSWorkspace implements Workspace {
           }
 
           await dstSql.exec("COMMIT;");
-        } catch (err) {
+        } catch (error) {
           try {
             await dstSql.exec("ROLLBACK;");
           } catch {
             // ignore
           }
-          throw err;
+          throw error;
         } finally {
           try {
             await dstSql.exec("PRAGMA foreign_keys=ON;");
@@ -602,6 +648,16 @@ export class AgentFSWorkspace implements Workspace {
     }
 
     this.checkpoints.set(label, snapshotPath);
+    try {
+      await agent.kv.set(`checkpoint:${safeLabel}`, {
+        createdAtSec: Math.floor(Date.now() / 1000),
+        id: safeLabel,
+        label,
+        snapshotPath,
+      });
+    } catch {
+      // ignore checkpoint metadata failures
+    }
     agentfsCheckpointsTotal.inc({ operation: "create" });
   }
 
@@ -653,7 +709,7 @@ export class AgentFSWorkspace implements Workspace {
         throw new Error("agentfs_restore_snapshot_db_unsupported");
       }
 
-      const sqlIdent = (value: string) => `"${value.replace(/"/g, '""')}"`;
+      const sqlIdent = (value: string) => `"${value.replaceAll(/"/g, '""')}"`;
 
       const dstSql = dst as unknown as {
         exec: (sql: string) => Promise<void>;
@@ -679,7 +735,7 @@ export class AgentFSWorkspace implements Workspace {
 
       try {
         for (const row of tables) {
-          const name = row.name;
+          const { name } = row;
           if (typeof name !== "string") {
             continue;
           }
@@ -718,13 +774,13 @@ export class AgentFSWorkspace implements Workspace {
         }
 
         await dstSql.exec("COMMIT;");
-      } catch (err) {
+      } catch (error) {
         try {
           await dstSql.exec("ROLLBACK;");
         } catch {
           // ignore
         }
-        throw err;
+        throw error;
       } finally {
         try {
           await dstSql.exec("PRAGMA foreign_keys=ON;");
@@ -782,10 +838,10 @@ export class AgentFSWorkspace implements Workspace {
       const result = await toolDocker.execute({
         input: {
           action: "exec",
-          name: this._containerName,
-          cmd: "sh",
           args: ["-c", finalCommand],
-          workingDirectory,
+          authz: this._authz,
+          cmd: "sh",
+          cw: this.repoBase,
           env: {
             ...options?.env,
             HOME: "/root",
@@ -794,11 +850,11 @@ export class AgentFSWorkspace implements Workspace {
             AGENTFS_RUN_ID: this.runId,
             AGENTFS_AGENT_ID: this.id,
           },
-          authz: this._authz,
+          name: this._containerName,
           timeoutSec: options?.timeoutMs
             ? Math.ceil(options.timeoutMs / 1000)
             : undefined,
-          cw: this.repoBase,
+          workingDirectory,
         },
       });
 
@@ -807,28 +863,28 @@ export class AgentFSWorkspace implements Workspace {
 
       const exitCode = result.details?.exitCode ?? 0;
       agentfsExecutionsTotal.inc({
-        status: exitCode === 0 ? "success" : "failed",
         overlay: String(this.isOverlay),
+        status: exitCode === 0 ? "success" : "failed",
       });
 
       return {
-        stdout: result.details?.text ?? "",
-        stderr: result.details?.error ?? "",
-        exitCode,
         durationMs,
+        exitCode,
+        stderr: result.details?.error ?? "",
+        stdout: result.details?.text ?? "",
       };
     } catch (error) {
       timer();
       agentfsExecutionsTotal.inc({
-        status: "failed",
         overlay: String(this.isOverlay),
+        status: "failed",
       });
 
       return {
-        stdout: "",
-        stderr: error instanceof Error ? error.message : String(error),
-        exitCode: 1,
         durationMs: Date.now() - startTime,
+        exitCode: 1,
+        stderr: error instanceof Error ? error.message : String(error),
+        stdout: "",
       };
     }
   }
@@ -843,7 +899,7 @@ export class AgentFSWorkspace implements Workspace {
    *
    * @returns The ID of the recorded tool call
    */
-  recordToolCall(
+  async recordToolCall(
     name: string,
     startedAt: number,
     completedAt: number,
@@ -852,7 +908,7 @@ export class AgentFSWorkspace implements Workspace {
     error?: string
   ): Promise<number> {
     const agent = this.requireAgent();
-    return agent.tools.record(
+    return await agent.tools.record(
       name,
       startedAt,
       completedAt,
@@ -868,17 +924,20 @@ export class AgentFSWorkspace implements Workspace {
    * @param since Unix timestamp to filter from (default: all)
    * @param limit Maximum number of results
    */
-  getToolCalls(since?: number, limit?: number): Promise<AgentFSToolCall[]> {
+  async getToolCalls(
+    since?: number,
+    limit?: number
+  ): Promise<AgentFSToolCall[]> {
     const agent = this.requireAgent();
-    return agent.tools.getRecent(since ?? 0, limit);
+    return await agent.tools.getRecent(since ?? 0, limit);
   }
 
   /**
    * Get aggregated tool call statistics.
    */
-  getToolStats(): Promise<AgentFSToolCallStats[]> {
+  async getToolStats(): Promise<AgentFSToolCallStats[]> {
     const agent = this.requireAgent();
-    return agent.tools.getStats();
+    return await agent.tools.getStats();
   }
 
   /**
@@ -910,9 +969,13 @@ export class AgentFSWorkspace implements Workspace {
   /**
    * Read a file from the AgentFS virtual filesystem.
    */
-  readFile(fsPath: string): Promise<string> {
+  async readFile(fsPath: string): Promise<string> {
     const agent = this.requireAgent();
-    return agent.fs.readFile(fsPath);
+    const content = await agent.fs.readFile(fsPath, "utf8");
+    if (typeof content === "string") {
+      return content;
+    }
+    return content.toString("utf8");
   }
 
   /**
@@ -949,7 +1012,7 @@ export class AgentFSWorkspace implements Workspace {
   }
 
   private requireAgent(): AgentFSInterface {
-    const agent = this.agent;
+    const { agent } = this;
     if (!(this._initialized && agent)) {
       throw new Error("agentfs_workspace_not_initialized");
     }

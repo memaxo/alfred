@@ -1,8 +1,16 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
-import type { Tool } from "ai";
 
-import { recordPolicyCheckFailure } from "../../metrics";
+import * as metrics from "../../metrics";
+
+export interface AITool<TInput, TOutput> {
+  name?: string;
+  description: string;
+  parameters?: unknown;
+  inputSchema?: unknown;
+  execute: (input: TInput) => Promise<TOutput> | TOutput;
+  needsApproval?: (input: TInput) => Promise<boolean> | boolean;
+}
 
 /**
  * Wraps a tool with AI SDK v6 'needsApproval' logic based on ALFRED policy.
@@ -11,7 +19,7 @@ import { recordPolicyCheckFailure } from "../../metrics";
  * @param policyCheck A function that returns the required scopes and resource context for the input
  */
 export function withPolicyApproval<TInput, TOutput>(
-  tool: Tool<TInput, TOutput>,
+  tool: AITool<TInput, TOutput>,
   policyCheck: (input: TInput) => {
     action: string;
     resource: { kind: string; id: string };
@@ -19,7 +27,7 @@ export function withPolicyApproval<TInput, TOutput>(
     authz?: string;
     context?: Record<string, unknown>;
   }
-): Tool<TInput, TOutput> {
+): AITool<TInput, TOutput> {
   const needsApproval = async (input: TInput) => {
     type PolicyContext = ReturnType<typeof policyCheck>;
     let policyContext: PolicyContext | null = null;
@@ -27,7 +35,7 @@ export function withPolicyApproval<TInput, TOutput>(
     try {
       const check = policyCheck(input);
       policyContext = check;
-      const authz = check.authz;
+      const { authz } = check;
 
       if (!authz) {
         return true;
@@ -35,20 +43,22 @@ export function withPolicyApproval<TInput, TOutput>(
 
       const result = await requireToolScopesAndPolicy(authz, check.scopes, {
         action: check.action,
-        resource: check.resource,
         context: check.context,
+        resource: check.resource,
       });
 
-      const obligationTypes = result.decision.obligations.map((o) =>
-        typeof o === "string" ? o : o.type
+      const obligationTypes = new Set(
+        result.decision.obligations.map((o) =>
+          typeof o === "string" ? o : o.type
+        )
       );
 
-      if (obligationTypes.includes("require_confirmation")) {
+      if (obligationTypes.has("require_confirmation")) {
         return true;
       }
 
       if (
-        obligationTypes.includes("require_biometric") &&
+        obligationTypes.has("require_biometric") &&
         result.claims.mfa !== "passkey"
       ) {
         return true;
@@ -60,12 +70,15 @@ export function withPolicyApproval<TInput, TOutput>(
       const toolName = descriptor ?? "unknown_tool";
 
       logger.warn("policy_check_failed_in_approval", {
-        tool: toolName,
         action: policyContext?.action ?? "unknown_action",
-        resource: policyContext?.resource ?? null,
         error: error instanceof Error ? error.message : String(error),
+        resource: policyContext?.resource ?? null,
+        tool: toolName,
       });
-      recordPolicyCheckFailure(toolName);
+      // Metrics labels must stay low-cardinality; descriptions are not stable IDs.
+      if (tool.name) {
+        metrics.recordPolicyCheckFailure(tool.name);
+      }
       // Security: fail closed by requiring human approval when policy enforcement errors, so unverified actions never auto-run.
       return true;
     }
@@ -74,5 +87,5 @@ export function withPolicyApproval<TInput, TOutput>(
   return {
     ...tool,
     needsApproval,
-  } as Tool<TInput, TOutput>;
+  } as AITool<TInput, TOutput>;
 }

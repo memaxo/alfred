@@ -1,12 +1,14 @@
 import { logger } from "@alfred/logger";
 import { generateObject } from "ai";
+
+import type { WorkflowIntent } from "../intent/types.js";
+import type { PlanCritique } from "./types.js";
+
 import { getModelId, getOpenAI } from "../ai.js";
 import {
   type StructuredPlan,
   structuredPlanSchema,
 } from "../generate/types.js";
-import type { WorkflowIntent } from "../intent/types.js";
-import type { PlanCritique } from "./types.js";
 
 /**
  * Revise a plan based on a critique

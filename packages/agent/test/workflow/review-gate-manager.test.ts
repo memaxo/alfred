@@ -1,11 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 const workflowRepoMocks = {
-  getRun: vi.fn(),
-  updateRun: vi.fn(),
-  createRun: vi.fn(),
   appendEvent: vi.fn(),
+  createRun: vi.fn(),
+  getRun: vi.fn(),
   listEvents: vi.fn(),
+  updateRun: vi.fn(),
 };
 
 mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
@@ -18,15 +18,14 @@ import { installLoggerMock } from "@alfred/test-kit/logger";
 
 installLoggerMock();
 
-const { ReviewGateManager } = await import(
-  "../../src/workflow/review-gate-manager"
-);
+const { ReviewGateManager } =
+  await import("../../src/workflow/review-gate-manager");
 
 describe("ReviewGateManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     workflowRepoMocks.getRun.mockResolvedValue(null);
-    workflowRepoMocks.updateRun.mockResolvedValue(undefined);
+    workflowRepoMocks.updateRun.mockResolvedValue();
   });
 
   describe("restoreFromRun", () => {
@@ -51,9 +50,9 @@ describe("ReviewGateManager", () => {
             checks: [
               { id: "test", type: "test", status: "passed", attempts: 1 },
             ],
+            minimumRequired: 1,
             planInitialized: true,
             planRequired: true,
-            minimumRequired: 1,
           },
         },
       });
@@ -71,15 +70,15 @@ describe("ReviewGateManager", () => {
       workflowRepoMocks.getRun.mockResolvedValue({
         id: "run-1",
         stateData: {
+          reviewEscalation: {
+            reason: "fixer_exhausted",
+            attempts: 3,
+          },
           reviewGate: {
             checks: [],
             planInitialized: false,
             planRequired: false,
             minimumRequired: 0,
-          },
-          reviewEscalation: {
-            reason: "fixer_exhausted",
-            attempts: 3,
           },
         },
       });
@@ -89,8 +88,8 @@ describe("ReviewGateManager", () => {
 
       const serialized = manager.serialize();
       expect(serialized.reviewEscalation).toEqual({
-        reason: "fixer_exhausted",
         attempts: 3,
+        reason: "fixer_exhausted",
       });
     });
 
@@ -146,7 +145,7 @@ describe("ReviewGateManager", () => {
     it("handles null/undefined data", () => {
       const manager = new ReviewGateManager();
       manager.applyPlan(null);
-      manager.applyPlan(undefined);
+      manager.applyPlan();
 
       expect(manager.summary()).toHaveLength(0);
     });
@@ -158,9 +157,9 @@ describe("ReviewGateManager", () => {
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({
         id: "test",
-        type: "test",
-        status: "passed",
         output: "All tests passed",
+        status: "passed",
+        type: "test",
       });
 
       const summary = manager.summary();
@@ -172,10 +171,10 @@ describe("ReviewGateManager", () => {
       const manager = new ReviewGateManager();
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({
-        id: "test",
-        type: "test",
-        status: "failed",
         error: { code: 1, message: "failed" },
+        id: "test",
+        status: "failed",
+        type: "test",
       });
 
       const summary = manager.summary();
@@ -186,7 +185,7 @@ describe("ReviewGateManager", () => {
       const manager = new ReviewGateManager();
 
       manager.applyPlan({ checks: [{ id: "a", type: "a" }] });
-      manager.recordCheck({ id: "a", status: "passed", output: "from output" });
+      manager.recordCheck({ id: "a", output: "from output", status: "passed" });
       expect(manager.summary()[0].evidence).toBe("from output");
     });
 
@@ -198,10 +197,10 @@ describe("ReviewGateManager", () => {
       circular.self = circular;
 
       manager.recordCheck({
-        id: "test",
-        type: "test",
-        status: "failed",
         evidence: circular,
+        id: "test",
+        status: "failed",
+        type: "test",
       });
 
       // Should fall back to String()
@@ -214,8 +213,8 @@ describe("ReviewGateManager", () => {
     it("returns metricKind on first call", () => {
       const manager = new ReviewGateManager();
       const result = manager.recordEscalation({
-        reason: "fixer_exhausted",
         attempts: 3,
+        reason: "fixer_exhausted",
       });
 
       expect(result).toEqual({ metricKind: "review_fixer_exhausted" });
@@ -232,21 +231,21 @@ describe("ReviewGateManager", () => {
     it("stores all escalation fields", () => {
       const manager = new ReviewGateManager();
       manager.recordEscalation({
-        reason: "fixer_exhausted",
         attempts: 3,
+        failures: [{ command: "bun test", error: "fail" }],
         fixerAttempts: 2,
         plan: ".agent/plans/run/debug.md",
-        failures: [{ command: "bun test", error: "fail" }],
+        reason: "fixer_exhausted",
         relevantFiles: ["src/foo.ts"],
         summary: "Tests failed",
       });
 
       const serialized = manager.serialize();
       expect(serialized.reviewEscalation).toMatchObject({
-        reason: "fixer_exhausted",
         attempts: 3,
         fixerAttempts: 2,
         plan: ".agent/plans/run/debug.md",
+        reason: "fixer_exhausted",
         relevantFiles: ["src/foo.ts"],
         summary: "Tests failed",
       });
@@ -310,7 +309,7 @@ describe("ReviewGateManager", () => {
     it("returns complete state", () => {
       const manager = new ReviewGateManager();
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
-      manager.recordCheck({ id: "test", status: "passed", attempt: 1 });
+      manager.recordCheck({ attempt: 1, id: "test", status: "passed" });
       manager.recordEscalation({ reason: "test_reason" });
 
       const serialized = manager.serialize();

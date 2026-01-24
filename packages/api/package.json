@@ -1,5 +1,11 @@
 {
   "name": "@alfred/api",
+  "type": "module",
+  "sideEffects": [
+    "**/init.ts",
+    "**/index.ts",
+    "**/metrics.ts"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -14,21 +20,11 @@
       "default": "./src/trpc-internal.ts"
     }
   },
-  "type": "module",
-  "sideEffects": [
-    "**/init.ts",
-    "**/index.ts",
-    "**/metrics.ts"
-  ],
   "scripts": {
     "build": "tsgo -b --emitDeclarationOnly",
     "test": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_FILE_TIMEOUT_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
     "test:postgres": "RUN_DB_TESTS=1 ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_FILE_TIMEOUT_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
     "typecheck": "tsgo -b"
-  },
-  "devDependencies": {},
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "@ai-sdk/google": "catalog:",
@@ -55,6 +51,10 @@
     "prom-client": "^15.1.3",
     "werift": "^0.22.2",
     "zod": "catalog:"
+  },
+  "devDependencies": {},
+  "peerDependencies": {
+    "typescript": "^5"
   },
   "optionalDependencies": {
     "node-pty": "^1.0.0"

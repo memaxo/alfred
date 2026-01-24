@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { toolDocker } from "@alfred/agent/orchestrator/tool/docker";
 import { toolRouter } from "@alfred/agent/orchestrator/tool/router";
 import { deployRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { randomUUID } from "node:crypto";
 import z from "zod";
+
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { deployService, type ProbeResult } from "../services/deploy";

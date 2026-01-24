@@ -3,18 +3,25 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./metrics": "./src/metrics.ts",
+    "./eval": "./src/eval/index.ts",
+    "./profile": "./src/profile.ts",
+    "./profiled": "./src/profiled.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo -b",
+    "test": "bun test --preload ./test/preload.ts test/*.test.ts",
+    "eval": "bun run scripts/eval.ts",
+    "profile": "bun run scripts/profile.ts"
   },
   "dependencies": {
+    "@alfred/logger": "workspace:*",
+    "@alfred/metrics": "workspace:*",
     "@alfred/rerank": "workspace:*",
     "oxc-parser": "^0.110.0"
   },
   "devDependencies": {
-    "@alfred/logger": "workspace:*",
     "typescript": "^5.7.3"
-  },
-  "scripts": {
-    "typecheck": "tsgo -b",
-    "test": "bun test"
   }
 }

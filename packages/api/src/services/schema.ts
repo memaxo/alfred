@@ -1,33 +1,34 @@
 import { logger } from "@alfred/logger";
-import type { SchemaContext, UIComponent } from "@alfred/type/genui";
+import { type SchemaContext, type UIComponent } from "@alfred/type/genui";
 import { uiComponentSchema } from "@alfred/type/genui.zod";
-import type { ModelRole } from "@alfred/type/model";
-import type { ModelMessage } from "ai";
+import { type ModelRole } from "@alfred/type/model";
+import { type ModelMessage } from "ai";
+
 import {
   genuiSchemaGenerationDurationSeconds,
   genuiSchemaGenerationTotal,
 } from "../metrics/genui";
 
-export type SchemaMeta = {
+export interface SchemaMeta {
   path: "deterministic" | "llm" | "skipped";
   selectedComponent: string | null;
   modelKey?: string;
   validationErrors?: string[];
-};
+}
 
-export type SchemaResult = {
+export interface SchemaResult {
   ui: UIComponent | null;
   meta: SchemaMeta;
-};
+}
 
-type GenUiPart = {
+interface GenUiPart {
   type: "data-ui";
   ui: UIComponent;
   id?: string;
   // NOTE: ALFRED sometimes attaches backing data for convenience in UIs.
   // This is not part of the canonical UIDataPart type.
   data?: unknown;
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -117,8 +118,8 @@ function validateUi(
     return { ok: true, ui: parsed.data as UIComponent };
   }
   return {
-    ok: false,
     errors: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    ok: false,
   };
 }
 
@@ -129,26 +130,26 @@ function buildDeterministicUi(args: {
   key?: string;
 }): SchemaResult {
   const candidate: UIComponent = {
-    component: args.component,
-    props: args.props,
     children: args.children,
+    component: args.component,
     key: args.key,
+    props: args.props,
   };
 
   const validated = validateUi(candidate);
   if (!validated.ok) {
     return {
-      ui: null,
       meta: {
         path: "deterministic",
         selectedComponent: args.component,
         validationErrors: validated.errors,
       },
+      ui: null,
     };
   }
   return {
-    ui: validated.ui,
     meta: { path: "deterministic", selectedComponent: args.component },
+    ui: validated.ui,
   };
 }
 
@@ -162,16 +163,16 @@ function buildChartFromNumberArray(
   }));
   return buildDeterministicUi({
     component: "chart",
-    props: { title, data },
+    props: { data, title },
   });
 }
 
 function buildListFromRecords(
-  records: Array<Record<string, unknown>>
+  records: Record<string, unknown>[]
 ): SchemaResult {
   const items = records.slice(0, 20).map((r, idx) => ({
-    id: typeof r.id === "string" && r.id.length > 0 ? r.id : `row-${idx}`,
     content: safeJson(r, 800),
+    id: typeof r.id === "string" && r.id.length > 0 ? r.id : `row-${idx}`,
   }));
   return buildDeterministicUi({ component: "list", props: { items } });
 }
@@ -179,8 +180,6 @@ function buildListFromRecords(
 function buildGridFromRecord(rec: Record<string, unknown>): SchemaResult {
   const entries = Object.entries(rec).slice(0, 24);
   const children: UIComponent[] = entries.map(([key, value]) => ({
-    component: "panel",
-    props: { title: key },
     children: [
       {
         component: "term",
@@ -192,17 +191,19 @@ function buildGridFromRecord(rec: Record<string, unknown>): SchemaResult {
         },
       },
     ],
+    component: "panel",
+    props: { title: key },
   }));
   return buildDeterministicUi({
+    children,
     component: "grid",
     props: { cols: 2 },
-    children,
   });
 }
 
-type SchemaGeneratorInit = {
+interface SchemaGeneratorInit {
   role?: ModelRole;
-};
+}
 
 export class SchemaGenerator {
   private readonly role: ModelRole;
@@ -220,7 +221,7 @@ export class SchemaGenerator {
     }
 
     if (isRecord(data)) {
-      const kind = data.kind;
+      const { kind } = data;
       if (typeof kind === "string" && kind.length > 0) {
         if (kind === "workflow-timeline") {
           return "workflow-timeline";
@@ -257,7 +258,7 @@ export class SchemaGenerator {
       }
 
       if (data.every((v) => isRecord(v))) {
-        const objs = data as Array<Record<string, unknown>>;
+        const objs = data as Record<string, unknown>[];
         if (objs.some((o) => hasTimestampishField(o))) {
           // Prefer workflow-timeline when the data appears workflowish; list otherwise.
           if (ctx.mode === "workflow") {
@@ -300,18 +301,18 @@ export class SchemaGenerator {
         "none";
       try {
         genuiSchemaGenerationTotal.inc({
-          path: result.meta.path,
-          outcome,
           component,
-          surface: args.ctx.surface,
           mode: args.ctx.mode,
+          outcome,
+          path: result.meta.path,
+          surface: args.ctx.surface,
         });
         genuiSchemaGenerationDurationSeconds.observe(
           {
-            path: result.meta.path,
             component,
-            surface: args.ctx.surface,
             mode: args.ctx.mode,
+            path: result.meta.path,
+            surface: args.ctx.surface,
           },
           durationMs / 1000
         );
@@ -323,7 +324,7 @@ export class SchemaGenerator {
 
     if (!picked) {
       return finish(
-        { ui: null, meta: { path: "skipped", selectedComponent: null } },
+        { meta: { path: "skipped", selectedComponent: null }, ui: null },
         "no_component"
       );
     }
@@ -361,10 +362,10 @@ export class SchemaGenerator {
         const out = this.buildDeterministic({
           component: "workflow-timeline",
           props: {
-            workflowId: rec.workflowId,
-            title: rec.title,
-            phases: rec.phases,
             elapsed: typeof rec.elapsed === "number" ? rec.elapsed : 0,
+            phases: rec.phases,
+            title: rec.title,
+            workflowId: rec.workflowId,
           },
         });
         return finish(out, out.ui ? "success" : "invalid");
@@ -383,32 +384,31 @@ export class SchemaGenerator {
     }
 
     // LLM path: capability gating + generateObject with uiComponentSchema.
-    const userId = args.ctx.userId;
-    const projectId = args.ctx.projectId;
+    const { userId } = args.ctx;
+    const { projectId } = args.ctx;
     if (!userId) {
       // Without identity we can't safely resolve preferences/model; skip.
       return finish(
-        { ui: null, meta: { path: "skipped", selectedComponent: picked } },
+        { meta: { path: "skipped", selectedComponent: picked }, ui: null },
         "missing_user"
       );
     }
 
-    const { getModelForRole, supportsGenUI } = await import(
-      "@alfred/agent/selector"
-    );
+    const { getModelForRole, supportsGenUI } =
+      await import("@alfred/agent/selector");
     const selection = projectId
-      ? await getModelForRole(this.role, { userId, projectId })
+      ? await getModelForRole(this.role, { projectId, userId })
       : await getModelForRole(this.role, { userId });
 
     if (!supportsGenUI(selection)) {
       return finish(
         {
-          ui: null,
           meta: {
             path: "skipped",
             selectedComponent: picked,
             modelKey: selection.modelKey,
           },
+          ui: null,
         },
         "unsupported"
       );
@@ -416,9 +416,9 @@ export class SchemaGenerator {
 
     const { DefaultAIAdapter } = await import("../adapters/ai-generation");
     const adapter = new DefaultAIAdapter({
-      userId,
       projectId,
       role: this.role,
+      userId,
     });
 
     const candidates = [picked];
@@ -455,13 +455,13 @@ export class SchemaGenerator {
       "Do not include markdown code fences. Do not include explanations.",
     ].join("\n");
 
-    const messages: ModelMessage[] = [{ role: "user", content: prompt }];
+    const messages: ModelMessage[] = [{ content: prompt, role: "user" }];
     const start = performance.now();
     try {
       const result = await adapter.generateObject({
         messages,
-        system,
         schema: uiComponentSchema,
+        system,
       });
       const object = result.object as unknown;
       const parsed = uiComponentSchema.safeParse(object);
@@ -470,7 +470,6 @@ export class SchemaGenerator {
       if (!parsed.success) {
         return finish(
           {
-            ui: null,
             meta: {
               path: "llm",
               selectedComponent: picked,
@@ -479,41 +478,42 @@ export class SchemaGenerator {
                 (i) => `${i.path.join(".")}: ${i.message}`
               ),
             },
+            ui: null,
           },
           "invalid"
         );
       }
 
       logger.info("genui_schema_generated", {
-        path: "llm",
         component: parsed.data.component,
-        surface: args.ctx.surface,
+        durationMs: Math.round(ms),
         mode: args.ctx.mode,
         model: selection.modelKey,
-        durationMs: Math.round(ms),
+        path: "llm",
+        surface: args.ctx.surface,
       });
 
       return finish(
         {
-          ui: parsed.data as UIComponent,
           meta: {
             path: "llm",
             selectedComponent: parsed.data.component,
             modelKey: selection.modelKey,
           },
+          ui: parsed.data as UIComponent,
         },
         "success"
       );
     } catch (error) {
       return finish(
         {
-          ui: null,
           meta: {
             path: "llm",
             selectedComponent: picked,
             modelKey: selection.modelKey,
             validationErrors: toValidationErrors(error),
           },
+          ui: null,
         },
         "error"
       );
@@ -528,18 +528,18 @@ export class SchemaGenerator {
     ctx: SchemaContext;
   }): Promise<GenUiPart | null> {
     const result = await this.generateSchema({
-      data: args.uiData,
       ctx: args.ctx,
+      data: args.uiData,
       preferredComponent: args.preferredComponent,
     });
     if (!result.ui) {
       return null;
     }
     return {
-      type: "data-ui",
-      id: args.id,
-      ui: result.ui,
       data: args.data,
+      id: args.id,
+      type: "data-ui",
+      ui: result.ui,
     };
   }
 }

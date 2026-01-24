@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
   afterEach,
   beforeEach,
@@ -7,7 +8,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { TRPCError } from "@trpc/server";
+
 import { nodePtySpawnMock } from "./utils/mock-node-pty";
 import { toObservable } from "./utils/stream";
 import { createTestCaller } from "./utils/trpc";

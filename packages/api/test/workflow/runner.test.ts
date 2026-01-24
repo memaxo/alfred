@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test";
-import { type RunPlanInput, runPlanV6 } from "@alfred/agent/workflow/runner";
 import type { WorkflowEvent } from "@alfred/type";
+
+import { type RunPlanInput, runPlanV6 } from "@alfred/agent/workflow/runner";
+import { describe, expect, it } from "bun:test";
 
 describe("workflow runner", () => {
   describe("runPlanV6", () => {

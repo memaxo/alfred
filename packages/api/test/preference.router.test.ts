@@ -7,6 +7,7 @@ import {
   mock,
   vi,
 } from "bun:test";
+
 import {
   recordMemoryForgetMock,
   recordMemoryUpdateMock,
@@ -31,37 +32,46 @@ dbModuleStub.userRepo.getPreferences = getPreferencesMock;
 dbModuleStub.userRepo.setPreference = setPreferenceMock;
 dbModuleStub.userRepo.deletePreference = deletePreferenceMock;
 dbModuleStub.userRepo.addFeedback = addFeedbackMock;
-dbModuleStub.userRepo.getFeedback = vi.fn().mockResolvedValue([]);
+vi.spyOn(dbModuleStub.userRepo, "getFeedback")
+  .mockImplementation()
+  .mockResolvedValue([]);
 
 dbModuleStub.conversationRepo.getMessage = getMessageMock;
 dbModuleStub.conversationRepo.messageRowToUIMessage = messageRowToUIMessageMock;
-dbModuleStub.conversationRepo.getActiveUserIds = vi.fn().mockResolvedValue([]);
-dbModuleStub.conversationRepo.getConversations = vi.fn().mockResolvedValue([]);
-dbModuleStub.conversationRepo.getConversationHistory = vi
-  .fn()
+vi.spyOn(dbModuleStub.conversationRepo, "getActiveUserIds")
+  .mockImplementation()
+  .mockResolvedValue([]);
+vi.spyOn(dbModuleStub.conversationRepo, "getConversations")
+  .mockImplementation()
+  .mockResolvedValue([]);
+vi.spyOn(dbModuleStub.conversationRepo, "getConversationHistory")
+  .mockImplementation()
   .mockResolvedValue(null);
-dbModuleStub.conversationRepo.createConversation = vi.fn();
-dbModuleStub.conversationRepo.createMessage = vi.fn();
+vi.spyOn(
+  dbModuleStub.conversationRepo,
+  "createConversation"
+).mockImplementation();
+vi.spyOn(dbModuleStub.conversationRepo, "createMessage").mockImplementation();
 
 dbModuleStub.userSchema = dbModuleStub.userSchema ?? {};
 dbModuleStub.userSchema.preferences = { $inferSelect: {} };
 
 mock.module("@alfred/agent/preference/loader", () => ({
+  invalidatePreferenceCache: invalidatePreferenceCacheMock,
   loadPreferences: vi.fn().mockResolvedValue(new Map()),
   loadPreferencesWithDefaults: vi.fn().mockResolvedValue(new Map()),
-  invalidatePreferenceCache: invalidatePreferenceCacheMock,
   resetPreferenceCache: vi.fn(),
 }));
 
 mock.module("@alfred/agent/preference/inference", () => ({
-  inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
-  inferResponsePreferences: vi.fn().mockResolvedValue(new Map()),
   inferDomainPreferences: vi.fn().mockReturnValue(new Map()),
+  inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
   inferPreferencesFromFeedback: vi.fn().mockReturnValue(new Map()),
+  inferResponsePreferences: vi.fn().mockResolvedValue(new Map()),
 }));
 
 let caller: Awaited<
-  ReturnType<typeof import("./utils/trpc")["createTestCaller"]>
+  ReturnType<(typeof import("./utils/trpc"))["createTestCaller"]>
 >;
 
 beforeAll(async () => {
@@ -76,8 +86,8 @@ beforeEach(() => {
   messageRowToUIMessageMock.mockReset();
   messageRowToUIMessageMock.mockImplementation((row) => ({
     id: row.id,
-    role: "assistant",
     parts: [{ type: "text", text: row.id }],
+    role: "assistant",
   }));
   inferPreferenceFromCorrectionMock.mockReset();
   inferPreferenceFromCorrectionMock.mockResolvedValue(null);
@@ -122,24 +132,24 @@ describe("preference router", () => {
   describe("set", () => {
     it("sets a preference", async () => {
       const mockPreference = {
+        confidence: 1.0,
         key: "theme",
         value: "dark",
-        confidence: 1.0,
       };
 
       setPreferenceMock.mockResolvedValue(mockPreference);
 
       const result = await caller.preference.set({
+        confidence: 1.0,
         key: "theme",
         value: "dark",
-        confidence: 1.0,
       });
 
       expect(setPreferenceMock).toHaveBeenCalledWith(
         "test-user",
         "theme",
         "dark",
-        1.0,
+        1,
         "user"
       );
       expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
@@ -149,22 +159,22 @@ describe("preference router", () => {
 
     it("normalizes model preference values to provider:modelId", async () => {
       setPreferenceMock.mockResolvedValue({
+        confidence: 1.0,
         key: "domain.ai.model.chat",
         value: "openai:gpt-4o-mini",
-        confidence: 1.0,
       });
 
       await caller.preference.set({
+        confidence: 1.0,
         key: "domain.ai.model.chat",
         value: "openai/gpt-4o-mini",
-        confidence: 1.0,
       });
 
       expect(setPreferenceMock).toHaveBeenCalledWith(
         "test-user",
         "domain.ai.model.chat",
         "openai:gpt-4o-mini",
-        1.0,
+        1,
         "user"
       );
       expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
@@ -174,23 +184,23 @@ describe("preference router", () => {
       const projectId = "00000000-0000-4000-8000-000000000000";
 
       setPreferenceMock.mockResolvedValue({
+        confidence: 1.0,
         key: "theme",
         value: "dark",
-        confidence: 1.0,
       });
 
       await caller.preference.set({
-        projectId,
-        key: "theme",
-        value: "dark",
         confidence: 1.0,
+        key: "theme",
+        projectId,
+        value: "dark",
       });
 
       expect(setPreferenceMock).toHaveBeenCalledWith(
         "test-user",
         "theme",
         "dark",
-        1.0,
+        1,
         "user",
         projectId
       );
@@ -248,17 +258,17 @@ describe("preference router", () => {
   describe("updateFromFeedback", () => {
     it("updates preferences and records feedback", async () => {
       getMessageMock.mockResolvedValue({
-        id: "msg-1",
         conversationId: "conv-1",
+        id: "msg-1",
       });
 
       const result = await caller.preference.updateFromFeedback({
         messageId: "msg-1",
-        rating: 5,
-        tags: ["too_verbose"],
         preferenceUpdates: {
           "response.verbosity": "concise",
         },
+        rating: 5,
+        tags: ["too_verbose"],
       });
 
       expect(setPreferenceMock).toHaveBeenCalledWith(
@@ -333,9 +343,9 @@ describe("preference router", () => {
       });
 
       const result = await caller.preference.inferFromCorrection({
-        originalMessageId: "orig",
         correctedMessageId: "corr",
         correctionType: "verbosity",
+        originalMessageId: "orig",
       });
 
       expect(setPreferenceMock).toHaveBeenCalledWith(
@@ -360,9 +370,9 @@ describe("preference router", () => {
       inferPreferenceFromCorrectionMock.mockResolvedValue(null);
 
       const result = await caller.preference.inferFromCorrection({
-        originalMessageId: "orig",
         correctedMessageId: "corr",
         correctionType: "tone",
+        originalMessageId: "orig",
       });
 
       expect(setPreferenceMock).not.toHaveBeenCalled();

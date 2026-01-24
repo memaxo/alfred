@@ -1,5 +1,6 @@
 import { appRouter } from "@alfred/api/router";
 import omelette from "omelette";
+
 import { getRegistry } from "../registry";
 
 type RouterWithProcedures = {

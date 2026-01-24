@@ -1,7 +1,8 @@
 import type { EventEnvelope } from "@alfred/type/envelope";
-import { eventEnvelopeSchema } from "@alfred/type/envelope.zod";
 import type { EventId, RunId } from "@alfred/type/id";
 import type { EventSource } from "@alfred/type/source";
+
+import { eventEnvelopeSchema } from "@alfred/type/envelope.zod";
 
 export function wrapEventEnvelope<T>(args: {
   id: string | EventId;

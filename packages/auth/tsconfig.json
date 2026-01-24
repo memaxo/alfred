@@ -6,7 +6,8 @@
     "sourceMap": false,
     "outDir": "dist",
     "composite": true,
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["dist", "**/*.test.ts"],

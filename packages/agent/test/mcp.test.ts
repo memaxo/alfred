@@ -1,5 +1,5 @@
-import { describe, expect, it, mock, vi } from "bun:test";
 import { tool } from "ai";
+import { describe, expect, it, mock, vi } from "bun:test";
 import { z } from "zod";
 
 const listEnabledMcpServersMock = vi.fn();

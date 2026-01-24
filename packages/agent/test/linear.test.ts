@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const executeMock = mock(() =>
-  Promise.resolve({ ok: true, id: "activity-123" })
+  Promise.resolve({ id: "activity-123", ok: true })
 );
 
 mock.module("../src/orchestrator/tool/ticket", () => ({
@@ -26,23 +26,22 @@ mock.module("p-retry", () => {
   const pRetry = <T>(fn: (attemptNumber: number) => T | Promise<T>) =>
     Promise.resolve(fn(1));
   class AbortError extends Error {}
-  return { default: pRetry, AbortError };
+  return { AbortError, default: pRetry };
 });
 
-const { emitLinearActivity, extractIssueIdFromSession } = await import(
-  "../src/orchestrator/linear"
-);
+const { emitLinearActivity, extractIssueIdFromSession } =
+  await import("../src/orchestrator/linear");
 const metricMocks = {
-  emissionsInc: mock(),
   durationStart: mock(() => () => {}),
+  emissionsInc: mock(),
   sessionInc: mock(),
 };
 
 mock.module("../src/workflow/metrics", () => ({
-  linearActivityEmissionsTotal: { inc: metricMocks.emissionsInc },
   linearActivityDurationSeconds: {
     startTimer: metricMocks.durationStart,
   },
+  linearActivityEmissionsTotal: { inc: metricMocks.emissionsInc },
   linearSessionOperationsTotal: { inc: metricMocks.sessionInc },
 }));
 const { ensureLinearTicket } = await import("../src/workflow/linear");
@@ -65,37 +64,37 @@ describe("linear helpers", () => {
   });
 
   it("emitLinearActivity forwards parameters and records success metrics", async () => {
-    executeMock.mockResolvedValueOnce({ ok: true, id: "activity-321" });
+    executeMock.mockResolvedValueOnce({ id: "activity-321", ok: true });
 
     const result = await emitLinearActivity("thought", {
-      sessionId: "session-id",
-      space: "workspace-1",
       authz: "Bearer token",
-      title: "Title",
       body: "Body text",
+      ephemeral: true,
       parameter: "param",
       result: "result",
-      ephemeral: true,
+      sessionId: "session-id",
+      space: "workspace-1",
+      title: "Title",
     });
 
-    expect(result).toEqual({ ok: true, id: "activity-321" });
+    expect(result).toEqual({ id: "activity-321", ok: true });
     expect(executeMock).toHaveBeenCalledTimes(1);
     expect(executeMock).toHaveBeenCalledWith({
       input: {
-        space: "workspace-1",
         action: "activity.thought",
-        sessionId: "session-id",
         authz: "Bearer token",
-        title: "Title",
         description: "Body text",
+        ephemeral: true,
         parameter: "param",
         result: "result",
-        ephemeral: true,
+        sessionId: "session-id",
+        space: "workspace-1",
+        title: "Title",
       },
     });
     expect(metricMocks.emissionsInc).toHaveBeenCalledWith({
-      type: "thought",
       status: "success",
+      type: "thought",
     });
     expect(metricMocks.durationStart).toHaveBeenCalledTimes(1);
   });
@@ -104,15 +103,15 @@ describe("linear helpers", () => {
     executeMock.mockRejectedValueOnce(new Error("linear-fault"));
 
     const result = await emitLinearActivity("action", {
+      authz: "token",
       sessionId: "sess",
       space: "workspace",
-      authz: "token",
     });
 
     expect(result).toEqual({ ok: false });
     expect(metricMocks.emissionsInc).toHaveBeenCalledWith({
-      type: "action",
       status: "failure",
+      type: "action",
     });
   });
 
@@ -126,11 +125,11 @@ describe("linear helpers", () => {
 
   it("ensureLinearTicket reuses existing session without creation", async () => {
     const result = await ensureLinearTicket({
+      authzLinear: "Bearer token",
       linear: {
         space: "workspace",
         sessionId: "existing-session",
       } as any,
-      authzLinear: "Bearer token",
       requirement: "Do work",
     });
 
@@ -158,19 +157,19 @@ describe("linear helpers", () => {
 
   it("ensureLinearTicket creates a ticket when inputs are valid", async () => {
     executeMock.mockResolvedValueOnce({
-      ok: true,
       id: "ISSUE-123",
+      ok: true,
       url: "https://linear.app/workspace/issue/ISSUE-123",
     });
 
     const result = await ensureLinearTicket({
+      authzLinear: "Bearer token",
       linear: {
         space: "workspace",
         teamId: "team-1",
         title: "Fix bug",
         description: "details",
       } as any,
-      authzLinear: "Bearer token",
       requirement: "Fix bug",
     });
 
@@ -187,11 +186,11 @@ describe("linear helpers", () => {
 
   it("ensureLinearTicket disables Linear linkage when team is missing", async () => {
     const result = await ensureLinearTicket({
+      authzLinear: "Bearer token",
       linear: {
         space: "workspace",
         title: "Fix bug",
       } as any,
-      authzLinear: "Bearer token",
       requirement: "Fix bug",
     });
 

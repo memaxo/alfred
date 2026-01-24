@@ -1,12 +1,13 @@
-import { describe, expect, it } from "bun:test";
-import { performance } from "node:perf_hooks";
-import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
+import type { ContextBundle } from "@alfred/type/plan";
+
+import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   createTrackerContext,
   updateTrackerWithContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
-import type { ContextBundle } from "@alfred/type/plan";
+import { describe, expect, it } from "bun:test";
+import { performance } from "node:perf_hooks";
 
 // budget: plan-generation
 

@@ -4,11 +4,13 @@
  * CLI commands for testing STT/TTS functionality.
  */
 
+import { logger } from "@alfred/logger";
 import { Buffer } from "node:buffer";
 import { extname, join } from "node:path";
-import { logger } from "@alfred/logger";
-import { decodeToPCM16, PCM_MIME_TYPE } from "../audio/codec";
+
 import type { ProcessConfig } from "../process/stt";
+
+import { decodeToPCM16, PCM_MIME_TYPE } from "../audio/codec";
 
 function guessMimeType(file: string): string {
   const ext = extname(file).toLowerCase();

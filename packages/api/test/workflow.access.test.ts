@@ -1,9 +1,9 @@
+import { type Obligation } from "@alfred/type";
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import type { Obligation } from "@alfred/type";
 
 // Create fresh mocks for this test file
-const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
-const consumeRouteRateLimitMock = vi.fn().mockResolvedValue(undefined);
+const createAuditLogMock = vi.fn().mockResolvedValue();
+const consumeRouteRateLimitMock = vi.fn().mockResolvedValue();
 const evaluateMock = vi
   .fn()
   .mockResolvedValue({ allow: true, obligations: [] });
@@ -39,9 +39,9 @@ const baseSession = {
 } as any;
 
 const baseInput = {
-  requirement: "test",
   auto: "low",
   mode: "sequential",
+  requirement: "test",
 } as any;
 
 describe("enforceWorkflowPlanPolicy", () => {
@@ -51,9 +51,8 @@ describe("enforceWorkflowPlanPolicy", () => {
 
   beforeEach(async () => {
     // Dynamic import to bypass any global mocks from other tests
-    const { enforceWorkflowPlanPolicy: efp } = await import(
-      "../src/workflow/access"
-    );
+    const { enforceWorkflowPlanPolicy: efp } =
+      await import("../src/workflow/access");
     enforceWorkflowPlanPolicy = efp;
 
     policyIncMock = vi.fn();
@@ -69,16 +68,16 @@ describe("enforceWorkflowPlanPolicy", () => {
     // Set return values after resetting
     policyLabelsMock.mockReturnValue({ inc: policyIncMock });
     obligationLabelsMock.mockReturnValue({ inc: obligationIncMock });
-    consumeRouteRateLimitMock.mockResolvedValue(undefined);
-    createAuditLogMock.mockResolvedValue(undefined);
+    consumeRouteRateLimitMock.mockResolvedValue();
+    createAuditLogMock.mockResolvedValue();
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
   });
 
   it("throws when session is missing", async () => {
     await expect(
       enforceWorkflowPlanPolicy({
-        session: null,
         input: baseInput,
+        session: null,
       })
     ).rejects.toMatchObject({ message: "session_required", statusCode: 401 });
     expect(consumeRouteRateLimitMock).not.toHaveBeenCalled();
@@ -86,22 +85,22 @@ describe("enforceWorkflowPlanPolicy", () => {
   });
 
   const bioObligation: Obligation = {
-    type: "biometric",
-    reason: "biometric_required",
     metadata: { code: "requireBio" },
+    reason: "biometric_required",
+    type: "biometric",
   };
 
   it("propagates policy denials with status 403", async () => {
     evaluateMock.mockResolvedValueOnce({
       allow: false,
-      reason: "policy_denied",
       obligations: [bioObligation],
+      reason: "policy_denied",
     });
 
     await expect(
       enforceWorkflowPlanPolicy({
-        session: baseSession,
         input: baseInput,
+        session: baseSession,
       })
     ).rejects.toMatchObject({ message: "policy_denied", statusCode: 403 });
 
@@ -118,8 +117,8 @@ describe("enforceWorkflowPlanPolicy", () => {
     });
 
     const result = await enforceWorkflowPlanPolicy({
-      session: baseSession,
       input: baseInput,
+      session: baseSession,
     });
 
     expect(result).toEqual({ obligations: [bioObligation] });

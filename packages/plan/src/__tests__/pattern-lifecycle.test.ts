@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { managePatternLifecycle } from "../pattern/lifecycle.js";
 
 // Mock @alfred/db

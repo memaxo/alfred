@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   ConversationHistory,
   FeedbackHistory,
   ToolCallHistory,
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const inferResponsePreferencesSemanticMock = mock(() =>
   Promise.resolve({

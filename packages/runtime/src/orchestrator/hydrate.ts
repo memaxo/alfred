@@ -1,10 +1,11 @@
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
 import {
   createTrackerContext,
   type TrackerContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { openDirectorySecure } from "@alfred/agent/security/filesystem";
-import type { WorkflowEvent } from "@alfred/type/plan";
 
 /**
  * Hydrate tracker context from workflow history.

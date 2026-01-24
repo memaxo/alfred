@@ -1,5 +1,6 @@
-import { describe, expect, it, mock } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { describe, expect, it, mock } from "bun:test";
 
 const mockEmbedMany = mock();
 mock.module("@alfred/rag", () => ({

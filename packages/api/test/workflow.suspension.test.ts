@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import { createWorkflowSuspension } from "@alfred/api/workflow/suspension";
 import type { Obligation } from "@alfred/type";
+
+import { createWorkflowSuspension } from "@alfred/api/workflow/suspension";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 import { metricsStub } from "./utils/mock-metrics";
 import { mockRunRegistry, mockWorkflowRepo } from "./utils/router-helpers";
 

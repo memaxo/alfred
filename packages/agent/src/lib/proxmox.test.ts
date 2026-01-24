@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+
 import { type ProxmoxError, proxmox } from "./proxmox";
 
 const mockBase = "https://pve.local:8006/api2/json";

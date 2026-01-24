@@ -5,12 +5,14 @@
  * Records outcomes and generates knowledge updates
  */
 
+import type { KnowledgeUpdate } from "@alfred/type/knowledge";
+
 import {
   type SupervisionEvent as LearningSupervisionEvent,
   supervise,
 } from "@alfred/learning/self_supervision";
 import { logger } from "@alfred/logger";
-import type { KnowledgeUpdate } from "@alfred/type/knowledge";
+
 import {
   runtimeKnowledgeBatchDurationSeconds,
   runtimeKnowledgeUpdatesTotal,

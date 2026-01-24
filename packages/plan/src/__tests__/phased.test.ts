@@ -1,10 +1,12 @@
 import { describe, expect, it, mock } from "bun:test";
+
+import type { WorkflowIntent } from "../intent/types.js";
+import type { ResearchResult } from "../research/types.js";
+
 import {
   generatePhasedPlan,
   generatePlanVariants,
 } from "../generate/phased.js";
-import type { WorkflowIntent } from "../intent/types.js";
-import type { ResearchResult } from "../research/types.js";
 
 describe("generatePhasedPlan", () => {
   it("should generate a valid plan structure", async () => {

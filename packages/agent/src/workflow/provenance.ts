@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+
 import {
   workflowProvenanceDurationSeconds,
   workflowProvenanceEdgesTotal,

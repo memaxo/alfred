@@ -5,10 +5,11 @@
  * and final compositing.
  */
 
+import type { RenderSystem } from "../types";
+
 import { UniformBuffer } from "../buffer";
 // Import shader source
 import bloomShaderSource from "../shaders/bloom.wgsl?raw";
-import type { RenderSystem } from "../types";
 
 /** Bloom configuration */
 export type BloomConfig = {

@@ -5,33 +5,46 @@
 
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import type {
-  AutonomyGradient,
-  CognitiveState,
-  Event,
+import {
+  type AutonomyGradient,
+  type CognitiveState,
+  type Event,
 } from "@alfred/cognitive/state";
 import { idle, initialAutonomy } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { z } from "zod";
-import { withPolicyApproval } from "./approval.js";
-import type { ToolExecuteArgs } from "./shared/context.js";
+
+import { withPolicyApproval, type AITool } from "./approval.js";
+import { type ToolExecuteArgs } from "./shared/context.js";
 
 // ============================================================================
 // Schemas
 // ============================================================================
 
 const cognitiveStateInputSchema = z.object({
-  streamId: z.string().min(1).describe("Cognitive stream ID (e.g., thread ID)"),
+  authz: z.string().optional().describe("Authorization token"),
   metric: z
     .enum(["energy", "boredom", "frustration", "autonomy", "all"])
     .optional()
     .describe("Specific metric to query (default: all)"),
-  authz: z.string().optional().describe("Authorization token"),
+  streamId: z.string().min(1).describe("Cognitive stream ID (e.g., thread ID)"),
 });
 
 const cognitiveStateOutputSchema = z.object({
+  autonomy: z.object({
+    level: z.number().min(0).max(1),
+    confidence: z.number().min(0).max(1),
+    alpha: z.number(),
+    beta: z.number(),
+  }),
+  physiology: z.object({
+    energy: z.number().min(0).max(1),
+    boredom: z.number().min(0).max(1),
+    frustration: z.number().min(0).max(1),
+  }),
+  since: z.number().describe("Timestamp of current state start"),
   state: z.enum([
     "idle",
     "capturing",
@@ -40,18 +53,6 @@ const cognitiveStateOutputSchema = z.object({
     "executing",
     "reflecting",
   ]),
-  physiology: z.object({
-    energy: z.number().min(0).max(1),
-    boredom: z.number().min(0).max(1),
-    frustration: z.number().min(0).max(1),
-  }),
-  autonomy: z.object({
-    level: z.number().min(0).max(1),
-    confidence: z.number().min(0).max(1),
-    alpha: z.number(),
-    beta: z.number(),
-  }),
-  since: z.number().describe("Timestamp of current state start"),
 });
 
 export type CognitiveStateInput = z.infer<typeof cognitiveStateInputSchema>;
@@ -72,8 +73,8 @@ async function enforceCognitiveStatePolicy(
   await requireToolScopesAndPolicy(input.authz, ["cognitive.read"], {
     action: "cognitive.query",
     resource: {
-      kind: "cognitive",
       id: input.streamId,
+      kind: "cognitive",
     },
   });
 }
@@ -112,10 +113,10 @@ function replayEvents(
     }
     const historicalEvent = unwrapped.data as Event;
     const result = applyTransition(state, autonomy, historicalEvent);
-    state = result.state;
-    autonomy = result.autonomy;
+    ({ state } = result);
+    ({ autonomy } = result);
   }
-  return { state, autonomy };
+  return { autonomy, state };
 }
 
 /**
@@ -167,7 +168,7 @@ function getStateSince(state: CognitiveState): number {
   if (state._ === "deciding") {
     // Deciding state has deadline (now + 5000ms), estimate start as deadline - 5000ms
     // Use current time if deadline is in the past (shouldn't happen but safe fallback)
-    const deadline = state.deadline;
+    const { deadline } = state;
     const estimatedStart = deadline - 5000;
     return estimatedStart > 0 ? estimatedStart : Date.now();
   }
@@ -179,16 +180,16 @@ function getStateSince(state: CognitiveState): number {
  * Zero values for filtering
  */
 const zeroPhysiology = {
-  energy: 0,
   boredom: 0,
+  energy: 0,
   frustration: 0,
 };
 
 const zeroAutonomy = {
-  level: 0,
-  confidence: 0,
   alpha: 0,
   beta: 0,
+  confidence: 0,
+  level: 0,
 };
 
 /**
@@ -200,7 +201,7 @@ function filterMetricsByType(
   metric: "energy" | "boredom" | "frustration" | "autonomy"
 ): CognitiveStateOutput {
   switch (metric) {
-    case "energy":
+    case "energy": {
       return {
         ...output,
         physiology: {
@@ -210,7 +211,8 @@ function filterMetricsByType(
         },
         autonomy: zeroAutonomy,
       };
-    case "boredom":
+    }
+    case "boredom": {
       return {
         ...output,
         physiology: {
@@ -220,7 +222,8 @@ function filterMetricsByType(
         },
         autonomy: zeroAutonomy,
       };
-    case "frustration":
+    }
+    case "frustration": {
       return {
         ...output,
         physiology: {
@@ -230,11 +233,13 @@ function filterMetricsByType(
         },
         autonomy: zeroAutonomy,
       };
-    case "autonomy":
+    }
+    case "autonomy": {
       return {
         ...output,
         physiology: zeroPhysiology,
       };
+    }
   }
 }
 
@@ -252,19 +257,19 @@ async function executeCognitiveState(
 
     // Build base output
     const output: CognitiveStateOutput = {
-      state: stateName,
-      physiology: {
-        energy: state.physiology.energy,
-        boredom: state.physiology.boredom,
-        frustration: state.physiology.frustration,
-      },
       autonomy: {
         level: autonomy.level,
         confidence: autonomy.confidence,
         alpha: autonomy.prior.alpha,
         beta: autonomy.prior.beta,
       },
+      physiology: {
+        energy: state.physiology.energy,
+        boredom: state.physiology.boredom,
+        frustration: state.physiology.frustration,
+      },
       since,
+      state: stateName,
     };
 
     // Filter by metric if specified
@@ -275,13 +280,14 @@ async function executeCognitiveState(
     return output;
   } catch (error) {
     logger.error("cognitive_state_query_failed", {
-      streamId: input.streamId,
       error: error instanceof Error ? error.message : String(error),
+      streamId: input.streamId,
     });
     throw new Error(
       `cognitive_state_query_failed: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }
@@ -291,37 +297,38 @@ async function executeCognitiveState(
 // ============================================================================
 
 export const toolCognitiveState = {
-  name: "cognitive_state",
   description:
     "Query current cognitive state including physiology (energy, boredom, frustration) and autonomy level. Returns state machine state, physiological metrics, and autonomy gradient with Beta prior.",
-  inputSchema: cognitiveStateInputSchema,
-  outputSchema: cognitiveStateOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<CognitiveStateInput>) => {
     await enforceCognitiveStatePolicy(input);
     return executeCognitiveState(input);
   },
+  inputSchema: cognitiveStateInputSchema,
+  name: "cognitive_state",
+  outputSchema: cognitiveStateOutputSchema,
 };
 
 const aiToolCognitiveStateBase = {
-  name: toolCognitiveState.name,
   description: toolCognitiveState.description,
-  parameters: toolCognitiveState.inputSchema,
-  inputSchema: toolCognitiveState.inputSchema,
   execute: async (input: CognitiveStateInput) =>
     toolCognitiveState.execute({ input }),
+  inputSchema: toolCognitiveState.inputSchema,
+  name: toolCognitiveState.name,
+  parameters: toolCognitiveState.inputSchema,
 };
 
-export const aiToolCognitiveState = withPolicyApproval(
-  aiToolCognitiveStateBase,
-  (input: CognitiveStateInput) => ({
-    action: "cognitive.query",
-    resource: {
-      kind: "cognitive",
-      id: input.streamId,
-    },
-    scopes: ["cognitive.read"],
-    authz: input.authz,
-  })
-);
+export const aiToolCognitiveState: AITool<CognitiveStateInput, any> =
+  withPolicyApproval(
+    aiToolCognitiveStateBase,
+    (input: CognitiveStateInput) => ({
+      action: "cognitive.query",
+      authz: input.authz,
+      resource: {
+        kind: "cognitive",
+        id: input.streamId,
+      },
+      scopes: ["cognitive.read"],
+    })
+  );
 
 export type ToolCognitiveState = typeof toolCognitiveState;

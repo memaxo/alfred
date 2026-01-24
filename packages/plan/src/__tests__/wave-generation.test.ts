@@ -1,10 +1,12 @@
 import { describe, expect, it } from "bun:test";
+
+import type { StructuredPlan } from "../types.js";
+
 import {
   attachWaves,
   planToWaves,
   validateWaveDependencies,
 } from "../generate/waves.js";
-import type { StructuredPlan } from "../types.js";
 
 describe("Wave Generation", () => {
   const mockPlan: StructuredPlan = {

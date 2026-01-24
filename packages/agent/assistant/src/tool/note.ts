@@ -5,6 +5,7 @@ import {
   updateNote,
 } from "@alfred/db/repo/assistant";
 import { z } from "zod";
+
 import { recordAssistantToolCall } from "../../../src/metrics";
 
 const noteInputSchema = z.object({

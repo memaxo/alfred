@@ -1,13 +1,14 @@
-import { performance } from "node:perf_hooks";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { PipelineEvent } from "@alfred/pipeline";
+import { type PipelineEvent } from "@alfred/pipeline";
 import {
   planPhaseInputSchema,
   planPhaseOutputSchema,
 } from "@alfred/pipeline/schemas";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { performance } from "node:perf_hooks";
+
 import { requirePolicy } from "../../../gate";
 import { ConciergeObserver } from "../../../services/concierge";
 import { authedProcedure, rateLimit } from "../../../trpc";
@@ -34,7 +35,7 @@ export const workflowPhasePlanProcedure = authedProcedure
   .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
   .input(planPhaseInputSchema)
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -70,10 +71,10 @@ export const workflowPhasePlanProcedure = authedProcedure
       // Check cache
       const fileTreeHash = await computeFileTreeHash(workspace);
       const cacheKey = getPlanCacheKey({
-        runId,
-        requirement: input.requirement,
-        workspace,
         fileTreeHash,
+        requirement: input.requirement,
+        runId,
+        workspace,
       });
 
       const cached = await getCachedPlan(cacheKey);
@@ -95,27 +96,27 @@ export const workflowPhasePlanProcedure = authedProcedure
       if (!existingRun) {
         await workflowRepo.createRun({
           id: runId,
-          userId: session.user.id,
-          projectId: undefined,
-          planId: undefined,
-          requirement: input.requirement,
-          workflowId: "pipeline",
-          status: "running",
           inputData: {
             requirement: input.requirement,
             workspace,
             runId,
           },
+          linearIssueId: input.linear?.issueId,
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
-          linearIssueId: input.linear?.issueId,
+          planId: undefined,
+          projectId: undefined,
+          requirement: input.requirement,
+          status: "running",
+          userId: session.user.id,
+          workflowId: "pipeline",
         });
       }
 
       const runner = new PipelineRunner({
-        maxParallel: 1,
         enableLearning: false,
         enableLinearSync: false,
+        maxParallel: 1,
       });
       registerDefaultStages(runner);
 
@@ -130,16 +131,12 @@ export const workflowPhasePlanProcedure = authedProcedure
       runner.addObserver(new CheckpointObserver(storage));
       runner.addObserver(
         new ConciergeObserver({
-          userId: session.user.id,
           runId,
+          userId: session.user.id,
         })
       );
 
       const pipelineInput = {
-        runId,
-        requirement: input.requirement,
-        workspace,
-        userId: session.user.id,
         authz: input.authz,
         linear: input.linear
           ? {
@@ -149,6 +146,10 @@ export const workflowPhasePlanProcedure = authedProcedure
               authz: input.authzLinear ?? "",
             }
           : undefined,
+        requirement: input.requirement,
+        runId,
+        userId: session.user.id,
+        workspace,
       };
 
       // Run pipeline up to and including 'schedule' stage
@@ -169,28 +170,27 @@ export const workflowPhasePlanProcedure = authedProcedure
         });
       }
 
-      const { createContextFromSnapshot } = await import(
-        "@alfred/pipeline/snapshot"
-      );
+      const { createContextFromSnapshot } =
+        await import("@alfred/pipeline/snapshot");
       const ctxDecoded = createContextFromSnapshot(snapshot, {
         emit: () => {},
       });
 
       const scheduleOutput = ctxDecoded.get("scheduleOutput") as {
-        waves: Array<{
+        waves: {
           id: string;
           agents: string[];
           dependsOn: string[];
           agentType?: string;
           phaseId?: string;
-        }>;
+        }[];
         executionMode: "sequential" | "parallel";
         estimatedDuration: number;
       };
       const planOutput = ctxDecoded.get("planOutput") as {
         planId: string;
         structuredPlan: unknown;
-        subtasks: Array<{
+        subtasks: {
           id: string;
           title: string;
           requirement: string;
@@ -198,7 +198,7 @@ export const workflowPhasePlanProcedure = authedProcedure
           priority: number;
           acceptance: string[];
           filesHint: string[];
-        }>;
+        }[];
         execPlans: Map<string, string> | Record<string, string>;
         rootPlanPath: string;
       };
@@ -222,52 +222,56 @@ export const workflowPhasePlanProcedure = authedProcedure
       try {
         await planRepo.createPlan({
           id: planOutput.planId,
-          userId: session.user.id,
+          intent: input.requirement,
+          plan: planOutput.structuredPlan,
           projectId:
             initOutput?.projectId && typeof initOutput.projectId === "string"
               ? initOutput.projectId
               : null,
-          intent: input.requirement,
-          plan: planOutput.structuredPlan,
           status: "pending",
+          userId: session.user.id,
         });
       } catch {
         await planRepo.updatePlan(planOutput.planId, {
+          intent: input.requirement,
+          plan: planOutput.structuredPlan,
           projectId:
             initOutput?.projectId && typeof initOutput.projectId === "string"
               ? initOutput.projectId
               : null,
-          intent: input.requirement,
-          plan: planOutput.structuredPlan,
           status: "pending",
         });
       }
 
       // Mark the run as awaiting approval.
       await workflowRepo.updateRun(runId, {
-        status: "suspended",
+        completedAt: null,
         planId: planOutput.planId,
         projectId:
           initOutput?.projectId && typeof initOutput.projectId === "string"
             ? initOutput.projectId
             : null,
         requirement: input.requirement,
-        suspendedAt: new Date(),
         resumedAt: null,
-        completedAt: null,
+        status: "suspended",
+        suspendedAt: new Date(),
       });
 
       const result = {
-        runId,
-        planId: planOutput.planId,
-        structuredPlan: planOutput.structuredPlan,
-        waves: scheduleOutput.waves,
-        waveCount: scheduleOutput.waves.length,
-        subtasks: planOutput.subtasks,
-        execPlans: execPlansRecord,
-        rootPlanPath: planOutput.rootPlanPath,
-        executionMode: scheduleOutput.executionMode,
+        context: contextOutput
+          ? {
+              totalTokens: contextOutput.totalTokens ?? 0,
+              ragChunkCount: Array.isArray(contextOutput.ragChunks)
+                ? contextOutput.ragChunks.length
+                : 0,
+            }
+          : undefined,
         estimatedDuration: scheduleOutput.estimatedDuration,
+        execPlans: execPlansRecord,
+        executionMode: scheduleOutput.executionMode,
+        planId: planOutput.planId,
+        rootPlanPath: planOutput.rootPlanPath,
+        runId,
         snapshot: {
           runId: snapshot.runId,
           status: snapshot.status,
@@ -278,14 +282,10 @@ export const workflowPhasePlanProcedure = authedProcedure
           lastEventAt: snapshot.lastEventAt,
           error: snapshot.error,
         },
-        context: contextOutput
-          ? {
-              totalTokens: contextOutput.totalTokens ?? 0,
-              ragChunkCount: Array.isArray(contextOutput.ragChunks)
-                ? contextOutput.ragChunks.length
-                : 0,
-            }
-          : undefined,
+        structuredPlan: planOutput.structuredPlan,
+        subtasks: planOutput.subtasks,
+        waveCount: scheduleOutput.waves.length,
+        waves: scheduleOutput.waves,
       };
 
       // Record metrics
@@ -303,18 +303,17 @@ export const workflowPhasePlanProcedure = authedProcedure
     } catch (error) {
       // Record error metrics
       const durationSec = (performance.now() - startTime) / 1000;
-      const { phasePlanRequestsTotal, phasePlanDurationSeconds } = await import(
-        "@alfred/pipeline/metrics"
-      );
+      const { phasePlanRequestsTotal, phasePlanDurationSeconds } =
+        await import("@alfred/pipeline/metrics");
       phasePlanRequestsTotal.inc({ status: "error" });
       phasePlanDurationSeconds.observe({ status: "error" }, durationSec);
 
       try {
         const { workflowRepo } = await import("@alfred/db");
         await workflowRepo.updateRun(runId, {
-          status: "failed",
           completedAt: new Date(),
           errorMessage: error instanceof Error ? error.message : String(error),
+          status: "failed",
         });
       } catch {
         // Best-effort.
@@ -327,7 +326,7 @@ export const workflowPhasePlanProcedure = authedProcedure
 export const workflowPhaseCachedPlanProcedure = phasePlanProcedure
   .input(planPhaseInputSchema)
   .query(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -342,17 +341,17 @@ export const workflowPhaseCachedPlanProcedure = phasePlanProcedure
       const workspace = input.workspace ?? process.cwd();
       const fileTreeHash = await computeFileTreeHash(workspace);
       const cacheKey = getPlanCacheKey({
-        runId: input.runId ?? "",
-        requirement: input.requirement,
-        workspace,
         fileTreeHash,
+        requirement: input.requirement,
+        runId: input.runId ?? "",
+        workspace,
       });
 
       const plan = await getCachedPlan(cacheKey);
       return {
+        cacheKey,
         cached: Boolean(plan),
         plan,
-        cacheKey,
       };
     } catch (error) {
       throw toTRPCError(error, "workflow_phase_cached_plan_failed");
@@ -364,7 +363,7 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
   .input(planPhaseInputSchema)
   .subscription(({ input, ctx }) =>
     observable<PipelineEvent>((emit) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         emit.error(
           new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
@@ -390,9 +389,9 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
           ]);
 
           const runner = new PipelineRunner({
-            maxParallel: 1,
             enableLearning: false,
             enableLinearSync: false,
+            maxParallel: 1,
           });
           registerDefaultStages(runner);
 
@@ -407,8 +406,8 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
           runner.addObserver(new CheckpointObserver(storage));
           runner.addObserver(
             new ConciergeObserver({
-              userId: session.user.id,
               runId,
+              userId: session.user.id,
             })
           );
 
@@ -424,26 +423,22 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
           if (!existingRun) {
             await workflowRepo.createRun({
               id: runId,
-              userId: session.user.id,
-              requirement: input.requirement,
-              workflowId: "pipeline",
-              status: "running",
               inputData: {
                 requirement: input.requirement,
                 workspace,
                 runId,
               },
+              linearIssueId: input.linear?.issueId,
               linearSessionId: input.linear?.sessionId,
               linearSpace: input.linear?.space,
-              linearIssueId: input.linear?.issueId,
+              requirement: input.requirement,
+              status: "running",
+              userId: session.user.id,
+              workflowId: "pipeline",
             });
           }
 
           const pipelineInput = {
-            runId,
-            requirement: input.requirement,
-            workspace,
-            userId: session.user.id,
             authz: input.authz,
             linear: input.linear
               ? {
@@ -453,6 +448,10 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
                   authz: input.authzLinear ?? "",
                 }
               : undefined,
+            requirement: input.requirement,
+            runId,
+            userId: session.user.id,
+            workspace,
           };
 
           // Run in background, stream events
@@ -467,8 +466,8 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
               }
             } catch (error) {
               logger.warn("phase_stream_plan_failed", {
-                runId,
                 error: error instanceof Error ? error.message : String(error),
+                runId,
               });
             } finally {
               queueObserver.close();

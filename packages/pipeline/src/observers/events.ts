@@ -1,4 +1,5 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
+
 import type { PipelineEvent } from "../events";
 import type { PipelineObserver } from "../runner";
 

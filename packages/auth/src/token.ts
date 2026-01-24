@@ -1,6 +1,7 @@
 import type { Decision, PolicyResource } from "@alfred/policy";
-import { evaluate } from "@alfred/policy";
 import type { KeyLike } from "jose";
+
+import { evaluate } from "@alfred/policy";
 import {
   importPKCS8,
   importSPKI,
@@ -9,6 +10,7 @@ import {
   SignJWT,
 } from "jose";
 import { nanoid } from "nanoid";
+
 import { getRedis } from "./redis";
 
 const ISSUER = process.env.AGENT_ISSUER || "alfred";

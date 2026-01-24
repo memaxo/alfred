@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { EMBEDDING_DIM, getHealth } from "./index";
 
 // Inline manifest types to avoid tsconfig rootDir issues

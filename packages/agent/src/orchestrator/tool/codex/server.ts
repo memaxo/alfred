@@ -1,12 +1,14 @@
 import type { FileSink, Subprocess } from "bun";
+
 import type { DirectoryHandle } from "../../../security/filesystem.js";
+import type { CodexToolInput } from "./definition.js";
+
 import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import {
   ensureServer,
   type ServerHandle,
   serverKey,
 } from "../shared/server.js";
-import type { CodexToolInput } from "./definition.js";
 import { mapAutoToCodex, pickEnvCodex, resolveExecutable } from "./policy.js";
 
 type Writer = { write?: (chunk: unknown) => Promise<void> | void } | undefined;

@@ -1,4 +1,6 @@
-import { performance } from "node:perf_hooks";
+import type { SttInput } from "@alfred/voice/services/stt";
+import type { TtsInput } from "@alfred/voice/services/tts";
+
 import { logger } from "@alfred/logger";
 import { voiceStreamLatencySeconds } from "@alfred/voice/metrics";
 import {
@@ -6,9 +8,9 @@ import {
   resolveSttLanguagePreference,
   resolveVoicePreference,
 } from "@alfred/voice/services/config";
-import type { SttInput } from "@alfred/voice/services/stt";
-import type { TtsInput } from "@alfred/voice/services/tts";
 import { TRPCError } from "@trpc/server";
+import { performance } from "node:perf_hooks";
+
 import { requirePolicy } from "../../gate";
 import { authedProcedure } from "../../trpc";
 import { toTRPCError } from "../../utils/error";

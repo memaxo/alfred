@@ -1,8 +1,10 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import * as codexRunRepo from "@alfred/db/repo/codex-run";
 import { z } from "zod";
-import { redactEventData, redactSecrets } from "../../utils/redaction.js";
+
 import type { ToolExecuteArgs } from "./shared/context.js";
+
+import { redactEventData, redactSecrets } from "../../utils/redaction.js";
 
 const listInputSchema = z.object({
   action: z.literal("list").describe("List Codex runs for the current user."),

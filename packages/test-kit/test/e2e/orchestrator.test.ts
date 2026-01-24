@@ -11,9 +11,10 @@
  * Ensure Docker is running before executing this test.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { issueAccessToken } from "@alfred/auth/token";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+
 import { CognitiveVCR } from "../../src/cognitive/vcr";
 import { DockerSandbox } from "../../src/kinetic/sandbox";
 

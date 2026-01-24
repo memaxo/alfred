@@ -1,6 +1,7 @@
 import { unregisterRunHandle } from "@alfred/agent/workflow/session-recovery";
 import { getRedis } from "@alfred/auth/redis";
 import { logger } from "@alfred/logger";
+
 import { droidPendingCleanupTotal, droidPendingRunsGauge } from "../metrics";
 
 const KEY_PREFIX = "droid:pending:";

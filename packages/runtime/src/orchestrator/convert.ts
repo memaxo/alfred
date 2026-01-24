@@ -1,8 +1,10 @@
+import type { StructuredPlan } from "@alfred/plan";
+
 import {
   planWaves,
   type WavePlan,
 } from "@alfred/agent/orchestrator/multi/spawn";
-import type { StructuredPlan } from "@alfred/plan";
+
 import { assignAgentTypes } from "./agents.js";
 import { buildDependencyMap } from "./dependencies.js";
 import { flattenPhases } from "./flatten.js";

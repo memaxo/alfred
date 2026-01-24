@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+
 import { CognitiveVCR, type Interaction } from "../../src/cognitive/vcr";
 
 describe("Cognitive VCR", () => {

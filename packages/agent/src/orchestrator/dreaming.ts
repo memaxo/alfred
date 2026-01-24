@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import { redactObject, redactSecrets } from "../utils/redaction.js";
 
 type DreamSeverity = "low" | "medium" | "high";

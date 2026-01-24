@@ -8,9 +8,11 @@
  */
 
 import { and, eq, isNull, or, sql } from "drizzle-orm";
+
+import type { EdgeRow, NodeRow } from "./types";
+
 import { db } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
-import type { EdgeRow, NodeRow } from "./types";
 
 /**
  * Temporal query options

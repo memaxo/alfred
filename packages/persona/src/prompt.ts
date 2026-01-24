@@ -2,11 +2,11 @@ import { renderHonorific, type HonorificPreference } from "./honorific.js";
 
 export type PersonaModality = "voice" | "text" | "tui" | "workflow";
 
-export type PersonaContext = {
+export interface PersonaContext {
   modality: PersonaModality;
   honorific: HonorificPreference;
   focusMode?: boolean;
-};
+}
 
 export function buildPersonaPrompt(ctx: PersonaContext): string {
   const h = renderHonorific(ctx.honorific);
@@ -41,10 +41,7 @@ export function buildPersonaPrompt(ctx: PersonaContext): string {
     "- Prefer concrete next steps over narration.",
   ];
 
-  const tui = [
-    "TUI mode:",
-    "- Keep copy short and operational.",
-  ];
+  const tui = ["TUI mode:", "- Keep copy short and operational."];
 
   const workflow = [
     "Workflow narration mode:",
@@ -64,8 +61,15 @@ export function buildPersonaPrompt(ctx: PersonaContext): string {
     ? ["Focus context:", "- User is in deep work mode. Be concise and direct."]
     : [];
 
-  return [...base, "", ...evidenceExamples, "", ...modalityBlock, "", ...focusHint]
+  return [
+    ...base,
+    "",
+    ...evidenceExamples,
+    "",
+    ...modalityBlock,
+    "",
+    ...focusHint,
+  ]
     .join("\n")
     .trim();
 }
-

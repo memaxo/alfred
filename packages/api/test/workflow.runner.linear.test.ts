@@ -7,6 +7,7 @@ import {
   mock,
   vi,
 } from "bun:test";
+
 // Import mock-metrics first - provides base metrics/logger/ai/policy stubs
 import { createMetricStub, metricsStub } from "./utils/mock-metrics";
 

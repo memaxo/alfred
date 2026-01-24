@@ -2,6 +2,7 @@ import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { logger } from "@alfred/logger";
 import { and, eq, inArray, or } from "drizzle-orm";
+
 import {
   graphContextDurationSeconds,
   graphRagEmptyTotal,

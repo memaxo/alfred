@@ -5,6 +5,7 @@ Shared data transfer objects and system events for the ALFRED monorepo.
 ## Type Hierarchy
 
 ### System Events
+
 The core of ALFRED's communication is based on system events, unified in `packages/type/src/events.ts`.
 
 - **DomainEvent**: The top-level union of all domain events.
@@ -14,12 +15,14 @@ The core of ALFRED's communication is based on system events, unified in `packag
   - `voice`: Events from the voice pipeline (STT, TTS, VAD).
 
 ### Data Transfer Objects (DTOs)
+
 - **CognitiveState**: Discriminated union of all possible cognitive states.
 - **ImplementationPlan**: Orchestrator's plan structure.
 - **UIMessage**: AI SDK v6 compatible message format.
 - **Envelope**: Generic wrapper for persisted events with metadata (ID, version, timestamp, causal links).
 
 ## Conventions
+
 - **Discriminants**: All discriminated unions use `_` as the discriminant property (e.g., `{ _: "idle" }`).
 - **Purity**: Files in this package should generally be pure type definitions. Runtime code is permitted only for shared constants or basic serialization helpers.
 - **Serialization**: Use `stableStringify` for deterministic JSON serialization.

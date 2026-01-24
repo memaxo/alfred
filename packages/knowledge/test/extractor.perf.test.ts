@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { extract, extractEntities, extractTemporal } from "../src/extractor";
 
 // budget: fact-extraction

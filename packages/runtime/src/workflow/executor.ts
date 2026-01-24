@@ -1,14 +1,17 @@
-import { createHash } from "node:crypto";
-import { getModelForRole } from "@alfred/agent/selector";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
-import * as conversationRepo from "@alfred/db/repo/conversation";
-import { logger } from "@alfred/logger";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { getModelForRole } from "@alfred/agent/selector";
+import * as conversationRepo from "@alfred/db/repo/conversation";
+import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
-import { createRuntime } from "../core";
+import { createHash } from "node:crypto";
+
 import type { RuntimeInput } from "../types";
+
+import { createRuntime } from "../core";
 
 export function createWorkflowExecutor(
   inputParam: WorkflowInputPayload,

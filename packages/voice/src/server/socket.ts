@@ -1,15 +1,16 @@
+import { logger } from "@alfred/logger";
+import {
+  type VoiceStreamAudioChunkPayload,
+  type VoiceStreamServerEvent,
+  type VoiceStreamStartPayload,
+  type VoiceStreamStopPayload,
+} from "@alfred/type/voice";
+import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
+import { type ServerWebSocket } from "bun";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { logger } from "@alfred/logger";
-import type {
-  VoiceStreamAudioChunkPayload,
-  VoiceStreamServerEvent,
-  VoiceStreamStartPayload,
-  VoiceStreamStopPayload,
-} from "@alfred/type/voice";
-import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
-import type { ServerWebSocket } from "bun";
+
 import {
   decodeToPCM16,
   encodeFromPCM16,
@@ -27,12 +28,12 @@ import {
   voiceWebSocketMessageLatencySeconds,
   voiceWebSocketPayloadTooLargeTotal,
 } from "../metrics";
-import type { VoiceRegistry } from "./registry";
-import type { VoiceSession } from "./session";
+import { type VoiceRegistry } from "./registry";
+import { type VoiceSession } from "./session";
 
 const MAX_WS_BINARY_BYTES = 64 * 1024;
 
-export type VoiceSocketData = {
+export interface VoiceSocketData {
   userId: string;
   sessionId?: string;
   sessionRegistryId?: string;
@@ -55,9 +56,9 @@ export type VoiceSocketData = {
   pingSentAt?: number | null;
   lastPongAt?: number | null;
   runtime?: unknown; // Pass-through for application context
-};
+}
 
-export type VoiceSocketHooks = {
+export interface VoiceSocketHooks {
   onSessionStart: (
     userId: string,
     sessionId: string,
@@ -87,10 +88,15 @@ export type VoiceSocketHooks = {
     durationSeconds?: number;
   }>;
   onSendError?: (reason: string) => void;
-};
+}
 
 type StreamCodec = "pcm" | "mp3" | "opus" | "wav";
-const SUPPORTED_STREAM_CODECS: StreamCodec[] = ["pcm", "mp3", "opus", "wav"];
+const SUPPORTED_STREAM_CODECS: StreamCodec[] = new Set([
+  "pcm",
+  "mp3",
+  "opus",
+  "wav",
+]);
 const codecToFormat: Partial<Record<StreamCodec, TargetFormat>> = {
   mp3: "mp3",
   opus: "opus",
@@ -102,7 +108,7 @@ function normalizeCodec(value?: string): StreamCodec {
     return "pcm";
   }
   const v = value as StreamCodec;
-  return SUPPORTED_STREAM_CODECS.includes(v) ? v : "pcm";
+  return SUPPORTED_STREAM_CODECS.has(v) ? v : "pcm";
 }
 
 function getEventType(payload: unknown): string {
@@ -128,10 +134,10 @@ function send(
     // WebSocket.OPEN = 1
     const error = new Error(`websocket_not_open: state=${ws.readyState}`);
     logger.error("voice_websocket_send_failed", {
-      sessionId: ws.data.sessionId ?? null,
-      eventType: getEventType(payload),
       error: error.message,
+      eventType: getEventType(payload),
       reason: "not_open",
+      sessionId: ws.data.sessionId ?? null,
     });
     onError?.(error, "not_open");
     return;
@@ -145,10 +151,10 @@ function send(
       ? "backpressure"
       : "send_error";
     logger.error("voice_websocket_send_failed", {
-      sessionId: ws.data.sessionId ?? null,
-      eventType: getEventType(payload),
       error: err.message,
+      eventType: getEventType(payload),
       reason,
+      sessionId: ws.data.sessionId ?? null,
     });
     onError?.(err, reason);
   }
@@ -163,7 +169,8 @@ function parseMessage(message: string | ArrayBuffer | Uint8Array) {
     return JSON.parse(text) as Record<string, unknown>;
   } catch (error) {
     throw new Error(
-      `invalid_json${error instanceof Error ? `: ${error.message}` : ""}`
+      `invalid_json${error instanceof Error ? `: ${error.message}` : ""}`,
+      { cause: error }
     );
   }
 }
@@ -220,17 +227,17 @@ export class VoiceSocketHandler {
         await this.handleChunk(ws, {
           _: "audio_chunk",
           audioBase64: toBufferFromBinary(message).toString("base64"),
-          mimeType: inputMimeType,
           emitPartial: true,
+          mimeType: inputMimeType,
         });
         return;
       }
 
       const event = parseMessage(message);
       const kind =
-        // biome-ignore lint/suspicious/noExplicitAny: Generic event handling
+        // oxlint-disable noExplicitAny: Generic event handling
         typeof (event as any)._ === "string"
-          ? // biome-ignore lint/suspicious/noExplicitAny: Generic event handling
+          ? // oxlint-disable noExplicitAny: Generic event handling
             ((event as any)._ as string)
           : null;
       if (!kind) {
@@ -239,30 +246,34 @@ export class VoiceSocketHandler {
       metricType = kind;
 
       switch (kind) {
-        case "start":
+        case "start": {
           await this.handleStart(
             ws,
             event as unknown as VoiceStreamStartPayload
           );
           break;
-        case "audio_chunk":
+        }
+        case "audio_chunk": {
           await this.handleChunk(
             ws,
             event as unknown as VoiceStreamAudioChunkPayload
           );
           break;
-        case "stop":
+        }
+        case "stop": {
           await this.handleStop(
             ws,
             (event as unknown as VoiceStreamStopPayload).reason ?? "manual"
           );
           break;
-        case "ping":
+        }
+        case "ping": {
           this.sendWithErrorHandling(ws, {
             _: "pong",
             sessionId: ws.data.sessionId ?? null,
           });
           break;
+        }
 
         case "telemetry_report": {
           const report = event as unknown as Extract<
@@ -286,15 +297,16 @@ export class VoiceSocketHandler {
           break;
         }
 
-        default:
+        default: {
           throw new Error(`unknown_event_type:${kind}`);
+        }
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       send(ws, {
         _: "error",
-        sessionId: ws.data.sessionId ?? null,
         message: msg,
+        sessionId: ws.data.sessionId ?? null,
       });
     } finally {
       const wallSeconds = (performance.now() - timerStart) / 1000;
@@ -310,8 +322,8 @@ export class VoiceSocketHandler {
     payload: VoiceStreamStartPayload
   ) {
     const sessionId = payload.sessionId || randomUUID();
-    const language = payload.language;
-    const userId = ws.data.userId;
+    const { language } = payload;
+    const { userId } = ws.data;
 
     // Create processing session
     this.sessionRegistry.removeSession(sessionId);
@@ -328,9 +340,9 @@ export class VoiceSocketHandler {
 
     // Registry hook
     const registryId = await this.hooks.onSessionStart(userId, sessionId, {
-      surface: payload.surface ?? "stream",
       codec: requestedCodec,
       negotiatedCodec,
+      surface: payload.surface ?? "stream",
       ttsFormat,
     });
 
@@ -357,11 +369,11 @@ export class VoiceSocketHandler {
 
     this.sendWithErrorHandling(ws, {
       _: "session_started",
-      sessionId,
       codec: requestedCodec,
+      inputMimeType: ws.data.inputMimeType,
       negotiatedCodec,
       protocolVersion: 1,
-      inputMimeType: ws.data.inputMimeType,
+      sessionId,
       ttsFormat,
     });
 
@@ -372,7 +384,7 @@ export class VoiceSocketHandler {
     ws: ServerWebSocket<VoiceSocketData>,
     payload: VoiceStreamAudioChunkPayload
   ) {
-    const sessionId = ws.data.sessionId;
+    const { sessionId } = ws.data;
     if (!sessionId) {
       throw new Error("session_not_started");
     }
@@ -404,7 +416,7 @@ export class VoiceSocketHandler {
           mimeType,
         });
         processedAudioBase64 = decoded.audioBase64;
-        mimeType = decoded.mimeType;
+        ({ mimeType } = decoded);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         if (ws.data.sessionRegistryId) {
@@ -412,8 +424,8 @@ export class VoiceSocketHandler {
         }
         this.sendWithErrorHandling(ws, {
           _: "error",
-          sessionId,
           message: msg,
+          sessionId,
         });
         return;
       }
@@ -424,10 +436,10 @@ export class VoiceSocketHandler {
       processedAudioBase64,
       mimeType,
       {
-        vadThreshold: ws.data.vadThreshold,
-        sessionId,
         chunkSize: ws.data.sttChunkSize,
         clearCache: shouldClearCache,
+        sessionId,
+        vadThreshold: ws.data.vadThreshold,
       }
     );
     if (shouldClearCache) {
@@ -457,19 +469,19 @@ export class VoiceSocketHandler {
       this.sendWithErrorHandling(ws, {
         _: "vad_state",
         sessionId,
-        // biome-ignore lint/suspicious/noExplicitAny: Internal result property
+        // oxlint-disable noExplicitAny: Internal result property
         vadConfidence: (result as any).vadConfidence ?? null,
-        // biome-ignore lint/suspicious/noExplicitAny: Internal result property
+        // oxlint-disable noExplicitAny: Internal result property
         isEmpty: (result as any).isEmpty ?? null,
-        // biome-ignore lint/suspicious/noExplicitAny: Internal result property
+        // oxlint-disable noExplicitAny: Internal result property
         endOfUtterance: (result as any).endOfUtterance ?? null,
       });
 
       if (ws.data.autoStop && result.endOfUtterance) {
         this.sendWithErrorHandling(ws, {
           _: "auto_stop",
-          sessionId,
           reason: "silence",
+          sessionId,
         });
         await this.handleStop(ws, "silence");
         return;
@@ -484,8 +496,8 @@ export class VoiceSocketHandler {
     ) {
       this.sendWithErrorHandling(ws, {
         _: "auto_stop",
-        sessionId,
         reason: "timeout",
+        sessionId,
       });
       await this.handleStop(ws, "timeout");
       return;
@@ -496,7 +508,7 @@ export class VoiceSocketHandler {
     ws: ServerWebSocket<VoiceSocketData>,
     _reason: "manual" | "silence" | "timeout"
   ) {
-    const sessionId = ws.data.sessionId;
+    const { sessionId } = ws.data;
     if (!sessionId) {
       return;
     }
@@ -553,9 +565,9 @@ export class VoiceSocketHandler {
       // Use hook-provided duration if available, otherwise fall back to wall-clock time
       const durationSeconds = assistant.durationSeconds ?? assistantWallSeconds;
       recordVoiceAssistant({
+        durationSeconds,
         provider: assistantProvider,
         status: "ok",
-        durationSeconds,
       });
       voiceStreamLatencySeconds.observe(
         { stage: "assistant" },
@@ -565,17 +577,17 @@ export class VoiceSocketHandler {
       const rawParsed = parseVoiceAssistantRaw(assistant.raw);
       if (!rawParsed.ok && assistant.raw !== undefined) {
         logger.warn("voice_assistant_raw_invalid", {
-          sessionId,
           error: rawParsed.error,
+          sessionId,
         });
       }
 
       this.sendWithErrorHandling(ws, {
         _: "assistant_message",
+        raw: rawParsed.ok ? rawParsed.value : undefined,
+        replayId: assistant.replayId ?? null,
         sessionId,
         text: assistant.text,
-        replayId: assistant.replayId ?? null,
-        raw: rawParsed.ok ? rawParsed.value : undefined,
       });
 
       if (ws.data.sessionRegistryId) {
@@ -594,8 +606,8 @@ export class VoiceSocketHandler {
       }
       this.sendWithErrorHandling(ws, {
         _: "error",
-        sessionId: ws.data.sessionId ?? null,
         message: msg,
+        sessionId: ws.data.sessionId ?? null,
       });
       await this.updateStatus(ws, "idle");
     }
@@ -610,7 +622,7 @@ export class VoiceSocketHandler {
       return;
     }
 
-    const sessionId = ws.data.sessionId;
+    const { sessionId } = ws.data;
     if (!sessionId) {
       throw new Error("session_id_missing");
     }
@@ -650,7 +662,7 @@ export class VoiceSocketHandler {
           if (binaryChunk) {
             ws.send(binaryChunk);
           }
-        } catch (_e) {
+        } catch {
           // Fallback or error
         }
 
@@ -661,7 +673,7 @@ export class VoiceSocketHandler {
         // So we should send binary. But client needs to know it's audio.
         // We decided "Binary = Audio".
 
-        /* 
+        /*
         send(ws, {
           type: "tts_chunk",
           sessionId,
@@ -683,8 +695,8 @@ export class VoiceSocketHandler {
       }
       this.sendWithErrorHandling(ws, {
         _: "error",
-        sessionId: ws.data.sessionId ?? null,
         message: msg,
+        sessionId: ws.data.sessionId ?? null,
       });
     } finally {
       const aborted = ws.data.ttsAbortToken !== token;
@@ -704,12 +716,12 @@ export class VoiceSocketHandler {
     state: "recording" | "processing" | "playing" | "idle"
   ) {
     const statusMap = {
-      recording: "recording",
-      processing: "processing",
-      playing: "responding",
       idle: "idle",
+      playing: "responding",
+      processing: "processing",
+      recording: "recording",
     } as const;
-    const sessionId = ws.data.sessionId;
+    const { sessionId } = ws.data;
     if (sessionId) {
       this.sendWithErrorHandling(ws, {
         _: "status",

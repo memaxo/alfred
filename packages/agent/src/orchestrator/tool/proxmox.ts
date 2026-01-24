@@ -22,6 +22,7 @@
 
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+
 import { type ProxmoxError, proxmox } from "../../lib/proxmox";
 
 const inputSchema = z

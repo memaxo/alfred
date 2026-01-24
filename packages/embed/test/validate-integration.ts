@@ -4,6 +4,7 @@
  */
 
 import { ingest, retrieve } from "@alfred/rag";
+
 import { embed, embedMany } from "../src/index";
 
 async function main() {
@@ -20,7 +21,7 @@ async function main() {
     testEmbedding.reduce((sum, val) => sum + val * val, 0)
   );
 
-  if (Math.abs(norm - 1.0) > 0.01) {
+  if (Math.abs(norm - 1) > 0.01) {
     throw new Error(`Normalization failed! Norm: ${norm}`);
   }
   const testNote =
@@ -35,7 +36,7 @@ async function main() {
 
   if (chunks.length > 0) {
     const topChunk = chunks[0];
-    // biome-ignore lint/suspicious/noExplicitAny: Validation script inspection
+    // oxlint-disable noExplicitAny: Validation script inspection
     const _metadata = topChunk.metadata as any;
   }
   const texts = [

@@ -6,6 +6,9 @@
  */
 
 import { describe, expect, it } from "bun:test";
+
+import type { Point4D } from "../src/types";
+
 import {
   computeNodeDepth,
   computeSemanticBasis,
@@ -20,7 +23,6 @@ import {
   recordState,
   screenToWorld,
 } from "../src/coordinate";
-import type { Point4D } from "../src/types";
 
 describe("Point4D Creation", () => {
   it("point4D creates point with defaults", () => {

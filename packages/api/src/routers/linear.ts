@@ -1,8 +1,9 @@
-import crypto from "node:crypto";
 import { cacheJTI } from "@alfred/auth/token";
 import { getLinearByOAuth, upsertLinear } from "@alfred/db/repo/linear";
 import { TRPCError } from "@trpc/server";
+import crypto from "node:crypto";
 import { z } from "zod";
+
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 import {

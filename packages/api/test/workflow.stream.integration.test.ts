@@ -3,6 +3,8 @@ process.env.OPENAI_API_KEY ??= "test-key";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
+import type { PipelineEvent } from "@alfred/pipeline";
+
 import {
   afterAll,
   beforeAll,
@@ -11,7 +13,6 @@ import {
   expect,
   it,
 } from "bun:test";
-import type { PipelineEvent } from "@alfred/pipeline";
 
 const [{ WorkflowTestHarness }, { toObservable }, { createWorkflowCaller }] =
   await Promise.all([

@@ -1,23 +1,23 @@
 {
   "name": "@alfred/tui",
   "version": "0.1.0",
-  "type": "module",
   "private": true,
-  "sideEffects": false,
   "description": "Unified CLI/TUI infrastructure for ALFRED",
   "bin": {
     "alfred": "./src/bin/alfred.ts"
   },
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "bun": "./src/index.ts",
-      "default": "./src/index.ts",
-      "types": "./dist/index.d.ts"
+      "default": "./src/index.ts"
     },
     "./*": {
+      "types": "./dist/*.d.ts",
       "bun": "./src/*.ts",
-      "default": "./src/*.ts",
-      "types": "./dist/*.d.ts"
+      "default": "./src/*.ts"
     }
   },
   "scripts": {
@@ -27,20 +27,20 @@
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.49",
+    "@ai-sdk/openai-compatible": "^2.0.18",
+    "@alfred/api": "workspace:*",
+    "@alfred/auth": "workspace:*",
+    "@alfred/logger": "workspace:*",
+    "@alfred/persona": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "@inquirer/prompts": "^7.5.0",
     "@opentui/core": "^0.1.23",
     "@opentui/react": "^0.1.63",
     "ai": "catalog:",
-    "@ai-sdk/openai": "^2.0.49",
-    "@ai-sdk/openai-compatible": "^2.0.18",
-    "trpc-cli": "^0.12.1",
-    "omelette": "^0.4.17",
-    "@inquirer/prompts": "^7.5.0",
     "better-auth": "catalog:",
-    "@alfred/api": "workspace:*",
-    "@alfred/auth": "workspace:*",
-    "@alfred/persona": "workspace:*",
-    "@alfred/type": "workspace:*",
-    "@alfred/logger": "workspace:*",
+    "omelette": "^0.4.17",
+    "trpc-cli": "^0.12.1",
     "zod": "catalog:"
   },
   "devDependencies": {

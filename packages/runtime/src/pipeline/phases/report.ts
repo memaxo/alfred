@@ -1,9 +1,11 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+
 import type { ExecutionContext } from "../../context";
-import { executeReportPhase } from "../../phases/report";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
+
+import { executeReportPhase } from "../../phases/report";
 
 export class ReportPhase implements Phase<RuntimeInput, void> {
   readonly id = "report";

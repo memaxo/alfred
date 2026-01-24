@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { parseWorkflowInputData } from "../../src/workflow/input";
 
 describe("workflow input validation", () => {

@@ -5,30 +5,34 @@
  * Follows the fixture handle pattern from workflow/runtime-fixture.ts.
  */
 
-import type { BrowserContext, Page, TestInfo } from "@playwright/test";
+import {
+  type BrowserContext,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 
-export type CrashReport = {
+export interface CrashReport {
   type: "browser-crash" | "context-crash" | "page-crash" | "render-crash";
   timestamp: string;
   url: string;
   screenshot?: string;
   consoleErrors: string[];
   networkErrors: string[];
-};
+}
 
-export type CrashMonitorHandle = {
+export interface CrashMonitorHandle {
   getCrashes: () => CrashReport[];
   hasCrashed: () => boolean;
   attachReport: () => Promise<void>;
   getReport: () => string;
-};
+}
 
 /**
  * Screenshot manager interface for crash captures
  */
-export type ScreenshotCapture = {
+export interface ScreenshotCapture {
   captureError: (name: string) => Promise<string>;
-};
+}
 
 /**
  * Monitor for browser/page crashes with recovery
@@ -84,12 +88,12 @@ export function createCrashMonitor(
       : undefined;
 
     crashes.push({
-      type: "page-crash",
-      timestamp: new Date().toISOString(),
-      url: page.url(),
-      screenshot,
       consoleErrors: [...consoleErrors],
       networkErrors: [...networkErrors],
+      screenshot,
+      timestamp: new Date().toISOString(),
+      type: "page-crash",
+      url: page.url(),
     });
   });
 
@@ -97,19 +101,16 @@ export function createCrashMonitor(
   context.on("close", () => {
     if (testInfo.status !== "passed") {
       crashes.push({
-        type: "context-crash",
-        timestamp: new Date().toISOString(),
-        url: page.url(),
         consoleErrors: [...consoleErrors],
         networkErrors: [...networkErrors],
+        timestamp: new Date().toISOString(),
+        type: "context-crash",
+        url: page.url(),
       });
     }
   });
 
   return {
-    getCrashes: () => crashes,
-    hasCrashed: () => crashes.length > 0,
-
     async attachReport() {
       if (crashes.length > 0) {
         await testInfo.attach("crash-report", {
@@ -118,6 +119,7 @@ export function createCrashMonitor(
         });
       }
     },
+    getCrashes: () => crashes,
 
     getReport(): string {
       if (crashes.length === 0) return "";
@@ -133,5 +135,7 @@ export function createCrashMonitor(
         )
         .join("\n\n");
     },
+
+    hasCrashed: () => crashes.length > 0,
   };
 }

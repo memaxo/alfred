@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { structuredPlanSchema } from "../schema.js";
 
 describe("@alfred/plan core types", () => {

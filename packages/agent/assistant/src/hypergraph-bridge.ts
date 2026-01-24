@@ -1,7 +1,8 @@
+import type { Hypergraph } from "@alfred/knowledge/hypergraph";
+
 import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { embed as embedVec, embedMany as embedVecMany } from "@alfred/embed";
-import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import {
   type AutoPersistHandle,
   type HypergraphLoader,
@@ -12,6 +13,7 @@ import {
   startAutoPersist,
 } from "@alfred/knowledge/persist";
 import { eq } from "drizzle-orm";
+
 import { persistKnowledge } from "./graphstore";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;

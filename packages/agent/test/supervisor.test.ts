@@ -1,5 +1,6 @@
-import { describe, expect, it } from "bun:test";
 import { LoopDetector } from "@alfred/cognitive";
+import { describe, expect, it } from "bun:test";
+
 import { BrainstemSupervisor } from "../src/orchestrator/loops/supervisor";
 
 describe("Brainstem Supervisor", () => {

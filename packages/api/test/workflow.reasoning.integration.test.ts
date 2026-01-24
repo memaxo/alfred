@@ -5,7 +5,7 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.OPENAI_API_KEY ??= "test-key";
 
 import "./utils/mock-metrics";
-
+import { type Obligation } from "@alfred/type";
 import {
   afterAll,
   afterEach,
@@ -15,7 +15,7 @@ import {
   it,
   mock,
 } from "bun:test";
-import type { Obligation } from "@alfred/type";
+
 import {
   createWorkflowCaller,
   type WorkflowTestUser,
@@ -39,8 +39,8 @@ mock.module("@alfred/policy", () => ({
 }));
 
 const TEST_USER: WorkflowTestUser = {
-  id: "workflow-integration-user",
   email: "workflow.integration@test.local",
+  id: "workflow-integration-user",
   name: "Workflow Integration",
   roles: ["owner"],
   scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -48,15 +48,14 @@ const TEST_USER: WorkflowTestUser = {
 
 describe("workflow reasoning integration (sqlite)", () => {
   beforeAll(async () => {
-    ({ persistReasoning } = await import(
-      "../../agent/assistant/src/graphstore.ts"
-    ));
+    ({ persistReasoning } =
+      await import("../../agent/assistant/src/graphstore.ts"));
     workflowRepo = await import("@alfred/db/repo/workflow");
     const dbModule = await import("@alfred/db");
-    db = dbModule.db;
+    ({ db } = dbModule);
     const graphSchema = await import("@alfred/db/schema/graph");
-    memoryNodes = graphSchema.memoryNodes;
-    memoryEdges = graphSchema.memoryEdges;
+    ({ memoryNodes } = graphSchema);
+    ({ memoryEdges } = graphSchema);
     const workflowSchema = await import("@alfred/db/schema/workflow");
     workflowRunsTable = workflowSchema.workflowRuns;
     workflowEventsTable = workflowSchema.workflowEvents;
@@ -85,13 +84,13 @@ describe("workflow reasoning integration (sqlite)", () => {
 
     await workflowRepo.createRun({
       id: runId,
-      userId: TEST_USER.id,
-      workflowId: "plan",
       inputData: {
         cw: resource,
         executionId: runId,
         reasoningSince: now - 1000,
       },
+      userId: TEST_USER.id,
+      workflowId: "plan",
     });
 
     await persistReasoning(
@@ -100,7 +99,7 @@ describe("workflow reasoning integration (sqlite)", () => {
         { text: "Investigate failing build", timestamp: now - 500 },
         { text: "Plan remediation", timestamp: now },
       ],
-      { executionId: runId, auto: "low" }
+      { auto: "low", executionId: runId }
     );
 
     const result = await caller.reasoning({ runId });

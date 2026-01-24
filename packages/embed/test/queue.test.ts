@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, mock, test } from "bun:test";
+
 import { EmbedQueue } from "../src/queue";
 
 // Shared mock callback creator

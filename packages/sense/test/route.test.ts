@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { WorkingSet } from "@alfred/type/sense";
+
+import { describe, expect, it } from "bun:test";
+
 import { scoreRoute } from "../src";
 
 describe("scoreRoute", () => {

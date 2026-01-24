@@ -6,19 +6,19 @@
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ApiClientOptions = {
+export interface ApiClientOptions {
   baseUrl?: string;
-};
+}
 
-export type ApiError = {
+export interface ApiError {
   code: string;
   message: string;
-};
+}
 
-export type ApiResult<T> = {
+export interface ApiResult<T> {
   data?: T;
   error?: ApiError;
-};
+}
 
 // ─── Fetch Helpers ───────────────────────────────────────────────────────────
 
@@ -70,11 +70,11 @@ async function fetchJson<T>(
 
     const data = await response.json();
     return { data: data as T };
-  } catch (err) {
+  } catch (error) {
     return {
       error: {
         code: "NETWORK_ERROR",
-        message: err instanceof Error ? err.message : "Network error",
+        message: error instanceof Error ? error.message : "Network error",
       },
     };
   }
@@ -123,6 +123,57 @@ export class ApiClient {
     return await fetchJson(url);
   }
 
+  async listEntities(
+    search?: string,
+    kind?: string,
+    resource = "user",
+    limit = 50
+  ): Promise<
+    ApiResult<{
+      entities: {
+        id: string;
+        name: string;
+        type: string;
+        description: string | null;
+        confidence: number | null;
+        createdAt: string | null;
+      }[];
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/knowledge.entitiesList?input=${encodeURIComponent(
+      JSON.stringify({ kind, limit, resource, search })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async getEntity(
+    entityId: string,
+    resource = "user"
+  ): Promise<
+    ApiResult<{
+      id: string;
+      name: string;
+      type: string;
+      description: string | null;
+      facts: {
+        id: string;
+        predicate: string;
+        object: string;
+        confidence: number;
+      }[];
+      relations: {
+        id: string;
+        target: string;
+        type: string;
+      }[];
+    } | null>
+  > {
+    const url = `${this.baseUrl}/api/trpc/knowledge.entityGet?input=${encodeURIComponent(
+      JSON.stringify({ entityId, resource })
+    )}`;
+    return await fetchJson(url);
+  }
+
   // ─── Workflow ──────────────────────────────────────────────────────────────
 
   async startWorkflow(
@@ -137,11 +188,11 @@ export class ApiClient {
   > {
     const url = `${this.baseUrl}/api/trpc/workflow.start`;
     return await fetchJson(url, {
-      method: "POST",
       body: JSON.stringify({
         requirement,
         auto,
       }),
+      method: "POST",
     });
   }
 
@@ -162,16 +213,61 @@ export class ApiClient {
 
   async listWorkflows(limit = 10): Promise<
     ApiResult<{
-      runs: Array<{
+      runs: {
         id: string;
         status: string;
         requirement: string;
         createdAt: string;
-      }>;
+      }[];
     }>
   > {
     const url = `${this.baseUrl}/api/trpc/workflow.list?input=${encodeURIComponent(
       JSON.stringify({ limit })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async cancelWorkflow(
+    runId: string
+  ): Promise<ApiResult<{ cancelled: boolean }>> {
+    const url = `${this.baseUrl}/api/trpc/workflow.cancel`;
+    return await fetchJson(url, {
+      body: JSON.stringify({ runId }),
+      method: "POST",
+    });
+  }
+
+  async suspendWorkflow(runId: string): Promise<ApiResult<{ ok: boolean }>> {
+    const url = `${this.baseUrl}/api/trpc/workflow.suspend`;
+    return await fetchJson(url, {
+      body: JSON.stringify({ runId }),
+      method: "POST",
+    });
+  }
+
+  async resumeWorkflow(runId: string): Promise<ApiResult<{ ok: boolean }>> {
+    const url = `${this.baseUrl}/api/trpc/workflow.resumePipeline`;
+    return await fetchJson(url, {
+      body: JSON.stringify({ runId }),
+      method: "POST",
+    });
+  }
+
+  async getWorkflowEvents(
+    runId: string,
+    limit = 100
+  ): Promise<
+    ApiResult<{
+      events: {
+        id: string;
+        eventType: string;
+        eventData: unknown;
+        timestamp: string;
+      }[];
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/workflow.events?input=${encodeURIComponent(
+      JSON.stringify({ limit, runId })
     )}`;
     return await fetchJson(url);
   }
@@ -195,14 +291,14 @@ export class ApiClient {
     limit = 10
   ): Promise<
     ApiResult<
-      Array<{
+      {
         id: string;
         title: string;
         lane: string;
         status: string;
         priority: number;
         workflowRunId: string | null;
-      }>
+      }[]
     >
   > {
     const url = `${this.baseUrl}/api/trpc/focus.commitmentList?input=${encodeURIComponent(
@@ -213,29 +309,29 @@ export class ApiClient {
 
   async listAttentionOpen(limit = 10): Promise<
     ApiResult<
-      Array<{
+      {
         id: string;
         kind: string;
         title: string | null;
         urgency: string;
         workflowRunId: string | null;
-      }>
+      }[]
     >
   > {
     const url = `${this.baseUrl}/api/trpc/attention.list?input=${encodeURIComponent(
-      JSON.stringify({ status: "open", limit, offset: 0 })
+      JSON.stringify({ limit, offset: 0, status: "open" })
     )}`;
     return await fetchJson(url);
   }
 
   async listDelta(limit = 10): Promise<
     ApiResult<
-      Array<{
+      {
         id: string;
         scope: string;
         summaryText: string;
         createdAt: string;
-      }>
+      }[]
     >
   > {
     const url = `${this.baseUrl}/api/trpc/delta.list?input=${encodeURIComponent(
@@ -263,12 +359,12 @@ export class ApiClient {
     filter: "all" | "running" | "agent" = "running"
   ): Promise<
     ApiResult<{
-      containers: Array<{
+      containers: {
         id: string;
         name: string;
         image: string;
         status: "running" | "paused" | "exited";
-      }>;
+      }[];
     }>
   > {
     const url = `${this.baseUrl}/api/trpc/deploy.containersList?input=${encodeURIComponent(
@@ -282,11 +378,11 @@ export class ApiClient {
     tail = 200
   ): Promise<
     ApiResult<{
-      logs: Array<{
+      logs: {
         timestamp: string;
         level: "debug" | "info" | "warn" | "error";
         message: string;
-      }>;
+      }[];
     }>
   > {
     const url = `${this.baseUrl}/api/trpc/deploy.containersLogs?input=${encodeURIComponent(

@@ -1,13 +1,5 @@
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
+import type { Obligation } from "@alfred/type";
+
 import {
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
@@ -18,8 +10,18 @@ import {
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
-import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+
 import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,

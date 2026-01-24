@@ -6,6 +6,7 @@ installAuthTokenMock();
 import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
 import { AgentFSWorkspace } from "../src/environment/agentfs";
 import { toolDocker } from "../src/orchestrator/tool/docker";
 import {

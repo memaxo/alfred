@@ -1,6 +1,7 @@
 import { phaseStatusSchema } from "@alfred/pipeline/schemas";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { authedProcedure } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
 import { WorkflowCheckpointStorage } from "../../../workflow/checkpoint";
@@ -9,9 +10,8 @@ export const workflowPhaseStatusProcedure = authedProcedure
   .input(z.object({ runId: z.string().min(1) }))
   .query(async ({ input }) => {
     try {
-      const { PostgresCheckpointStorage } = await import(
-        "@alfred/db/repo/workflow"
-      );
+      const { PostgresCheckpointStorage } =
+        await import("@alfred/db/repo/workflow");
       const { getResumeStage } = await import("@alfred/pipeline/snapshot");
 
       const storage = new WorkflowCheckpointStorage(
@@ -33,14 +33,14 @@ export const workflowPhaseStatusProcedure = authedProcedure
         nextStage !== null;
 
       return phaseStatusSchema.parse({
-        runId: snapshot.runId,
-        status: snapshot.status,
+        canResume,
+        error: snapshot.error,
         lastCompletedStage: snapshot.lastCompletedStage,
         lastCompletedStageIndex: snapshot.lastCompletedStageIndex,
-        stageResults: snapshot.stageResults ?? [],
-        error: snapshot.error,
-        canResume,
         nextStage,
+        runId: snapshot.runId,
+        stageResults: snapshot.stageResults ?? [],
+        status: snapshot.status,
       });
     } catch (error) {
       if (error instanceof TRPCError) {

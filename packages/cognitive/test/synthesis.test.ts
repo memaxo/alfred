@@ -1,10 +1,11 @@
-import { describe, expect, it, mock } from "bun:test";
-import { EMBEDDING_DIM } from "@alfred/embed";
-import { empty, fact as graphFact } from "@alfred/knowledge";
 import type {
   KnowledgeConfidence,
   KnowledgeFact,
 } from "@alfred/type/knowledge";
+
+import { EMBEDDING_DIM } from "@alfred/embed";
+import { empty, fact as graphFact } from "@alfred/knowledge";
+import { describe, expect, it, mock } from "bun:test";
 
 const toConfidence = (value: number) => value as KnowledgeConfidence;
 

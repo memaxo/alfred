@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/client";
 import { deviceAuthorizationClient } from "better-auth/client/plugins";
+
 import { openBrowser } from "./browser";
 import {
   clearCredentials,

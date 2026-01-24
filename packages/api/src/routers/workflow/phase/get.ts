@@ -1,6 +1,7 @@
 import { planPhaseOutputSchema } from "@alfred/pipeline/schemas";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { requirePolicy } from "../../../gate";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
@@ -40,22 +41,21 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
         });
       }
 
-      const { createContextFromSnapshot } = await import(
-        "@alfred/pipeline/snapshot"
-      );
+      const { createContextFromSnapshot } =
+        await import("@alfred/pipeline/snapshot");
       const ctxDecoded = createContextFromSnapshot(snapshot, {
         emit: () => {},
       });
 
       const scheduleOutput = ctxDecoded.get("scheduleOutput") as
         | {
-            waves: Array<{
+            waves: {
               id: string;
               agents: string[];
               dependsOn: string[];
               agentType?: string;
               phaseId?: string;
-            }>;
+            }[];
             executionMode: "sequential" | "parallel";
             estimatedDuration: number;
           }
@@ -65,7 +65,7 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
         | {
             planId: string;
             structuredPlan: unknown;
-            subtasks: Array<{
+            subtasks: {
               id: string;
               title: string;
               requirement: string;
@@ -73,7 +73,7 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
               priority: number;
               acceptance: string[];
               filesHint: string[];
-            }>;
+            }[];
             execPlans: Map<string, string> | Record<string, string>;
             rootPlanPath: string;
           }
@@ -102,16 +102,20 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
             : execPlansRaw;
 
       const result = {
-        runId: snapshot.runId,
-        planId: planOutput.planId,
-        structuredPlan: planOutput.structuredPlan,
-        waves: scheduleOutput.waves,
-        waveCount: scheduleOutput.waves.length,
-        subtasks: planOutput.subtasks,
-        execPlans: execPlansRecord,
-        rootPlanPath: planOutput.rootPlanPath,
-        executionMode: scheduleOutput.executionMode,
+        context: contextOutput
+          ? {
+              totalTokens: contextOutput.totalTokens ?? 0,
+              ragChunkCount: Array.isArray(contextOutput.ragChunks)
+                ? contextOutput.ragChunks.length
+                : 0,
+            }
+          : undefined,
         estimatedDuration: scheduleOutput.estimatedDuration,
+        execPlans: execPlansRecord,
+        executionMode: scheduleOutput.executionMode,
+        planId: planOutput.planId,
+        rootPlanPath: planOutput.rootPlanPath,
+        runId: snapshot.runId,
         snapshot: {
           runId: snapshot.runId,
           status: snapshot.status,
@@ -122,14 +126,10 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
           lastEventAt: snapshot.lastEventAt,
           error: snapshot.error,
         },
-        context: contextOutput
-          ? {
-              totalTokens: contextOutput.totalTokens ?? 0,
-              ragChunkCount: Array.isArray(contextOutput.ragChunks)
-                ? contextOutput.ragChunks.length
-                : 0,
-            }
-          : undefined,
+        structuredPlan: planOutput.structuredPlan,
+        subtasks: planOutput.subtasks,
+        waveCount: scheduleOutput.waves.length,
+        waves: scheduleOutput.waves,
       };
 
       return planPhaseOutputSchema.parse(result);

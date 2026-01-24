@@ -1,4 +1,5 @@
 import { DEFAULT_COMPRESSION_CONFIG } from "@alfred/knowledge/compression";
+
 import { coerceBool, toFloat, toInt } from "../utils/coerce";
 
 export const reasoningConfig = {

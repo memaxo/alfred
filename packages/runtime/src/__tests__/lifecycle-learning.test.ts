@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { createLifecycle } from "../workflow/lifecycle.js";
 
 // Mock dependencies
@@ -27,8 +28,8 @@ const mockExtractAntiPatternFromRun = mock(async () => ({}));
 const mockLearnProjectConventions = mock(async () => ({}));
 
 mock.module("@alfred/plan", () => ({
-  extractPatternFromRun: mockExtractPatternFromRun,
   extractAntiPatternFromRun: mockExtractAntiPatternFromRun,
+  extractPatternFromRun: mockExtractPatternFromRun,
   learnProjectConventions: mockLearnProjectConventions,
 }));
 
@@ -36,14 +37,14 @@ mock.module("@alfred/plan", () => ({
 // Bun's mock.module() not isolating properly between test files. The module mocks
 // for @alfred/db, @alfred/plan etc. pollute other tests.
 // NOTE: Refactor to use dependency injection instead of mock.module().
-// biome-ignore lint/suspicious/noSkippedTests: Known test isolation issue with mock.module()
+// oxlint-disable noSkippedTests: Known test isolation issue with mock.module()
 describe.skip("Workflow Lifecycle Hooks (Learning)", () => {
   const mockArgs = {
-    userId: "user-123",
-    stopStreamTimer: () => {},
-    recordEvent: () => {},
-    triggerPreferenceRefresh: () => {},
     emitComplete: () => {},
+    recordEvent: () => {},
+    stopStreamTimer: () => {},
+    triggerPreferenceRefresh: () => {},
+    userId: "user-123",
   };
 
   beforeEach(() => {
@@ -62,10 +63,10 @@ describe.skip("Workflow Lifecycle Hooks (Learning)", () => {
       async () =>
         ({
           id: "run-123",
+          inputData: { planId: "plan-123" },
+          projectId: "proj-123",
           status: "completed",
           userId: "user-123",
-          projectId: "proj-123",
-          inputData: { planId: "plan-123" },
         }) as any
     );
 
@@ -93,9 +94,9 @@ describe.skip("Workflow Lifecycle Hooks (Learning)", () => {
       async () =>
         ({
           id: "run-failed",
+          inputData: { planId: "plan-123" },
           status: "failed",
           userId: "user-123",
-          inputData: { planId: "plan-123" },
         }) as any
     );
 
@@ -108,11 +109,11 @@ describe.skip("Workflow Lifecycle Hooks (Learning)", () => {
     );
 
     await lifecycle.markFailed({
-      runId: "run-failed",
+      emitError: () => {},
       error: new Error("Arbiter failed"),
       input: { auto: "low", mode: "sequential" },
       notifyLinearFailure: async () => {},
-      emitError: () => {},
+      runId: "run-failed",
     });
 
     // Wait for async learning block

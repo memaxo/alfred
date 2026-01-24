@@ -3,6 +3,7 @@ import type { StructuredPlan } from "@alfred/plan";
 import type { AgentOutcome } from "@alfred/runtime/orchestrator/agent";
 // Import actual types from dependencies to avoid type mismatches
 import type { SubTask } from "@alfred/type/plan";
+
 import type { KnowledgeInsight, ReviewCheck } from "../events";
 
 // Re-export for convenience

@@ -4,15 +4,15 @@
  * JSON-serialisable by design.
  */
 
-export type AgentFSDirEntry = {
+export interface AgentFSDirEntry {
   name: string;
   ino: number;
   isDirectory: boolean;
   size?: number;
   mtime?: number;
-};
+}
 
-export type AgentFSToolCallInfo = {
+export interface AgentFSToolCallInfo {
   id: number;
   name: string;
   startedAt: number;
@@ -21,31 +21,38 @@ export type AgentFSToolCallInfo = {
   error?: string | null;
   parameters?: unknown;
   result?: unknown;
-};
+}
 
-export type AgentFSKVEntry = {
+export interface AgentFSKVEntry {
   key: string;
   value: unknown;
   createdAt?: number;
   updatedAt?: number;
-};
+}
 
-export type AgentFSStreamCursor = {
+export interface AgentFSChange {
+  path: string;
+  type: "created" | "modified" | "deleted";
+  size?: number;
+  mtime?: number;
+}
+
+export interface AgentFSStreamCursor {
   toolCallId?: number;
   toolCallSince?: number;
   kvUpdatedAt?: number;
-};
+}
 
-export type AgentFSSnapshot = {
+export interface AgentFSSnapshot {
   runId: string;
   dbPath: string;
   ts: number;
   entries: AgentFSDirEntry[];
   toolCalls: AgentFSToolCallInfo[];
   kvStore: AgentFSKVEntry[];
-};
+}
 
-export type AgentFSStreamData = {
+export interface AgentFSStreamData {
   type: "data";
   ts: number;
   runId: string;
@@ -57,21 +64,22 @@ export type AgentFSStreamData = {
   entries?: AgentFSDirEntry[];
   toolCalls?: AgentFSToolCallInfo[];
   kvStore?: AgentFSKVEntry[];
-};
+  changes?: AgentFSChange[];
+}
 
-export type AgentFSStreamError = {
+export interface AgentFSStreamError {
   type: "error";
   ts: number;
   code: string;
   message: string;
   retryable: boolean;
-};
+}
 
-export type AgentFSStreamDone = {
+export interface AgentFSStreamDone {
   type: "done";
   ts: number;
   reason: "closed" | "complete";
-};
+}
 
 export type AgentFSStreamEvent =
   | AgentFSStreamData

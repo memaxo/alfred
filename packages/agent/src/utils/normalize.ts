@@ -1,6 +1,8 @@
-import { randomUUID } from "node:crypto";
 import type { SearchReceipt, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { randomUUID } from "node:crypto";
+
 import { coerceNonEmptyString } from "./coerce";
 
 type MessagePart = UIMessage["parts"][number];

@@ -1,5 +1,6 @@
-import { structuredPlanSchema } from "../schema.js";
 import type { StructuredPlan } from "../types.js";
+
+import { structuredPlanSchema } from "../schema.js";
 
 function validatePlan(
   data: unknown

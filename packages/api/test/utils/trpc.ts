@@ -11,12 +11,11 @@ import "./mock-db-client";
 import "./mock-voice";
 import "./mock-hypergraph";
 import "./mock-node-pty";
-import { createTestSession } from "@alfred/test-kit/auth";
-import { RuntimeContext } from "@alfred/type/runtime-context";
-
-// type RouterInputs = inferRouterInputs<TRPCAppRouter>;
-
 import type { RouterDeps } from "@alfred/api/deps";
+
+import { createTestSession } from "@alfred/test-kit/auth";
+// type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+import { RuntimeContext } from "@alfred/type/runtime-context";
 
 type CreateCallerOptions = {
   userId?: string;

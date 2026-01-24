@@ -1,7 +1,8 @@
-import { performance } from "node:perf_hooks";
-import type { PipelineSnapshot } from "@alfred/pipeline";
+import { type PipelineSnapshot } from "@alfred/pipeline";
 import { TRPCError } from "@trpc/server";
+import { performance } from "node:perf_hooks";
 import { z } from "zod";
+
 import { requirePolicy } from "../../../gate";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
@@ -30,7 +31,7 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -41,9 +42,8 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
     const startTime = performance.now();
 
     try {
-      const { phaseUpdatePlanDurationSeconds } = await import(
-        "@alfred/pipeline/metrics"
-      );
+      const { phaseUpdatePlanDurationSeconds } =
+        await import("@alfred/pipeline/metrics");
 
       const { structuredPlanSchema } = await import("@alfred/plan/schema");
       const { hasCycles, planToWaves } = await import("@alfred/plan/generate");
@@ -112,7 +112,7 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
       // Update snapshot
       const updatedSnapshot: PipelineSnapshot = {
         ...snapshot,
-        contextEntries: Array.from(ctxMap.entries()),
+        contextEntries: [...ctxMap.entries()],
       };
 
       await storage.save(input.runId, updatedSnapshot);
@@ -133,16 +133,15 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
 
       return {
         runId: input.runId,
-        waves,
-        waveCount: waves.length,
         structuredPlan: parsedPlan,
         subtasks,
+        waveCount: waves.length,
+        waves,
       };
     } catch (error) {
       const durationSec = (performance.now() - startTime) / 1000;
-      const { phaseUpdatePlanDurationSeconds } = await import(
-        "@alfred/pipeline/metrics"
-      );
+      const { phaseUpdatePlanDurationSeconds } =
+        await import("@alfred/pipeline/metrics");
       phaseUpdatePlanDurationSeconds.observe(durationSec);
 
       throw toTRPCError(error, "workflow_phase_update_plan_failed");

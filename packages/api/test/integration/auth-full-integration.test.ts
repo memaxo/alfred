@@ -66,9 +66,8 @@ async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
     const { auditLogs } = await import("@alfred/db/schema/policy");
-    const { workflowEvents, workflowRuns } = await import(
-      "@alfred/db/schema/workflow"
-    );
+    const { workflowEvents, workflowRuns } =
+      await import("@alfred/db/schema/workflow");
     await db.delete(auditLogs);
     await db.delete(workflowEvents);
     await db.delete(workflowRuns);
@@ -106,8 +105,8 @@ describe("Auth Full Integration", () => {
   describe("Token Lifecycle", () => {
     it("issues token with scopes", async () => {
       const caller = await createTestCaller({
-        userId: "token-issue-user",
         scopes: ["token.issue"],
+        userId: "token-issue-user",
       });
 
       const result = await caller.token.issue({
@@ -123,8 +122,8 @@ describe("Auth Full Integration", () => {
 
     it("issues elevated token with passkey MFA", async () => {
       const caller = await createTestCaller({
-        userId: "elevated-user",
         scopes: ["token.elevate"],
+        userId: "elevated-user",
       });
 
       const result = await caller.token.elevate({
@@ -139,8 +138,8 @@ describe("Auth Full Integration", () => {
 
     it("validates token with required scopes", async () => {
       const caller = await createTestCaller({
-        userId: "validate-user",
         scopes: ["token.issue"],
+        userId: "validate-user",
       });
 
       const result = await caller.token.issue({
@@ -156,8 +155,8 @@ describe("Auth Full Integration", () => {
     it("rejects token with missing required scopes during verification", async () => {
       // Issue a token with limited scopes
       const caller = await createTestCaller({
-        userId: "scope-missing-user",
         scopes: ["token.issue"],
+        userId: "scope-missing-user",
       });
 
       const result = await caller.token.issue({
@@ -199,8 +198,8 @@ describe("Auth Full Integration", () => {
 
     it("revokes token and propagates to active sessions", async () => {
       const caller = await createTestCaller({
-        userId: "revoke-user",
         scopes: ["token.issue", "session.invalidate"],
+        userId: "revoke-user",
       });
 
       // Issue a regular token
@@ -222,8 +221,8 @@ describe("Auth Full Integration", () => {
   describe("Biometric Enforcement", () => {
     it("issues token with biometric MFA requirement", async () => {
       const caller = await createTestCaller({
-        userId: "bio-user",
         scopes: ["token.elevate"],
+        userId: "bio-user",
       });
 
       const result = await caller.token.elevate({
@@ -244,7 +243,7 @@ describe("Auth Full Integration", () => {
         "bio-elevated-user",
         ["workflow.plan"],
         undefined,
-        { mfa: "passkey", elevated: true }
+        { elevated: true, mfa: "passkey" }
       );
 
       expect(token).toBeDefined();
@@ -286,8 +285,8 @@ describe("Auth Full Integration", () => {
   describe("Audit Log Verification", () => {
     it("audits token issuance operations", async () => {
       const caller = await createTestCaller({
-        userId: "audit-issue-user",
         scopes: ["token.issue"],
+        userId: "audit-issue-user",
       });
 
       const result = await caller.token.issue({
@@ -320,8 +319,8 @@ describe("Auth Full Integration", () => {
 
     it("audits policy denial events", async () => {
       const _caller = await createTestCaller({
-        userId: "audit-deny-user",
         scopes: ["token.issue"],
+        userId: "audit-deny-user",
       });
 
       const {
@@ -336,7 +335,7 @@ describe("Auth Full Integration", () => {
       try {
         await requireToolScopesAndPolicy(`Bearer ${token}`, ["note.read"], {
           action: "admin.delete",
-          resource: { kind: "user", id: "other-user" },
+          resource: { id: "other-user", kind: "user" },
         });
         expect.unreachable("Should have been denied");
       } catch (error: any) {
@@ -349,13 +348,13 @@ describe("Auth Full Integration", () => {
   describe("Multi-User Scoping", () => {
     it("isolates tokens between users", async () => {
       const user1 = await createTestCaller({
-        userId: "user-isolation-1",
         scopes: ["token.issue"],
+        userId: "user-isolation-1",
       });
 
       const user2 = await createTestCaller({
-        userId: "user-isolation-2",
         scopes: ["token.issue"],
+        userId: "user-isolation-2",
       });
 
       const token1 = await user1.token.issue({
@@ -374,8 +373,8 @@ describe("Auth Full Integration", () => {
 
     it("scopes token permissions correctly", async () => {
       const caller = await createTestCaller({
-        userId: "scope-isolation-user",
         scopes: ["token.issue"],
+        userId: "scope-isolation-user",
       });
 
       // Issue token with specific scopes
@@ -419,8 +418,8 @@ describe("Auth Full Integration", () => {
 
     it("validates token structure", async () => {
       const caller = await createTestCaller({
-        userId: "structure-user",
         scopes: ["token.issue"],
+        userId: "structure-user",
       });
 
       const result = await caller.token.issue({

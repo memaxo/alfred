@@ -1,5 +1,7 @@
 {
   "name": "@alfred/auth",
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -10,25 +12,23 @@
       "default": "./src/*.ts"
     }
   },
-  "type": "module",
-  "sideEffects": false,
   "scripts": {
     "build": "tsgo -b --emitDeclarationOnly",
     "typecheck": "tsgo -b"
   },
+  "dependencies": {
+    "@alfred/db": "workspace:*",
+    "@alfred/policy": "workspace:*",
+    "@better-auth/expo": "1.4.7",
+    "@better-auth/passkey": "1.4.7",
+    "better-auth": "catalog:",
+    "jose": "^5.2.1",
+    "nanoid": "^5.0.7",
+    "redis": "^4.7.0",
+    "zod": "catalog:"
+  },
   "devDependencies": {},
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "better-auth": "catalog:",
-    "@better-auth/expo": "1.4.7",
-    "@better-auth/passkey": "1.4.7",
-    "zod": "catalog:",
-    "@alfred/db": "workspace:*",
-    "@alfred/policy": "workspace:*",
-    "jose": "^5.2.1",
-    "nanoid": "^5.0.7",
-    "redis": "^4.7.0"
   }
 }

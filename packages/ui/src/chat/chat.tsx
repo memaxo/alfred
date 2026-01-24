@@ -1,5 +1,5 @@
-import type { UIMessage } from "@alfred/type/stream";
-import type { FormEvent, ReactNode } from "react";
+import { type UIMessage } from "@alfred/type/stream";
+import { type FormEvent, type ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -14,17 +14,20 @@ import {
   type ToolResultPart,
 } from "./parts";
 
-type VirtualRange = { startIndex: number; endIndex: number };
+interface VirtualRange {
+  startIndex: number;
+  endIndex: number;
+}
 
-type VirtualizedComponentProps = {
+interface VirtualizedComponentProps {
   data: UIMessage[];
   itemContent: (index: number, message: UIMessage) => ReactNode;
   rangeChanged?: (range: VirtualRange) => void;
-};
+}
 
 type VirtualizedComponent = React.ComponentType<VirtualizedComponentProps>;
 
-export type ChatProps = {
+export interface ChatProps {
   messages: UIMessage[];
   onSend: (text: string) => void;
   placeholder?: string;
@@ -42,21 +45,21 @@ export type ChatProps = {
     message: UIMessage
   ) => ReactNode | null;
   renderMessageActions?: (message: UIMessage) => ReactNode | null;
-};
+}
 
-type ToolCallBlock = {
+interface ToolCallBlock {
   id: string | null;
   name: string | null;
   args: unknown;
-};
+}
 
-type ToolResultBlock = {
+interface ToolResultBlock {
   id: string | null;
   name: string | null;
   result: unknown;
-};
+}
 
-type RenderBlock = {
+interface RenderBlock {
   key: string;
   role: UIMessage["role"];
   agentLabel: string;
@@ -66,7 +69,7 @@ type RenderBlock = {
   reasoning: string | null;
   toolCalls: ToolCallBlock[];
   toolResults: ToolResultBlock[];
-};
+}
 
 function buildRenderBlock(message: UIMessage, index: number): RenderBlock {
   const agentLabel = getAgentLabel(message);
@@ -99,9 +102,9 @@ function buildRenderBlock(message: UIMessage, index: number): RenderBlock {
     isToolCallPart
   ) as unknown as ToolCallPart[];
   const toolCalls = toolCallParts.map((part) => ({
+    args: part.input ?? null,
     id: part.toolCallId ?? null,
     name: part.toolName ?? null,
-    args: part.input ?? null,
   }));
 
   const toolResultParts = message.parts.filter(
@@ -114,13 +117,13 @@ function buildRenderBlock(message: UIMessage, index: number): RenderBlock {
   }));
 
   return {
-    key: message.id ?? `message-${index}`,
-    role: message.role,
     agentLabel,
-    status,
-    timestamp,
-    text,
+    key: message.id ?? `message-${index}`,
     reasoning,
+    role: message.role,
+    status,
+    text,
+    timestamp,
     toolCalls,
     toolResults,
   };
@@ -136,8 +139,8 @@ function recordPerfSnapshot(messages: UIMessage[], range?: VirtualRange) {
   };
   perfWindow.__perf = perfWindow.__perf ?? {};
   perfWindow.__perf.chat = {
-    messageCount: messages.length,
     lastRender: performance.now(),
+    messageCount: messages.length,
     range,
   };
 }
@@ -263,7 +266,7 @@ export function Chat({
   renderPart,
   renderMessageActions,
 }: ChatProps) {
-  const [range, setRange] = useState<VirtualRange | undefined>(undefined);
+  const [range, setRange] = useState<VirtualRange | undefined>();
 
   const handleRangeChanged = useCallback(
     (next: VirtualRange) => {
@@ -282,7 +285,7 @@ export function Chat({
     const snapshotRange =
       range ??
       (messages.length > 0
-        ? { startIndex: 0, endIndex: messages.length - 1 }
+        ? { endIndex: messages.length - 1, startIndex: 0 }
         : undefined);
     recordPerfSnapshot(messages, snapshotRange);
   }, [messages, perf, range]);
@@ -326,7 +329,7 @@ export function Chat({
 
   const logContent = useMemo(() => {
     if (virtualized && ListComponent) {
-      // biome-ignore lint/suspicious/noExplicitAny: Virtual list component typing
+      // oxlint-disable noExplicitAny: Virtual list component typing
       const VirtualList = ListComponent as React.ComponentType<any>;
       return (
         <VirtualList

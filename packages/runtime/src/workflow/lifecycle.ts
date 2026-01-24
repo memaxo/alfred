@@ -1,10 +1,10 @@
 import { recordAudit } from "@alfred/agent/utils/audit";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import { type WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { StructuredPlan } from "@alfred/plan";
+import { type StructuredPlan } from "@alfred/plan";
 
-export type Lifecycle = {
+export interface Lifecycle {
   closeTimer: (status: "ok" | "error" | "cancel") => void;
   emitCompleteOnce: () => void;
   isCompleted: () => boolean;
@@ -19,7 +19,7 @@ export type Lifecycle = {
     emitError: (error: unknown) => void;
     summary?: string;
   }) => Promise<void>;
-};
+}
 
 export function createLifecycle(args: {
   userId: string;
@@ -67,23 +67,23 @@ export function createLifecycle(args: {
     finalizeState = "cancelled";
     try {
       await workflowRepo.updateRun(runId, {
-        status: "cancelled",
         completedAt: new Date(),
+        status: "cancelled",
       });
       await recordAudit({
-        userId: args.userId,
-        projectId: args.projectId,
         action: "workflow.stream.cancel",
-        resource: { kind: "workflow", id: runId },
         decision: "allow",
+        projectId: args.projectId,
+        resource: { kind: "workflow", id: runId },
+        userId: args.userId,
       });
       args.triggerPreferenceRefresh(args.userId, {
         reason: "workflow_stream_cancelled",
       });
     } catch (error) {
       logger.warn("workflow_cancellation_update_failed", {
-        runId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
     args.recordEvent("cancel");
@@ -101,23 +101,23 @@ export function createLifecycle(args: {
     finalizeState = "suspended";
     try {
       await workflowRepo.updateRun(runId, {
-        status: "suspended",
         completedAt: undefined,
+        status: "suspended",
       });
       await recordAudit({
-        userId: args.userId,
-        projectId: args.projectId,
         action: "workflow.stream.suspend",
-        resource: { kind: "workflow", id: runId },
         decision: "allow",
+        projectId: args.projectId,
+        resource: { kind: "workflow", id: runId },
+        userId: args.userId,
       });
       args.triggerPreferenceRefresh(args.userId, {
         reason: "workflow_stream_suspended",
       });
     } catch (error) {
       logger.warn("workflow_suspension_update_failed", {
-        runId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
     args.recordEvent("complete");
@@ -141,19 +141,19 @@ export function createLifecycle(args: {
         stateData: summary ? { executionSummary: summary } : undefined,
       });
       await recordAudit({
-        userId: args.userId,
-        projectId: args.projectId,
         action: "workflow.stream.complete",
-        resource: { kind: "workflow", id: runId },
         decision: "allow",
+        projectId: args.projectId,
+        resource: { kind: "workflow", id: runId },
+        userId: args.userId,
       });
       args.triggerPreferenceRefresh(args.userId, {
         reason: "workflow_stream_complete",
       });
     } catch (error) {
       logger.warn("workflow_completion_update_failed", {
-        runId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
 
@@ -173,40 +173,38 @@ export function createLifecycle(args: {
                 const parsed = structuredPlanSchema.safeParse(savedPlan.plan);
                 if (!parsed.success) {
                   logger.warn("pattern_extraction_plan_invalid", {
-                    runId,
                     planId,
+                    runId,
                   });
                   return;
                 }
                 const plan = parsed.data as StructuredPlan;
-                const { extractPatternFromRun } = await import(
-                  "@alfred/plan/pattern"
-                );
+                const { extractPatternFromRun } =
+                  await import("@alfred/plan/pattern");
                 await extractPatternFromRun(
                   {
-                    id: run.id,
-                    userId: run.userId,
-                    status: run.status,
-                    projectId: run.projectId,
-                    created: run.created,
                     completedAt: run.completedAt,
+                    created: run.created,
+                    id: run.id,
+                    projectId: run.projectId,
+                    status: run.status,
+                    userId: run.userId,
                   },
                   plan
                 );
 
                 // Trigger Convention Learning
                 if (run.projectId) {
-                  const { learnProjectConventions } = await import(
-                    "@alfred/plan/project"
-                  );
+                  const { learnProjectConventions } =
+                    await import("@alfred/plan/project");
                   await learnProjectConventions(
                     {
-                      id: run.id,
-                      userId: run.userId,
-                      status: run.status,
-                      projectId: run.projectId,
-                      created: run.created,
                       completedAt: run.completedAt,
+                      created: run.created,
+                      id: run.id,
+                      projectId: run.projectId,
+                      status: run.status,
+                      userId: run.userId,
                     },
                     run.projectId,
                     summary ?? savedPlan.intent ?? ""
@@ -217,8 +215,8 @@ export function createLifecycle(args: {
           }
         } catch (error) {
           logger.warn("pattern_extraction_failed", {
-            runId,
             error: error instanceof Error ? error.message : String(error),
+            runId,
           });
         }
       })();
@@ -245,24 +243,21 @@ export function createLifecycle(args: {
     if (runId) {
       try {
         await recordAudit({
-          userId: args.userId,
-          projectId: args.projectId,
           action: "workflow.stream.fail",
-          resource: { kind: "workflow", id: runId },
-          decision: "allow",
           context: {
             auto: input.auto,
             mode: input.mode,
             message: error instanceof Error ? error.message : String(error),
           },
+          decision: "allow",
+          projectId: args.projectId,
+          resource: { kind: "workflow", id: runId },
+          userId: args.userId,
         });
-      } catch (auditError) {
+      } catch (error) {
         logger.warn("workflow_failure_audit_failed", {
           runId,
-          error:
-            auditError instanceof Error
-              ? auditError.message
-              : String(auditError),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -275,9 +270,9 @@ export function createLifecycle(args: {
     if (runId) {
       try {
         await workflowRepo.updateRun(runId, {
-          status: "failed",
           errorMessage: error instanceof Error ? error.message : String(error),
           stateData: summary ? { executionSummary: summary } : undefined,
+          status: "failed",
         });
 
         // Trigger Anti-Pattern Learning (Failure)
@@ -295,23 +290,22 @@ export function createLifecycle(args: {
                   const parsed = structuredPlanSchema.safeParse(savedPlan.plan);
                   if (!parsed.success) {
                     logger.warn("anti_pattern_extraction_plan_invalid", {
-                      runId,
                       planId,
+                      runId,
                     });
                     return;
                   }
                   const plan = parsed.data as StructuredPlan;
-                  const { extractAntiPatternFromRun } = await import(
-                    "@alfred/plan/pattern"
-                  );
+                  const { extractAntiPatternFromRun } =
+                    await import("@alfred/plan/pattern");
                   await extractAntiPatternFromRun(
                     {
-                      id: run.id,
-                      userId: run.userId,
-                      status: run.status,
-                      projectId: run.projectId,
-                      created: run.created,
                       completedAt: run.completedAt,
+                      created: run.created,
+                      id: run.id,
+                      projectId: run.projectId,
+                      status: run.status,
+                      userId: run.userId,
                     },
                     plan,
                     summary ??
@@ -320,20 +314,17 @@ export function createLifecycle(args: {
                 }
               }
             }
-          } catch (err) {
+          } catch (error) {
             logger.warn("anti_pattern_extraction_failed", {
               runId,
-              error: err instanceof Error ? err.message : String(err),
+              error: error instanceof Error ? error.message : String(error),
             });
           }
         })();
-      } catch (updateError) {
+      } catch (error) {
         logger.warn("workflow_error_status_update_failed", {
           runId,
-          error:
-            updateError instanceof Error
-              ? updateError.message
-              : String(updateError),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -345,8 +336,8 @@ export function createLifecycle(args: {
     emitCompleteOnce,
     isCompleted,
     markCancelled,
-    markSuspended,
     markCompleted,
     markFailed,
+    markSuspended,
   };
 }

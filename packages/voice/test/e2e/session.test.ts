@@ -1,6 +1,6 @@
+import { createVoiceTestRegistry } from "@alfred/test-kit/voice/runtime-fixture";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { Buffer } from "node:buffer";
-import { createVoiceTestRegistry } from "@alfred/test-kit/voice/runtime-fixture";
 
 function makePcmBase64(seed: string) {
   return Buffer.from(seed).toString("base64");

@@ -1,5 +1,6 @@
 import { generateObject } from "ai";
 import * as z from "zod";
+
 import type { WorkflowIntent } from "../intent/types.js";
 import type { ResearchResult } from "../research/types.js";
 import type { StructuredPlan } from "../types.js";

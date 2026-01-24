@@ -3,10 +3,10 @@
  * Used to gracefully degrade when external services (DB, UV, etc.) are unavailable.
  */
 
-import { accessSync, constants, statSync } from "node:fs";
-import { join } from "node:path";
 import { db } from "@alfred/db";
 import { logger } from "@alfred/logger";
+import { accessSync, constants, statSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * Database availability state cache

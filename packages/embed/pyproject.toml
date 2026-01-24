@@ -4,21 +4,21 @@ version = "0.1.0"
 description = "Local embedding models for ALFRED (KaLM + Qwen3-VL multimodal)"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    # Core ML dependencies
-    "sentence-transformers>=3.0.0",
-    "huggingface-hub>=0.20.0",
-    "numpy>=1.24.0",
-    "torch>=2.5.0",
-    "bitsandbytes>=0.42.0 ; sys_platform != 'darwin'",
-    "accelerate>=0.26.0",
-    # Qwen3-VL-Embedding multimodal support
-    "transformers>=4.57.0",
-    "qwen-vl-utils>=0.0.14",
-    "pillow>=10.0.0",
-    "requests>=2.31.0",
-    # Note: ROCm PyTorch is configured via environment variable EMBED_DEVICE=rocm
-    # For ROCm builds, use packages/embed/pyproject.rocm.toml or set EMBED_DEVICE=rocm
-    # Default uses PyPI torch (works on CPU/MPS/CUDA)
+  # Core ML dependencies
+  "sentence-transformers>=3.0.0",
+  "huggingface-hub>=0.20.0",
+  "numpy>=1.24.0",
+  "torch>=2.5.0",
+  "bitsandbytes>=0.42.0 ; sys_platform != 'darwin'",
+  "accelerate>=0.26.0",
+  # Qwen3-VL-Embedding multimodal support
+  "transformers>=4.57.0",
+  "qwen-vl-utils>=0.0.14",
+  "pillow>=10.0.0",
+  "requests>=2.31.0",
+  # Note: ROCm PyTorch is configured via environment variable EMBED_DEVICE=rocm
+  # For ROCm builds, use packages/embed/pyproject.rocm.toml or set EMBED_DEVICE=rocm
+  # Default uses PyPI torch (works on CPU/MPS/CUDA)
 ]
 
 # Note: ROCm PyTorch configuration moved to pyproject.rocm.toml

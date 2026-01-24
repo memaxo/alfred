@@ -1,5 +1,6 @@
 import { projectRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
+
 import type { Convention } from "./types.js";
 
 type StoredConvention = {

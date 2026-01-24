@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { parseModelKey, parseModelRef, toModelKey } from "../src/model";
 import { modelRefSchema } from "../src/model.zod";
 

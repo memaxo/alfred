@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { sanitizeContextText } from "../src/repo/sanitize";
 
 describe("repo/sanitize", () => {

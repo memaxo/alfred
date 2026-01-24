@@ -1,7 +1,9 @@
 import { spawn } from "bun";
+
 import type { DirectoryHandle } from "../../security/filesystem.js";
-import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import type { ProjectConfig } from "../../utils/project-detector";
+
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 
 export type RunnerOutput = {
   stdout: string;

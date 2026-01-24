@@ -3,6 +3,7 @@
 // are not properly stubbed due to module evaluation order issues.
 // NOTE: Refactor to use dependency injection instead of mock.module().
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+
 import { dbModuleStub } from "./utils/mock-db-client";
 import {
   mockPolicyAudit,
@@ -48,18 +49,18 @@ afterEach(() => {
   resetAllMocks();
 });
 
-// biome-ignore lint/suspicious/noSkippedTests: Known test isolation issue with mock.module()
+// oxlint-disable noSkippedTests: Known test isolation issue with mock.module()
 describe.skip("deploy router", () => {
   describe("list", () => {
     it("lists deployments", async () => {
       const deploymentId = "00000000-0000-0000-0000-000000000000";
       const mockDeployments = [
         {
-          id: deploymentId,
-          userId: "test-user",
           app: "app1",
-          type: "preview",
+          id: deploymentId,
           status: "running",
+          type: "preview",
+          userId: "test-user",
         },
       ];
 
@@ -76,11 +77,11 @@ describe.skip("deploy router", () => {
     it("gets a deployment", async () => {
       const deploymentId = "00000000-0000-0000-0000-000000000000";
       const mockDeployment = {
-        id: deploymentId,
-        userId: "test-user",
         app: "app1",
-        type: "preview",
+        id: deploymentId,
         status: "running",
+        type: "preview",
+        userId: "test-user",
       };
 
       getDeploymentByIdMock.mockResolvedValue(mockDeployment);

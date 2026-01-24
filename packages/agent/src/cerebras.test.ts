@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { generateText } from "ai";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 const { getModelForRole } = await import("./selector");
 

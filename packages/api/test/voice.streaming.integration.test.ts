@@ -19,8 +19,8 @@ if (SHOULD_RUN) {
     auth: {
       api: {
         getSession: async () => ({
-          user: { id: "test-user", role: "user" },
           session: { id: "test-session" },
+          user: { id: "test-user", role: "user" },
         }),
       },
     },
@@ -70,22 +70,21 @@ describeFn("voice streaming integration", () => {
     port = await getFreePort();
     process.env.VOICE_STREAMING_PORT = String(port);
 
-    const { installVoiceTestPools: installPools } = await import(
-      "@alfred/test-kit/voice/runtime-fixture"
-    );
+    const { installVoiceTestPools: installPools } =
+      await import("@alfred/test-kit/voice/runtime-fixture");
     installVoiceTestPools = installPools;
     voiceFixture = await installVoiceTestPools({
-      transcript: "mock transcript",
       chunkText: "stream-chunk",
+      transcript: "mock transcript",
     });
 
     const streaming = await import("@alfred/api/voice/streaming");
-    startVoiceStreamingPrototype = streaming.startVoiceStreamingPrototype;
-    stopVoiceStreamingPrototype = streaming.stopVoiceStreamingPrototype;
+    ({ startVoiceStreamingPrototype } = streaming);
+    ({ stopVoiceStreamingPrototype } = streaming);
 
     const pools = await import("@alfred/api/voice/pools");
-    initializeVoicePools = pools.initializeVoicePools;
-    shutdownVoicePools = pools.shutdownVoicePools;
+    ({ initializeVoicePools } = pools);
+    ({ shutdownVoicePools } = pools);
 
     await initializeVoicePools();
     startVoiceStreamingPrototype();

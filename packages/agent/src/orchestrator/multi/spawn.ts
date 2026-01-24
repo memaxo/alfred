@@ -1,14 +1,16 @@
-import type { WorkspaceKind } from "../../environment/types.js";
+import { type StructuredHandoff, type UpstreamFailure } from "@alfred/type";
+
+import { type WorkspaceKind } from "../../environment/types.js";
 import { openDirectorySecure } from "../../security/filesystem.js";
 import { subtaskPlanPath } from "../plans.js";
-import type { SubTask, SubTaskId } from "./decompose";
+import { type SubTask, type SubTaskId } from "./decompose";
 import { buildFixerSubTask } from "./review";
 
 export type AgentId = string;
 
 export type WaveId = string;
 
-export type AgentSpec = {
+export interface AgentSpec {
   agentId: AgentId;
   subTaskId: SubTaskId;
   sessionId: string;
@@ -21,6 +23,8 @@ export type AgentSpec = {
   profile?: string;
   /** Enable AgentFS overlay mode (copy-on-write) */
   agentfsOverlay?: boolean;
+  /** Optional base runId to clone AgentFS DB from (run-to-run sharing). */
+  agentfsBaseRunId?: string;
   execPlanPath: string;
   context: {
     linearIssueId?: string;
@@ -28,18 +32,20 @@ export type AgentSpec = {
     linearSpace?: string;
     linearAuthz?: string;
     relevantFiles?: string[];
-    handoff?: string; // New: Textual handoff from previous wave
-    clarifications?: Array<{ response: string }>; // New: User clarifications
+    handoff?: string; // Textual handoff from previous wave (legacy)
+    structuredHandoff?: StructuredHandoff; // Rich handoff with decisions, files, blockers
+    upstreamFailures?: UpstreamFailure[]; // Failures from dependent tasks
+    clarifications?: Array<{ response: string }>; // User clarifications
   };
-};
+}
 
-export type WavePlan = {
+export interface WavePlan {
   id: WaveId;
   agents: SubTaskId[];
   dependsOn: WaveId[];
   agentType?: string;
   phaseId?: string;
-};
+}
 
 /**
  * Determine the execution environment for an agent.
@@ -61,10 +67,14 @@ export function buildAgentSpec(
     profile?: string;
     /** Enable AgentFS overlay mode (copy-on-write) */
     agentfsOverlay?: boolean;
+    /** Optional base runId to clone AgentFS DB from (run-to-run sharing). */
+    agentfsBaseRunId?: string;
     maxParallel?: number;
     mandateTDD?: boolean; // Phase 4
     handoff?: string;
-    clarifications?: Array<{ response: string }>;
+    structuredHandoff?: StructuredHandoff;
+    upstreamFailures?: UpstreamFailure[];
+    clarifications?: { response: string }[];
     linear?: {
       issueId?: string;
       sessionId?: string;
@@ -90,17 +100,10 @@ export function buildAgentSpec(
 
   return {
     agentId,
-    subTaskId: subTask.id,
-    sessionId,
-    workingDirectory,
-    environment,
-    auto,
-    mandateTDD: options?.mandateTDD,
-    model: options?.model,
     agentType: options?.agentType,
-    profile: options?.profile,
+    agentfsBaseRunId: options?.agentfsBaseRunId,
     agentfsOverlay: options?.agentfsOverlay,
-    execPlanPath,
+    auto,
     context: {
       linearIssueId: options?.linear?.issueId,
       linearSessionId: options?.linear?.sessionId,
@@ -108,8 +111,18 @@ export function buildAgentSpec(
       linearAuthz: options?.linear?.authz,
       relevantFiles: subTask.filesHint,
       handoff: options?.handoff,
+      structuredHandoff: options?.structuredHandoff,
+      upstreamFailures: options?.upstreamFailures,
       clarifications: options?.clarifications,
     },
+    environment,
+    execPlanPath,
+    mandateTDD: options?.mandateTDD,
+    model: options?.model,
+    profile: options?.profile,
+    sessionId,
+    subTaskId: subTask.id,
+    workingDirectory,
   };
 }
 
@@ -129,8 +142,8 @@ export function buildFixerAgentSpec(args: {
 }): AgentSpec {
   const subTask = buildFixerSubTask({
     attempt: args.attempt,
-    summary: args.summary,
     relevantFiles: args.relevantFiles,
+    summary: args.summary,
   });
 
   const effectiveAuto =
@@ -244,9 +257,9 @@ export function planWaves(
     }
 
     waves.push({
-      id: waveId,
       agents: currentWaveTasks,
       dependsOn: Array.from(dependsOnSet),
+      id: waveId,
     });
     waveIndex++;
 
@@ -268,7 +281,7 @@ export function planWaves(
       const remaining = readyQueue
         .slice(readyIndex)
         .filter((id) => !scheduled.has(id));
-      readyQueue = [...remaining, ...newReady].sort(compareTasks);
+      readyQueue = [...remaining, ...newReady].toSorted(compareTasks);
       readyIndex = 0;
     }
   }
@@ -283,7 +296,7 @@ export function planWaves(
     }
     remaining.sort(compareTasks);
     if (remaining.length > 0) {
-      waves.push({ id: `wave_${waveIndex}`, agents: remaining, dependsOn: [] });
+      waves.push({ agents: remaining, dependsOn: [], id: `wave_${waveIndex}` });
     }
   }
 

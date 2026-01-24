@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it, mock } from "bun:test";
-
 import type { PipelineSnapshot } from "@alfred/pipeline";
+
+import { beforeAll, describe, expect, it, mock } from "bun:test";
 
 let caller: Awaited<ReturnType<typeof import("./utils/trpc").createTestCaller>>;
 let resumed = false;

@@ -1,9 +1,11 @@
+import type client from "prom-client";
+
 import {
   droidExecDurationSeconds,
   droidExecRunsTotal,
 } from "@alfred/agent/orchestrator/tool/droid/metrics";
 import { cognitiveFeedbackSubmissionsTotal } from "@alfred/metrics/shared";
-import type client from "prom-client";
+
 import {
   assistantGenerateDurationSeconds,
   assistantGenerateRequestsTotal,

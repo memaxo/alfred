@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 
-import { meetsConstraints } from "../src/autonomy/constraint";
 import type { AutonomyGradient, Constraint } from "../src/autonomy/types";
+
+import { meetsConstraints } from "../src/autonomy/constraint";
 import { initialAutonomy } from "../src/autonomy/update";
 import { autonomy, confidence, timestamp } from "../src/util/math";
 

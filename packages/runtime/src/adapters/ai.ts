@@ -7,14 +7,15 @@
 
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import { llmConcurrency, llmRateLimit } from "@alfred/agent/utils/rate-limiter";
-import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
+import { buildHistoryContext } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { classifyAiSdkError, isAbortError } from "@alfred/type/aierror";
 import { parseModelKey } from "@alfred/type/model";
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { UIMessage } from "@alfred/type/stream";
-import type { LanguageModel, Tool } from "ai";
+import { type WorkflowEvent } from "@alfred/type/plan";
+import { type UIMessage } from "@alfred/type/stream";
+import { type LanguageModel, type Tool } from "ai";
 import { stepCountIs, streamText, validateUIMessages } from "ai";
+
 import {
   runtimeAiEventsTotal,
   runtimeAiSdkCallsTotal,
@@ -39,7 +40,7 @@ export function normalizeModelLabel(raw: string): string {
   }
 }
 
-export type StreamOptions = {
+export interface StreamOptions {
   model: LanguageModel;
   messages: UIMessage[];
   tools?: Record<string, Tool>;
@@ -48,11 +49,11 @@ export type StreamOptions = {
   system?: string;
   temperature?: number;
   maxOutputTokens?: number;
-};
+}
 
-export type AiAdapter = {
+export interface AiAdapter {
   stream(options: StreamOptions): AsyncGenerator<WorkflowEvent, void, void>;
-};
+}
 
 /**
  * AISDKAdapter wraps AI SDK streamText and maps events to WorkflowEvent
@@ -62,11 +63,11 @@ export type AiAdapter = {
  * - tool-call: { toolCallId, toolName, input } (NOT args)
  * - tool-result: { toolCallId, toolName, input, output } (NOT result)
  */
-type AdapterInit = {
+interface AdapterInit {
   runId?: string;
   userId?: string;
   projectId?: string;
-};
+}
 
 export class AISDKAdapter {
   private readonly runId?: string;
@@ -109,8 +110,8 @@ export class AISDKAdapter {
     runtimeAiSdkCallsTotal.inc({ model: modelId, status: "started" });
 
     logger.info("runtime_ai_sdk_call_start", {
-      runId: this.runId,
       model: modelId,
+      runId: this.runId,
     });
 
     try {
@@ -128,14 +129,24 @@ export class AISDKAdapter {
         >[0]["tools"],
       })) as UIMessage[];
 
+      // Use calculated budget based on model
+      const { calculateBudget } = await import("@alfred/history");
+      const calculatedBudget = calculateBudget({ modelId });
+
       const stopHistoryTimer =
         runtimeHistorySelectionDurationSeconds.startTimer();
       const historyContext = await buildHistoryContext({
+        budget: {
+          maxContextTokens: calculatedBudget.effectiveContextTokens,
+          historyRatio: calculatedBudget.historyRatio,
+          minSystemReserveTokens: calculatedBudget.systemReserveTokens,
+          minHeadroomTokens: calculatedBudget.headroomTokens,
+          reservedToolingTokens: calculatedBudget.toolingReserveTokens,
+        },
         messages: validatedMessages,
         modelId,
-        system: systemPrompt,
         source: "runtime-ai-adapter",
-        budget: getHistoryBudgetDefaults(),
+        system: systemPrompt,
       });
       stopHistoryTimer();
 
@@ -158,22 +169,22 @@ export class AISDKAdapter {
 
       if (historyContext.droppedMessages > 0) {
         logger.info("runtime_history_pruned", {
-          runId: this.runId,
           dropped: historyContext.droppedMessages,
+          droppedTokens: historyContext.droppedTokens,
           kept: historyContext.uiMessages.length,
           keptTokens: historyContext.keptTokens,
-          droppedTokens: historyContext.droppedTokens,
+          runId: this.runId,
         });
       }
 
-      const modelMessages = historyContext.modelMessages;
+      const { modelMessages } = historyContext;
 
       const telemetry =
         process.env.AI_TELEMETRY === "1"
           ? {
               experimental_telemetry: {
-                isEnabled: true,
                 functionId: "runtime.stream",
+                isEnabled: true,
                 recordInputs: false,
                 recordOutputs: false,
               },
@@ -213,9 +224,9 @@ export class AISDKAdapter {
       stopAi();
 
       logger.info("runtime_ai_sdk_call_complete", {
-        runId: this.runId,
-        model: modelId,
         durationMs,
+        model: modelId,
+        runId: this.runId,
       });
     } catch (error) {
       const durationMs = Date.now() - startTime;
@@ -224,9 +235,9 @@ export class AISDKAdapter {
 
       if (isAbortError(error)) {
         logger.warn("runtime_ai_sdk_aborted", {
-          runId: this.runId,
-          model: modelId,
           durationMs,
+          model: modelId,
+          runId: this.runId,
         });
         throw error;
       }
@@ -245,13 +256,13 @@ export class AISDKAdapter {
 
       yield {
         _: "error",
-        message: classified.safeCode,
         chunk: {
           code: classified.safeCode,
           message: classified.safeMessage,
           kind: classified.kind,
           retryable: classified.retryable,
         },
+        message: classified.safeCode,
       } as WorkflowEvent;
 
       throw error;
@@ -288,27 +299,27 @@ export class AISDKAdapter {
     if (isTextDeltaEvent(sdkEvent)) {
       return {
         _: "text-delta",
-        id: sdkEvent.id,
         delta: sdkEvent.delta,
+        id: sdkEvent.id,
       };
     }
 
     if (isToolCallEvent(sdkEvent)) {
       return {
         _: "tool-call",
+        input: sdkEvent.input,
         toolCallId: sdkEvent.toolCallId,
         toolName: sdkEvent.toolName,
-        input: sdkEvent.input,
       };
     }
 
     if (isToolResultEvent(sdkEvent)) {
       return {
         _: "tool-result",
-        toolCallId: sdkEvent.toolCallId,
-        toolName: sdkEvent.toolName,
         input: sdkEvent.input,
         output: sdkEvent.output,
+        toolCallId: sdkEvent.toolCallId,
+        toolName: sdkEvent.toolName,
       };
     }
 
@@ -331,7 +342,7 @@ export class AISDKAdapter {
     }
 
     if (forwardedEventTypes.has(sdkEvent.type)) {
-      // biome-ignore lint/suspicious/noExplicitAny: Internal event mapping
+      // oxlint-disable noExplicitAny: Internal event mapping
       return { ...sdkEvent, _: sdkEvent.type } as any;
     }
 
@@ -347,23 +358,26 @@ export class AISDKAdapter {
 
     try {
       const prompt = await buildPreferenceSystemPrompt(this.userId, {
+        conversationType: "workflow",
         projectId: this.projectId,
         toolNames: options.tools ? Object.keys(options.tools) : undefined,
-        conversationType: "workflow",
       });
       return prompt || undefined;
     } catch (error) {
       logger.warn("runtime_preference_prompt_failed", {
+        error: error instanceof Error ? error.message : String(error),
         runId: this.runId,
         userId: this.userId,
-        error: error instanceof Error ? error.message : String(error),
       });
       return;
     }
   }
 }
 
-type BaseEvent = { type: string; [key: string]: unknown };
+interface BaseEvent {
+  type: string;
+  [key: string]: unknown;
+}
 
 type TextDeltaEvent = BaseEvent & {
   type: "text-delta";

@@ -4,6 +4,7 @@
  */
 
 import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
+
 import { db } from "../client";
 import {
   bookmarks,
@@ -45,22 +46,22 @@ export async function createTask(
   const res = await db
     .insert(tasks)
     .values({
-      userId,
+      description: description ?? null,
+      due: due ?? null,
+      priority,
       projectId,
       title,
-      description: description ?? null,
-      priority,
-      due: due ?? null,
+      userId,
     })
     .returning();
 
   const row = Array.isArray(res)
     ? res[0]
-    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+    : // oxlint-disable noExplicitAny: Drizzle return type normalization
       (res as any).rows
-      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
-      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      : // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any)[0];
   return row;
 }
@@ -128,21 +129,21 @@ export async function createNote(
   const res = await db
     .insert(notes)
     .values({
-      userId,
-      projectId,
       content,
-      title: title ?? null,
+      projectId,
       tags: tagsInput ?? null,
+      title: title ?? null,
+      userId,
     })
     .returning();
 
   const row = Array.isArray(res)
     ? res[0]
-    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+    : // oxlint-disable noExplicitAny: Drizzle return type normalization
       (res as any).rows
-      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
-      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      : // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any)[0];
   return row;
 }
@@ -217,22 +218,22 @@ export async function createReminder(
   const res = await db
     .insert(reminders)
     .values({
-      userId,
-      projectId,
-      title,
       description: description ?? null,
       due,
+      projectId,
       recurring: recurring ?? null,
+      title,
+      userId,
     })
     .returning();
 
   const row = Array.isArray(res)
     ? res[0]
-    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+    : // oxlint-disable noExplicitAny: Drizzle return type normalization
       (res as any).rows
-      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
-      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      : // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any)[0];
   return row;
 }
@@ -314,7 +315,7 @@ export async function advanceReminder(
   nextDueAt: Date | null
 ): Promise<number> {
   const patch = nextDueAt
-    ? { fired: false, firedAt: sql`NOW()`, due: nextDueAt }
+    ? { due: nextDueAt, fired: false, firedAt: sql`NOW()` }
     : { fired: true, firedAt: sql`NOW()` };
 
   const rows = await db
@@ -352,22 +353,22 @@ export async function createBookmark(
   const res = await db
     .insert(bookmarks)
     .values({
-      userId,
-      projectId,
-      url,
-      title: title ?? null,
       description: description ?? null,
+      projectId,
       tags: tagsInput ?? null,
+      title: title ?? null,
+      url,
+      userId,
     })
     .returning();
 
   const row = Array.isArray(res)
     ? res[0]
-    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+    : // oxlint-disable noExplicitAny: Drizzle return type normalization
       (res as any).rows
-      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
-      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      : // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any)[0];
   return row;
 }
@@ -410,24 +411,24 @@ export async function createTimer(
   const res = await db
     .insert(timers)
     .values({
-      userId,
-      projectId,
-      label: label ?? null,
-      duration: durationSec,
-      start: sql<Date>`NOW()`,
-      end: sql<Date>`NOW() + (${durationSec}::int * interval '1 second')`,
       cancelled: false,
       completed: false,
+      duration: durationSec,
+      end: sql<Date>`NOW() + (${durationSec}::int * interval '1 second')`,
+      label: label ?? null,
+      projectId,
+      start: sql<Date>`NOW()`,
+      userId,
     })
     .returning();
 
   const row = Array.isArray(res)
     ? res[0]
-    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+    : // oxlint-disable noExplicitAny: Drizzle return type normalization
       (res as any).rows
-      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
-      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      : // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any)[0];
   return row;
 }
@@ -483,23 +484,23 @@ export async function createEvent(
   const res = await db
     .insert(events)
     .values({
-      userId,
-      projectId,
-      title,
-      start,
-      end: end ?? null,
       description: description ?? null,
+      end: end ?? null,
       location: location ?? null,
+      projectId,
+      start,
+      title,
+      userId,
     })
     .returning();
 
   const row = Array.isArray(res)
     ? res[0]
-    : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+    : // oxlint-disable noExplicitAny: Drizzle return type normalization
       (res as any).rows
-      ? // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
-      : // biome-ignore lint/suspicious/noExplicitAny: Drizzle return type normalization
+      : // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any)[0];
   return row;
 }

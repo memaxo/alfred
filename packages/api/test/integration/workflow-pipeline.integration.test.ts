@@ -11,6 +11,8 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
+import type { PipelineEvent } from "@alfred/pipeline";
+
 import {
   afterAll,
   afterEach,
@@ -21,7 +23,6 @@ import {
   it,
 } from "bun:test";
 import path from "node:path";
-import type { PipelineEvent } from "@alfred/pipeline";
 
 // VCR for AI provider responses
 const cassettePath = path.join(

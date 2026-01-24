@@ -3,6 +3,7 @@
  */
 
 import type { Knowledge, NodeId } from "./hypergraph.js";
+
 import { pattern as createPattern } from "./hypergraph.js";
 
 type ConfidentKnowledge = Extract<Knowledge, { confidence: unknown }>;

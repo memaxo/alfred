@@ -11,6 +11,7 @@ import { metricsRegistry } from "@alfred/metrics/registry";
 import { TRPCError } from "@trpc/server";
 import { and, eq, gt } from "drizzle-orm";
 import { z } from "zod";
+
 import { collectPerformanceTelemetry } from "../performance/telemetry";
 import { protectedProcedure, router } from "../trpc";
 import { getVoicePools } from "../voice/pools";

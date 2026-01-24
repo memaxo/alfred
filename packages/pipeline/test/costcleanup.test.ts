@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "bun:test";
 import { clearRunCosts, getTrackedRuns, recordCost } from "@alfred/metrics";
+import { afterEach, describe, expect, it } from "bun:test";
+
 import { CostCleanupObserver } from "../src/observers/costcleanup";
 import { PipelineRunner } from "../src/runner";
 

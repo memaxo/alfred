@@ -1,17 +1,18 @@
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { accessSync, constants as fsConstants } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import type { DirectoryHandle } from "../../security/filesystem.js";
+
+import { type DirectoryHandle } from "../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
   openDirectorySecure,
 } from "../../security/filesystem.js";
-import { withPolicyApproval } from "./approval.js";
-import type { ToolWriter } from "./shared/context.js";
+import { withPolicyApproval, type AITool } from "./approval.js";
+import { type ToolWriter } from "./shared/context.js";
 import { resolveExecutable } from "./shared/subprocess.js";
 
 const MIN_TIMEOUT_SEC = 5;
@@ -47,9 +48,9 @@ const READ_ONLY_ACTIONS = new Set<BrowserAction>([
 
 const snapshotOptionsSchema = z
   .object({
-    interactive: z.boolean().optional(),
     compact: z.boolean().optional(),
     depth: z.number().int().min(1).max(10).optional(),
+    interactive: z.boolean().optional(),
     scope: z.string().min(1).optional(),
   })
   .strict();
@@ -138,9 +139,7 @@ export const browserInputSchema = z
 export type BrowserInput = z.infer<typeof browserInputSchema>;
 
 const browserOutputSchema = z.object({
-  ok: z.boolean(),
   action: z.string(),
-  session: z.string(),
   details: z
     .object({
       data: z.unknown().optional(),
@@ -156,6 +155,8 @@ const browserOutputSchema = z.object({
         .optional(),
     })
     .optional(),
+  ok: z.boolean(),
+  session: z.string(),
 });
 
 export type BrowserToolOutput = z.infer<typeof browserOutputSchema>;
@@ -168,7 +169,7 @@ function ensure<T>(value: T | undefined, error: string): T {
     return value as T;
   }
   if (typeof value === "undefined") {
-    throw new Error(error);
+    throw new TypeError(error);
   }
   return value;
 }
@@ -178,7 +179,7 @@ function sanitizeSessionName(raw: string): string {
   if (trimmed.length === 0) {
     return "default";
   }
-  return trimmed.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64) || "default";
+  return trimmed.replaceAll(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64) || "default";
 }
 
 function resolveSessionName(input: BrowserInput): string {
@@ -201,9 +202,9 @@ function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
       error instanceof DirectoryAccessError &&
       error.code === "not_directory"
     ) {
-      throw new Error("browser_invalid_cwd_not_directory");
+      throw new Error("browser_invalid_cwd_not_directory", { cause: error });
     }
-    throw new Error("browser_invalid_cwd");
+    throw new Error("browser_invalid_cwd", { cause: error });
   }
 }
 
@@ -215,8 +216,8 @@ async function enforcePolicy(input: BrowserInput, session: string) {
   await requireToolScopesAndPolicy(input.authz, scopes, {
     action: `browser.${input.action}`,
     resource: {
-      kind: "web",
       id: input.url ?? input.selector ?? session,
+      kind: "web",
     },
   });
 }
@@ -263,9 +264,9 @@ function parseAgentBrowserJson(stdout: string): AgentBrowserJson | null {
       return null;
     }
     if (record.success) {
-      return { success: true, data: record.data };
+      return { data: record.data, success: true };
     }
-    return { success: false, error: record.error, data: record.data };
+    return { data: record.data, error: record.error, success: false };
   } catch {
     return null;
   }
@@ -316,9 +317,9 @@ async function readAllText(
 
 function buildBrowserEnv(session: string): Record<string, string> {
   const env: Record<string, string> = {
-    PATH: process.env.PATH ?? "",
-    HOME: process.env.HOME ?? os.homedir(),
     AGENT_BROWSER_SESSION: session,
+    HOME: process.env.HOME ?? os.homedir(),
+    PATH: process.env.PATH ?? "",
   };
 
   for (const [key, value] of Object.entries(process.env)) {
@@ -381,9 +382,9 @@ async function runAgentBrowser(params: {
   const proc = Bun.spawn([command, ...fullArgs], {
     cwd: cwdHandle.path,
     env: buildBrowserEnv(session),
-    stdout: "pipe",
     stderr: "pipe",
     stdin: "ignore",
+    stdout: "pipe",
   });
 
   let didTimeout = false;
@@ -395,7 +396,7 @@ async function runAgentBrowser(params: {
       // noop
     }
     void Promise.resolve(
-      writer?.write?.({ type: "notice", message: "browser_timeout" })
+      writer?.write?.({ message: "browser_timeout", type: "notice" })
     ).catch(() => {});
   }, timeoutSec * 1000);
 
@@ -407,12 +408,12 @@ async function runAgentBrowser(params: {
 
     if (stdout.length > 0) {
       void Promise.resolve(
-        writer?.write?.({ type: "stdout", text: stdout })
+        writer?.write?.({ text: stdout, type: "stdout" })
       ).catch(() => {});
     }
     if (stderr.length > 0) {
       void Promise.resolve(
-        writer?.write?.({ type: "stderr", text: stderr })
+        writer?.write?.({ text: stderr, type: "stderr" })
       ).catch(() => {});
     }
 
@@ -420,7 +421,7 @@ async function runAgentBrowser(params: {
       throw new Error("browser_exec_timeout");
     }
 
-    return { exitCode, stdout, stderr };
+    return { exitCode, stderr, stdout };
   } finally {
     clearTimeout(timer);
   }
@@ -515,8 +516,9 @@ function buildCommandArgs(input: BrowserInput): string[] {
     case "close": {
       return ["close"];
     }
-    default:
+    default: {
       throw new Error("browser_action_not_supported");
+    }
   }
 }
 
@@ -543,9 +545,9 @@ async function captureFailureArtifacts(params: {
   let screenshotPath: string | undefined;
   try {
     const result = await runAgentBrowser({
+      args: ["screenshot", screenshot],
       cwdHandle,
       session,
-      args: ["screenshot", screenshot],
       timeoutSec: Math.min(input.timeoutSec ?? DEFAULT_TIMEOUT_SEC, 30),
       writer,
     });
@@ -559,9 +561,9 @@ async function captureFailureArtifacts(params: {
   let snapshotPath: string | undefined;
   try {
     const snapshotResult = await runAgentBrowser({
+      args: ["snapshot", "-i", "-c", "-d", "6", "-s", scope],
       cwdHandle,
       session,
-      args: ["snapshot", "-i", "-c", "-d", "6", "-s", scope],
       timeoutSec: Math.min(input.timeoutSec ?? DEFAULT_TIMEOUT_SEC, 30),
       writer,
     });
@@ -583,11 +585,8 @@ async function captureFailureArtifacts(params: {
 }
 
 export const toolBrowser = {
-  name: "browser",
   description:
     "Deterministic browser automation via agent-browser (snapshot refs + actions) for UI verification and reproducible debugging.",
-  inputSchema: browserInputSchema,
-  outputSchema: browserOutputSchema,
   execute: async ({
     input,
     writer,
@@ -697,37 +696,43 @@ export const toolBrowser = {
       cwdHandle.close();
     }
   },
+  inputSchema: browserInputSchema,
+  name: "browser",
+  outputSchema: browserOutputSchema,
 };
 
 const aiToolBrowserBase = {
-  name: toolBrowser.name,
   description: toolBrowser.description,
-  parameters: toolBrowser.inputSchema,
-  inputSchema: toolBrowser.inputSchema,
   execute: async (input: BrowserInput) => toolBrowser.execute({ input }),
+  inputSchema: toolBrowser.inputSchema,
+  name: toolBrowser.name,
+  parameters: toolBrowser.inputSchema,
 };
 
-export const aiToolBrowser = withPolicyApproval(aiToolBrowserBase, (input) => {
-  const session = resolveSessionName(input);
-  const scopes = READ_ONLY_ACTIONS.has(input.action as BrowserAction)
-    ? ["web.read"]
-    : ["web.write"];
-  return {
-    action: `browser.${input.action}`,
-    resource: {
-      kind: "web",
-      id: input.url ?? input.selector ?? session,
-    },
-    scopes,
-    authz: input.authz,
-  };
-});
+export const aiToolBrowser: AITool<BrowserInput, any> = withPolicyApproval(
+  aiToolBrowserBase,
+  (input) => {
+    const session = resolveSessionName(input);
+    const scopes = READ_ONLY_ACTIONS.has(input.action as BrowserAction)
+      ? ["web.read"]
+      : ["web.write"];
+    return {
+      action: `browser.${input.action}`,
+      authz: input.authz,
+      resource: {
+        kind: "web",
+        id: input.url ?? input.selector ?? session,
+      },
+      scopes,
+    };
+  }
+);
 
 export const __internals = {
   READ_ONLY_ACTIONS,
-  sanitizeSessionName,
-  resolveSessionName,
   buildCommandArgs,
   parseAgentBrowserJson,
   resolveArtifactDir,
+  resolveSessionName,
+  sanitizeSessionName,
 };

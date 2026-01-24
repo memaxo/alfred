@@ -1,16 +1,19 @@
 import "bun";
-import { readdir, stat } from "node:fs/promises";
-import path from "node:path";
 import type {
   ContextBundle,
   ContextFileSlice,
   SearchReceipt,
   SearchReceiptItem,
 } from "@alfred/type";
+
+import { readdir, stat } from "node:fs/promises";
+import path from "node:path";
+
+import type { ToolWriter } from "../tool/shared/context.js";
+
 import { ingestCodeFiles } from "../../utils/rag-ingest.js";
 import { toolCodex } from "../tool/codex/index";
 import { toolDroid } from "../tool/droid";
-import type { ToolWriter } from "../tool/shared/context.js";
 import { toolWeb } from "../tool/web";
 import { createTokenEstimator } from "../util/token";
 

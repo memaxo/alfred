@@ -1,3 +1,5 @@
+import type { SearchReceipt } from "@alfred/type";
+
 import {
   afterAll,
   afterEach,
@@ -9,7 +11,6 @@ import {
   vi,
 } from "bun:test";
 import path from "node:path";
-import type { SearchReceipt } from "@alfred/type";
 
 const droidExecuteMock = vi.fn();
 const codexExecuteMock = vi.fn();

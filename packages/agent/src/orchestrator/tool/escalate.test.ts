@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
+
 import { EscalationError, isEscalationError, toolEscalate } from "./escalate";
 import {
   AGENT_ESCALATION_REASONS,

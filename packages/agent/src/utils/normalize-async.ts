@@ -5,11 +5,14 @@
  * tool results with GenUI data-ui parts.
  */
 
-import { randomUUID } from "node:crypto";
 import type { SchemaContext } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
-import { enrich } from "./enrich";
+
+import { randomUUID } from "node:crypto";
+
 import type { NormalizableGenerate, ToolResultShape } from "./normalize";
+
+import { enrich } from "./enrich";
 
 type MessagePart = UIMessage["parts"][number];
 

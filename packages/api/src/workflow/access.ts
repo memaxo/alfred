@@ -1,12 +1,14 @@
+import type { auth } from "@alfred/auth";
+import type { Obligation } from "@alfred/type";
+
 import {
   mapWorkflowResource,
   type WorkflowInputPayload,
 } from "@alfred/agent/workflow/schema";
 import { consumeRouteRateLimit } from "@alfred/api/trpc";
-import type { auth } from "@alfred/auth";
 import * as policyRepo from "@alfred/db/repo/policy";
 import { evaluate } from "@alfred/policy";
-import type { Obligation } from "@alfred/type";
+
 import { policyDecisionsTotal, policyObligationsTotal } from "../metrics";
 import {
   getSessionUser,

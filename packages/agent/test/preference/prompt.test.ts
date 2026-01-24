@@ -3,9 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 const loader = await import("../../src/preference/loader");
 const loadPreferencesSpy = vi.spyOn(loader, "loadPreferencesWithDefaults");
 
-const { buildPreferenceSystemPrompt } = await import(
-  "../../src/preference/prompt"
-);
+const { buildPreferenceSystemPrompt } =
+  await import("../../src/preference/prompt");
 
 describe("buildPreferenceSystemPrompt", () => {
   beforeEach(() => {
@@ -16,15 +15,15 @@ describe("buildPreferenceSystemPrompt", () => {
       new Map([
         [
           "response.verbosity",
-          { value: "concise", source: "user", confidence: 1 },
+          { confidence: 1, source: "user", value: "concise" },
         ],
         [
           "response.tone",
-          { value: "technical", source: "user", confidence: 1 },
+          { confidence: 1, source: "user", value: "technical" },
         ],
         [
           "domain.proxmox.config_format",
-          { value: "yaml", source: "default", confidence: 0.5 },
+          { confidence: 0.5, source: "default", value: "yaml" },
         ],
       ])
     );

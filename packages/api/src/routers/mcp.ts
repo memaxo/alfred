@@ -1,12 +1,14 @@
+import type { McpAuthType, McpTransport } from "@alfred/db/schema/mcp";
+
 import {
   createMcpServer,
   deleteMcpServer,
   listMcpServers,
   updateMcpServer,
 } from "@alfred/db/repo/mcp";
-import type { McpAuthType, McpTransport } from "@alfred/db/schema/mcp";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 
 const labelSchema = z

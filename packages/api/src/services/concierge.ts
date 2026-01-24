@@ -1,5 +1,7 @@
-import { logger } from "@alfred/logger";
 import type { PipelineEvent, PipelineObserver } from "@alfred/pipeline";
+
+import { logger } from "@alfred/logger";
+
 import { upsertAttentionItem, upsertSuspendAttentionItem } from "./attention";
 import { ensureRunDeltaBrief } from "./delta";
 

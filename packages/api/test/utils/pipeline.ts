@@ -1,5 +1,6 @@
-import { mock, vi } from "bun:test";
 import type { PipelineEvent } from "@alfred/pipeline";
+
+import { mock, vi } from "bun:test";
 
 type PipelineObserver = {
   onEvent: (event: PipelineEvent) => void;

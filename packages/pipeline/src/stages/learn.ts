@@ -1,7 +1,8 @@
 import { logger } from "@alfred/logger";
+
 import { createEvent } from "../events";
-import type { PipelineContext, PipelineStage } from "../pipeline";
-import type { LearnOutput, ReviewOutput } from "./types";
+import { type PipelineContext, type PipelineStage } from "../pipeline";
+import { type LearnOutput, type ReviewOutput } from "./types";
 
 export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
   readonly name = "learn" as const;
@@ -12,16 +13,16 @@ export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
   ): Promise<LearnOutput> {
     if (!ctx.config.enableLearning) {
       return {
+        graphUpdates: 0,
         insights: [],
         mistakes: [],
-        graphUpdates: 0,
       };
     }
 
     ctx.emit(
       createEvent("stage:progress", {
-        stage: "learn",
         message: "Learning worker will process run asynchronously",
+        stage: "learn",
       })
     );
 
@@ -30,9 +31,8 @@ export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
     // We just ensure the worker is started; it will process this run when ready
     try {
       // Import dynamically to avoid circular dependencies
-      const { startLearningWorker } = await import(
-        "@alfred/agent/orchestrator/learning-worker"
-      );
+      const { startLearningWorker } =
+        await import("@alfred/agent/orchestrator/learning-worker");
 
       startLearningWorker({
         enabled: true,
@@ -41,27 +41,27 @@ export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
       });
 
       logger.info("learn_stage_complete", {
-        runId: ctx.runId,
         message: "Learning worker will process run asynchronously",
+        runId: ctx.runId,
       });
 
       // Return empty results since learning happens asynchronously
       // The worker will process this run and update the knowledge graph
       return {
+        graphUpdates: 0,
         insights: [],
         mistakes: [],
-        graphUpdates: 0,
       };
     } catch (error) {
       logger.warn("learning_worker_start_failed", {
-        runId: ctx.runId,
         error: error instanceof Error ? error.message : String(error),
+        runId: ctx.runId,
       });
 
       return {
+        graphUpdates: 0,
         insights: [],
         mistakes: [],
-        graphUpdates: 0,
       };
     }
   }

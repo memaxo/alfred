@@ -1,4 +1,5 @@
 import { LoopDetector } from "@alfred/cognitive";
+
 import type { SubTask, SubTaskId } from "./decompose";
 import type { AgentId, WaveId } from "./spawn";
 

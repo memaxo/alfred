@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
 describe("notification router", () => {

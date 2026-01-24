@@ -2,6 +2,8 @@
  * State factory functions
  */
 
+import type { AutonomyGradient, CognitiveState } from "./types.js";
+
 import { defaultPhysiology, type Physiology } from "../physiology/index.js";
 import {
   type Criteria,
@@ -12,7 +14,6 @@ import {
 } from "../plan/types.js";
 import { confidence, timestamp } from "../util/math.js";
 import { calculateError } from "./error.js";
-import type { AutonomyGradient, CognitiveState } from "./types.js";
 
 export { initialAutonomy } from "../autonomy/update.js";
 

@@ -1,7 +1,9 @@
 import nlp from "compromise";
+
+import type { BaseView, Contradiction, NumberJson, TextView } from "./types.js";
+
 import { buildAntonymMap } from "../lexicon/index.js";
 import { canonicalize, clampConfidence, isStopword } from "./entities.js";
-import type { BaseView, Contradiction, NumberJson, TextView } from "./types.js";
 import { asTextView } from "./types.js";
 
 /**

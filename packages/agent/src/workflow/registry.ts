@@ -1,9 +1,11 @@
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+
+import { logger } from "@alfred/logger";
+import { redis as defaultRedis, RedisClient } from "bun";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
-import { logger } from "@alfred/logger";
-import type { RuntimeContext } from "@alfred/type/runtime-context";
-import { redis as defaultRedis, RedisClient } from "bun";
+
 import {
   runRegistryDispatchDurationSeconds,
   runRegistryEventsTotal,

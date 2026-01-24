@@ -1,9 +1,11 @@
 import { z } from "zod";
+
+import type { PlanEvaluation } from "../types.js";
+
 import {
   type StructuredPlan,
   structuredPlanSchema,
 } from "../generate/types.js";
-import type { PlanEvaluation } from "../types.js";
 
 /**
  * PlanCritiqueIssue: A single issue identified in a plan

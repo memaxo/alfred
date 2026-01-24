@@ -1,9 +1,9 @@
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;
 process.env.DATABASE_URL = "sqlite::memory:";
 
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
 import { extractEntries } from "@alfred/knowledge/persist";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 
 let persistKnowledge: typeof import("../src/graphstore").persistKnowledge;

@@ -4,35 +4,33 @@ version = "0.2.0"
 description = "Voice models dependencies for ALFRED (Nemotron Speech STT, Maya1 TTS)"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "nemo_toolkit[asr]>=1.23.0",
-    "packaging",
-    "silero-vad>=4.0.0",
-    "numpy>=1.24.0,<2",
-    "torch>=2.5.0",
-    "torchvision>=0.20.0",
-    "torchaudio>=2.5.0",
-    "transformers>=4.46.0",
-    "snac>=1.2.0",
-    "soundfile>=0.12.0",
-    "accelerate>=0.26.0",
-    "termcolor>=2.4.0",
-    "ml_dtypes>=0.5.0",
-    # Force datasets>=2.21.0 to resolve pyarrow compatibility
-    # - datasets 2.14.4 (from nemo_toolkit) uses PyExtensionType (removed in pyarrow 13.0+)
-    # - datasets>=2.21.0 uses pa.ExtensionType instead (compatible with pyarrow 22.0.0)
-    # - Override the nemo_toolkit constraint with a newer datasets version
-    "datasets>=2.21.0",
-    # Platform-specific dependencies (macOS only for dev)
-    "mlx>=0.19.0; sys_platform == 'darwin'",
-    "mlx-lm>=0.19.0; sys_platform == 'darwin'",
+  "nemo_toolkit[asr]>=1.23.0",
+  "packaging",
+  "silero-vad>=4.0.0",
+  "numpy>=1.24.0,<2",
+  "torch>=2.5.0",
+  "torchvision>=0.20.0",
+  "torchaudio>=2.5.0",
+  "transformers>=4.46.0",
+  "snac>=1.2.0",
+  "soundfile>=0.12.0",
+  "accelerate>=0.26.0",
+  "termcolor>=2.4.0",
+  "ml_dtypes>=0.5.0",
+  # Force datasets>=2.21.0 to resolve pyarrow compatibility
+  # - datasets 2.14.4 (from nemo_toolkit) uses PyExtensionType (removed in pyarrow 13.0+)
+  # - datasets>=2.21.0 uses pa.ExtensionType instead (compatible with pyarrow 22.0.0)
+  # - Override the nemo_toolkit constraint with a newer datasets version
+  "datasets>=2.21.0",
+  # Platform-specific dependencies (macOS only for dev)
+  "mlx>=0.19.0; sys_platform == 'darwin'",
+  "mlx-lm>=0.19.0; sys_platform == 'darwin'",
 ]
 
 # Dependency overrides to resolve conflicts
 [tool.uv]
 # Override nemo_toolkit's datasets constraint to use a compatible version
-override-dependencies = [
-    "datasets>=2.21.0",
-]
+override-dependencies = ["datasets>=2.21.0"]
 
 # Note: Cross-platform PyTorch configuration is handled via environment variables
 # For macOS development, use standard PyPI packages

@@ -9,6 +9,7 @@ export { SummarizeStage } from "./summarize";
 export * from "./types";
 
 import type { PipelineRunner } from "../runner";
+
 import { ContextStage } from "./context";
 import { ExecuteStage } from "./execute";
 import { InitStage } from "./init";

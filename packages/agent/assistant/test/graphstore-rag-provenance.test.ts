@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
+
 import type { EdgeSeed } from "../src/graphstore";
 
 const upsertCalls: EdgeSeed[] = [];

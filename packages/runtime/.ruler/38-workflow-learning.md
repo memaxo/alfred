@@ -1,6 +1,7 @@
 # Workflow Learning Patterns
 
 ## Core Principle
+
 Every workflow execution is a learning opportunity. The system must automatically capture successes, failures, and conventions to improve future planning and execution accuracy.
 
 ## Rules
@@ -18,3 +19,9 @@ Every workflow execution is a learning opportunity. The system must automaticall
 6. **Pattern lifecycle.** Implement automatic confidence decay for unused patterns (retire after 30 days) and quarantine for patterns with low success rates (<30% after 5 uses).
 
 7. **Vector search performance.** Perform vector similarity matches directly in SQL using `pgvector` operators (`<=>`) to maintain <10ms retrieval latency. Use `CASE` expressions for contextual weighting within the query.
+
+8. **Task enrichment.** Enrich new tasks with similar past executions, relevant heuristics, and upstream failure context using `@alfred/plan/enrich`. See `packages/agent/.ruler/enrichment-patterns.md` for details.
+
+9. **Retry resolution tracking.** When a failed task succeeds on retry, record the resolution with `createRetryResolution()` to enable future similar-failure lookups.
+
+10. **Structured handoffs.** Build rich wave-to-wave handoffs with `buildStructuredHandoff()` including decisions, blockers, and tools to avoid for cross-wave learning.

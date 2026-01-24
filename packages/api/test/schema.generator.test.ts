@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { uiComponentSchema } from "@alfred/type/genui.zod";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 type EnvSnapshot = Record<string, string | undefined>;
 

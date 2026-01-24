@@ -1,6 +1,8 @@
 import { logger } from "@alfred/logger";
-import { createLinearBlockingRelation } from "../linear";
+
 import type { SubTask, SubTaskId } from "./decompose";
+
+import { createLinearBlockingRelation } from "../linear";
 
 export type LinearSyncConfig = {
   space: string;

@@ -9,8 +9,10 @@
  */
 
 import { describe, expect, it } from "bun:test";
+
 import type { PipelineEvent } from "../src/events";
 import type { PipelineContext, PipelineStage } from "../src/pipeline";
+
 import { DEFAULT_CONFIG, STAGE_ORDER } from "../src/pipeline";
 import { PipelineRunner } from "../src/runner";
 import {

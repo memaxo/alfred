@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Mock AI SDK
-let generateObjectCalls: Array<{ prompt: string }> = [];
+let generateObjectCalls: { prompt: string }[] = [];
 
 mock.module("ai", () => ({
   generateObject: (args: { prompt: string; schema: unknown }) => {
@@ -29,9 +29,9 @@ mock.module("ai", () => ({
 mock.module("@alfred/logger", () => ({
   logger: {
     debug: () => {},
-    warn: () => {},
     error: () => {},
     info: () => {},
+    warn: () => {},
   },
 }));
 
@@ -42,13 +42,13 @@ const { calculateRelevance, calculateRelevanceWithLLM, calculateReliability } =
 describe("calculateReliability", () => {
   it("should score HTTPS higher than HTTP", () => {
     const https = calculateReliability({
-      url: "https://example.com/article",
       content: "Sample content",
+      url: "https://example.com/article",
     });
 
     const http = calculateReliability({
-      url: "http://example.com/article",
       content: "Sample content",
+      url: "http://example.com/article",
     });
 
     expect(https).toBeGreaterThan(http);
@@ -57,21 +57,21 @@ describe("calculateReliability", () => {
 
   it("should apply domain authority scores", () => {
     const official = calculateReliability({
-      url: "https://react.dev/learn",
       content: "React documentation",
+      url: "https://react.dev/learn",
     });
 
     const github = calculateReliability({
-      url: "https://github.com/facebook/react",
       content: "React repository",
+      url: "https://github.com/facebook/react",
     });
 
     const blog = calculateReliability({
-      url: "https://myblog.com/react-tutorial",
       content: "React tutorial",
+      url: "https://myblog.com/react-tutorial",
     });
 
-    expect(official).toBe(1.0); // Official docs
+    expect(official).toBe(1); // Official docs
     expect(github).toBe(0.9); // GitHub
     expect(blog).toBeLessThan(github); // Unknown blog
   });
@@ -101,12 +101,12 @@ describe("calculateRelevance", () => {
   describe("sync (heuristic)", () => {
     it("should score exact title matches highly", () => {
       const scoreMatch = calculateRelevance(
-        { title: "Dark Mode Tutorial", summary: "Learn dark mode" },
+        { summary: "Learn dark mode", title: "Dark Mode Tutorial" },
         "dark mode implementation"
       );
 
       const scoreNoMatch = calculateRelevance(
-        { title: "Unrelated Topic", summary: "Something else" },
+        { summary: "Something else", title: "Unrelated Topic" },
         "dark mode implementation"
       );
 
@@ -115,7 +115,7 @@ describe("calculateRelevance", () => {
 
     it("should handle empty content gracefully", () => {
       const score = calculateRelevance(
-        { title: "Test", summary: "Test summary" },
+        { summary: "Test summary", title: "Test" },
         "test query"
       );
 
@@ -125,7 +125,7 @@ describe("calculateRelevance", () => {
 
     it("should handle short queries", () => {
       const score = calculateRelevance(
-        { title: "Test Article", summary: "Content" },
+        { summary: "Content", title: "Test Article" },
         "hi" // Too short to match
       );
 
@@ -137,16 +137,16 @@ describe("calculateRelevance", () => {
     const mockModel = {
       doGenerate: async () => ({}),
       doStream: async () => ({}),
+      modelId: "test-model",
       provider: "test",
       specificationVersion: "v1" as const,
-      modelId: "test-model",
     };
 
     it("should use LLM for semantic scoring", async () => {
       const score = await calculateRelevanceWithLLM(
         {
-          title: "Dark Mode with Themes",
           summary: "How to implement dark mode",
+          title: "Dark Mode with Themes",
         },
         "dark mode implementation",
         {
@@ -164,19 +164,19 @@ describe("calculateRelevance", () => {
 
       await calculateRelevanceWithLLM(
         {
-          title: "Test",
-          summary: "Summary",
           content: longContent,
+          summary: "Summary",
+          title: "Test",
         },
         "test query",
         {
+          maxContentLength: 100,
           model: mockModel as any,
           modelKey: "test/model",
-          maxContentLength: 100,
         }
       );
 
-      const prompt = generateObjectCalls[0].prompt;
+      const { prompt } = generateObjectCalls[0];
       expect(prompt).toContain("...");
     });
 
@@ -186,12 +186,11 @@ describe("calculateRelevance", () => {
         generateObject: () => Promise.reject(new Error("LLM failure")),
       }));
 
-      const { calculateRelevanceWithLLM: calcFn } = await import(
-        "../research/score.js"
-      );
+      const { calculateRelevanceWithLLM: calcFn } =
+        await import("../research/score.js");
 
       const score = await calcFn(
-        { title: "Test", summary: "Test summary" },
+        { summary: "Test summary", title: "Test" },
         "test query",
         {
           model: mockModel as any,

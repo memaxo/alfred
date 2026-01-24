@@ -60,10 +60,10 @@ export const BUDGET_RATIOS = Object.freeze({
 // Budget Types
 // ============================================================================
 
-import type { HistoryTier } from "./types";
+import { type HistoryTier } from "./types";
 export type { HistoryTier };
 
-export type BudgetConfig = {
+export interface BudgetConfig {
   /** Model ID for context window lookup */
   modelId: string;
   /** Override history ratio (0.15-0.75) */
@@ -78,9 +78,9 @@ export type BudgetConfig = {
   budgetUsd?: number;
   /** Use extended context if available */
   useExtendedContext?: boolean;
-};
+}
 
-export type CalculatedBudget = {
+export interface CalculatedBudget {
   // Model info
   modelId: string;
   modelSpec: ModelSpec;
@@ -109,9 +109,9 @@ export type CalculatedBudget = {
 
   // Cost projections
   estimatedCostPerTurn: CostProjection;
-};
+}
 
-export type CostProjection = {
+export interface CostProjection {
   /** Minimum cost (system + small response) */
   minCostUsd: number;
   /** Typical cost (half context + medium response) */
@@ -122,7 +122,7 @@ export type CostProjection = {
   inputCostPer1k: number;
   /** Cost per 1k output tokens */
   outputCostPer1k: number;
-};
+}
 
 // ============================================================================
 // Budget Calculator
@@ -174,11 +174,11 @@ export function calculateBudget(config: BudgetConfig): CalculatedBudget {
 
   // Calculate history budget
   const historyWindow = Math.floor(effectiveContextTokens * historyRatio);
-  const systemTokens = config.systemTokens ?? systemReserveTokens;
+  const actualSystemTokens = config.systemTokens
+    ? Math.max(config.systemTokens, systemReserveTokens)
+    : systemReserveTokens;
   const totalReserve =
-    Math.max(systemTokens, systemReserveTokens) +
-    headroomTokens +
-    toolingReserveTokens;
+    actualSystemTokens + headroomTokens + toolingReserveTokens;
   const historyBudgetTokens = Math.max(0, historyWindow - totalReserve);
 
   // Calculate tier overdrafts (based on history budget)
@@ -205,7 +205,7 @@ export function calculateBudget(config: BudgetConfig): CalculatedBudget {
 
   // Calculate effective utilization
   const totalAllocated =
-    systemReserveTokens +
+    actualSystemTokens +
     headroomTokens +
     toolingReserveTokens +
     historyBudgetTokens;
@@ -214,27 +214,27 @@ export function calculateBudget(config: BudgetConfig): CalculatedBudget {
   // Calculate cost projections
   const estimatedCostPerTurn = calculateCostProjection(
     modelSpec,
-    systemReserveTokens,
+    actualSystemTokens,
     historyBudgetTokens,
     effectiveContextTokens
   );
 
   return {
-    modelId: config.modelId,
-    modelSpec,
-    maxContextTokens: baseContextTokens,
-    effectiveContextTokens,
-    systemReserveTokens,
-    headroomTokens,
-    toolingReserveTokens,
-    historyBudgetTokens,
-    highTierOverdraft,
-    mediumTierOverdraft,
-    warningThreshold,
     criticalThreshold,
-    historyRatio,
+    effectiveContextTokens,
     effectiveUtilization,
     estimatedCostPerTurn,
+    headroomTokens,
+    highTierOverdraft,
+    historyBudgetTokens,
+    historyRatio,
+    maxContextTokens: baseContextTokens,
+    mediumTierOverdraft,
+    modelId: config.modelId,
+    modelSpec,
+    systemReserveTokens: actualSystemTokens,
+    toolingReserveTokens,
+    warningThreshold,
   };
 }
 
@@ -269,17 +269,17 @@ function calculateCostProjection(
 
   // Maximum: full context + max response
   const maxInputTokens = maxContext * 0.85; // 85% utilization ceiling
-  const maxOutputTokens = spec.capabilities.maxOutputTokens;
+  const { maxOutputTokens } = spec.capabilities;
   const maxCostUsd =
     (maxInputTokens * inputCostPer1k) / 1000 +
     (maxOutputTokens * outputCostPer1k) / 1000;
 
   return {
-    minCostUsd,
-    typicalCostUsd,
-    maxCostUsd,
     inputCostPer1k,
+    maxCostUsd,
+    minCostUsd,
     outputCostPer1k,
+    typicalCostUsd,
   };
 }
 
@@ -295,15 +295,19 @@ export function getAllowedOverdraft(
   }
 
   switch (tier) {
-    case "anchor":
+    case "anchor": {
       // Anchors always included, no overdraft concept
       return budget.historyBudgetTokens;
-    case "high":
+    }
+    case "high": {
       return budget.highTierOverdraft;
-    case "medium":
+    }
+    case "medium": {
       return budget.mediumTierOverdraft;
-    case "low":
+    }
+    case "low": {
       return 0;
+    }
   }
 }
 
@@ -352,36 +356,36 @@ export function checkBudgetHealth(
 
   if (remaining <= 0) {
     return {
-      status: "exceeded",
-      remainingTokens: 0,
-      utilizationPercent: 100,
       message: `History budget exceeded by ${Math.abs(remaining)} tokens`,
+      remainingTokens: 0,
+      status: "exceeded",
+      utilizationPercent: 100,
     };
   }
 
   if (remaining < budget.criticalThreshold) {
     return {
-      status: "critical",
-      remainingTokens: remaining,
-      utilizationPercent,
       message: `Critical: only ${remaining} tokens remaining`,
+      remainingTokens: remaining,
+      status: "critical",
+      utilizationPercent,
     };
   }
 
   if (remaining < budget.warningThreshold) {
     return {
-      status: "warning",
-      remainingTokens: remaining,
-      utilizationPercent,
       message: `Warning: ${remaining} tokens remaining (${utilizationPercent.toFixed(1)}% used)`,
+      remainingTokens: remaining,
+      status: "warning",
+      utilizationPercent,
     };
   }
 
   return {
-    status: "healthy",
-    remainingTokens: remaining,
-    utilizationPercent,
     message: `Healthy: ${remaining} tokens remaining`,
+    remainingTokens: remaining,
+    status: "healthy",
+    utilizationPercent,
   };
 }
 
@@ -394,7 +398,7 @@ export function estimateTurnsRemaining(
   avgTokensPerTurn: number
 ): number {
   if (avgTokensPerTurn <= 0) {
-    return Number.POSITIVE_INFINITY;
+    return Infinity;
   }
   const remaining = budget.historyBudgetTokens - currentUsage;
   return Math.max(0, Math.floor(remaining / avgTokensPerTurn));
@@ -431,26 +435,26 @@ export function formatBudgetSummary(budget: CalculatedBudget): string {
   return [
     `Model: ${budget.modelSpec.displayName}`,
     `Context Window: ${formatK(budget.effectiveContextTokens)} tokens`,
-    "",
-    "Budget Allocation:",
+    ``,
+    `Budget Allocation:`,
     `  System Reserve:  ${formatK(budget.systemReserveTokens)} (${((budget.systemReserveTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
     `  Headroom:        ${formatK(budget.headroomTokens)} (${((budget.headroomTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
     `  Tooling:         ${formatK(budget.toolingReserveTokens)} (${((budget.toolingReserveTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
     `  History Budget:  ${formatK(budget.historyBudgetTokens)} (${((budget.historyBudgetTokens / budget.effectiveContextTokens) * 100).toFixed(1)}%)`,
-    "",
-    "Overdraft Allowances:",
+    ``,
+    `Overdraft Allowances:`,
     `  High Tier:   ${budget.highTierOverdraft} tokens`,
     `  Medium Tier: ${budget.mediumTierOverdraft} tokens`,
-    "",
-    "Warning Thresholds:",
+    ``,
+    `Warning Thresholds:`,
     `  Warning:  < ${formatK(budget.warningThreshold)} remaining`,
     `  Critical: < ${formatK(budget.criticalThreshold)} remaining`,
-    "",
-    "Cost Estimates (per turn):",
+    ``,
+    `Cost Estimates (per turn):`,
     `  Minimum:  ${formatUsd(budget.estimatedCostPerTurn.minCostUsd)}`,
     `  Typical:  ${formatUsd(budget.estimatedCostPerTurn.typicalCostUsd)}`,
     `  Maximum:  ${formatUsd(budget.estimatedCostPerTurn.maxCostUsd)}`,
-    "",
+    ``,
     `Effective Utilization: ${(budget.effectiveUtilization * 100).toFixed(1)}%`,
   ].join("\n");
 }

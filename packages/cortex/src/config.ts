@@ -6,11 +6,13 @@
  */
 
 import type { VisualConfig } from "@alfred/type";
+
 import type { CortexEngine } from "./engine";
-import { getPreset, mergeWithPreset } from "./presets";
 import type { CoronaSystem } from "./systems/corona";
 import type { ParticleSystem } from "./systems/particles";
 import type { PostProcessSystem } from "./systems/postprocess";
+
+import { getPreset, mergeWithPreset } from "./presets";
 
 /**
  * Apply a visual configuration to the Cortex engine

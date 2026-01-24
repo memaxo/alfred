@@ -1,11 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Install shared mocks
 installAuthTokenMock();
@@ -40,9 +39,8 @@ mock.module("../../../src/metrics.ts", () => ({
   recordAssistantToolCall: () => {},
 }));
 
-const { toolPreferenceGet, toolPreferenceSet } = await import(
-  "../../assistant/src/tool/preference"
-);
+const { toolPreferenceGet, toolPreferenceSet } =
+  await import("../../assistant/src/tool/preference");
 
 describe("Preference Tools", () => {
   beforeEach(() => {
@@ -54,13 +52,13 @@ describe("Preference Tools", () => {
     mockInvalidatePreferenceCache.mockReset();
 
     mockRequireToolScopesAndPolicy.mockResolvedValue({
-      decision: { allow: true },
       claims: {
         sub: "test-user",
         scopes: ["preference.read", "preference.write"],
         elevated: true,
         mfa: "passkey",
       },
+      decision: { allow: true },
     });
   });
   afterEach(() => {
@@ -71,21 +69,21 @@ describe("Preference Tools", () => {
     it("returns mapped preferences with sources", async () => {
       mockGetPreferences.mockResolvedValue([
         {
-          key: "response.verbosity",
-          value: "concise",
           confidence: 0.95,
+          key: "response.verbosity",
           source: "user",
+          value: "concise",
         },
         {
-          key: "domain.git.tool_preference",
-          value: "git",
           confidence: 0.7,
+          key: "domain.git.tool_preference",
           source: "inferred",
+          value: "git",
         },
       ]);
 
       const result = await toolPreferenceGet.execute({
-        input: { userId: "u1", authz: "Bearer token" },
+        input: { authz: "Bearer token", userId: "u1" },
       });
 
       expect(result.preferences).toHaveLength(2);
@@ -99,7 +97,7 @@ describe("Preference Tools", () => {
         ["preference.read"],
         expect.objectContaining({
           action: "preference.read",
-          resource: { kind: "preference", id: "u1" },
+          resource: { id: "u1", kind: "preference" },
         })
       );
     });
@@ -107,21 +105,21 @@ describe("Preference Tools", () => {
     it("filters by key", async () => {
       mockGetPreferences.mockResolvedValue([
         {
-          key: "response.verbosity",
-          value: "detailed",
           confidence: 1,
+          key: "response.verbosity",
           source: "user",
+          value: "detailed",
         },
         {
-          key: "response.tone",
-          value: "technical",
           confidence: 1,
+          key: "response.tone",
           source: "user",
+          value: "technical",
         },
       ]);
 
       const result = await toolPreferenceGet.execute({
-        input: { userId: "u1", key: "response.tone" },
+        input: { key: "response.tone", userId: "u1" },
       });
 
       expect(result.preferences).toHaveLength(1);
@@ -131,21 +129,21 @@ describe("Preference Tools", () => {
     it("filters by domain", async () => {
       mockGetPreferences.mockResolvedValue([
         {
-          key: "domain.git.tool_preference",
-          value: "git",
           confidence: 1,
+          key: "domain.git.tool_preference",
           source: "user",
+          value: "git",
         },
         {
-          key: "domain.docker.tool_preference",
-          value: "docker",
           confidence: 1,
+          key: "domain.docker.tool_preference",
           source: "user",
+          value: "docker",
         },
       ]);
 
       const result = await toolPreferenceGet.execute({
-        input: { userId: "u1", domain: "git" },
+        input: { domain: "git", userId: "u1" },
       });
 
       expect(result.preferences).toHaveLength(1);
@@ -154,8 +152,8 @@ describe("Preference Tools", () => {
 
     it("rejects invalid key via schema", () => {
       const parsed = toolPreferenceGet.inputSchema.safeParse({
-        userId: "u1",
         key: "not-a-real-key",
+        userId: "u1",
       });
       expect(parsed.success).toBe(false);
     });
@@ -165,28 +163,28 @@ describe("Preference Tools", () => {
     it("updates preference and returns previous value when present", async () => {
       mockGetPreferences.mockResolvedValue([
         {
-          key: "response.verbosity",
-          value: "minimal",
           confidence: 1,
+          key: "response.verbosity",
           source: "user",
+          value: "minimal",
         },
       ]);
       mockSetPreference.mockResolvedValue({
-        id: "p1",
-        userId: "u1",
-        key: "response.verbosity",
-        value: "concise",
         confidence: 1,
+        id: "p1",
+        key: "response.verbosity",
         source: "user",
+        userId: "u1",
+        value: "concise",
       });
-      mockInvalidatePreferenceCache.mockResolvedValue(undefined);
+      mockInvalidatePreferenceCache.mockResolvedValue();
 
       const result = await toolPreferenceSet.execute({
         input: {
-          userId: "u1",
-          key: "response.verbosity",
-          value: "concise",
           authz: "Bearer token",
+          key: "response.verbosity",
+          userId: "u1",
+          value: "concise",
         },
       });
 
@@ -200,8 +198,8 @@ describe("Preference Tools", () => {
         ["preference.write"],
         expect.objectContaining({
           action: "preference.set",
-          resource: { kind: "preference", id: "u1" },
           context: expect.objectContaining({ key: "response.verbosity" }),
+          resource: { kind: "preference", id: "u1" },
         })
       );
 
@@ -217,21 +215,21 @@ describe("Preference Tools", () => {
     it("uses inferred source mapping and default confidence", async () => {
       mockGetPreferences.mockResolvedValue([]);
       mockSetPreference.mockResolvedValue({
-        id: "p1",
-        userId: "u1",
-        key: "domain.git.tool_preference",
-        value: "git",
         confidence: 0.8,
+        id: "p1",
+        key: "domain.git.tool_preference",
         source: "inferred",
+        userId: "u1",
+        value: "git",
       });
-      mockInvalidatePreferenceCache.mockResolvedValue(undefined);
+      mockInvalidatePreferenceCache.mockResolvedValue();
 
       await toolPreferenceSet.execute({
         input: {
-          userId: "u1",
           key: "domain.git.tool_preference",
-          value: "git",
           source: "inferred",
+          userId: "u1",
+          value: "git",
         },
       });
 
@@ -246,8 +244,8 @@ describe("Preference Tools", () => {
 
     it("rejects invalid values via schema", () => {
       const parsed = toolPreferenceSet.inputSchema.safeParse({
-        userId: "u1",
         key: "response.verbosity",
+        userId: "u1",
         value: null,
       });
       expect(parsed.success).toBe(false);

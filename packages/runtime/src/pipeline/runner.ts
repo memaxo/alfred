@@ -1,8 +1,11 @@
-import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
-import { runtimePhaseDurationSeconds, runtimePhasesTotal } from "../metrics";
+
+import { logger } from "@alfred/logger";
+
 import type { Phase, PhaseResult, PipelineState } from "./types";
+
+import { runtimePhaseDurationSeconds, runtimePhasesTotal } from "../metrics";
 
 const DEFAULT_PHASE_TIMEOUTS: Record<string, number> = {
   scan: 60_000,

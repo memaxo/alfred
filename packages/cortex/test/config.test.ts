@@ -5,7 +5,6 @@
  * Tests schema validation and config utilities.
  */
 
-import { describe, expect, it } from "bun:test";
 import {
   atmosphereConfigSchema,
   bloomConfigSchema,
@@ -19,6 +18,8 @@ import {
   visualConfigSchema,
   visualPresetSchema,
 } from "@alfred/type";
+import { describe, expect, it } from "bun:test";
+
 import { interpolateConfig, parseOklch, rgbToOklch } from "../src/config";
 import {
   getDefaultPreset,

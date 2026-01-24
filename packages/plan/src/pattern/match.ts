@@ -1,6 +1,8 @@
-import { patternRepo } from "@alfred/db";
 import type { WorkflowPattern } from "@alfred/db/repo/pattern";
+
+import { patternRepo } from "@alfred/db";
 import { embed } from "@alfred/rag";
+
 import type { StructuredPlan } from "../types.js";
 
 export type MatchOptions = {

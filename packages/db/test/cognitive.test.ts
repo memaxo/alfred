@@ -1,7 +1,7 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { randomUUID } from "node:crypto";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;

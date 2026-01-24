@@ -1,6 +1,7 @@
-import { expect, it } from "bun:test";
 import { graphRepo } from "@alfred/db";
 import { describeSqlite } from "@alfred/db/testing";
+import { expect, it } from "bun:test";
+
 import { runQuery } from "../src/query";
 
 type NodeSeed = {

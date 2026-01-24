@@ -2,8 +2,10 @@ import { beforeAll, describe, expect, it } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { PipelineRunner } from "../../src/runner";
+
 import type { PipelineSnapshot } from "../../src/snapshot";
+
+import { PipelineRunner } from "../../src/runner";
 import { registerDefaultStages } from "../../src/stages";
 
 describe("Pipeline resume roundtrip", () => {

@@ -4,8 +4,9 @@
  * Tests that engine wrappers correctly call domain package functions
  */
 
-import { describe, expect, it } from "bun:test";
 import { empty as emptyGraph } from "@alfred/knowledge/hypergraph";
+import { describe, expect, it } from "bun:test";
+
 import { CognitiveEngine } from "../src/engines/cognitive";
 import { KnowledgeEngine } from "../src/engines/knowledge";
 import { LearningEngine } from "../src/engines/learning";

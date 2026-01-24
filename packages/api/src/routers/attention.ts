@@ -1,8 +1,10 @@
 import { attentionRepo } from "@alfred/db";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
-import { resolveAttentionItem } from "../services/attention";
+
 import type { NotifyEvent } from "../services/notify";
+
+import { resolveAttentionItem } from "../services/attention";
 import { subscribeToNotify } from "../services/notify";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { assertResourceAccess } from "../utils/error-helpers";

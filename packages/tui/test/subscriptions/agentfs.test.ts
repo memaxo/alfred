@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+
 import { createAgentFSSubscription } from "../../src/tui/subscriptions/agentfs";
 
 describe("AgentFSSubscription", () => {

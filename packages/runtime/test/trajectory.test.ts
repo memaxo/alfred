@@ -1,6 +1,8 @@
-import { describe, expect, it } from "bun:test";
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import { describe, expect, it } from "bun:test";
+
 import type { PersistedWorkflowEvent } from "../src/trajectory/atif";
+
 import { buildAtifTrajectory } from "../src/trajectory/atif";
 import { validateAtifTrajectory } from "../src/trajectory/validate";
 

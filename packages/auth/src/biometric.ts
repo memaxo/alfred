@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+
 import { getRedis } from "./redis";
 
 const memoryTickets = new Map<string, number>();

@@ -14,6 +14,7 @@ import {
   delimiter as pathDelimiter,
   resolve,
 } from "node:path";
+
 import { __internals } from "../src/orchestrator/tool/droid";
 
 const { isWithinBase, pickEnv, resolveExecutable } = __internals;

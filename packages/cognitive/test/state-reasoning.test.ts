@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
+
 import type { Outcome } from "../src/plan/types";
+
 import { evaluateReasoningQuality } from "../src/state/reasoning";
 
 const successOutcome: Outcome = { _: "success", result: null, duration: 100 };

@@ -14,17 +14,17 @@ mock.module("@alfred/runtime/orchestrator/agent", () => ({
     await Bun.write(escalationPath, "Need human help");
     return {
       agentId: spec.agentId,
-      phaseId,
-      stuck: false,
-      status: "success",
       durationSeconds: 0,
-      role: "agent",
+      phaseId,
       result: {
         summary: "mock agent success",
         artifacts: [],
         changes: [],
         notes: [],
       },
+      role: "agent",
+      status: "success",
+      stuck: false,
     };
   },
 }));
@@ -44,22 +44,26 @@ describe("ExecuteStage escalation", () => {
   });
 
   afterAll(async () => {
-    await rm(testWorkspace, { recursive: true, force: true });
+    await rm(testWorkspace, { force: true, recursive: true });
   });
 
   it("marks agent outcome as escalated when escalation file exists (deprecated path)", async () => {
     const runId = randomUUID();
     const ctx = createPipelineContext({
-      runId,
-      requirement: "Test escalation",
-      workspace: testWorkspace,
-      userId: "test-user",
       config: { ...DEFAULT_CONFIG, enableLearning: false },
       emit: () => {},
+      requirement: "Test escalation",
+      runId,
+      userId: "test-user",
+      workspace: testWorkspace,
     });
 
     ctx.set("planOutput", {
+      execPlans: new Map([
+        ["t1", join(testWorkspace, ".agent", "plans", runId, "t1.md")],
+      ]),
       planId: "plan-1",
+      rootPlanPath: join(testWorkspace, ".agent", "plans", runId, "root.md"),
       structuredPlan: {
         id: "plan-1",
         title: "Test plan",
@@ -84,18 +88,14 @@ describe("ExecuteStage escalation", () => {
           filesHint: [],
         },
       ],
-      execPlans: new Map([
-        ["t1", join(testWorkspace, ".agent", "plans", runId, "t1.md")],
-      ]),
-      rootPlanPath: join(testWorkspace, ".agent", "plans", runId, "root.md"),
     });
 
     const stage = new ExecuteStage();
     const out = await stage.execute(
       {
-        waves: [{ id: "wave-0", agents: ["t1"], dependsOn: [] }],
-        executionMode: "sequential",
         estimatedDuration: 1,
+        executionMode: "sequential",
+        waves: [{ id: "wave-0", agents: ["t1"], dependsOn: [] }],
       },
       ctx
     );
@@ -117,7 +117,7 @@ describe("ExecuteStage real-time escalation", () => {
   });
 
   afterAll(async () => {
-    await rm(testWorkspace, { recursive: true, force: true });
+    await rm(testWorkspace, { force: true, recursive: true });
   });
 
   it("marks agent outcome as escalated when runtime returns escalation data", async () => {
@@ -127,11 +127,7 @@ describe("ExecuteStage real-time escalation", () => {
         await mkdir(spec.workingDirectory, { recursive: true });
         return {
           agentId: spec.agentId,
-          phaseId,
-          stuck: false,
-          status: "escalated",
           durationSeconds: 1,
-          role: "codex",
           escalation: "Missing dependency: @acme/widget",
           escalationData: {
             type: "escalate",
@@ -140,35 +136,42 @@ describe("ExecuteStage real-time escalation", () => {
             suggestions: ["Install @acme/widget", "Use alternative"],
             severity: "blocking",
           },
+          phaseId,
           result: {
             summary: "codex agent execution",
             artifacts: [],
             changes: [],
             notes: [],
           },
+          role: "codex",
+          status: "escalated",
+          stuck: false,
         };
       },
     }));
 
     // Re-import to get fresh module with new mock
-    const { createPipelineContext: createCtx } = await import(
-      "../../src/context"
-    );
+    const { createPipelineContext: createCtx } =
+      await import("../../src/context");
     const { DEFAULT_CONFIG: config } = await import("../../src/pipeline");
     const { ExecuteStage: Stage } = await import("../../src/stages/execute");
 
     const runId = randomUUID();
     const ctx = createCtx({
-      runId,
-      requirement: "Test real-time escalation",
-      workspace: testWorkspace,
-      userId: "test-user",
       config: { ...config, enableLearning: false },
       emit: () => {},
+      requirement: "Test real-time escalation",
+      runId,
+      userId: "test-user",
+      workspace: testWorkspace,
     });
 
     ctx.set("planOutput", {
+      execPlans: new Map([
+        ["t2", join(testWorkspace, ".agent", "plans", runId, "t2.md")],
+      ]),
       planId: "plan-2",
+      rootPlanPath: join(testWorkspace, ".agent", "plans", runId, "root.md"),
       structuredPlan: {
         id: "plan-2",
         title: "Test plan",
@@ -193,18 +196,14 @@ describe("ExecuteStage real-time escalation", () => {
           filesHint: [],
         },
       ],
-      execPlans: new Map([
-        ["t2", join(testWorkspace, ".agent", "plans", runId, "t2.md")],
-      ]),
-      rootPlanPath: join(testWorkspace, ".agent", "plans", runId, "root.md"),
     });
 
     const stage = new Stage();
     const out = await stage.execute(
       {
-        waves: [{ id: "wave-0", agents: ["t2"], dependsOn: [] }],
-        executionMode: "sequential",
         estimatedDuration: 1,
+        executionMode: "sequential",
+        waves: [{ id: "wave-0", agents: ["t2"], dependsOn: [] }],
       },
       ctx
     );

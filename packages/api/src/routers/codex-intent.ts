@@ -1,10 +1,11 @@
-import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+import { type AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import {
   requireToolScopesAndPolicy,
   type TokenClaims,
 } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 import { buildCodexErrorResponse, formatCodexErrorMessage } from "./codex";
 
@@ -14,11 +15,8 @@ import { buildCodexErrorResponse, formatCodexErrorMessage } from "./codex";
  */
 
 const codexIntentInputSchema = z.object({
-  intent: z.string().min(1).max(500),
-  auto: z.enum(["read", "low", "medium", "high"]).default("read"),
   authz: z.string().optional(),
-  sessionId: z.string().min(1).max(255).optional(),
-  cw: z.string().optional(),
+  auto: z.enum(["read", "low", "medium", "high"]).default("read"),
   context: z
     .object({
       linearIssueId: z.string().optional(),
@@ -28,6 +26,9 @@ const codexIntentInputSchema = z.object({
       relevantFiles: z.array(z.string()).optional(),
     })
     .optional(),
+  cw: z.string().optional(),
+  intent: z.string().min(1).max(500),
+  sessionId: z.string().min(1).max(255).optional(),
 });
 
 /**
@@ -90,12 +91,12 @@ const codexIntentProcedures = {
             ["droid.exec"],
             {
               action: "droid.exec",
+              context: {
+                auto: input.auto,
+              },
               resource: {
                 kind: "repo",
                 id: input.cw ?? "cwd",
-              },
-              context: {
-                auto: input.auto,
               },
             }
           );
@@ -128,22 +129,21 @@ const codexIntentProcedures = {
       const prompt = intentToPrompt(input.intent);
 
       try {
-        const { toolCodex } = await import(
-          "@alfred/agent/orchestrator/tool/codex/index"
-        );
+        const { toolCodex } =
+          await import("@alfred/agent/orchestrator/tool/codex/index");
         const chunks: string[] = [];
         const events: AlfredCodexEvent[] = [];
 
         const result = await toolCodex.execute({
           input: {
             action: "exec" as const,
-            prompt,
-            out: "text",
-            auto: input.auto,
-            cw: input.cw,
             authz: input.authz,
-            sessionId: input.sessionId,
+            auto: input.auto,
             context: input.context,
+            cw: input.cw,
+            out: "text",
+            prompt,
+            sessionId: input.sessionId,
             userId,
           },
           writer: {
@@ -163,18 +163,18 @@ const codexIntentProcedures = {
         });
 
         return {
-          intent: input.intent,
-          result: result.result,
           artifacts: result.artifacts ?? [],
           eventCount: events.length,
+          intent: input.intent,
+          result: result.result,
         };
       } catch (error) {
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_intent_run_failed");
         throw new TRPCError({
+          cause,
           code: trpcCode,
           message: formatCodexErrorMessage(sanitized, correlationId),
-          cause,
         });
       }
     }),

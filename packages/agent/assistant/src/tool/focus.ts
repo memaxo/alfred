@@ -8,6 +8,7 @@ import {
 import { getTasks } from "@alfred/db/repo/assistant";
 import { addEvent, getPreferences, setPreference } from "@alfred/db/repo/user";
 import { z } from "zod";
+
 import { recordAssistantToolCall } from "../../../src/metrics";
 
 const focusInputSchema = z.object({

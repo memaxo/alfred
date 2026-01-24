@@ -4,6 +4,7 @@
  */
 
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+
 import type {
   RagDeleteInput,
   RagIngestInput,

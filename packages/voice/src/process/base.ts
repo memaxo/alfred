@@ -1,7 +1,9 @@
+import type { Subprocess } from "bun";
+
 import { accessSync, constants as fsConstants, statSync } from "node:fs";
 import { dirname, join, delimiter as pathDelimiter } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Subprocess } from "bun";
+
 import { Bridge, type IPCRequest, type IPCResponse } from "./ipc";
 
 export function resolveVoiceDir(): string {

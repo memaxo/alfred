@@ -1,6 +1,8 @@
 import { describe, expect, it, mock } from "bun:test";
-import { evaluatePlanDeterministic } from "../evaluate/verify.js";
+
 import type { StructuredPlan } from "../types.js";
+
+import { evaluatePlanDeterministic } from "../evaluate/verify.js";
 
 describe("evaluatePlanDeterministic", () => {
   it("should return zero score when budget checks fail", async () => {

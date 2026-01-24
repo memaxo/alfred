@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import type { NodeId } from "../src/hypergraph.js";
+
 import { type HyperRect, RTreeND } from "../src/indices/rtree.js";
 
 const node = (value: string): NodeId => value as NodeId;

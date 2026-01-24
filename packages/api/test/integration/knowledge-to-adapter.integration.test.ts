@@ -9,12 +9,12 @@
  * Uses SQLite in-memory database for fast, isolated tests.
  */
 
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import path from "node:path";
+
 process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
-
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
-import path from "node:path";
 
 const cassettePath = path.join(
   import.meta.dir,
@@ -31,9 +31,8 @@ let vcr: InstanceType<typeof VCRRecorder>;
 async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { memoryNodes, memoryEdges } = await import(
-      "@alfred/db/schema/graph"
-    );
+    const { memoryNodes, memoryEdges } =
+      await import("@alfred/db/schema/graph");
 
     await db.delete(memoryEdges);
     await db.delete(memoryNodes);
@@ -53,13 +52,13 @@ beforeAll(async () => {
   await vcr.start();
 });
 
+afterEach(() => {
+  // No cleanup needed
+});
+
 afterAll(async () => {
   await vcr?.stop();
   await resetTables();
-});
-
-afterEach(() => {
-  // No cleanup needed
 });
 
 describe("Knowledge to Adapter", () => {
@@ -90,7 +89,6 @@ describe("Knowledge to Adapter", () => {
         // Create test nodes
         await graphRepo.upsertNodes([
           {
-            resource: "adapter-test",
             hash: "preference-formal",
             kind: "preference",
             label: "Formal tone preferred",
@@ -98,6 +96,7 @@ describe("Knowledge to Adapter", () => {
               value: "formal",
               confidence: 0.9,
             },
+            resource: "adapter-test",
             sanitized: true,
           },
         ]);

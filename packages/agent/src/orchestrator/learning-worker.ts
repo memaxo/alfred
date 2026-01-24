@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { db } from "@alfred/db";
 import {
   archiveNodes,
@@ -23,6 +22,8 @@ import { deriveDecisionFacts } from "@alfred/knowledge/reasoning/decisions";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+
 import { buildDreamHeuristic } from "./dreaming.js";
 
 // Mock metrics if package not available (for tests or circular dep avoidance)

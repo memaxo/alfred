@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
-import type { UIMessage } from "@alfred/type/stream";
+import { type UIMessage } from "@alfred/type/stream";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 import "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { aiStub, metricsStub } from "./utils/mock-metrics";
@@ -15,9 +16,9 @@ const inferDomainPreferencesMock = vi.fn().mockReturnValue(new Map());
 const inferPreferencesFromFeedbackMock = vi.fn().mockReturnValue(new Map());
 
 mock.module("@alfred/agent/preference/inference", () => ({
-  inferResponsePreferences: inferResponsePreferencesMock,
   inferDomainPreferences: inferDomainPreferencesMock,
   inferPreferencesFromFeedback: inferPreferencesFromFeedbackMock,
+  inferResponsePreferences: inferResponsePreferencesMock,
 }));
 
 const mergePreferencesMock = vi.fn();
@@ -30,9 +31,8 @@ mock.module("@alfred/agent/preference/loader", () => ({
   invalidatePreferenceCache: invalidatePreferenceCacheMock,
 }));
 
-const { validateConversationMessages, runPreferenceInference } = await import(
-  "../src/scheduler/preference-inference"
-);
+const { validateConversationMessages, runPreferenceInference } =
+  await import("../src/scheduler/preference-inference");
 
 function createToolMessage(
   type: "tool-call" | "tool-result",
@@ -40,7 +40,6 @@ function createToolMessage(
 ): UIMessage {
   return {
     id: `${type}-${suffix}`,
-    role: "assistant",
     parts: [
       {
         type,
@@ -50,6 +49,7 @@ function createToolMessage(
         output: type === "tool-result" ? { clean: true } : undefined,
       } as UIMessage["parts"][number],
     ],
+    role: "assistant",
   };
 }
 
@@ -58,23 +58,23 @@ describe("validateConversationMessages", () => {
     const messages: UIMessage[] = [
       {
         id: "msg-1",
-        role: "user",
         parts: [{ type: "text", text: "Hello" }],
+        role: "user",
       },
       {
         id: "msg-2",
-        role: "assistant",
         parts: [{ type: "text", text: "Hi" }],
+        role: "assistant",
       },
     ];
 
     const logger = { warn: vi.fn() };
     const validated = await validateConversationMessages({
-      messages,
       conversationId: "conv-valid",
-      userId: "user-1",
       logger,
+      messages,
       tools: {},
+      userId: "user-1",
     });
 
     expect(validated).not.toBeNull();
@@ -86,8 +86,8 @@ describe("validateConversationMessages", () => {
     const messages = [
       {
         id: "msg-1",
-        role: "malicious" as unknown as UIMessage["role"],
         parts: [],
+        role: "malicious" as unknown as UIMessage["role"],
       },
     ];
     const logger = { warn: vi.fn() };
@@ -95,11 +95,11 @@ describe("validateConversationMessages", () => {
     validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
 
     const validated = await validateConversationMessages({
-      messages: messages as UIMessage[],
       conversationId: "conv-invalid",
-      userId: "user-1",
       logger,
+      messages: messages as UIMessage[],
       tools: {},
+      userId: "user-1",
     });
 
     expect(validated).toBeNull();
@@ -133,17 +133,17 @@ describe("runPreferenceInference", () => {
       { length: MAX_HISTORY_MESSAGES + 10 },
       (_, index) => ({
         id: `msg-${index}`,
-        role: index % 2 === 0 ? "user" : "assistant",
         parts: [{ type: "text", text: `message-${index}` }],
+        role: index % 2 === 0 ? "user" : "assistant",
       })
     );
 
     const conversationRow = {
-      id: "conv-1",
-      userId: "user-123",
-      title: null,
       created: new Date(),
+      id: "conv-1",
+      title: null,
       updated: new Date(),
+      userId: "user-123",
     };
 
     conversationRepoMock.getConversations.mockResolvedValueOnce([
@@ -158,7 +158,7 @@ describe("runPreferenceInference", () => {
       new Map([
         [
           "response.tone",
-          { value: "curt", source: "learned", confidence: 0.9 },
+          { confidence: 0.9, source: "learned", value: "curt" },
         ],
       ])
     );
@@ -166,7 +166,7 @@ describe("runPreferenceInference", () => {
       new Map([
         [
           "response.tone",
-          { value: "curt", source: "learned", confidence: 0.9 },
+          { confidence: 0.9, source: "learned", value: "curt" },
         ],
       ])
     );
@@ -196,17 +196,17 @@ describe("runPreferenceInference", () => {
       (_, index) =>
         ({
           id: `msg-${index}`,
-          role: index % 2 === 0 ? "user" : "assistant",
           parts: [{ type: "text", text: `message-${index}` }],
+          role: index % 2 === 0 ? "user" : "assistant",
         }) as UIMessage
     );
 
     const conversationRow = {
-      id: "conv-tool",
-      userId: "user-456",
-      title: null,
       created: new Date(),
+      id: "conv-tool",
+      title: null,
       updated: new Date(),
+      userId: "user-456",
     };
 
     conversationRepoMock.getConversations.mockResolvedValueOnce([

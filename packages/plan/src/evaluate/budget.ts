@@ -1,4 +1,5 @@
 import type { StructuredPlan } from "../generate/types.js";
+
 import { estimateTextTokens } from "../research/token.js";
 
 const PHASE_TOKEN_BUDGET = 100_000;

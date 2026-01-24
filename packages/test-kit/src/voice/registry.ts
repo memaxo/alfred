@@ -1,7 +1,8 @@
-import { Buffer } from "node:buffer";
 import type { STTPool } from "@alfred/voice/process/stt";
 import type { TTSPool } from "@alfred/voice/process/tts";
+
 import { VoiceRegistry } from "@alfred/voice/server/registry";
+import { Buffer } from "node:buffer";
 
 export type VoiceTestOptions = {
   transcript?: string;

@@ -1,5 +1,6 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { EMBEDDING_DIM } from "@alfred/embed";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
+
 import { recordMemoryForgetMock, resetAgentMocks } from "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
 import {

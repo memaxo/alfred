@@ -1,7 +1,8 @@
 import { logger } from "@alfred/logger";
 import { LiteBatcher } from "@alfred/pacer";
-import type { PipelineEvent } from "../events";
-import type { PipelineObserver } from "../runner";
+
+import { type PipelineEvent } from "../events";
+import { type PipelineObserver } from "../runner";
 
 type LinearUpdate =
   | {
@@ -10,20 +11,20 @@ type LinearUpdate =
     }
   | { action: "comment"; issueId: string; body: string };
 
-export type LinearObserverConfig = {
+export interface LinearObserverConfig {
   syncIntervalMs: number;
   space: string;
   issueId: string;
   authz: string;
-};
+}
 
 export class LinearSyncObserver implements PipelineObserver {
   private readonly pendingUpdates = new LiteBatcher<LinearUpdate>(() => {}, {
     // We use the batcher as a shared, typed buffer and trigger flushing explicitly
     // via the observer interval / completion hooks to preserve process-liveness behavior.
     maxSize: Number.POSITIVE_INFINITY,
-    wait: Number.POSITIVE_INFINITY,
     started: false,
+    wait: Number.POSITIVE_INFINITY,
   });
   private rateLimiter: InstanceType<
     typeof import("@alfred/agent/orchestrator/linear-rate-limiter").LinearRateLimiter
@@ -46,9 +47,8 @@ export class LinearSyncObserver implements PipelineObserver {
 
   private async initRateLimiter(): Promise<void> {
     try {
-      const { LinearRateLimiter } = await import(
-        "@alfred/agent/orchestrator/linear-rate-limiter"
-      );
+      const { LinearRateLimiter } =
+        await import("@alfred/agent/orchestrator/linear-rate-limiter");
       this.rateLimiter = new LinearRateLimiter();
       void this.flush();
     } catch (error) {
@@ -79,13 +79,14 @@ export class LinearSyncObserver implements PipelineObserver {
 
   onEvent(event: PipelineEvent): void {
     switch (event.type) {
-      case "context:set":
+      case "context:set": {
         if (event.key === "linearTaskIssueMap") {
           this.applyTaskIssueMap(event.value);
         }
         break;
+      }
 
-      case "stage:enter":
+      case "stage:enter": {
         if (event.stage === "execute") {
           this.pendingUpdates.addItem({
             action: "set-started",
@@ -93,6 +94,7 @@ export class LinearSyncObserver implements PipelineObserver {
           });
         }
         break;
+      }
 
       case "agent:spawn": {
         this.agentToTaskId.set(event.agentId, event.taskId);
@@ -103,7 +105,7 @@ export class LinearSyncObserver implements PipelineObserver {
         break;
       }
 
-      case "agent:complete":
+      case "agent:complete": {
         {
           const taskId = this.agentToTaskId.get(event.agentId);
           if (!taskId) {
@@ -136,8 +138,9 @@ export class LinearSyncObserver implements PipelineObserver {
           this.pendingUpdates.addItem({ action: "set-cancelled", issueId });
         }
         break;
+      }
 
-      case "pipeline:complete":
+      case "pipeline:complete": {
         this.pendingUpdates.addItem({
           action: "set-completed",
           issueId: this.config.issueId,
@@ -151,8 +154,9 @@ export class LinearSyncObserver implements PipelineObserver {
         }
         void this.flush(); // Immediate flush on completion
         break;
+      }
 
-      case "pipeline:failed":
+      case "pipeline:failed": {
         this.pendingUpdates.addItem({
           action: "comment",
           issueId: this.config.issueId,
@@ -164,6 +168,7 @@ export class LinearSyncObserver implements PipelineObserver {
         });
         void this.flush(); // Immediate flush on failure
         break;
+      }
     }
   }
 
@@ -198,14 +203,13 @@ export class LinearSyncObserver implements PipelineObserver {
 
   private async applyUpdate(update: LinearUpdate): Promise<void> {
     // Use toolTicket.execute() pattern for Linear operations
-    const { toolTicket } = await import(
-      "@alfred/agent/orchestrator/tool/ticket"
-    );
+    const { toolTicket } =
+      await import("@alfred/agent/orchestrator/tool/ticket");
 
     switch (update.action) {
       case "set-started":
       case "set-completed":
-      case "set-cancelled":
+      case "set-cancelled": {
         await toolTicket.execute({
           input: {
             space: this.config.space,
@@ -215,7 +219,8 @@ export class LinearSyncObserver implements PipelineObserver {
           },
         });
         break;
-      case "comment":
+      }
+      case "comment": {
         await toolTicket.execute({
           input: {
             space: this.config.space,
@@ -226,6 +231,7 @@ export class LinearSyncObserver implements PipelineObserver {
           },
         });
         break;
+      }
     }
   }
 }

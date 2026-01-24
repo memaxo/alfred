@@ -1,9 +1,10 @@
-import crypto from "node:crypto";
-import { URLSearchParams } from "node:url";
 import type { LinearInstallation } from "@alfred/db/repo/linear";
+
 import { updateLinearToken } from "@alfred/db/repo/linear";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
+import crypto from "node:crypto";
+import { URLSearchParams } from "node:url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

@@ -4,8 +4,10 @@
  * Validates that metrics, logs, and traces are emitted correctly.
  */
 
-import { beforeEach, describe, expect, it, vi } from "bun:test";
 import type { KnowledgeFact, KnowledgeUpdate } from "@alfred/type/knowledge";
+
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
 import {

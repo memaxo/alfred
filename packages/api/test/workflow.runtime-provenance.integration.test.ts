@@ -9,6 +9,7 @@ process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.OPENAI_API_KEY ??= "test-key";
 
+import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   afterAll,
   afterEach,
@@ -18,7 +19,6 @@ import {
   expect,
   it,
 } from "bun:test";
-import { EMBEDDING_DIM } from "@alfred/embed";
 import { eq } from "drizzle-orm";
 
 let ingest: typeof import("@alfred/rag").ingest;

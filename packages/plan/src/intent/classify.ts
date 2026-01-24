@@ -6,10 +6,12 @@
  */
 
 import type { LanguageModel } from "ai";
+
 import { z } from "zod";
 
-import { classify, OFFLINE_MODE } from "../classify/index.js";
 import type { WorkflowIntent } from "./types.js";
+
+import { classify, OFFLINE_MODE } from "../classify/index.js";
 
 /**
  * Intent category type

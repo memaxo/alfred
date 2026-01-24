@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
+
+import type { DeploymentInsert, DeploymentRecord } from "./types";
+
 import { db } from "../../client";
 import { deployments } from "../../schema/deploy";
-import type { DeploymentInsert, DeploymentRecord } from "./types";
 import { sanitize } from "./utils";
 
 export async function setDeploymentStatus(

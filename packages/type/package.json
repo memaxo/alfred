@@ -2,6 +2,7 @@
   "name": "@alfred/type",
   "version": "0.0.0",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -188,6 +189,5 @@
     "@alfred/tsconfig": "workspace:*",
     "tsdown": "^0.2.16",
     "typescript": "^5.7.2"
-  },
-  "sideEffects": false
+  }
 }

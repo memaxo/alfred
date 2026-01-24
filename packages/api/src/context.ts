@@ -1,9 +1,12 @@
+import type { Obligation } from "@alfred/type";
+
+import { auth } from "@alfred/auth";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
-import { auth } from "@alfred/auth";
-import type { Obligation } from "@alfred/type";
-import { RuntimeContext } from "@alfred/type/runtime-context";
+
 import type { RouterDeps } from "./deps";
+
 import { getSessionUser } from "./utils/session";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;

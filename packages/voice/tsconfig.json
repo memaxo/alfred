@@ -5,7 +5,8 @@
     "outDir": "dist",
     "composite": true,
     "declaration": true,
-    "declarationMap": false
+    "declarationMap": false,
+    "strictNullChecks": true
   },
   "include": ["src"],
   "references": [

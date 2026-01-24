@@ -1,8 +1,10 @@
-import { accessSync, constants as fsConstants, lstatSync } from "node:fs";
-import path from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { logger } from "@alfred/metrics";
+import { accessSync, constants as fsConstants, lstatSync } from "node:fs";
+import path from "node:path";
+
 import type { DirectoryHandle } from "../../../security/filesystem.js";
+
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,

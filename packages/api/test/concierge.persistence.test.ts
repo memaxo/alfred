@@ -1,10 +1,10 @@
-import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { PipelineEvent } from "@alfred/pipeline";
+
+import { attentionRepo, clarificationRepo, deltaRepo } from "@alfred/db";
 
 // Establish the standard API test mocks (includes @alfred/db shim).
 import "./utils/mock-db-client";
-
-import { attentionRepo, clarificationRepo, deltaRepo } from "@alfred/db";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 describe("concierge persistence (db-shim)", () => {
   let upsertAttentionItem: typeof import("../src/services/attention").upsertAttentionItem;

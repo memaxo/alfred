@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
+
 import type { PipelineEvent } from "../../src/events";
+import type { PipelineSnapshot, SerializableValue } from "../../src/snapshot";
+
 import { createEvent } from "../../src/events";
 import { STAGE_ORDER } from "../../src/pipeline";
-import type { PipelineSnapshot, SerializableValue } from "../../src/snapshot";
 import { createSnapshot, PipelineReconstructor } from "../../src/snapshot";
 
 /**

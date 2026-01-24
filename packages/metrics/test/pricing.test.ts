@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { calculateCostUsd, getModelPricing } from "../src/pricing";
 
 describe("Pricing Registry", () => {

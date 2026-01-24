@@ -1,9 +1,11 @@
 import { describe, expect, it } from "bun:test";
+
 import type { PipelineEvent } from "../src/events";
-import { createEvent } from "../src/events";
 import type { PipelineContext, PipelineStage } from "../src/pipeline";
-import { PipelineRunner } from "../src/runner";
 import type { PipelineInput } from "../src/stages/types";
+
+import { createEvent } from "../src/events";
+import { PipelineRunner } from "../src/runner";
 
 describe("PipelineRunner suspension", () => {
   it("emits pipeline:suspend and stops when pipelineSuspend is set", async () => {

@@ -1,16 +1,18 @@
 import { logger } from "@alfred/logger";
-import { createPipelineContext } from "./context";
+
 import type { ExecutionSummary, PipelineEvent } from "./events";
-import { createEvent } from "./events";
 import type {
   PipelineConfig,
   PipelineContext,
   PipelineStage,
   StageName,
 } from "./pipeline";
-import { DEFAULT_CONFIG, STAGE_ORDER } from "./pipeline";
 import type { PipelineSnapshot, SerializableValue } from "./snapshot";
 import type { PipelineInput, PipelineResult } from "./stages/types";
+
+import { createPipelineContext } from "./context";
+import { createEvent } from "./events";
+import { DEFAULT_CONFIG, STAGE_ORDER } from "./pipeline";
 
 export type PipelineObserver = {
   onEvent(event: PipelineEvent): void;

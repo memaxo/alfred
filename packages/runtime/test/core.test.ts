@@ -2,9 +2,10 @@
  * WorkflowRuntime core tests
  */
 
-import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
+
+import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 
 const { AISDKAdapter } = await import("../src/adapters/ai");
 const originalStream = AISDKAdapter.prototype.stream;

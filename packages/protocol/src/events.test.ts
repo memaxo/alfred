@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { parseThreadEvent, threadEventSchema } from "./events";
 
 describe("parseThreadEvent", () => {

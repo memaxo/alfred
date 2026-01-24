@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test";
-import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { ContextBundle } from "@alfred/type/plan";
+
+import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { describe, expect, it } from "bun:test";
 
 function makeBundle(paths: string[]): ContextBundle {
   return {

@@ -28,11 +28,11 @@ uv sync && bun test test/python.test.ts
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ALFRED_SUMMARIZE_OFFLINE` | `0` | Force heuristic fallback |
-| `SUMMARIZE_MODEL` | `Qwen/Qwen2.5-Coder-0.5B-Instruct` | Model for perplexity |
-| `SUMMARIZE_DEVICE` | `auto` | Device: auto, cpu, cuda, mps |
+| Variable                   | Default                            | Description                  |
+| -------------------------- | ---------------------------------- | ---------------------------- |
+| `ALFRED_SUMMARIZE_OFFLINE` | `0`                                | Force heuristic fallback     |
+| `SUMMARIZE_MODEL`          | `Qwen/Qwen2.5-Coder-0.5B-Instruct` | Model for perplexity         |
+| `SUMMARIZE_DEVICE`         | `auto`                             | Device: auto, cpu, cuda, mps |
 
 ## Python Dependencies
 

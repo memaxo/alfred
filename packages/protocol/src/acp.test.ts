@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type {
   AcpStopReason,
   AcpToolKind,
@@ -7,6 +8,7 @@ import type {
   SessionId,
   ToolCall,
 } from "./acp";
+
 import {
   AGENT_METHODS,
   AgentSideConnection,

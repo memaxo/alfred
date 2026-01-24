@@ -1,5 +1,8 @@
-import { performance } from "node:perf_hooks";
 import { markVoice } from "@alfred/metrics/performance";
+import { performance } from "node:perf_hooks";
+
+import type { ChunkSize, STTPool } from "../process/stt";
+
 import {
   decodeToPCM16,
   isLikelyPCM,
@@ -7,7 +10,6 @@ import {
   sanitizeBase64,
 } from "../audio/codec";
 import { recordVoiceStt, voiceStreamLatencySeconds } from "../metrics";
-import type { ChunkSize, STTPool } from "../process/stt";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap
 

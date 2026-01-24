@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
 import { deltaRepo } from "@alfred/db";
+import { describe, expect, test } from "bun:test";
+
 import { createTestCaller } from "./utils/trpc";
 
 describe("delta router", () => {

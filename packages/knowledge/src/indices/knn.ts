@@ -1,4 +1,5 @@
 import { cosineSimilarity } from "@alfred/embed";
+
 import type { NodeId } from "../hypergraph.js";
 
 /**

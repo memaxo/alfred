@@ -13,6 +13,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { projects } from "./project";
 
 // Index coverage is handled in migrations 0003, 0007, and 0039 for the assistant tables.

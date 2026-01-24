@@ -1,5 +1,6 @@
+import { type ServerWebSocket } from "bun";
 import { afterAll, describe, expect, it } from "bun:test";
-import type { ServerWebSocket } from "bun";
+
 import { VoiceRegistry } from "../../src/server/registry";
 import {
   VoiceSocketHandler,
@@ -11,7 +12,7 @@ function percentile(values: number[], p: number): number {
   if (values.length === 0) {
     throw new Error("percentile_empty");
   }
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = [...values].toSorted((a, b) => a - b);
   const clamped = Math.min(100, Math.max(0, p));
   const rank = (clamped / 100) * (sorted.length - 1);
   const low = Math.floor(rank);
@@ -27,12 +28,12 @@ function percentile(values: number[], p: number): number {
 
 // Mock dependencies
 const mockHooks: VoiceSocketHooks = {
+  onAssistantResponse: async () => {},
+  onSessionComplete: async () => {},
+  onSessionError: async () => {},
   onSessionStart: async () => "reg-1",
   onSessionStatus: async () => {},
   onTranscriptUpdate: async () => {},
-  onAssistantResponse: async () => {},
-  onSessionError: async () => {},
-  onSessionComplete: async () => {},
   runAssistant: async () => ({ text: "ok" }),
 };
 
@@ -40,12 +41,12 @@ const mockHooks: VoiceSocketHooks = {
 const mockSttPool = {
   transcribe: async () => {
     await new Promise((r) => setTimeout(r, 10));
-    return { text: "hello", isPartial: true };
+    return { isPartial: true, text: "hello" };
   },
 };
 
 const mockTtsPool = {
-  // biome-ignore lint/suspicious/noExplicitAny: Mock pool requires flexible typing
+  // oxlint-disable noExplicitAny: Mock pool requires flexible typing
   synthesize: async (req: any, onChunk: any) => {
     // Simulate synthesis delay
     await new Promise((r) => setTimeout(r, 10));
@@ -55,13 +56,19 @@ const mockTtsPool = {
   },
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: Mock pool cast
+// oxlint-disable noExplicitAny: Mock pool cast
 const registry = new VoiceRegistry(mockSttPool as any, mockTtsPool as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8899;
-// biome-ignore lint/suspicious/noExplicitAny: Bun.serve requires data type
+// oxlint-disable noExplicitAny: Bun.serve requires data type
 const server = Bun.serve<any>({
+  fetch(req, server) {
+    if (server.upgrade(req)) {
+      return;
+    }
+    return new Response("ok");
+  },
   port: PORT,
   websocket: {
     open(ws) {
@@ -69,17 +76,11 @@ const server = Bun.serve<any>({
     },
     async message(ws, message) {
       await handler.handleMessage(
-        // biome-ignore lint/suspicious/noExplicitAny: WebSocket data cast
+        // oxlint-disable noExplicitAny: WebSocket data cast
         ws as unknown as ServerWebSocket<any>,
         message
       );
     },
-  },
-  fetch(req, server) {
-    if (server.upgrade(req)) {
-      return;
-    }
-    return new Response("ok");
   },
 });
 
@@ -97,6 +98,9 @@ describe("Latency Benchmark", () => {
       const client = new VoiceStreamClient(
         { url: `ws://localhost:${PORT}` },
         {
+          onError: (ev) => {
+            throw new Error(`voice_stream_client_error:${ev.message}`);
+          },
           onPartialTranscript: (_ev) => {
             if (!resolveNextTranscript) {
               return;
@@ -104,9 +108,6 @@ describe("Latency Benchmark", () => {
             const resolve = resolveNextTranscript;
             resolveNextTranscript = null;
             resolve(performance.now());
-          },
-          onError: (ev) => {
-            throw new Error(`voice_stream_client_error:${ev.message}`);
           },
         }
       );
@@ -131,8 +132,8 @@ describe("Latency Benchmark", () => {
         const sendAt = performance.now();
         await client.sendAudioChunk({
           audio,
-          mimeType: "audio/pcm",
           emitPartial: true,
+          mimeType: "audio/pcm",
         });
         const recvAt = await receivedAt;
         latenciesMs.push(recvAt - sendAt);
@@ -148,7 +149,7 @@ describe("Latency Benchmark", () => {
       await client.close();
     } finally {
       if (oldFfmpegPath === undefined) {
-        // biome-ignore lint/performance/noDelete: test cleanup
+        // oxlint-disable noDelete: test cleanup
         delete process.env.VOICE_FFMPEG_PATH;
       } else {
         process.env.VOICE_FFMPEG_PATH = oldFfmpegPath;

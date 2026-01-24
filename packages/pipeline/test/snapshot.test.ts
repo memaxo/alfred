@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
+
 import type { PipelineEvent } from "../src/events";
+
 import { createEvent } from "../src/events";
 import {
   assertSerializable,

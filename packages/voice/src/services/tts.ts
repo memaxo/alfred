@@ -1,8 +1,10 @@
-import { performance } from "node:perf_hooks";
 import { markVoice } from "@alfred/metrics/performance";
+import { performance } from "node:perf_hooks";
+
+import type { TTSPool } from "../process/tts";
+
 import { encodeFromPCM16, sanitizeBase64 } from "../audio/codec";
 import { recordVoiceTts, voiceStreamLatencySeconds } from "../metrics";
-import type { TTSPool } from "../process/tts";
 
 export type TtsInput = {
   text: string;

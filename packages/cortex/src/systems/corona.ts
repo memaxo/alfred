@@ -5,10 +5,11 @@
  * Uses GPU compute for fiber animation and instanced rendering for display.
  */
 
+import type { OrbConfig, RenderSystem, Vec2 } from "../types";
+
 import { StorageBuffer, UniformBuffer } from "../buffer";
 // Import shader source
 import coronaShaderSource from "../shaders/corona.wgsl?raw";
-import type { OrbConfig, RenderSystem, Vec2 } from "../types";
 
 /** Corona system configuration */
 export type CoronaSystemConfig = {

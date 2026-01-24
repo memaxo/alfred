@@ -10,12 +10,12 @@
  * Uses SQLite in-memory database for fast, isolated tests.
  */
 
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import path from "node:path";
+
 process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
-
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
-import path from "node:path";
 
 const cassettePath = path.join(
   import.meta.dir,
@@ -32,9 +32,8 @@ let vcr: InstanceType<typeof VCRRecorder>;
 async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { memoryNodes, memoryEdges, knowledgeCorrections } = await import(
-      "@alfred/db/schema/graph"
-    );
+    const { memoryNodes, memoryEdges, knowledgeCorrections } =
+      await import("@alfred/db/schema/graph");
 
     await db.delete(memoryEdges);
     await db.delete(memoryNodes);
@@ -55,35 +54,34 @@ beforeAll(async () => {
   await vcr.start();
 });
 
+afterEach(() => {});
+
 afterAll(async () => {
   await vcr?.stop();
   await resetTables();
 });
-
-afterEach(() => {});
 
 describe("Correction Learning", () => {
   describe("Correction API Processing", () => {
     it("processes correction API calls", async () => {
       try {
         const { db } = await import("@alfred/db");
-        const { knowledgeCorrections } = await import(
-          "@alfred/db/schema/graph"
-        );
+        const { knowledgeCorrections } =
+          await import("@alfred/db/schema/graph");
 
         const correctionId = crypto.randomUUID();
 
         // Insert a correction record
         await db.insert(knowledgeCorrections).values({
           id: correctionId,
-          userId: "correction-user",
-          resource: "workflow",
-          targetType: "node",
-          targetId: crypto.randomUUID(),
           operation: "update",
-          reason: "User corrected classification",
-          previous: { confidence: 0.3 },
           patch: { confidence: 0.9 },
+          previous: { confidence: 0.3 },
+          reason: "User corrected classification",
+          resource: "workflow",
+          targetId: crypto.randomUUID(),
+          targetType: "node",
+          userId: "correction-user",
         });
 
         // Verify the correction was inserted
@@ -116,22 +114,22 @@ describe("Correction Learning", () => {
         // Create two related nodes
         const node1Id = await graphRepo.upsertNodes([
           {
-            resource: "correction-test",
             hash: "correction-node-1",
             kind: "fact",
             label: "Original fact",
             properties: { value: "original" },
+            resource: "correction-test",
             sanitized: true,
           },
         ]);
 
         const node2Id = await graphRepo.upsertNodes([
           {
-            resource: "correction-test",
             hash: "correction-node-2",
             kind: "fact",
             label: "Corrected fact",
             properties: { value: "corrected" },
+            resource: "correction-test",
             sanitized: true,
           },
         ]);
@@ -140,11 +138,11 @@ describe("Correction Learning", () => {
         await graphRepo.upsertEdges([
           {
             fromId: node1Id[0]!,
-            toId: node2Id[0]!,
             kind: "corrects",
-            weight: 1.0,
-            resource: "correction-test",
             metadata: { source: "user_correction" },
+            resource: "correction-test",
+            toId: node2Id[0]!,
+            weight: 1.0,
           },
         ]);
 
@@ -177,7 +175,6 @@ describe("Correction Learning", () => {
         // Create a node with low confidence
         const _nodeId = await graphRepo.upsertNodes([
           {
-            resource: "boost-test",
             hash: "boost-node",
             kind: "preference",
             label: "Boosted preference",
@@ -185,13 +182,14 @@ describe("Correction Learning", () => {
               value: "short-responses",
               confidence: 0.3,
             },
+            resource: "boost-test",
             sanitized: true,
           },
         ]);
 
         // Update confidence (simulating correction)
         await graphRepo.updateNodeConfidenceBatch([
-          { hash: "boost-node", deltaConfidence: 0.6 },
+          { deltaConfidence: 0.6, hash: "boost-node" },
         ]);
 
         // Verify confidence was boosted

@@ -5,8 +5,9 @@
  */
 
 import type { ApiResult } from "../api/client";
-import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+
+import { getApiClient } from "../api/client";
 import { addPollingWithFallback, type DataMode } from "./mode";
 
 export type FocusBoardState = {

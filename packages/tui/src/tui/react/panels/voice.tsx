@@ -7,9 +7,12 @@
 /** @jsxImportSource @opentui/react */
 
 import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
+
 import type { VoiceState } from "../../subscriptions/voice";
+
 import { colors, progressChars } from "../../theme";
 import { bold, dim, fg } from "../../typography";
 import { useVoiceStore } from "../hooks/stores";

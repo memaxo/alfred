@@ -3,7 +3,9 @@ import { stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import YAML from "yaml";
 import { z } from "zod";
+
 import type { Obligation, PolicyDocument } from "./types";
+
 import { DEFAULT_POLICY_PATH } from "./types";
 
 const obligationObjectSchema = z.object({

@@ -1,6 +1,7 @@
+import type { WorkflowEvent } from "@alfred/type";
+
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import * as workflowRepo from "@alfred/db/repo/workflow";
-import type { WorkflowEvent } from "@alfred/type";
 
 function coerceRecord(val: unknown): Record<string, unknown> {
   if (typeof val === "object" && val !== null && !Array.isArray(val)) {

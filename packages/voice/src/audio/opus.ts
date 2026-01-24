@@ -1,7 +1,7 @@
-import type { Buffer } from "node:buffer";
+import { type Buffer } from "node:buffer";
 
 // Lazy load @discordjs/opus to allow mocking in tests
-// biome-ignore lint/suspicious/noExplicitAny: Dynamic require
+// oxlint-disable noExplicitAny: Dynamic require
 let OpusEncoderClass: any = null;
 
 function getOpusClass() {
@@ -10,8 +10,8 @@ function getOpusClass() {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require("@discordjs/opus");
       OpusEncoderClass = mod.OpusEncoder;
-    } catch (e) {
-      throw new Error(`opus_load_failed: ${String(e)}`);
+    } catch (error) {
+      throw new Error(`opus_load_failed: ${String(error)}`, { cause: e });
     }
   }
   return OpusEncoderClass;
@@ -20,9 +20,9 @@ function getOpusClass() {
 const RATE = 48_000;
 const CHANNELS = 1;
 
-// biome-ignore lint/suspicious/noExplicitAny: Native binding
+// oxlint-disable noExplicitAny: Native binding
 let encoder: any = null;
-// biome-ignore lint/suspicious/noExplicitAny: Native binding
+// oxlint-disable noExplicitAny: Native binding
 let decoder: any = null;
 
 function getEncoder() {
@@ -46,7 +46,8 @@ export function encodeOpus(pcm: Buffer): Buffer {
     return getEncoder().encode(pcm);
   } catch (error) {
     throw new Error(
-      `opus_encode_failed: ${error instanceof Error ? error.message : String(error)}`
+      `opus_encode_failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     );
   }
 }
@@ -56,7 +57,8 @@ export function decodeOpus(opus: Buffer): Buffer {
     return getDecoder().decode(opus);
   } catch (error) {
     throw new Error(
-      `opus_decode_failed: ${error instanceof Error ? error.message : String(error)}`
+      `opus_decode_failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     );
   }
 }

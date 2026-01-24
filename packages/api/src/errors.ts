@@ -1,4 +1,5 @@
 import type { Obligation } from "@alfred/type";
+
 import { TRPCError } from "@trpc/server";
 
 export class PolicyObligationError extends TRPCError {

@@ -1,9 +1,10 @@
+import type { UIMessage } from "@alfred/type/stream";
+
 import {
   isGenUIToolResult,
   isUIDataPart,
   type UIComponent,
 } from "@alfred/type/genui";
-import type { UIMessage } from "@alfred/type/stream";
 
 type UIPart = UIMessage["parts"][number];
 

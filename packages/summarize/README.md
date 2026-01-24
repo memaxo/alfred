@@ -71,7 +71,12 @@ console.log(result.score); // Positive = relevant, negative = may confuse
 ### Process Management
 
 ```typescript
-import { initialize, shutdown, getHealth, isPythonAvailable } from "@alfred/summarize";
+import {
+  initialize,
+  shutdown,
+  getHealth,
+  isPythonAvailable,
+} from "@alfred/summarize";
 
 // Check if Python backend is available
 if (isPythonAvailable()) {
@@ -103,18 +108,19 @@ Based on the [LongCodeZip paper](https://arxiv.org/abs/2510.00446):
 ### Heuristic Fallback
 
 When Python is unavailable:
+
 - **Summarization**: Position-based sentence extraction (first/last sentences weighted higher)
 - **Chunking**: Paragraph boundary detection (double newlines)
 - **AMI**: Word overlap ratio scaled to AMI-like range
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SUMMARIZE_MODEL` | `Qwen/Qwen2.5-Coder-0.5B-Instruct` | Model for perplexity calculation |
-| `SUMMARIZE_DEVICE` | `auto` | Device: auto, cpu, cuda, mps |
-| `SUMMARIZE_LOG_LEVEL` | `INFO` | Python logging level |
-| `ALFRED_SUMMARIZE_OFFLINE` | `0` | Force heuristic fallback |
+| Variable                   | Default                            | Description                      |
+| -------------------------- | ---------------------------------- | -------------------------------- |
+| `SUMMARIZE_MODEL`          | `Qwen/Qwen2.5-Coder-0.5B-Instruct` | Model for perplexity calculation |
+| `SUMMARIZE_DEVICE`         | `auto`                             | Device: auto, cpu, cuda, mps     |
+| `SUMMARIZE_LOG_LEVEL`      | `INFO`                             | Python logging level             |
+| `ALFRED_SUMMARIZE_OFFLINE` | `0`                                | Force heuristic fallback         |
 
 ## Architecture
 

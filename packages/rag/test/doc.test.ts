@@ -1,3 +1,4 @@
+import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   afterEach,
   beforeAll,
@@ -8,7 +9,6 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { EMBEDDING_DIM } from "@alfred/embed";
 
 const createDocumentMock = vi.fn();
 const addChunksMock = vi.fn();

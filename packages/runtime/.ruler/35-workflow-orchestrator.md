@@ -8,4 +8,3 @@
 6. Make terminal transitions single-shot: exactly one of cancelled/suspended/completed/failed, and `emitComplete` must fire once.
 7. Always pair `registerRunHandle` with `unregisterRunHandle` via `finally`.
 8. Enforce a workflow-level global timeout (30 minutes) that aborts the run and updates status to failed.
-

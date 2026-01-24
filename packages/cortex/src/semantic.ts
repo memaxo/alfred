@@ -7,6 +7,7 @@
  */
 
 import { cosineSimilarity } from "@alfred/embed";
+
 import type { Point4D, Vec2 } from "./types";
 
 // Re-export for backward compatibility

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { HardwareProbe } from "../../src/physical/probe";
 import { SyntheticSignal } from "../../src/physical/signal";
 

@@ -17,4 +17,3 @@ ExecPlans must accurately reflect implementation status. When verifying features
 5. **Partial completion.** Mark ExecPlans as "Mostly Complete ⚠️" when core functionality is done but minor items remain. Document remaining work clearly.
 
 6. **Status accuracy.** ExecPlan status must match actual codebase state. If an ExecPlan says "Proposed" but implementation exists, update it immediately.
-

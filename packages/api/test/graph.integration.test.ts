@@ -3,11 +3,12 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
-import "./utils/mock-hypergraph";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
+
+import "./utils/mock-hypergraph";
 import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 
 let persistHypergraphToDb: typeof import("@alfred/agent/assistant/hypergraph-bridge").persistHypergraphToDb;
@@ -19,8 +20,8 @@ let _ingest: typeof import("@alfred/rag").ingest;
 let setEmbeddingProvider: typeof import("@alfred/rag").setEmbeddingProvider;
 
 const TEST_USER = {
-  id: "graph-integration-user",
   email: "graph.integration@test.local",
+  id: "graph-integration-user",
   name: "Graph Integration",
   roles: ["owner"],
   scopes: ["graph.read", "graph.write", "assistant.write"],
@@ -28,14 +29,14 @@ const TEST_USER = {
 
 function createCaller() {
   const runtime = {
-    requestId: `graph-test-${Date.now()}`,
-    receivedAt: new Date(),
-    method: "POST",
-    url: "http://localhost/trpc",
-    ip: null,
     forwardedFor: [] as string[],
-    userAgent: "bun-test",
+    ip: null,
+    method: "POST",
+    receivedAt: new Date(),
     referer: null,
+    requestId: `graph-test-${Date.now()}`,
+    url: "http://localhost/trpc",
+    userAgent: "bun-test",
   };
 
   const runtimeContext = new RuntimeContext([
@@ -51,10 +52,10 @@ function createCaller() {
   });
 
   return graphRouter.createCaller({
-    session,
+    policy: { obligations: [] },
     runtime,
     runtimeContext,
-    policy: { obligations: [] },
+    session,
   } as Parameters<typeof graphRouter.createCaller>[0]);
 }
 
@@ -68,17 +69,16 @@ async function getNodeIds(resource: string) {
 
 describe("graph router integration (sqlite)", () => {
   beforeAll(async () => {
-    ({ persistHypergraphToDb } = await import(
-      "@alfred/agent/assistant/hypergraph-bridge"
-    ));
+    ({ persistHypergraphToDb } =
+      await import("@alfred/agent/assistant/hypergraph-bridge"));
     const ragModule = await import("@alfred/rag");
     _ingest = ragModule.ingest;
-    setEmbeddingProvider = ragModule.setEmbeddingProvider;
+    ({ setEmbeddingProvider } = ragModule);
     const dbModule = await import("@alfred/db");
-    db = dbModule.db;
+    ({ db } = dbModule);
     const schema = await import("@alfred/db/schema/graph");
-    memoryNodes = schema.memoryNodes;
-    memoryEdges = schema.memoryEdges;
+    ({ memoryNodes } = schema);
+    ({ memoryEdges } = schema);
     ({ graphRouter } = await import("@alfred/api/routers/graph"));
   });
 
@@ -163,9 +163,9 @@ describe("graph router integration (sqlite)", () => {
 
     const inserted = await caller.connect({
       fromId,
-      toId,
       kind: "depends_on",
       resource,
+      toId,
     });
 
     expect(inserted.resource).toBe(resource);
@@ -191,15 +191,15 @@ describe("graph router integration (sqlite)", () => {
     const ragInsert = await db
       .insert(memoryNodes)
       .values({
+        hash: `rag_doc:${source}`,
         kind: "rag_document",
         label: source,
-        resource: "user",
-        hash: `rag_doc:${source}`,
         properties: {
           documentId: source,
           source,
           ragResource: `rag:${source}`,
         },
+        resource: "user",
       })
       .returning();
 
@@ -216,13 +216,13 @@ describe("graph router integration (sqlite)", () => {
     const insertedNodes = await db
       .insert(memoryNodes)
       .values({
+        hash: `reasoning:${resource}`,
         kind: "reasoning",
         label,
-        resource,
-        hash: `reasoning:${resource}`,
         properties: {
           ragDocumentIds: [documentId],
         },
+        resource,
       })
       .returning();
 
@@ -236,14 +236,14 @@ describe("graph router integration (sqlite)", () => {
       .insert(memoryEdges)
       .values({
         fromId: ragNode?.id,
-        toId: reasoningNode.id,
-        kind: "explains",
-        resource: "user",
         hash: `explains:${ragNode?.id}:${reasoningNode.id}`,
-        weight: 1,
+        kind: "explains",
         metadata: {
           documentId,
         },
+        resource: "user",
+        toId: reasoningNode.id,
+        weight: 1,
       })
       .onConflictDoNothing({ target: memoryEdges.hash })
       .returning();
@@ -252,9 +252,9 @@ describe("graph router integration (sqlite)", () => {
 
     // Traverse incoming edges to the reasoning node via graph.runQuery
     const result = await caller.runQuery({
+      direction: "in",
       kind: "traverse",
       nodeId: reasoningNode.id,
-      direction: "in",
       resource: "user",
     });
 

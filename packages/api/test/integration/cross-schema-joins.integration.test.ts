@@ -67,48 +67,48 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       const [run] = await db
         .insert(workflowRuns)
         .values({
-          userId,
-          workflowId: "audit-workflow",
-          status: "completed",
+          completedAt: new Date(),
           inputData: {},
           stateData: {},
-          completedAt: new Date(),
+          status: "completed",
+          userId,
+          workflowId: "audit-workflow",
         })
         .returning();
 
       // Create audit logs for the workflow
       await db.insert(auditLogs).values([
         {
-          userId,
-          policy: "workflow:plan",
-          decision: "allow",
-          reason: "User has required scopes",
-          subject: JSON.stringify({ id: userId, scopes: ["workflow.read"] }),
-          resource: JSON.stringify({ kind: "workflow" }),
           context: JSON.stringify({ workflowId: "audit-workflow" }),
+          decision: "allow",
+          policy: "workflow:plan",
+          reason: "User has required scopes",
+          resource: JSON.stringify({ kind: "workflow" }),
+          subject: JSON.stringify({ id: userId, scopes: ["workflow.read"] }),
+          userId,
         },
         {
-          userId,
-          policy: "workflow:execute",
+          context: JSON.stringify({ workflowId: "audit-workflow" }),
           decision: "deny",
+          policy: "workflow:execute",
           reason: "Missing required scope: workflow.execute",
-          subject: JSON.stringify({ id: userId, scopes: ["workflow.read"] }),
           resource: JSON.stringify({
             kind: "workflow",
             workflowId: "audit-workflow",
           }),
-          context: JSON.stringify({ workflowId: "audit-workflow" }),
+          subject: JSON.stringify({ id: userId, scopes: ["workflow.read"] }),
+          userId,
         },
       ]);
 
       // Join workflow runs with audit logs
       const result = await db
         .select({
+          auditId: auditLogs.id,
+          decision: auditLogs.decision,
+          policy: auditLogs.policy,
           runId: workflowRuns.id,
           workflowId: workflowRuns.workflowId,
-          auditId: auditLogs.id,
-          policy: auditLogs.policy,
-          decision: auditLogs.decision,
         })
         .from(workflowRuns)
         .leftJoin(auditLogs, eq(auditLogs.userId, workflowRuns.userId))
@@ -131,7 +131,6 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       // Create knowledge nodes
       const [nodeId] = await graphRepo.upsertNodes([
         {
-          resource,
           hash: "reasoning-node",
           kind: "reasoning",
           label: "Workflow reasoning step",
@@ -139,6 +138,7 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
             text: "User prefers detailed explanations",
             autonomy: "medium",
           },
+          resource,
           sanitized: true,
         },
       ]);
@@ -147,13 +147,13 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       const [event] = await db
         .insert(workflowEvents)
         .values({
-          runId: crypto.randomUUID(),
-          type: "reasoning",
-          timestamp: new Date(),
           payload: {
             text: "Considering user's preference for detailed explanations",
             nodeId: nodeId[0],
           },
+          runId: crypto.randomUUID(),
+          timestamp: new Date(),
+          type: "reasoning",
         })
         .returning();
 
@@ -178,7 +178,6 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       // Create preference nodes
       await graphRepo.upsertNodes([
         {
-          resource,
           hash: "pref-format",
           kind: "preference",
           label: "Output format preference",
@@ -186,10 +185,10 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
             value: "bullet-points",
             confidence: 0.9,
           },
+          resource,
           sanitized: true,
         },
         {
-          resource,
           hash: "pref-verbosity",
           kind: "preference",
           label: "Verbosity preference",
@@ -197,6 +196,7 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
             value: "detailed",
             confidence: 0.85,
           },
+          resource,
           sanitized: true,
         },
       ]);
@@ -204,9 +204,7 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       // Create workflow runs that use these preferences
       await db.insert(workflowRuns).values([
         {
-          userId,
-          workflowId: "workflow-using-prefs",
-          status: "completed",
+          completedAt: new Date(),
           inputData: {
             preferences: ["bullet-points", "detailed"],
           },
@@ -214,7 +212,9 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
             output:
               "• Detailed point 1\n• Detailed point 2\n• Detailed point 3",
           },
-          completedAt: new Date(),
+          status: "completed",
+          userId,
+          workflowId: "workflow-using-prefs",
         },
       ]);
 
@@ -249,22 +249,22 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
 
       for (const userId of userIds) {
         await db.insert(workflowRuns).values({
-          userId,
-          workflowId: `perf-workflow-${userId}`,
-          status: "completed",
+          completedAt: new Date(),
           inputData: {},
           stateData: {},
-          completedAt: new Date(),
+          status: "completed",
+          userId,
+          workflowId: `perf-workflow-${userId}`,
         });
 
         await db.insert(auditLogs).values({
-          userId,
-          policy: "test:policy",
-          decision: "allow",
-          reason: "Performance test",
-          subject: JSON.stringify({ id: userId }),
-          resource: JSON.stringify({ test: true }),
           context: JSON.stringify({}),
+          decision: "allow",
+          policy: "test:policy",
+          reason: "Performance test",
+          resource: JSON.stringify({ test: true }),
+          subject: JSON.stringify({ id: userId }),
+          userId,
         });
       }
 
@@ -273,8 +273,8 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
 
       const result = await db
         .select({
-          workflowId: workflowRuns.workflowId,
           policy: auditLogs.policy,
+          workflowId: workflowRuns.workflowId,
         })
         .from(workflowRuns)
         .innerJoin(auditLogs, eq(auditLogs.userId, workflowRuns.userId));
@@ -289,9 +289,8 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
     it("uses indexes efficiently for joins", async () => {
       const { db } = await import("@alfred/db");
       const { graphRepo } = await import("@alfred/db");
-      const { memoryNodes, memoryEdges } = await import(
-        "@alfred/db/schema/graph"
-      );
+      const { memoryNodes, memoryEdges } =
+        await import("@alfred/db/schema/graph");
       const { eq } = await import("drizzle-orm");
 
       const resource = "join-perf-test";
@@ -299,11 +298,11 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       // Create nodes
       const nodeIds = await graphRepo.upsertNodes(
         Array.from({ length: 5 }, (_, i) => ({
-          resource,
           hash: `node-${i}`,
           kind: "fact",
           label: `Node ${i}`,
           properties: {},
+          resource,
           sanitized: true,
         }))
       );
@@ -312,11 +311,11 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       await graphRepo.upsertEdges(
         Array.from({ length: 10 }, (_, i) => ({
           fromId: nodeIds[i % nodeIds.length]!,
-          toId: nodeIds[(i + 1) % nodeIds.length]!,
           kind: "relates",
-          weight: 1.0,
-          resource,
           metadata: {},
+          resource,
+          toId: nodeIds[(i + 1) % nodeIds.length]!,
+          weight: 1.0,
         }))
       );
 
@@ -325,9 +324,9 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
 
       const result = await db
         .select({
-          nodeId: memoryNodes.id,
-          label: memoryNodes.label,
           edgeKind: memoryEdges.kind,
+          label: memoryNodes.label,
+          nodeId: memoryNodes.id,
         })
         .from(memoryNodes)
         .innerJoin(memoryEdges, eq(memoryEdges.fromId, memoryNodes.id))
@@ -345,9 +344,8 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
     it("handles multi-table joins", async () => {
       const { db } = await import("@alfred/db");
       const { graphRepo } = await import("@alfred/db");
-      const { workflowRuns, workflowEvents } = await import(
-        "@alfred/db/schema/workflow"
-      );
+      const { workflowRuns, workflowEvents } =
+        await import("@alfred/db/schema/workflow");
       const { memoryNodes } = await import("@alfred/db/schema/graph");
       const { eq, and } = await import("drizzle-orm");
 
@@ -357,11 +355,11 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       // Create data
       const [nodeId] = await graphRepo.upsertNodes([
         {
-          resource,
           hash: "multi-node",
           kind: "reasoning",
           label: "Multi-join test",
           properties: {},
+          resource,
           sanitized: true,
         },
       ]);
@@ -369,22 +367,22 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
       const [run] = await db
         .insert(workflowRuns)
         .values({
-          userId,
-          workflowId: "multijoin-workflow",
-          status: "completed",
+          completedAt: new Date(),
           inputData: { nodeId: nodeId[0] },
           stateData: {},
-          completedAt: new Date(),
+          status: "completed",
+          userId,
+          workflowId: "multijoin-workflow",
         })
         .returning();
 
       const [event] = await db
         .insert(workflowEvents)
         .values({
-          runId: run!.id,
-          type: "reasoning",
-          timestamp: new Date(),
           payload: { nodeId: nodeId[0] },
+          runId: run!.id,
+          timestamp: new Date(),
+          type: "reasoning",
         })
         .returning();
 

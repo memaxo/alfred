@@ -17,11 +17,11 @@
     "typecheck": "tsgo -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {
+    "@ai-sdk/cohere": "^2.0.0",
     "@alfred/db": "workspace:*",
     "@alfred/embed": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/rerank": "workspace:*",
-    "@ai-sdk/cohere": "^2.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {

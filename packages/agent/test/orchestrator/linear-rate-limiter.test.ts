@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { LinearRateLimiter } from "../../src/orchestrator/linear-rate-limiter";
 
 describe("LinearRateLimiter", () => {

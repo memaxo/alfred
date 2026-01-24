@@ -2,6 +2,7 @@
   "name": "@alfred/cortex",
   "version": "0.0.0",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -36,7 +37,6 @@
       "default": "./src/fallback/*.ts"
     }
   },
-  "sideEffects": false,
   "scripts": {
     "build": "tsgo -b",
     "dev": "tsgo -b -w",

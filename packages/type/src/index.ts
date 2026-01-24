@@ -5,6 +5,8 @@
 
 // AgentFS DTOs
 export * from "./agentfs";
+// Task enrichment types (failure context, handoffs, retry resolution)
+export * from "./enrichment";
 // Build-time constants
 export * from "./build-constants";
 // Cognitive domain types

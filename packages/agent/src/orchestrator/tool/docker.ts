@@ -1,21 +1,22 @@
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { logger } from "@alfred/logger";
 import { accessSync, constants as fsConstants } from "node:fs";
 import path from "node:path";
 import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { logger } from "@alfred/logger";
 import { z } from "zod";
-import type { DirectoryHandle } from "../../security/filesystem.js";
+
+import { type DirectoryHandle } from "../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
   openDirectorySecure,
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
-import { withPolicyApproval } from "./approval.js";
-import type { ToolWriter } from "./shared/context.js";
+import { withPolicyApproval, type AITool } from "./approval.js";
+import { type ToolWriter } from "./shared/context.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -35,9 +36,9 @@ function assertAllowedDirectory(candidate: string) {
       error instanceof DirectoryAccessError &&
       error.code === "not_directory"
     ) {
-      throw new Error("docker_invalid_cwd_not_directory");
+      throw new Error("docker_invalid_cwd_not_directory", { cause: error });
     }
-    throw new Error("docker_invalid_cwd");
+    throw new Error("docker_invalid_cwd", { cause: error });
   } finally {
     handle?.close();
   }
@@ -124,8 +125,8 @@ async function enforcePolicy(input: DockerInput) {
     // not tool-specific operation names.
     action: scopes[0] ?? "deploy.write",
     resource: {
-      kind: "deploy",
       id: input.name ?? input.tag ?? "runtime",
+      kind: "deploy",
     },
   });
 }
@@ -147,9 +148,9 @@ function acquireCwdHandle(candidate: string | undefined): DirectoryHandle {
       error instanceof DirectoryAccessError &&
       error.code === "not_directory"
     ) {
-      throw new Error("docker_invalid_cwd_not_directory");
+      throw new Error("docker_invalid_cwd_not_directory", { cause: error });
     }
-    throw new Error("docker_invalid_cwd");
+    throw new Error("docker_invalid_cwd", { cause: error });
   }
 }
 
@@ -192,8 +193,6 @@ async function runDocker({
 }) {
   // #region agent log
   fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       location: "docker.ts:runDocker:entry",
       message: "runDocker called",
@@ -208,6 +207,8 @@ async function runDocker({
       runId: "pre-fix",
       hypothesisId: "A,B,C,D",
     }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   }).catch(() => {});
   // #endregion
 
@@ -229,8 +230,8 @@ async function runDocker({
   const command = resolveExecutable(process.env.DOCKER_BIN ?? "docker");
   if (debug) {
     logger.debug("docker_spawn", {
-      command,
       args: redactArgs(args),
+      command,
       cwd: cwdHandle.path,
     });
   }
@@ -251,26 +252,24 @@ async function runDocker({
           ...process.env,
           PATH: process.env.PATH ?? "",
         },
-        stdout: "pipe",
         stderr: "pipe",
         stdin: "ignore",
+        stdout: "pipe",
       })
     : spawnWithSecureCwd({
-        cwdHandle,
-        cmd: command,
         args,
+        cmd: command,
+        cwdHandle,
         env: {
           PATH: process.env.PATH ?? "",
         },
-        stdout: "pipe",
         stderr: "pipe",
         stdin: "ignore",
+        stdout: "pipe",
       });
 
   // #region agent log
   fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       location: "docker.ts:runDocker:afterSpawn",
       message: "spawn returned",
@@ -287,6 +286,8 @@ async function runDocker({
       runId: "post-fix-v9",
       hypothesisId: "C",
     }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   }).catch(() => {});
   // #endregion
 
@@ -295,9 +296,9 @@ async function runDocker({
   }
 
   const accumulator = {
-    stdout: "",
-    stderr: "",
     capturedBytes: 0,
+    stderr: "",
+    stdout: "",
     truncated: false,
   };
 
@@ -308,7 +309,7 @@ async function runDocker({
       // noop
     }
     void Promise.resolve(
-      writer?.write?.({ type: "notice", message: "docker_timeout" })
+      writer?.write?.({ message: "docker_timeout", type: "notice" })
     ).catch(() => {});
   }, timeoutSec * 1000);
 
@@ -321,8 +322,6 @@ async function runDocker({
   try {
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:runDocker:awaitExitedFirst",
         message: "awaiting proc.exited FIRST",
@@ -332,13 +331,13 @@ async function runDocker({
         runId: "post-fix-v9",
         hypothesisId: "F",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
     exitCode = await proc.exited;
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:runDocker:exitedFirst",
         message: "proc.exited resolved FIRST",
@@ -348,6 +347,8 @@ async function runDocker({
         runId: "post-fix-v9",
         hypothesisId: "F",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
   } catch {
@@ -372,22 +373,20 @@ async function runDocker({
             constructor?: { name?: unknown };
           };
           const streamInfo = {
-            hasTextMethod,
-            streamLocked: stdoutDebug.locked,
-            streamState: stdoutDebug.state,
-            isReadableStream: proc.stdout instanceof ReadableStream,
             constructorName:
               typeof stdoutDebug.constructor?.name === "string"
                 ? stdoutDebug.constructor.name
                 : String(stdoutDebug.constructor?.name ?? ""),
-            hasGetReader: typeof stdoutDebug.getReader === "function",
             exitCode,
+            hasGetReader: typeof stdoutDebug.getReader === "function",
+            hasTextMethod,
+            isReadableStream: proc.stdout instanceof ReadableStream,
+            streamLocked: stdoutDebug.locked,
+            streamState: stdoutDebug.state,
           };
           fetch(
             "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
             {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 location: "docker.ts:runDocker:stdoutReaderStart",
                 message: "stdout reader starting after exit",
@@ -397,6 +396,8 @@ async function runDocker({
                 runId: "post-fix-v9",
                 hypothesisId: "F",
               }),
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
             }
           ).catch(() => {});
           // #endregion
@@ -411,8 +412,6 @@ async function runDocker({
               fetch(
                 "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                 {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     location: "docker.ts:runDocker:stdoutIsUint8Array",
                     message: "stdout is Uint8Array (spawnSync-like)",
@@ -422,6 +421,8 @@ async function runDocker({
                     runId: "post-fix-v9",
                     hypothesisId: "F",
                   }),
+                  headers: { "Content-Type": "application/json" },
+                  method: "POST",
                 }
               ).catch(() => {});
               // #endregion
@@ -436,8 +437,6 @@ async function runDocker({
               fetch(
                 "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                 {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     location: "docker.ts:runDocker:stdoutBeforeRead",
                     message: "stdout before read",
@@ -447,6 +446,8 @@ async function runDocker({
                     runId: "post-fix-v9",
                     hypothesisId: "F",
                   }),
+                  headers: { "Content-Type": "application/json" },
+                  method: "POST",
                 }
               ).catch(() => {});
               // #endregion
@@ -459,8 +460,6 @@ async function runDocker({
                 fetch(
                   "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                   {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       location: "docker.ts:runDocker:stdoutText",
                       message: "stdout.text() completed",
@@ -473,6 +472,8 @@ async function runDocker({
                       runId: "post-fix-v9",
                       hypothesisId: "F",
                     }),
+                    headers: { "Content-Type": "application/json" },
+                    method: "POST",
                   }
                 ).catch(() => {});
                 // #endregion
@@ -484,8 +485,6 @@ async function runDocker({
                   fetch(
                     "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                     {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
                         location: "docker.ts:runDocker:stdoutResponseText",
                         message:
@@ -499,10 +498,12 @@ async function runDocker({
                         runId: "post-fix-v9",
                         hypothesisId: "F",
                       }),
+                      headers: { "Content-Type": "application/json" },
+                      method: "POST",
                     }
                   ).catch(() => {});
                   // #endregion
-                } catch (_responseError) {
+                } catch {
                   // Final fallback to getReader()
                   const reader = proc.stdout.getReader();
                   let _chunkCount = 0;
@@ -532,8 +533,6 @@ async function runDocker({
               fetch(
                 "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                 {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     location: "docker.ts:runDocker:stdoutUnknownType",
                     message: "stdout is unknown type",
@@ -549,6 +548,8 @@ async function runDocker({
                     runId: "post-fix-v9",
                     hypothesisId: "F",
                   }),
+                  headers: { "Content-Type": "application/json" },
+                  method: "POST",
                 }
               ).catch(() => {});
               // #endregion
@@ -565,7 +566,7 @@ async function runDocker({
                 }
               }
               void Promise.resolve(
-                writer?.write?.({ type: "stdout", text })
+                writer?.write?.({ text, type: "stdout" })
               ).catch(() => {});
             }
           } catch (error) {
@@ -573,8 +574,6 @@ async function runDocker({
             fetch(
               "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
               {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   location: "docker.ts:runDocker:stdoutReaderError",
                   message: "stdout reader error",
@@ -587,6 +586,8 @@ async function runDocker({
                   runId: "post-fix-v9",
                   hypothesisId: "A",
                 }),
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
               }
             ).catch(() => {});
             // #endregion
@@ -600,8 +601,6 @@ async function runDocker({
             fetch(
               "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
               {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   location: "docker.ts:runDocker:stdoutReaderFinally",
                   message: "stdout reader finally",
@@ -611,6 +610,8 @@ async function runDocker({
                   runId: "post-fix-v9",
                   hypothesisId: "A",
                 }),
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
               }
             ).catch(() => {});
             // #endregion
@@ -631,8 +632,6 @@ async function runDocker({
           fetch(
             "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
             {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 location: "docker.ts:runDocker:stderrReaderStart",
                 message: "stderr reader starting after exit",
@@ -642,6 +641,8 @@ async function runDocker({
                 runId: "post-fix-v9",
                 hypothesisId: "B",
               }),
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
             }
           ).catch(() => {});
           // #endregion
@@ -656,8 +657,6 @@ async function runDocker({
               fetch(
                 "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                 {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     location: "docker.ts:runDocker:stderrIsUint8Array",
                     message: "stderr is Uint8Array (spawnSync-like)",
@@ -667,6 +666,8 @@ async function runDocker({
                     runId: "post-fix-v9",
                     hypothesisId: "B",
                   }),
+                  headers: { "Content-Type": "application/json" },
+                  method: "POST",
                 }
               ).catch(() => {});
               // #endregion
@@ -681,8 +682,6 @@ async function runDocker({
                 fetch(
                   "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                   {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       location: "docker.ts:runDocker:stderrText",
                       message: "stderr.text() completed",
@@ -695,6 +694,8 @@ async function runDocker({
                       runId: "post-fix-v9",
                       hypothesisId: "B",
                     }),
+                    headers: { "Content-Type": "application/json" },
+                    method: "POST",
                   }
                 ).catch(() => {});
                 // #endregion
@@ -706,8 +707,6 @@ async function runDocker({
                   fetch(
                     "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                     {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
                         location: "docker.ts:runDocker:stderrResponseText",
                         message:
@@ -721,10 +720,12 @@ async function runDocker({
                         runId: "post-fix-v9",
                         hypothesisId: "B",
                       }),
+                      headers: { "Content-Type": "application/json" },
+                      method: "POST",
                     }
                   ).catch(() => {});
                   // #endregion
-                } catch (_responseError) {
+                } catch {
                   // Final fallback to getReader()
                   const reader = proc.stderr.getReader();
                   while (true) {
@@ -752,8 +753,6 @@ async function runDocker({
               fetch(
                 "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
                 {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     location: "docker.ts:runDocker:stderrUnknownType",
                     message: "stderr is unknown type",
@@ -772,6 +771,8 @@ async function runDocker({
                     runId: "post-fix-v9",
                     hypothesisId: "B",
                   }),
+                  headers: { "Content-Type": "application/json" },
+                  method: "POST",
                 }
               ).catch(() => {});
               // #endregion
@@ -784,7 +785,7 @@ async function runDocker({
                 accumulator.stderr = text.slice(0, OUTPUT_CAP_BYTES);
               }
               void Promise.resolve(
-                writer?.write?.({ type: "stderr", text })
+                writer?.write?.({ text, type: "stderr" })
               ).catch(() => {});
             }
           } catch (error) {
@@ -792,8 +793,6 @@ async function runDocker({
             fetch(
               "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
               {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   location: "docker.ts:runDocker:stderrReaderError",
                   message: "stderr reader error",
@@ -806,6 +805,8 @@ async function runDocker({
                   runId: "post-fix-v9",
                   hypothesisId: "B",
                 }),
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
               }
             ).catch(() => {});
             // #endregion
@@ -819,8 +820,6 @@ async function runDocker({
             fetch(
               "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
               {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   location: "docker.ts:runDocker:stderrReaderFinally",
                   message: "stderr reader finally",
@@ -833,6 +832,8 @@ async function runDocker({
                   runId: "post-fix-v9",
                   hypothesisId: "B",
                 }),
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
               }
             ).catch(() => {});
             // #endregion
@@ -846,8 +847,6 @@ async function runDocker({
   // Wait for streams to complete (process already exited)
   // #region agent log
   fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       location: "docker.ts:runDocker:beforeStreams",
       message: "before awaiting streams",
@@ -857,13 +856,13 @@ async function runDocker({
       runId: "post-fix-v9",
       hypothesisId: "F",
     }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   }).catch(() => {});
   // #endregion
   await Promise.allSettled([stdoutPromise, stderrPromise]);
   // #region agent log
   fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       location: "docker.ts:runDocker:afterStreams",
       message: "after streams completed",
@@ -879,28 +878,28 @@ async function runDocker({
       runId: "post-fix-v9",
       hypothesisId: "F",
     }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   }).catch(() => {});
   // #endregion
   if (debug) {
     logger.debug("docker_completed", {
-      exitCode,
-      stdoutBytes: Buffer.byteLength(accumulator.stdout),
-      stderrBytes: Buffer.byteLength(accumulator.stderr),
-      truncated: accumulator.truncated,
       durationMs: Math.round(performance.now() - startMs),
+      exitCode,
+      stderrBytes: Buffer.byteLength(accumulator.stderr),
+      stdoutBytes: Buffer.byteLength(accumulator.stdout),
+      truncated: accumulator.truncated,
     });
   }
 
   const result = {
     exitCode,
-    stdout: accumulator.stdout.trim(),
     stderr: accumulator.stderr.trim(),
+    stdout: accumulator.stdout.trim(),
     truncated: accumulator.truncated,
   };
   // #region agent log
   fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       location: "docker.ts:runDocker:return",
       message: "runDocker returning",
@@ -916,12 +915,17 @@ async function runDocker({
       runId: "pre-fix",
       hypothesisId: "A,B,D",
     }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   }).catch(() => {});
   // #endregion
   return result;
 }
 
-type InspectPortMapping = { host: number; container: number };
+interface InspectPortMapping {
+  host: number;
+  container: number;
+}
 
 function parseInspectPorts(raw: unknown, containerPort?: number) {
   if (!Array.isArray(raw) || raw.length === 0) {
@@ -989,15 +993,15 @@ function executeBuild(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args,
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.exitCode !== 0) {
       throw new Error("docker_build_failed");
     }
 
-    return { ok: true as const, details: { name: tag } };
+    return { details: { name: tag }, ok: true as const };
   });
 }
 
@@ -1080,8 +1084,6 @@ function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
 
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:executeRun:beforeRunDocker",
         message: "executeRun calling runDocker",
@@ -1096,6 +1098,8 @@ function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
         runId: "pre-fix",
         hypothesisId: "D",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
 
@@ -1127,8 +1131,6 @@ function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
 
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:executeRun:beforeDockerRun",
         message: "before docker run",
@@ -1147,6 +1149,8 @@ function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
         runId: "post-fix-v17",
         hypothesisId: "F",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
 
@@ -1164,7 +1168,7 @@ function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
 set -e
 cd "${spawnCwd}"
 export DOCKER_BUILDKIT=0
-${command} ${args.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")} > "${outputPath}" 2>&1
+${command} ${args.map((a) => `"${a.replaceAll(/"/g, String.raw`\"`)}"`).join(" ")} > "${outputPath}" 2>&1
 EXIT_CODE=$?
 echo "$EXIT_CODE" > "${outputPath}.exit"
 exit $EXIT_CODE
@@ -1180,14 +1184,14 @@ exit $EXIT_CODE
       // Execute script
       const proc = Bun.spawn(["bash", scriptPath], {
         cwd: spawnCwd,
-        stdin: "ignore",
-        stdout: "pipe",
-        stderr: "pipe",
         env: {
           ...process.env,
           PATH: process.env.PATH ?? "",
           DOCKER_BUILDKIT: "0",
         },
+        stderr: "pipe",
+        stdin: "ignore",
+        stdout: "pipe",
       });
 
       // Read script stderr
@@ -1233,8 +1237,6 @@ exit $EXIT_CODE
         fetch(
           "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               location: "docker.ts:executeRun:dockerOutput",
               message: "docker output from file",
@@ -1251,6 +1253,8 @@ exit $EXIT_CODE
               runId: "post-fix-v18",
               hypothesisId: "G",
             }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         ).catch(() => {});
         // #endregion
@@ -1260,8 +1264,6 @@ exit $EXIT_CODE
         fetch(
           "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               location: "docker.ts:executeRun:dockerOutputError",
               message: "failed to read docker output file",
@@ -1271,6 +1273,8 @@ exit $EXIT_CODE
               runId: "post-fix-v18",
               hypothesisId: "G",
             }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         ).catch(() => {});
         // #endregion
@@ -1289,8 +1293,6 @@ exit $EXIT_CODE
 
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:executeRun:afterDockerRun",
         message: "after docker run via Bun.$",
@@ -1306,6 +1308,8 @@ exit $EXIT_CODE
         runId: "post-fix-v17",
         hypothesisId: "F",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
 
@@ -1322,8 +1326,6 @@ exit $EXIT_CODE
         fetch(
           "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               location: "docker.ts:executeRun:containerVerification",
               message: "container verification after run",
@@ -1338,6 +1340,8 @@ exit $EXIT_CODE
               runId: "post-fix-v18",
               hypothesisId: "G",
             }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         ).catch(() => {});
         // #endregion
@@ -1346,8 +1350,6 @@ exit $EXIT_CODE
         fetch(
           "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               location: "docker.ts:executeRun:containerVerificationError",
               message: "container verification error",
@@ -1360,6 +1362,8 @@ exit $EXIT_CODE
               runId: "post-fix-v18",
               hypothesisId: "G",
             }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         ).catch(() => {});
         // #endregion
@@ -1382,8 +1386,6 @@ exit $EXIT_CODE
         fetch(
           "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               location: "docker.ts:executeRun:inspectFallback",
               message: "inspect fallback succeeded",
@@ -1393,6 +1395,8 @@ exit $EXIT_CODE
               runId: "post-fix-v17",
               hypothesisId: "F",
             }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         ).catch(() => {});
         // #endregion
@@ -1401,8 +1405,6 @@ exit $EXIT_CODE
         fetch(
           "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               location: "docker.ts:executeRun:inspectFailed",
               message: "inspect fallback failed",
@@ -1412,6 +1414,8 @@ exit $EXIT_CODE
               runId: "post-fix-v17",
               hypothesisId: "F",
             }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         ).catch(() => {});
         // #endregion
@@ -1420,15 +1424,13 @@ exit $EXIT_CODE
 
     const result = {
       exitCode,
-      stdout: finalStdout,
       stderr: stderr.trim(),
+      stdout: finalStdout,
       truncated: false,
     };
 
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:executeRun:afterRunDocker",
         message: "executeRun got result from runDocker",
@@ -1445,6 +1447,8 @@ exit $EXIT_CODE
         runId: "pre-fix",
         hypothesisId: "A,B,D",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
 
@@ -1470,8 +1474,6 @@ exit $EXIT_CODE
       fetch(
         "http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3",
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             location: "docker.ts:executeRun:containerVerification",
             message: "container verification",
@@ -1481,6 +1483,8 @@ exit $EXIT_CODE
             runId: "post-fix-v17",
             hypothesisId: "F",
           }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         }
       ).catch(() => {});
       // #endregion
@@ -1490,8 +1494,6 @@ exit $EXIT_CODE
 
     // #region agent log
     fetch("http://127.0.0.1:7243/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         location: "docker.ts:executeRun:afterParseContainerId",
         message: "parsed containerId",
@@ -1506,6 +1508,8 @@ exit $EXIT_CODE
         runId: "post-fix-v17",
         hypothesisId: "F",
       }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     }).catch(() => {});
     // #endregion
 
@@ -1529,7 +1533,6 @@ exit $EXIT_CODE
       : mapped[0];
 
     return {
-      ok: true as const,
       details: {
         name,
         containerId,
@@ -1537,6 +1540,7 @@ exit $EXIT_CODE
         hostPort: selected?.host ?? input.hostPort ?? null,
         ports: mapped,
       },
+      ok: true as const,
     };
   });
 }
@@ -1611,8 +1615,8 @@ function executeRun(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args,
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.exitCode !== 0) {
@@ -1624,8 +1628,8 @@ function executeRun(input: DockerInput, writer: ToolWriter) {
     const inspectResult = await runDocker({
       args: ["inspect", name],
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (inspectResult.exitCode !== 0) {
@@ -1658,7 +1662,6 @@ function executeRun(input: DockerInput, writer: ToolWriter) {
     }
 
     return {
-      ok: true as const,
       details: {
         name,
         containerId,
@@ -1666,6 +1669,7 @@ function executeRun(input: DockerInput, writer: ToolWriter) {
         hostPort: selected?.host ?? input.hostPort ?? null,
         ports: mapped,
       },
+      ok: true as const,
     };
   });
 }
@@ -1677,15 +1681,15 @@ function executeStart(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args: ["start", name],
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.exitCode !== 0) {
       throw new Error("docker_start_failed");
     }
 
-    return { ok: true as const, details: { name } };
+    return { details: { name }, ok: true as const };
   });
 }
 
@@ -1696,15 +1700,15 @@ function executeStop(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args: ["stop", name],
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.exitCode !== 0) {
       throw new Error("docker_stop_failed");
     }
 
-    return { ok: true as const, details: { name } };
+    return { details: { name }, ok: true as const };
   });
 }
 
@@ -1715,15 +1719,15 @@ function executeRemove(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args: ["rm", "-f", name],
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.exitCode !== 0) {
       throw new Error("docker_remove_failed");
     }
 
-    return { ok: true as const, details: { name } };
+    return { details: { name }, ok: true as const };
   });
 }
 
@@ -1734,8 +1738,8 @@ function executeInspect(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args: ["inspect", name],
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.exitCode !== 0) {
@@ -1768,8 +1772,8 @@ function executeInspect(input: DockerInput, writer: ToolWriter) {
     }
 
     return {
-      ok: true as const,
       details: { ports, containerId, running },
+      ok: true as const,
     };
   });
 }
@@ -1789,17 +1793,17 @@ function executeLogs(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args,
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     if (result.truncated) {
       await Promise.resolve(
         writer?.write?.({
-          type: "notice",
           message: "docker_logs_truncated",
           name,
           tail: input.tail,
+          type: "notice",
         })
       ).catch(() => {});
     }
@@ -1809,7 +1813,6 @@ function executeLogs(input: DockerInput, writer: ToolWriter) {
     }
 
     return {
-      ok: true as const,
       details: {
         name,
         exitCode: result.exitCode,
@@ -1817,6 +1820,7 @@ function executeLogs(input: DockerInput, writer: ToolWriter) {
         error: result.stderr || undefined,
         truncated: result.truncated,
       },
+      ok: true as const,
     };
   });
 }
@@ -1827,8 +1831,8 @@ function executeWait(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args: ["wait", name],
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
     if (result.exitCode !== 0) {
       throw new Error("docker_wait_failed");
@@ -1836,11 +1840,11 @@ function executeWait(input: DockerInput, writer: ToolWriter) {
     const parsed = Number.parseInt(result.stdout.trim(), 10);
     const containerExitCode = Number.isNaN(parsed) ? null : parsed;
     return {
-      ok: true as const,
       details: {
         name,
         exitCode: containerExitCode ?? undefined,
       },
+      ok: true as const,
     };
   });
 }
@@ -1867,10 +1871,10 @@ async function executeProbe(input: DockerInput, writer: ToolWriter) {
 
     Promise.resolve(
       writer?.write?.({
-        type: "notice",
         message: "docker_probe_result",
-        status: response.status,
         ok: response.ok,
+        status: response.status,
+        type: "notice",
       })
     ).catch(() => {});
 
@@ -1883,16 +1887,16 @@ async function executeProbe(input: DockerInput, writer: ToolWriter) {
     }
 
     return {
-      ok: true as const,
       details: {
         status: response.status,
         body,
         truncated,
       },
+      ok: true as const,
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("docker_probe_timeout");
+      throw new Error("docker_probe_timeout", { cause: error });
     }
     throw error;
   } finally {
@@ -1932,12 +1936,11 @@ function executeExec(input: DockerInput, writer: ToolWriter) {
     const result = await runDocker({
       args,
       cwdHandle,
-      writer,
       timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+      writer,
     });
 
     return {
-      ok: true as const,
       details: {
         name,
         exitCode: result.exitCode,
@@ -1945,12 +1948,12 @@ function executeExec(input: DockerInput, writer: ToolWriter) {
         error: result.stderr || undefined,
         truncated: result.truncated,
       },
+      ok: true as const,
     };
   });
 }
 
 const dockerOutputSchema = z.object({
-  ok: z.boolean(),
   details: z
     .object({
       name: z.string().optional(),
@@ -1969,15 +1972,13 @@ const dockerOutputSchema = z.object({
       body: z.string().optional(),
     })
     .optional(),
+  ok: z.boolean(),
 });
 
 export type DockerToolOutput = z.infer<typeof dockerOutputSchema>;
 
 export const toolDocker = {
-  name: "docker",
   description: "Manage local Docker containers for preview deployments.",
-  inputSchema: dockerInputSchema,
-  outputSchema: dockerOutputSchema,
   execute: async ({
     input,
     writer,
@@ -2012,29 +2013,35 @@ export const toolDocker = {
         throw new Error("docker_action_not_supported");
     }
   },
+  inputSchema: dockerInputSchema,
+  name: "docker",
+  outputSchema: dockerOutputSchema,
 };
 
 const aiToolDockerBase = {
-  name: toolDocker.name,
   description: toolDocker.description,
-  parameters: toolDocker.inputSchema,
-  inputSchema: toolDocker.inputSchema,
   execute: async (input: DockerInput) => toolDocker.execute({ input }),
+  inputSchema: toolDocker.inputSchema,
+  name: toolDocker.name,
+  parameters: toolDocker.inputSchema,
 };
 
-export const aiToolDocker = withPolicyApproval(aiToolDockerBase, (input) => {
-  const scopes =
-    input.action === "exec.probe" ? ["deploy.read"] : ["deploy.write"];
-  return {
-    action: `docker.${input.action}`,
-    resource: {
-      kind: "deploy",
-      id: input.name ?? input.tag ?? "runtime",
-    },
-    scopes,
-    authz: input.authz,
-  };
-});
+export const aiToolDocker: AITool<DockerInput, any> = withPolicyApproval(
+  aiToolDockerBase,
+  (input) => {
+    const scopes =
+      input.action === "exec.probe" ? ["deploy.read"] : ["deploy.write"];
+    return {
+      action: `docker.${input.action}`,
+      authz: input.authz,
+      resource: {
+        kind: "deploy",
+        id: input.name ?? input.tag ?? "runtime",
+      },
+      scopes,
+    };
+  }
+);
 
 export type ToolDocker = typeof toolDocker;
 

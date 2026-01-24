@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ExecutionPlan } from "@alfred/cognitive";
+
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { PlanRunner } from "../src/loops/plan-runner";
 
 const mockTools = {

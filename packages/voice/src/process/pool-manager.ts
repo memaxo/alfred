@@ -1,5 +1,6 @@
-import { join } from "node:path";
 import { logger } from "@alfred/logger";
+import { join } from "node:path";
+
 import { VoiceRegistry } from "../server/registry";
 import { resolveVoiceDir } from "./base";
 import { type ProcessConfig as STTConfig, STTPool } from "./stt";

@@ -1,7 +1,9 @@
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
-import { toolTicket } from "../orchestrator/tool/ticket";
+
 import type { WorkflowInputPayload } from "./schema";
+
+import { toolTicket } from "../orchestrator/tool/ticket";
 
 const MAX_LINEAR_TITLE = 240;
 

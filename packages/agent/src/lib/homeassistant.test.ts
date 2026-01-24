@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
 import { HomeAssistant, type HomeAssistantError } from "./homeassistant";
 
 const mockBaseUrl = "http://homeassistant.local:8123";

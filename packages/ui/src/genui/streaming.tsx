@@ -6,9 +6,11 @@
  */
 
 import type { UIComponent, UIInterpreterOptions } from "@alfred/type/genui";
-import { uiComponentSchema } from "@alfred/type/genui.zod";
 import type { ReactNode } from "react";
+
+import { uiComponentSchema } from "@alfred/type/genui.zod";
 import { createElement } from "react";
+
 import { GenUIErrorBoundary } from "./boundary";
 import { renderUISchema } from "./interpreter";
 

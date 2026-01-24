@@ -1,11 +1,12 @@
-import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+
 import { verifyMcpSessionToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
 import { z } from "zod";
 
 export type RuntimeMcpServerOptions = {

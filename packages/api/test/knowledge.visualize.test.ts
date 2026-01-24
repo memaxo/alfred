@@ -3,6 +3,10 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
+import { createTestSession } from "@alfred/test-kit/auth";
+
+import "./utils/mock-hypergraph";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   afterAll,
   afterEach,
@@ -12,9 +16,6 @@ import {
   it,
   vi,
 } from "bun:test";
-import "./utils/mock-hypergraph";
-import { createTestSession } from "@alfred/test-kit/auth";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 import { eq } from "drizzle-orm";
 
 let db: typeof import("@alfred/db").db;

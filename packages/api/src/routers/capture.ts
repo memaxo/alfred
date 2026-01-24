@@ -12,15 +12,16 @@ import { logger } from "@alfred/logger";
 import { scoreRoute } from "@alfred/sense";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 import { publishInboxEvent } from "./inbox";
 
 const evidenceInput = z
   .object({
     capturedAt: z.string().datetime().optional(),
-    tags: z.array(z.string().min(1)).max(32).optional(),
     device: z.string().min(1).max(128).optional(),
     surface: z.enum(["native", "web", "unknown"]).optional(),
+    tags: z.array(z.string().min(1)).max(32).optional(),
   })
   .partial()
   .optional();
@@ -31,29 +32,29 @@ const payloadInput = z.discriminatedUnion("kind", [
     text: z.string().min(1).max(10_000),
   }),
   z.object({
-    kind: z.literal("voice"),
     audioBase64: z.string().min(1),
-    mimeType: z.string().min(1).default("audio/m4a"),
+    kind: z.literal("voice"),
     language: z.string().min(2).max(10).optional(),
+    mimeType: z.string().min(1).default("audio/m4a"),
   }),
   z.object({
-    kind: z.literal("photo"),
     imageBase64: z.string().min(1),
+    kind: z.literal("photo"),
     mimeType: z.string().min(1).default("image/jpeg"),
   }),
 ]);
 
 const captureCreateInput = z.object({
-  payload: payloadInput,
   evidence: evidenceInput,
+  payload: payloadInput,
 });
 
 const captureTriageInput = z.object({
   captureId: z.string().uuid(),
   destination: z.enum(["note", "reminder"]),
+  due: z.string().datetime().optional(),
   projectId: z.string().uuid().optional(),
   title: z.string().min(1).max(256).optional(),
-  due: z.string().datetime().optional(),
 });
 
 async function transcribeVoiceClip({
@@ -72,17 +73,16 @@ async function transcribeVoiceClip({
     import("../voice/pools"),
   ]);
 
-  const { resolveSttLanguagePreference, DEFAULT_STT_MODEL } = await import(
-    "@alfred/voice/services/config"
-  );
+  const { resolveSttLanguagePreference, DEFAULT_STT_MODEL } =
+    await import("@alfred/voice/services/config");
 
   const sttLanguage = await resolveSttLanguagePreference(userId, language);
   const { sttPool } = getVoicePools();
   const result = await transcribeLocal(sttPool, {
     audioBase64,
+    language: sttLanguage,
     mimeType,
     model: DEFAULT_STT_MODEL,
-    language: sttLanguage,
   });
   return (result.text ?? "").trim();
 }
@@ -126,9 +126,9 @@ async function processPhotoCapture({
 
   // Embed the image using Qwen multimodal provider
   const embedding = await provider.embed({
+    mimeType,
     type: "image",
     url: dataUrl,
-    mimeType,
   });
 
   // For now, use a placeholder description
@@ -136,15 +136,15 @@ async function processPhotoCapture({
   const text = "[Photo capture]";
 
   logger.info("photo_capture_embedded", {
-    mimeType,
     embeddingLength: embedding.length,
+    mimeType,
     modelId: MODEL_IDS.QWEN3_VL_2B,
   });
 
   return {
-    text,
     embedding,
     modelId: MODEL_IDS.QWEN3_VL_2B,
+    text,
   };
 }
 
@@ -152,7 +152,7 @@ export const captureRouter = router({
   create: authedProcedure
     .input(captureCreateInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -166,9 +166,9 @@ export const captureRouter = router({
 
       const evidence = {
         capturedAt,
-        tags: input.evidence?.tags,
         device: input.evidence?.device,
         surface: input.evidence?.surface,
+        tags: input.evidence?.tags,
       };
 
       let derivedText = "";
@@ -178,10 +178,10 @@ export const captureRouter = router({
         derivedText = input.payload.text.trim();
       } else if (input.payload.kind === "voice") {
         derivedText = await transcribeVoiceClip({
-          userId: session.user.id,
           audioBase64: input.payload.audioBase64,
-          mimeType: input.payload.mimeType,
           language: input.payload.language,
+          mimeType: input.payload.mimeType,
+          userId: session.user.id,
         });
       } else if (input.payload.kind === "photo") {
         // Process photo capture with multimodal embedding
@@ -204,10 +204,10 @@ export const captureRouter = router({
       }
 
       const capture = await createCapture({
-        userId: session.user.id,
-        kind: input.payload.kind,
         evidence,
+        kind: input.payload.kind,
         sourceDevice: input.evidence?.device,
+        userId: session.user.id,
       });
 
       const bundle = await createBundle({
@@ -224,18 +224,18 @@ export const captureRouter = router({
               `capture:photo:${capture.id}`,
               `Photo capture ${capturedAt.toISOString()}`,
               undefined,
-              { kind: "photo", captureId: capture.id }
+              { captureId: capture.id, kind: "photo" }
             );
             await ragRepo.addChunks(document.id, [
               {
                 content: derivedText,
-                order: 0,
                 embedding: photoEmbedding.embedding,
                 embeddingModelId: photoEmbedding.modelId,
                 metadata: {
                   captureId: capture.id,
                   kind: "photo",
                 },
+                order: 0,
               },
             ]);
             logger.info("photo_capture_rag_stored", {
@@ -255,20 +255,20 @@ export const captureRouter = router({
       const route = scoreRoute({ text: derivedText, workingSet });
 
       const receipt = await upsertReceipt({
-        captureId: capture.id,
-        decision: "route",
-        summary: route.summary,
-        evidence: route.evidence,
-        outcome: route.outcome,
         alternatives: route.alternatives,
+        captureId: capture.id,
         confidence: route.confidence,
         corrections: [],
+        decision: "route",
+        evidence: route.evidence,
+        outcome: route.outcome,
+        summary: route.summary,
       });
 
-      const item = { capture, bundle, receipt };
+      const item = { bundle, capture, receipt };
       publishInboxEvent(session.user.id, {
-        type: "inbox.updated",
         payload: { item },
+        type: "inbox.updated",
       });
 
       return item;
@@ -277,7 +277,7 @@ export const captureRouter = router({
   triage: authedProcedure
     .input(captureTriageInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -286,8 +286,8 @@ export const captureRouter = router({
       }
 
       const item = await getInboxItem({
-        userId: session.user.id,
         captureId: input.captureId,
+        userId: session.user.id,
       });
       if (!item?.bundle) {
         throw new TRPCError({
@@ -329,8 +329,8 @@ export const captureRouter = router({
           "user",
           [
             {
-              kind: "note",
               id: note.id,
+              kind: "note",
               label: mirrorLabel,
               properties: {
                 entity: { kind: "note", id: note.id },
@@ -355,47 +355,47 @@ export const captureRouter = router({
             await ingest(`note:${note.id}`, trimmed);
           } catch (error) {
             logger.warn("sense_note_embedding_failed", {
-              noteId: note.id,
               error: error instanceof Error ? error.message : String(error),
+              noteId: note.id,
             });
           }
         })();
 
         await updateCaptureStatus({
-          userId: session.user.id,
           id: input.captureId,
           status: "converted",
+          userId: session.user.id,
         });
 
         if (item.receipt) {
           await upsertReceipt({
+            alternatives: item.receipt.alternatives,
             captureId: input.captureId,
+            confidence: item.receipt.confidence,
+            corrections: item.receipt.corrections,
             decision: item.receipt.decision,
-            summary: item.receipt.summary,
             evidence: item.receipt.evidence,
             outcome: {
               ...item.receipt.outcome,
               kind: "note",
               targetId: note.id,
             },
-            alternatives: item.receipt.alternatives,
-            confidence: item.receipt.confidence,
-            corrections: item.receipt.corrections,
+            summary: item.receipt.summary,
           });
         }
 
         const refreshed = await getInboxItem({
-          userId: session.user.id,
           captureId: input.captureId,
+          userId: session.user.id,
         });
         if (refreshed) {
           publishInboxEvent(session.user.id, {
-            type: "inbox.updated",
             payload: { item: refreshed },
+            type: "inbox.updated",
           });
         }
 
-        return { kind: "note" as const, id: note.id };
+        return { id: note.id, kind: "note" as const };
       }
 
       const due = input.due
@@ -414,8 +414,8 @@ export const captureRouter = router({
         "user",
         [
           {
-            kind: "reminder",
             id: reminder.id,
+            kind: "reminder",
             label: reminder.title,
             properties: {
               entity: { kind: "reminder", id: reminder.id },
@@ -432,39 +432,39 @@ export const captureRouter = router({
       );
 
       await updateCaptureStatus({
-        userId: session.user.id,
         id: input.captureId,
         status: "converted",
+        userId: session.user.id,
       });
 
       if (item.receipt) {
         await upsertReceipt({
+          alternatives: item.receipt.alternatives,
           captureId: input.captureId,
+          confidence: item.receipt.confidence,
+          corrections: item.receipt.corrections,
           decision: item.receipt.decision,
-          summary: item.receipt.summary,
           evidence: item.receipt.evidence,
           outcome: {
             ...item.receipt.outcome,
             kind: "reminder",
             targetId: reminder.id,
           },
-          alternatives: item.receipt.alternatives,
-          confidence: item.receipt.confidence,
-          corrections: item.receipt.corrections,
+          summary: item.receipt.summary,
         });
       }
 
       const refreshed = await getInboxItem({
-        userId: session.user.id,
         captureId: input.captureId,
+        userId: session.user.id,
       });
       if (refreshed) {
         publishInboxEvent(session.user.id, {
-          type: "inbox.updated",
           payload: { item: refreshed },
+          type: "inbox.updated",
         });
       }
 
-      return { kind: "reminder" as const, id: reminder.id };
+      return { id: reminder.id, kind: "reminder" as const };
     }),
 });

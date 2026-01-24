@@ -1,11 +1,12 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
-import type { CognitiveStateInput } from "../src/orchestrator/tool/cognitive";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+
+import { type CognitiveStateInput } from "../src/orchestrator/tool/cognitive";
 
 // Install shared mocks
 installAuthTokenMock();
@@ -16,9 +17,9 @@ const mockGetEventsSince = mock();
 const mockGetAllEvents = mock();
 mock.module("@alfred/db", () => ({
   cognitiveRepo: {
-    getLatestSnapshot: mockGetLatestSnapshot,
-    getEventsSince: mockGetEventsSince,
     getAllEvents: mockGetAllEvents,
+    getEventsSince: mockGetEventsSince,
+    getLatestSnapshot: mockGetLatestSnapshot,
   },
 }));
 
@@ -26,9 +27,8 @@ mock.module("@alfred/db", () => ({
 // are NOT mocked - we use real implementations to test actual behavior
 
 // Import tool after mocking
-const { toolCognitiveState } = await import(
-  "../src/orchestrator/tool/cognitive"
-);
+const { toolCognitiveState } =
+  await import("../src/orchestrator/tool/cognitive");
 
 describe("Cognitive State Tool", () => {
   beforeEach(() => {
@@ -39,18 +39,19 @@ describe("Cognitive State Tool", () => {
 
     // Default to allowing all policy checks
     authTokenMocks.requireToolScopesAndPolicy.mockResolvedValue({
-      decision: { allow: true },
       claims: {
         sub: "test-user",
         scopes: ["cognitive.read"],
       },
+      decision: { allow: true },
     });
   });
 
   describe("cognitive_state", () => {
     it("returns current state from snapshot without events", async () => {
       const snapshot = {
-        streamId: "stream-1",
+        createdAt: new Date(2000),
+        lastEventId: "event-1",
         state: {
           _: "thinking",
           about: "test query",
@@ -67,16 +68,15 @@ describe("Cognitive State Tool", () => {
             lastUpdate: 2000,
           },
         },
-        lastEventId: "event-1",
-        createdAt: new Date(2000),
+        streamId: "stream-1",
       };
 
       mockGetLatestSnapshot.mockResolvedValue(snapshot);
       mockGetEventsSince.mockResolvedValue([]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });
@@ -89,20 +89,19 @@ describe("Cognitive State Tool", () => {
 
     it("replays events since snapshot", async () => {
       const snapshot = {
-        streamId: "stream-1",
+        createdAt: new Date(1000),
+        lastEventId: "event-1",
         state: {
           _: "idle",
           since: 1000,
           physiology: { energy: 1.0, boredom: 0.0, frustration: 0.0 },
         },
-        lastEventId: "event-1",
-        createdAt: new Date(1000),
+        streamId: "stream-1",
       };
 
       const eventRecord = {
+        createdAt: new Date(2000),
         id: "event-2",
-        streamId: "stream-1",
-        type: "input",
         payload: {
           v: 1,
           id: "event-2",
@@ -116,15 +115,16 @@ describe("Cognitive State Tool", () => {
             ts: 2000,
           },
         },
-        createdAt: new Date(2000),
+        streamId: "stream-1",
+        type: "input",
       };
 
       mockGetLatestSnapshot.mockResolvedValue(snapshot);
       mockGetEventsSince.mockResolvedValue([eventRecord]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });
@@ -136,12 +136,12 @@ describe("Cognitive State Tool", () => {
     });
 
     it("starts from idle when no snapshot exists", async () => {
-      mockGetLatestSnapshot.mockResolvedValue(undefined);
+      mockGetLatestSnapshot.mockResolvedValue();
       mockGetAllEvents.mockResolvedValue([]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });
@@ -154,7 +154,8 @@ describe("Cognitive State Tool", () => {
 
     it("filters by metric when specified", async () => {
       const snapshot = {
-        streamId: "stream-1",
+        createdAt: new Date(1000),
+        lastEventId: "event-1",
         state: {
           _: "idle",
           since: 1000,
@@ -168,17 +169,16 @@ describe("Cognitive State Tool", () => {
             lastUpdate: 1000,
           },
         },
-        lastEventId: "event-1",
-        createdAt: new Date(1000),
+        streamId: "stream-1",
       };
 
       mockGetLatestSnapshot.mockResolvedValue(snapshot);
       mockGetEventsSince.mockResolvedValue([]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
-        metric: "energy",
         authz: "Bearer test-token",
+        metric: "energy",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });
@@ -191,7 +191,8 @@ describe("Cognitive State Tool", () => {
 
     it("filters by autonomy metric", async () => {
       const snapshot = {
-        streamId: "stream-1",
+        createdAt: new Date(1000),
+        lastEventId: "event-1",
         state: {
           _: "idle",
           since: 1000,
@@ -205,17 +206,16 @@ describe("Cognitive State Tool", () => {
             lastUpdate: 1000,
           },
         },
-        lastEventId: "event-1",
-        createdAt: new Date(1000),
+        streamId: "stream-1",
       };
 
       mockGetLatestSnapshot.mockResolvedValue(snapshot);
       mockGetEventsSince.mockResolvedValue([]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
-        metric: "autonomy",
         authz: "Bearer test-token",
+        metric: "autonomy",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });
@@ -244,8 +244,8 @@ describe("Cognitive State Tool", () => {
       mockGetLatestSnapshot.mockRejectedValue(new Error("db_error"));
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       await expect(toolCognitiveState.execute({ input })).rejects.toThrow(
@@ -255,21 +255,20 @@ describe("Cognitive State Tool", () => {
 
     it("handles malformed event payloads gracefully", async () => {
       const snapshot = {
-        streamId: "stream-1",
+        createdAt: new Date(1000),
+        lastEventId: "event-1",
         state: {
           _: "idle",
           since: 1000,
           physiology: { energy: 1.0, boredom: 0.0, frustration: 0.0 },
         },
-        lastEventId: "event-1",
-        createdAt: new Date(1000),
+        streamId: "stream-1",
       };
 
       // Event with invalid payload structure
       const eventRecord = {
+        createdAt: new Date(2000),
         id: "event-2",
-        streamId: "stream-1",
-        type: "input",
         payload: {
           v: 1,
           id: "event-2",
@@ -278,15 +277,16 @@ describe("Cognitive State Tool", () => {
           resource: "user",
           data: null, // Invalid: should be event object
         },
-        createdAt: new Date(2000),
+        streamId: "stream-1",
+        type: "input",
       };
 
       mockGetLatestSnapshot.mockResolvedValue(snapshot);
       mockGetEventsSince.mockResolvedValue([eventRecord]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       // Should skip invalid events and return snapshot state
@@ -296,20 +296,19 @@ describe("Cognitive State Tool", () => {
 
     it("replays multiple events in sequence", async () => {
       const snapshot = {
-        streamId: "stream-1",
+        createdAt: new Date(1000),
+        lastEventId: "event-1",
         state: {
           _: "idle",
           since: 1000,
           physiology: { energy: 1.0, boredom: 0.0, frustration: 0.0 },
         },
-        lastEventId: "event-1",
-        createdAt: new Date(1000),
+        streamId: "stream-1",
       };
 
       const event1 = {
+        createdAt: new Date(2000),
         id: "event-2",
-        streamId: "stream-1",
-        type: "input",
         payload: {
           v: 1,
           id: "event-2",
@@ -323,13 +322,13 @@ describe("Cognitive State Tool", () => {
             ts: 2000,
           },
         },
-        createdAt: new Date(2000),
+        streamId: "stream-1",
+        type: "input",
       };
 
       const event2 = {
+        createdAt: new Date(3000),
         id: "event-3",
-        streamId: "stream-1",
-        type: "input",
         payload: {
           v: 1,
           id: "event-3",
@@ -343,15 +342,16 @@ describe("Cognitive State Tool", () => {
             ts: 3000,
           },
         },
-        createdAt: new Date(3000),
+        streamId: "stream-1",
+        type: "input",
       };
 
       mockGetLatestSnapshot.mockResolvedValue(snapshot);
       mockGetEventsSince.mockResolvedValue([event1, event2]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });
@@ -384,34 +384,34 @@ describe("Cognitive State Tool", () => {
       ];
       for (const metric of validMetrics) {
         const result = toolCognitiveState.inputSchema.safeParse({
-          streamId: "stream-1",
           metric,
+          streamId: "stream-1",
         });
         expect(result.success).toBe(true);
       }
     });
 
     it("rejects invalid metric values", () => {
-      const invalid = { streamId: "stream-1", metric: "invalid" };
+      const invalid = { metric: "invalid", streamId: "stream-1" };
       const result = toolCognitiveState.inputSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
     it("accepts optional authz token", () => {
       const result = toolCognitiveState.inputSchema.safeParse({
-        streamId: "stream-1",
         authz: "Bearer token",
+        streamId: "stream-1",
       });
       expect(result.success).toBe(true);
     });
 
     it("validates output schema structure", async () => {
-      mockGetLatestSnapshot.mockResolvedValue(undefined);
+      mockGetLatestSnapshot.mockResolvedValue();
       mockGetAllEvents.mockResolvedValue([]);
 
       const input: CognitiveStateInput = {
-        streamId: "stream-1",
         authz: "Bearer test-token",
+        streamId: "stream-1",
       };
 
       const result = await toolCognitiveState.execute({ input });

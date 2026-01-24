@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { probeTailscaleStatus } from "../src/tailscale/status";
 
 const shouldRun = process.env.ALFRED_TEST_TAILSCALE === "1";

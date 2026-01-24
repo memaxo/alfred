@@ -4,13 +4,15 @@
  * Validates that runtime components meet performance budgets.
  */
 
-import { beforeEach, describe, expect, it } from "bun:test";
-import { assertBudget, withBudget } from "@alfred/test-kit";
 import type {
   KnowledgeConfidence,
   KnowledgeFact,
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
+
+import { assertBudget, withBudget } from "@alfred/test-kit";
+import { beforeEach, describe, expect, it } from "bun:test";
+
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
 

@@ -13,28 +13,28 @@ export type UnifiedNodeKind =
   | "other"
   | (string & Record<never, never>);
 
-export type UnifiedNodeRef = {
+export interface UnifiedNodeRef {
   uiId?: string;
   dbId?: string;
   hgHash?: string;
-};
+}
 
-export type UnifiedNode = {
+export interface UnifiedNode {
   id: UnifiedNodeRef;
   kind: UnifiedNodeKind;
   label: string;
-  // biome-ignore lint/suspicious/noExplicitAny: Unified node properties can have any shape
+  // oxlint-disable noExplicitAny: Unified node properties can have any shape
   properties?: Record<string, any>;
-};
+}
 
-export type UnifiedEdge = {
+export interface UnifiedEdge {
   id?: string;
   source: UnifiedNodeRef;
   target: UnifiedNodeRef;
   kind: string;
   weight?: number;
-  // biome-ignore lint/suspicious/noExplicitAny: Unified edge properties can have any shape
+  // oxlint-disable noExplicitAny: Unified edge properties can have any shape
   properties?: Record<string, any>;
-};
+}
 
 export type ResourceScope = string;

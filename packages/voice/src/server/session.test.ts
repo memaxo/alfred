@@ -1,13 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { Buffer } from "node:buffer";
+
+import type { STTPool } from "../process/stt";
+import type { TTSPool } from "../process/tts";
+
 import {
   voiceSttDurationSeconds,
   voiceSttTotal,
   voiceTtsDurationSeconds,
   voiceTtsTotal,
 } from "../metrics";
-import type { STTPool } from "../process/stt";
-import type { TTSPool } from "../process/tts";
 import { VoiceRegistry } from "./registry";
 import { VoiceSession } from "./session";
 

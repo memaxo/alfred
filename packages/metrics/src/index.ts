@@ -1,6 +1,7 @@
 export * from "./classification";
 export * from "./cognitive";
 export * from "./cost";
+export * from "./enrichment";
 export * from "./logger";
 export * from "./performance";
 export * from "./pricing";

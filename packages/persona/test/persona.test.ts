@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import {
   buildPersonaPrompt,
   parsePersonaTelemetry,
@@ -8,20 +9,20 @@ import {
 describe("@alfred/persona", () => {
   it("buildPersonaPrompt returns non-empty string", () => {
     const prompt = buildPersonaPrompt({
-      modality: "text",
-      honorific: "sir",
       focusMode: false,
+      honorific: "sir",
+      modality: "text",
     });
     expect(prompt.length).toBeGreaterThan(20);
   });
 
   it("personaTelemetrySchema parses valid telemetry", () => {
     const input = {
-      speechAct: "answer",
       constraints: { focusMode: false, ttsSafe: true, maxWords: null },
-      tooling: { toolsUsed: [], hasToolResults: false },
       heuristicFallbackUsed: false,
       intent: { type: "conversational", confidence: null },
+      speechAct: "answer",
+      tooling: { toolsUsed: [], hasToolResults: false },
     };
     const parsed = parsePersonaTelemetry(input);
     expect(parsed.ok).toBe(true);
@@ -30,4 +31,3 @@ describe("@alfred/persona", () => {
     }
   });
 });
-

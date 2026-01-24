@@ -5,8 +5,9 @@
  * Cache key is based on requirement, workspace, and file tree hash.
  */
 
-import { createHash } from "node:crypto";
 import { logger } from "@alfred/logger";
+import { createHash } from "node:crypto";
+
 import type { PlanPhaseOutput } from "./schemas";
 
 const PLAN_CACHE_TTL_SECONDS = 3600; // 1 hour

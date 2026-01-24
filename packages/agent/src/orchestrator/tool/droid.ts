@@ -1,7 +1,10 @@
-import path from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { logger } from "@alfred/logger";
+import path from "node:path";
 import { z } from "zod";
-import type { DirectoryHandle } from "../../security/filesystem.js";
+
+import { persistArtifact } from "../../artifact/persist.js";
+import { type DirectoryHandle } from "../../security/filesystem.js";
 import {
   DirectoryAccessError,
   openDirectorySecure,
@@ -64,8 +67,8 @@ const toolOutputSchema = z.object({
   artifacts: z
     .array(
       z.object({
-        path: z.string(),
         kind: z.string(),
+        path: z.string(),
       })
     )
     .optional(),
@@ -102,8 +105,8 @@ function buildFlags(input: DroidToolInput) {
 
 function pickEnv(custom: Record<string, string> | undefined) {
   const safeEnv: Record<string, string> = {
-    PATH: process.env.PATH ?? "",
     FACTORY_API_KEY: process.env.FACTORY_API_KEY ?? "",
+    PATH: process.env.PATH ?? "",
   };
 
   if (!custom) {
@@ -143,9 +146,9 @@ function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
       error instanceof DirectoryAccessError &&
       error.code === "not_directory"
     ) {
-      throw new Error("droid_invalid_cwd_not_directory");
+      throw new Error("droid_invalid_cwd_not_directory", { cause: error });
     }
-    throw new Error("droid_invalid_cwd");
+    throw new Error("droid_invalid_cwd", { cause: error });
   }
 }
 
@@ -155,12 +158,12 @@ async function enforcePolicy(input: DroidToolInput) {
     ["droid.exec"],
     {
       action: "droid.exec",
+      context: {
+        auto: input.auto,
+      },
       resource: {
         kind: "repo",
         id: input.cw ? path.resolve(input.cw) : undefined,
-      },
-      context: {
-        auto: input.auto,
       },
     }
   );
@@ -203,16 +206,16 @@ function streamStdout(
             try {
               const parsed = JSON.parse(line);
               void Promise.resolve(
-                writer?.write?.({ type: "droid", chunk: parsed })
+                writer?.write?.({ chunk: parsed, type: "droid" })
               ).catch(() => {});
             } catch {
               void Promise.resolve(
-                writer?.write?.({ type: "stdout", text: line })
+                writer?.write?.({ text: line, type: "stdout" })
               ).catch(() => {});
             }
           }
         } else {
-          void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+          void Promise.resolve(writer?.write?.({ text, type: "stdout" })).catch(
             () => {}
           );
         }
@@ -234,7 +237,7 @@ function extractDroidReasoning(chunk: unknown): string | null {
     chunkObj.role === "assistant" &&
     typeof chunkObj.text === "string"
   ) {
-    const text = chunkObj.text;
+    const { text } = chunkObj;
     const markers = ["I'll analyze", "Let me", "Analyzing"];
     if (markers.some((m) => text.includes(m))) {
       return text;
@@ -252,11 +255,8 @@ function extractDroidReasoning(chunk: unknown): string | null {
 }
 
 export const toolDroid = {
-  name: "droid",
   description:
     "Run the ALFRED droid exec CLI in a sandboxed, non-interactive mode.",
-  inputSchema: droidInputSchema,
-  outputSchema: toolOutputSchema,
   execute: async ({ input, writer }: DroidExecuteArgs) => {
     await enforcePolicy(input);
 
@@ -320,22 +320,34 @@ export const toolDroid = {
       ).catch(() => {});
     }
 
+    const resultText = getAccumulatedOutput(accumulator);
+    void persistArtifact({
+      repoRoot: cwdHandle.path,
+      category: "droid",
+      tool: "droid",
+      format: "txt",
+      content: resultText,
+    }).catch((err) => logger.debug("droid_persist_artifact_error", { err }));
+
     return {
-      result: getAccumulatedOutput(accumulator),
+      result: resultText,
       artifacts: [],
     };
   },
+  inputSchema: droidInputSchema,
+  name: "droid",
+  outputSchema: toolOutputSchema,
 };
 
 export type ToolDroid = typeof toolDroid;
 
 export const __internals = {
   DEFAULT_ALLOW_PREFIXES,
+  appendReasoningTrace,
+  assertAllowedDirectory: (candidate: string) =>
+    acquireWorkingDirectoryHandle(candidate).path,
+  extractDroidReasoning,
   isWithinBase,
   pickEnv,
   resolveExecutable: (cmd: string) => resolveExecutable(cmd, "droid"),
-  assertAllowedDirectory: (candidate: string) =>
-    acquireWorkingDirectoryHandle(candidate).path,
-  appendReasoningTrace,
-  extractDroidReasoning,
 };

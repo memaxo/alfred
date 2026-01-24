@@ -1,5 +1,6 @@
-import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import type { Hypergraph } from "@alfred/knowledge/hypergraph";
+
+import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 
 const persistCalls: Array<{ resource: string; size: number }> = [];
 

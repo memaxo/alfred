@@ -1,7 +1,9 @@
-import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PhaseRunner } from "../src/pipeline/runner";
+import { describe, expect, it } from "bun:test";
+
 import type { Phase, PhaseResult, PipelineState } from "../src/pipeline/types";
+
+import { PhaseRunner } from "../src/pipeline/runner";
 
 class MockPhase implements Phase<any, any> {
   constructor(

@@ -1,3 +1,6 @@
+import type { Subprocess } from "bun";
+
+import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
 import {
   afterEach,
   beforeEach,
@@ -7,8 +10,6 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
-import type { Subprocess } from "bun";
 
 // Skip these tests in fast test runs - they require voice dependencies
 const shouldSkip = !process.env.RUN_VOICE_TESTS;

@@ -1,7 +1,7 @@
+import { spawn } from "bun";
 import { describe, expect, it } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spawn } from "bun";
 
 // Low-level integration test for the Python factory
 describe("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {

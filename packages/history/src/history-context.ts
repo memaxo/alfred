@@ -1,15 +1,16 @@
 import { withBudget } from "@alfred/metrics/performance";
 import { createTokenEstimator } from "@alfred/metrics/token";
-import type { UIMessage } from "@alfred/type/stream";
+import { type UIMessage } from "@alfred/type/stream";
 import { convertToModelMessages, pruneMessages } from "ai";
+
 import { BUDGET_RATIOS } from "./calculator";
 import { getModelContextInfo } from "./model";
-import type {
-  BuildHistoryContextOptions,
-  BuildHistoryContextResult,
-  HistoryBudget,
-  HistorySelection,
-  HistoryTier,
+import {
+  type BuildHistoryContextOptions,
+  type BuildHistoryContextResult,
+  type HistoryBudget,
+  type HistorySelection,
+  type HistoryTier,
 } from "./types";
 
 /**
@@ -22,9 +23,9 @@ import type {
  *
  * @see packages/history/src/calculator.ts for full rationale
  */
-const DEFAULT_HISTORY_RATIO = BUDGET_RATIOS.DEFAULT_HISTORY_RATIO; // 0.55
-const MIN_HISTORY_RATIO = BUDGET_RATIOS.MIN_HISTORY_RATIO; // 0.15
-const MAX_HISTORY_RATIO = BUDGET_RATIOS.MAX_HISTORY_RATIO; // 0.75
+const { DEFAULT_HISTORY_RATIO } = BUDGET_RATIOS; // 0.55
+const { MIN_HISTORY_RATIO } = BUDGET_RATIOS; // 0.15
+const { MAX_HISTORY_RATIO } = BUDGET_RATIOS; // 0.75
 const DEFAULT_MIN_SYSTEM_RESERVE = BUDGET_RATIOS.MIN_SYSTEM_RESERVE; // 2000 (scaled by model)
 const DEFAULT_MIN_HEADROOM = BUDGET_RATIOS.MIN_HEADROOM; // 2000 (scaled by model)
 const DEFAULT_RESERVED_TOOLING = BUDGET_RATIOS.MIN_TOOLING_RESERVE; // 1000 (scaled by model)
@@ -32,10 +33,10 @@ const HIGH_TIER_OVERDRAFT = BUDGET_RATIOS.MIN_HIGH_OVERDRAFT; // 512 (scaled by 
 const MEDIUM_TIER_OVERDRAFT = BUDGET_RATIOS.MIN_MEDIUM_OVERDRAFT; // 256 (scaled by model)
 
 const ROLE_WEIGHTS: Record<string, number> = {
-  user: 3,
   assistant: 2,
-  tool: 1,
   system: 1,
+  tool: 1,
+  user: 3,
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -48,7 +49,7 @@ function clamp(value: number, min: number, max: number): number {
   return value;
 }
 
-type MessageInfo = {
+interface MessageInfo {
   index: number;
   id: string;
   tokens: number;
@@ -57,9 +58,9 @@ type MessageInfo = {
   isAnchor: boolean;
   groupId: string;
   message: UIMessage;
-};
+}
 
-type GroupInfo = {
+interface GroupInfo {
   id: string;
   indices: number[];
   tokens: number;
@@ -67,7 +68,7 @@ type GroupInfo = {
   isAnchor: boolean;
   score: number;
   latestIndex: number;
-};
+}
 
 export async function buildHistoryContext(
   options: BuildHistoryContextOptions
@@ -187,14 +188,14 @@ export async function buildHistoryContext(
       }
       const groupId = toolGroupMap.get(index) ?? `msg-${index}`;
       return {
-        index,
-        id,
-        tokens,
-        tier,
-        score,
-        isAnchor,
         groupId,
+        id,
+        index,
+        isAnchor,
         message,
+        score,
+        tier,
+        tokens,
       };
     });
 
@@ -211,11 +212,11 @@ export async function buildHistoryContext(
       keptTokens += group.tokens;
     }
 
-    const historyBudgetTokens = budget.historyBudgetTokens;
+    const { historyBudgetTokens } = budget;
 
     const candidateGroups = groups
       .filter((group) => !group.isAnchor)
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         if (b.score !== a.score) {
           return b.score - a.score;
         }
@@ -244,7 +245,7 @@ export async function buildHistoryContext(
       keptTokens += group.tokens;
     }
 
-    const keptIndices = [...selectedIndices].sort((a, b) => a - b);
+    const keptIndices = [...selectedIndices].toSorted((a, b) => a - b);
     const keptMessages = keptIndices
       .map((index) => messages[index])
       .filter((m): m is UIMessage => !!m);
@@ -262,12 +263,6 @@ export async function buildHistoryContext(
     }
 
     const selection: HistorySelection = {
-      kept: keptMessages,
-      dropped: droppedMessages,
-      tiers,
-      tierByMessage,
-      keptTokens,
-      droppedTokens,
       budget: {
         modelId: options.modelId,
         maxContextTokens: budget.maxContextTokens,
@@ -275,6 +270,12 @@ export async function buildHistoryContext(
         systemTokens: budget.systemTokens,
         headroomTokens: budget.headroomTokens,
       },
+      dropped: droppedMessages,
+      droppedTokens,
+      kept: keptMessages,
+      keptTokens,
+      tierByMessage,
+      tiers,
     };
 
     const uiMessages = keptMessages;
@@ -289,17 +290,17 @@ export async function buildHistoryContext(
       modelMessagesRaw.length === 0
         ? []
         : pruneMessages({
-            messages: modelMessagesRaw,
             emptyMessages: "remove",
+            messages: modelMessagesRaw,
           });
 
     return {
-      uiMessages,
-      modelMessages,
       droppedMessages: droppedMessages.length,
-      keptTokens,
       droppedTokens,
+      keptTokens,
+      modelMessages,
       selection,
+      uiMessages,
     } satisfies BuildHistoryContextResult;
   });
 }
@@ -308,11 +309,10 @@ function emptyResult(
   options: BuildHistoryContextOptions
 ): BuildHistoryContextResult {
   return {
-    uiMessages: [],
-    modelMessages: [],
     droppedMessages: 0,
-    keptTokens: 0,
     droppedTokens: 0,
+    keptTokens: 0,
+    modelMessages: [],
     selection: {
       kept: [],
       dropped: [],
@@ -328,6 +328,7 @@ function emptyResult(
         headroomTokens: 0,
       },
     },
+    uiMessages: [],
   };
 }
 
@@ -390,10 +391,10 @@ function resolveBudget(
   );
 
   return {
-    historyBudgetTokens,
-    systemTokens,
     headroomTokens,
+    historyBudgetTokens,
     maxContextTokens,
+    systemTokens,
   } satisfies Required<Pick<HistoryBudget, "maxContextTokens">> & {
     historyBudgetTokens: number;
     systemTokens: number;
@@ -512,7 +513,10 @@ function findLastIndexByRole(
   return -1;
 }
 
-type ToolChain = { start: number; end: number };
+interface ToolChain {
+  start: number;
+  end: number;
+}
 
 function findToolChains(messages: readonly UIMessage[]): ToolChain[] {
   const chains: ToolChain[] = [];
@@ -523,7 +527,7 @@ function findToolChains(messages: readonly UIMessage[]): ToolChain[] {
       if (current) {
         current.end = index;
       } else {
-        current = { start: index, end: index };
+        current = { end: index, start: index };
       }
     } else if (current) {
       chains.push(current);
@@ -568,11 +572,11 @@ function buildGroups(messageInfos: MessageInfo[]): GroupInfo[] {
       groups.set(info.groupId, {
         id: info.groupId,
         indices: [info.index],
-        tokens: info.tokens,
-        tier: info.tier,
         isAnchor: info.isAnchor,
-        score: info.score,
         latestIndex: info.index,
+        score: info.score,
+        tier: info.tier,
+        tokens: info.tokens,
       });
       continue;
     }

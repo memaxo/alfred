@@ -13,7 +13,9 @@ import {
   privacyFactQuerySchema,
 } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+
 import type { Context } from "../context";
+
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";

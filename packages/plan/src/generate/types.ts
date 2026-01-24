@@ -1,5 +1,7 @@
 import type { WavePlan } from "@alfred/type/plan";
+
 import { z } from "zod";
+
 import type { Phase, StructuredPlan } from "../types.js";
 
 /**

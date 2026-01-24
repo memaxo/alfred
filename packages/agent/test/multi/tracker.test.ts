@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
+
 import {
   __internals,
   clearAgentDetectorWithContext,
@@ -10,6 +10,7 @@ import {
   type TrackerContext,
   updateTrackerWithContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const emptySubTasks: SubTask[] = [];
 

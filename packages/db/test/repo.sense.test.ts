@@ -5,9 +5,10 @@
  * Run with: RUN_DB_TESTS=1 bun test test/repo.sense.test.ts
  */
 
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
+
 import * as senseRepo from "../src/repo/sense";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";

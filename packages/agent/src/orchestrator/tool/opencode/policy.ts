@@ -1,5 +1,6 @@
-import path from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import path from "node:path";
+
 import type { OpenCodeToolInput } from "./definition.js";
 
 export async function enforcePolicy(input: OpenCodeToolInput) {

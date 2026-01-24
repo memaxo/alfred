@@ -7,6 +7,7 @@
 /** @jsxImportSource @opentui/react */
 
 import { useEffect, useState } from "react";
+
 import { colors } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
 import { useFocusStore } from "../hooks/stores";

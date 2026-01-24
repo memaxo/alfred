@@ -19,7 +19,10 @@ bun add @alfred/resilience
 ### Abort Signals
 
 ```typescript
-import { createLinkedAbortController, raceWithAbort } from "@alfred/resilience/abort";
+import {
+  createLinkedAbortController,
+  raceWithAbort,
+} from "@alfred/resilience/abort";
 
 // Create child signal that aborts with parent
 const parent = new AbortController();
@@ -143,6 +146,7 @@ See `packages/pipeline/test/resilience/` for comprehensive examples.
 ## Integration
 
 This package is used by:
+
 - `@alfred/pipeline` - Workflow orchestration
 - `@alfred/agent` - Agent execution
 - `@alfred/runtime` - Runtime operations

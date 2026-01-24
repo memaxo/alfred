@@ -4,6 +4,7 @@
  */
 
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
 import { user } from "./auth";
 
 export const tokenMetadata = pgTable("token_metadata", {

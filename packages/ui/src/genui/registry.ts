@@ -5,9 +5,9 @@
  * Components are registered by name and resolved at render time.
  */
 
-import type { ComponentType } from "react";
+import { type ComponentType } from "react";
 
-// biome-ignore lint/suspicious/noExplicitAny: Generic component registry requires flexible typing
+// oxlint-disable noExplicitAny: Generic component registry requires flexible typing
 type GenUIComponent = ComponentType<any>;
 
 /**
@@ -67,7 +67,7 @@ export function hasComponent(name: string): boolean {
  * @returns Array of registered component names
  */
 export function getRegisteredComponents(): string[] {
-  return Array.from(componentRegistry.keys());
+  return [...componentRegistry.keys()];
 }
 
 /**

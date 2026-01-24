@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import * as flowctx from "@alfred/agent/orchestrator/flow/context";
 import * as semantic from "@alfred/agent/orchestrator/reasoning/decompose-semantic";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+
 import * as conventions from "../research/conventions.js";
 import * as patterns from "../research/patterns.js";
 

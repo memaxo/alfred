@@ -1,7 +1,9 @@
 import { patternRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { embed } from "@alfred/rag";
+
 import type { StructuredPlan } from "../generate/types.js";
+
 import { syncPatternToKnowledgeGraph } from "./knowledge.js";
 import { extractTrigger } from "./trigger.js";
 

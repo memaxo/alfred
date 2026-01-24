@@ -1,11 +1,13 @@
+import type { ReviewGate } from "@alfred/agent/workflow/review-gate";
+import type { WorkflowEvent } from "@alfred/type";
+
 import {
   multiAgentAgentDurationSeconds,
   multiAgentErrorsTotal,
   multiAgentTasksTotal,
   multiAgentWavesTotal,
 } from "@alfred/agent/workflow/metrics";
-import type { ReviewGate } from "@alfred/agent/workflow/review-gate";
-import type { WorkflowEvent } from "@alfred/type";
+
 import type { ReasonTrace } from "./provenance";
 
 function coerceRecord(val: unknown): Record<string, unknown> {

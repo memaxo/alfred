@@ -1,9 +1,10 @@
+import type { ProjectConfig } from "../../utils/project-detector";
+
 import {
   DEFAULT_ALLOW_PREFIXES,
   openDirectorySecure,
 } from "../../security/filesystem";
 import { spawnWithSecureCwd } from "../../security/secure-spawn";
-import type { ProjectConfig } from "../../utils/project-detector";
 
 type SmokeResult = {
   success: boolean;

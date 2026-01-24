@@ -3,12 +3,13 @@
  * Tests the complete integration from note creation through embedding to retrieval
  */
 
-import { afterAll, describe, expect, test } from "bun:test";
 import { db } from "@alfred/db";
 import { memoryNodes } from "@alfred/db/schema/graph";
 import { describePostgres } from "@alfred/db/testing";
 import { ingest, retrieve } from "@alfred/rag";
+import { afterAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+
 import { EMBEDDING_DIM, embed, embedMany, shutdown } from "../src/index";
 
 const RUN_EMBED_MODEL_TESTS = process.env.RUN_EMBED_MODEL_TESTS === "1";

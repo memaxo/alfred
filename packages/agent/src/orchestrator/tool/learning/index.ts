@@ -3,12 +3,12 @@
  * Exposes explicit learning/feedback capabilities as agent tools.
  */
 
-import { withPolicyApproval } from "../approval.js";
-import type { ToolExecuteArgs } from "../shared/context.js";
-import type {
-  LearnMistakeInput,
-  LearnPatternInput,
-  LearnRecordInput,
+import { withPolicyApproval, type AITool } from "../approval.js";
+import { type ToolExecuteArgs } from "../shared/context.js";
+import {
+  type LearnMistakeInput,
+  type LearnPatternInput,
+  type LearnRecordInput,
 } from "./definition.js";
 import {
   learnMistakeInputSchema,
@@ -52,127 +52,121 @@ export {
 // ============================================================================
 
 export const toolLearnRecord = {
-  name: "learn_record",
   description:
     "Record a workflow outcome (expected vs actual) to improve future behavior. Persists a learning outcome and optional insights to the knowledge graph.",
-  inputSchema: learnRecordInputSchema,
-  outputSchema: learnRecordOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<LearnRecordInput>) => {
     const { userId } = await enforceLearnRecordPolicy(input);
     return executeLearnRecord({ input, userId });
   },
+  inputSchema: learnRecordInputSchema,
+  name: "learn_record",
+  outputSchema: learnRecordOutputSchema,
 };
 
 const aiToolLearnRecordBase = {
-  name: toolLearnRecord.name,
   description: toolLearnRecord.description,
-  parameters: toolLearnRecord.inputSchema,
-  inputSchema: toolLearnRecord.inputSchema,
   execute: async (input: LearnRecordInput) =>
     toolLearnRecord.execute({ input }),
+  inputSchema: toolLearnRecord.inputSchema,
+  name: toolLearnRecord.name,
+  parameters: toolLearnRecord.inputSchema,
 };
 
-export const aiToolLearnRecord = withPolicyApproval(
-  aiToolLearnRecordBase,
-  (input: LearnRecordInput) => ({
+export const aiToolLearnRecord: AITool<LearnRecordInput, any> =
+  withPolicyApproval(aiToolLearnRecordBase, (input: LearnRecordInput) => ({
     action: "learning.record",
-    resource: {
-      kind: "learning",
-      id: `runtime:${input.workflowId}`,
-    },
-    scopes: ["learning.write"],
     authz: input.authz,
     context: {
       outcome: input.outcome,
       contentLength: input.actual.length,
     },
-  })
-);
+    resource: {
+      kind: "learning",
+      id: `runtime:${input.workflowId}`,
+    },
+    scopes: ["learning.write"],
+  }));
 
 // ============================================================================
 // Tool: learn_pattern
 // ============================================================================
 
 export const toolLearnPattern = {
-  name: "learn_pattern",
   description:
     "Store a successful tool sequence as a reusable pattern. Optionally refines a concise rule using a fast/low-cost language model when available.",
-  inputSchema: learnPatternInputSchema,
-  outputSchema: learnPatternOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<LearnPatternInput>) => {
     const { userId } = await enforceLearnPatternPolicy(input);
     return executeLearnPattern({ input, userId });
   },
+  inputSchema: learnPatternInputSchema,
+  name: "learn_pattern",
+  outputSchema: learnPatternOutputSchema,
 };
 
 const aiToolLearnPatternBase = {
-  name: toolLearnPattern.name,
   description: toolLearnPattern.description,
-  parameters: toolLearnPattern.inputSchema,
-  inputSchema: toolLearnPattern.inputSchema,
   execute: async (input: LearnPatternInput) =>
     toolLearnPattern.execute({ input }),
+  inputSchema: toolLearnPattern.inputSchema,
+  name: toolLearnPattern.name,
+  parameters: toolLearnPattern.inputSchema,
 };
 
-export const aiToolLearnPattern = withPolicyApproval(
-  aiToolLearnPatternBase,
-  (input: LearnPatternInput) => ({
+export const aiToolLearnPattern: AITool<LearnPatternInput, any> =
+  withPolicyApproval(aiToolLearnPatternBase, (input: LearnPatternInput) => ({
     action: "learning.pattern",
-    resource: {
-      kind: "learning",
-      id: input.domain ?? "user",
-    },
-    scopes: ["learning.write"],
     authz: input.authz,
     context: {
       domain: input.domain ?? null,
       confidence: input.confidence,
       toolCount: input.toolSequence.length,
     },
-  })
-);
+    resource: {
+      kind: "learning",
+      id: input.domain ?? "user",
+    },
+    scopes: ["learning.write"],
+  }));
 
 // ============================================================================
 // Tool: learn_mistake
 // ============================================================================
 
 export const toolLearnMistake = {
-  name: "learn_mistake",
   description:
     "Record a mistake and its correction for future avoidance. Persists a heuristic-style rule into the knowledge graph.",
-  inputSchema: learnMistakeInputSchema,
-  outputSchema: learnMistakeOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<LearnMistakeInput>) => {
     const { userId } = await enforceLearnMistakePolicy(input);
     return executeLearnMistake({ input, userId });
   },
+  inputSchema: learnMistakeInputSchema,
+  name: "learn_mistake",
+  outputSchema: learnMistakeOutputSchema,
 };
 
 const aiToolLearnMistakeBase = {
-  name: toolLearnMistake.name,
   description: toolLearnMistake.description,
-  parameters: toolLearnMistake.inputSchema,
-  inputSchema: toolLearnMistake.inputSchema,
   execute: async (input: LearnMistakeInput) =>
     toolLearnMistake.execute({ input }),
+  inputSchema: toolLearnMistake.inputSchema,
+  name: toolLearnMistake.name,
+  parameters: toolLearnMistake.inputSchema,
 };
 
-export const aiToolLearnMistake = withPolicyApproval(
-  aiToolLearnMistakeBase,
-  (input: LearnMistakeInput) => ({
+export const aiToolLearnMistake: AITool<LearnMistakeInput, any> =
+  withPolicyApproval(aiToolLearnMistakeBase, (input: LearnMistakeInput) => ({
     action: "learning.mistake",
-    resource: {
-      kind: "learning",
-      id: input.domain ?? "user",
-    },
-    scopes: ["learning.write"],
     authz: input.authz,
     context: {
       domain: input.domain ?? null,
       severity: input.severity,
     },
-  })
-);
+    resource: {
+      kind: "learning",
+      id: input.domain ?? "user",
+    },
+    scopes: ["learning.write"],
+  }));
 
 export type ToolLearnRecord = typeof toolLearnRecord;
 export type ToolLearnPattern = typeof toolLearnPattern;

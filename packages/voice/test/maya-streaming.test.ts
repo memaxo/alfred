@@ -1,5 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
+
 import type { Process } from "../src/process/base";
+
 import { Maya } from "../src/process/maya";
 
 describe("Maya Streaming", () => {

@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { describe, expect, it } from "bun:test";
+
 import { buildHistoryContext } from "../src";
 
 function textMessage(

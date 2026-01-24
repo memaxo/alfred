@@ -18,6 +18,7 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
+import { type WorkflowEvent } from "@alfred/type";
 import {
   afterAll,
   afterEach,
@@ -29,7 +30,6 @@ import {
 } from "bun:test";
 import { Buffer } from "node:buffer";
 import path from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
 
 // VCR for AI provider responses
 const cassettePath = path.join(
@@ -53,9 +53,8 @@ let _createTestCaller: typeof import("../utils/trpc").createTestCaller;
 async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { workflowEvents, workflowRuns } = await import(
-      "@alfred/db/schema/workflow"
-    );
+    const { workflowEvents, workflowRuns } =
+      await import("@alfred/db/schema/workflow");
     await db.delete(workflowEvents);
     await db.delete(workflowRuns);
   } catch {
@@ -72,9 +71,8 @@ beforeAll(async () => {
   ({ toObservable } = await import("../utils/stream"));
 
   // Load voice utilities
-  ({ installVoiceTestPools } = await import(
-    "@alfred/test-kit/voice/runtime-fixture"
-  ));
+  ({ installVoiceTestPools } =
+    await import("@alfred/test-kit/voice/runtime-fixture"));
   ({ _createTestCaller } = await import("../utils/trpc"));
 
   // Create and start VCR
@@ -100,15 +98,15 @@ describe("Voice → Workflow Integration", () => {
 
     // Set up voice with workflow-triggering transcript
     voiceFixture = await installVoiceTestPools({
-      transcript: "Create a new file called hello.ts",
       chunkText: "workflow-response-chunk",
       streamingChunks: 2,
+      transcript: "Create a new file called hello.ts",
     });
 
     workflowHarness = new WorkflowTestHarness({
       user: {
-        id: "voice-workflow-user",
         email: "voice-workflow@test.local",
+        id: "voice-workflow-user",
         name: "Voice Workflow Test",
         roles: ["owner"],
         scopes: [
@@ -160,9 +158,9 @@ describe("Voice → Workflow Integration", () => {
       const events: WorkflowEvent[] = [];
 
       const subscription = await caller.stream({
-        requirement: voiceInput,
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: voiceInput,
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -170,17 +168,17 @@ describe("Voice → Workflow Integration", () => {
         const timeout = setTimeout(() => resolve(), 15_000);
 
         const sub = observable.subscribe({
-          next: (event) => events.push(event),
-          error: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
-          },
           complete: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          next: (event) => events.push(event),
         });
       });
 
@@ -239,9 +237,9 @@ describe("Voice → Workflow Integration", () => {
       let workflowResult = "";
 
       const subscription = await caller.stream({
-        requirement: "What time is it?",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "What time is it?",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -249,6 +247,16 @@ describe("Voice → Workflow Integration", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
 
         const sub = observable.subscribe({
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
           next: (event) => {
             events.push(event);
             if (event._ === "ui-message") {
@@ -257,16 +265,6 @@ describe("Voice → Workflow Integration", () => {
                 workflowResult += msg.content;
               }
             }
-          },
-          error: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
-          },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
           },
         });
       });
@@ -346,28 +344,28 @@ describe("Voice → Workflow Integration", () => {
       let runId: string | undefined;
 
       const subscription = await caller.stream({
-        requirement: "Long running task",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Long running task",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
       await new Promise<void>((resolve) => {
         const sub = observable.subscribe({
+          complete: () => {
+            sub.unsubscribe?.();
+            resolve();
+          },
+          error: () => {
+            sub.unsubscribe?.();
+            resolve();
+          },
           next: (event) => {
             if (event._ === "run" && (event as any).id) {
               runId = (event as any).id;
               sub.unsubscribe?.();
               resolve();
             }
-          },
-          error: () => {
-            sub.unsubscribe?.();
-            resolve();
-          },
-          complete: () => {
-            sub.unsubscribe?.();
-            resolve();
           },
         });
 
@@ -409,28 +407,28 @@ describe("Voice → Workflow Integration", () => {
       let runId: string | undefined;
 
       const subscription = await caller.stream({
-        requirement: "Task that will be cancelled",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Task that will be cancelled",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
       await new Promise<void>((resolve) => {
         const sub = observable.subscribe({
+          complete: () => {
+            sub.unsubscribe?.();
+            resolve();
+          },
+          error: () => {
+            sub.unsubscribe?.();
+            resolve();
+          },
           next: (event) => {
             if (event._ === "run" && (event as any).id) {
               runId = (event as any).id;
               sub.unsubscribe?.();
               resolve();
             }
-          },
-          error: () => {
-            sub.unsubscribe?.();
-            resolve();
-          },
-          complete: () => {
-            sub.unsubscribe?.();
-            resolve();
           },
         });
 
@@ -470,15 +468,15 @@ describe("Full Voice-Workflow Round Trip", () => {
     await resetTables();
 
     voiceFixture = await installVoiceTestPools({
-      transcript: "Help me write a test",
       chunkText: "response-audio",
       streamingChunks: 3,
+      transcript: "Help me write a test",
     });
 
     workflowHarness = new WorkflowTestHarness({
       user: {
-        id: "round-trip-user",
         email: "roundtrip@test.local",
+        id: "round-trip-user",
         name: "Round Trip Test",
         roles: ["owner"],
         scopes: [
@@ -532,9 +530,9 @@ describe("Full Voice-Workflow Round Trip", () => {
     let workflowOutput = "";
 
     const subscription = await caller.stream({
-      requirement: voiceRequest,
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: voiceRequest,
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -542,6 +540,16 @@ describe("Full Voice-Workflow Round Trip", () => {
       const timeout = setTimeout(() => resolve(), 15_000);
 
       const sub = observable.subscribe({
+        complete: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        error: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
         next: (event) => {
           workflowEvents.push(event);
           if (event._ === "ui-message") {
@@ -550,16 +558,6 @@ describe("Full Voice-Workflow Round Trip", () => {
               workflowOutput += msg.content;
             }
           }
-        },
-        error: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
-        },
-        complete: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
         },
       });
     });
@@ -638,26 +636,26 @@ describe("Full Voice-Workflow Round Trip", () => {
     let runId: string | undefined;
 
     const subscription = await caller.stream({
-      requirement: "Task to interrupt",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Task to interrupt",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
     await new Promise<void>((resolve) => {
       const sub = observable.subscribe({
-        next: (event) => {
-          if (event._ === "run" && (event as any).id) {
-            runId = (event as any).id;
-          }
+        complete: () => {
+          sub.unsubscribe?.();
+          resolve();
         },
         error: () => {
           sub.unsubscribe?.();
           resolve();
         },
-        complete: () => {
-          sub.unsubscribe?.();
-          resolve();
+        next: (event) => {
+          if (event._ === "run" && (event as any).id) {
+            runId = (event as any).id;
+          }
         },
       });
 
@@ -692,9 +690,9 @@ describe("Voice-Workflow Latency", () => {
 
   beforeEach(async () => {
     voiceFixture = await installVoiceTestPools({
-      transcript: "Quick test",
       chunkText: "fast-response",
       streamingChunks: 1,
+      transcript: "Quick test",
     });
   });
 

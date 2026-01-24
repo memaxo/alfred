@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { join } from "node:path";
+
 import { TTSPool } from "../../src/process/tts";
 
 // High-level E2E test using the Node.js wrapper

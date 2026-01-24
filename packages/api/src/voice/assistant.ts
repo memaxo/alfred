@@ -1,7 +1,7 @@
 import { type Event, type Outcome, timestamp } from "@alfred/cognitive/state";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
-import { buildHistoryContext } from "@alfred/history/history-context";
+import { buildHistoryContext, getOrCreateTracker } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import {
   adaptForVoice,
@@ -9,10 +9,14 @@ import {
   formatGreeting,
   timeOfDayFromHour,
 } from "@alfred/persona";
-import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
-import type { RuntimeContext } from "@alfred/type/runtime-context";
-import type { UIMessage } from "@alfred/type/stream";
-import type { VoiceAssistantRaw } from "@alfred/type/voice";
+import {
+  type CognitiveEffect,
+  type CognitiveLoopResult,
+} from "@alfred/runtime";
+import { type RuntimeContext } from "@alfred/type/runtime-context";
+import { type UIMessage } from "@alfred/type/stream";
+import { type VoiceAssistantRaw } from "@alfred/type/voice";
+
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { getHonorificPreference } from "../persona/honorific";
@@ -25,28 +29,28 @@ import {
   handleWorkflowIntent,
 } from "./workflow-handler.js";
 
-export type VoiceAssistantInput = {
+export interface VoiceAssistantInput {
   text: string;
   userId: string;
   projectId?: string;
   language?: string;
   thread?: string;
   resource?: string;
-};
+}
 
-export type VoiceAssistantResult = {
+export interface VoiceAssistantResult {
   text: string;
   replayId: string | null;
   raw: VoiceAssistantRaw;
   durationSeconds: number;
-};
+}
 
-type FocusState = {
+interface FocusState {
   _: "idle" | "active";
   since?: string;
   duration?: number;
   note?: string;
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -74,14 +78,14 @@ function parseFocusState(value: unknown): FocusState | null {
   }
   return {
     _: kind,
-    since: sinceRaw,
     duration: durationRaw,
     note: noteRaw,
+    since: sinceRaw,
   };
 }
 
 function normalizeStart(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+  return text.replaceAll(/\s+/g, " ").trim();
 }
 
 function applyOpening(opening: string, text: string): string {
@@ -144,8 +148,8 @@ function withPersonaTelemetry(input: {
   const hour = new Date().getHours();
   const greeting = input.sessionStart
     ? formatGreeting({
-        timeOfDay: timeOfDayFromHour(hour),
         honorific: input.honorific,
+        timeOfDay: timeOfDayFromHour(hour),
       })
     : "";
 
@@ -173,11 +177,11 @@ function withPersonaTelemetry(input: {
 
   const meta = (input.result.raw.meta ?? {}) as Record<string, unknown>;
   meta.personaTelemetry = {
-    speechAct: input.speechAct,
     constraints: { focusMode: input.focusMode, ttsSafe: true, maxWords: null },
-    tooling: { toolsUsed, hasToolResults },
     heuristicFallbackUsed: input.heuristicFallbackUsed,
     intent: { type: input.intent.type, confidence: input.intent.confidence },
+    speechAct: input.speechAct,
+    tooling: { toolsUsed, hasToolResults },
   };
 
   return {
@@ -193,9 +197,10 @@ function withPersonaTelemetry(input: {
 
 async function getUserFocusState(userId: string): Promise<FocusState | null> {
   try {
-    const preferences = (await userRepo.getPreferences(
-      userId
-    )) as unknown as Array<{ key: string; value: unknown }>;
+    const preferences = (await userRepo.getPreferences(userId)) as unknown as {
+      key: string;
+      value: unknown;
+    }[];
     const entry = preferences.find((pref) => pref.key === "focus");
 
     const state = parseFocusState(entry?.value);
@@ -244,9 +249,10 @@ export const VOICE_WORKFLOW_PREFERENCE_KEY = "domain.voice.workflow_enabled";
  */
 async function isVoiceWorkflowEnabled(userId: string): Promise<boolean> {
   try {
-    const preferences = (await userRepo.getPreferences(
-      userId
-    )) as unknown as Array<{ key: string; value: unknown }>;
+    const preferences = (await userRepo.getPreferences(userId)) as unknown as {
+      key: string;
+      value: unknown;
+    }[];
 
     const entry = preferences.find(
       (pref) => pref.key === VOICE_WORKFLOW_PREFERENCE_KEY
@@ -258,7 +264,7 @@ async function isVoiceWorkflowEnabled(userId: string): Promise<boolean> {
     }
 
     // Handle boolean or string values
-    const value = entry.value;
+    const { value } = entry;
     if (typeof value === "boolean") {
       return value;
     }
@@ -281,9 +287,9 @@ export async function runAssistantForVoice(
   // Inject Adapter if missing (Backward Compat / Default behavior)
   if (!ctx.ai) {
     ctx.ai = new DefaultAIAdapter({
-      userId: input.userId,
       projectId: input.projectId,
       role: "voice",
+      userId: input.userId,
     });
   }
 
@@ -309,8 +315,10 @@ export async function runAssistantForVoice(
                 : "answer";
         ctx.set?.("voiceAssistantLastRunAt", new Date().toISOString());
         return withPersonaTelemetry({
-          result: workflowRouted.handled,
-          speechAct,
+          focusMode,
+          heuristicFallbackUsed:
+            workflowRouted.intent.meta.heuristicFallbackUsed,
+          honorific,
           intent: {
             type: workflowRouted.intent.result.type,
             confidence:
@@ -318,11 +326,9 @@ export async function runAssistantForVoice(
                 ? workflowRouted.intent.result.confidence
                 : null,
           },
-          heuristicFallbackUsed:
-            workflowRouted.intent.meta.heuristicFallbackUsed,
-          focusMode,
-          honorific,
+          result: workflowRouted.handled,
           sessionStart,
+          speechAct,
           toolCalls: [],
           toolResults: [],
         });
@@ -330,16 +336,16 @@ export async function runAssistantForVoice(
     } catch (error) {
       // Log but fall through to conversational assistant
       logger.warn("voice_workflow_routing_failed", {
-        userId: input.userId,
         error: error instanceof Error ? error.message : String(error),
+        userId: input.userId,
       });
     }
   }
 
   // Continue with conversational assistant
   return runConversationalAssistant(ctx, input, {
-    honorific,
     focusState,
+    honorific,
     sessionStart,
   });
 }
@@ -362,21 +368,22 @@ async function routeVoiceWorkflow(
   const intent = await classifyVoiceIntent(input.text, sessionContext);
 
   logger.debug("voice_intent_classified", {
-    userId: input.userId,
-    intentType: intent.result.type,
     hasSessionContext: !!sessionContext,
+    intentType: intent.result.type,
     sessionPhase: sessionContext?.state.phase,
+    userId: input.userId,
   });
 
   // Route based on intent type
   switch (intent.result.type) {
-    case "workflow":
+    case "workflow": {
       return {
         handled: await handleWorkflowIntent(ctx, input, sessionContext),
         intent,
       };
+    }
 
-    case "approval":
+    case "approval": {
       return {
         handled: await handleApprovalIntent(
           ctx,
@@ -386,16 +393,19 @@ async function routeVoiceWorkflow(
         ),
         intent,
       };
+    }
 
-    case "status_query":
+    case "status_query": {
       return {
         handled: await handleStatusQuery(ctx, input, intent.result.runId),
         intent,
       };
+    }
 
-    default:
+    default: {
       // Fall through to conversational assistant
       return { handled: null, intent };
+    }
   }
 }
 
@@ -416,8 +426,8 @@ async function runConversationalAssistant(
   const defaults = getVoiceAgentDefaults();
   const selection = input.projectId
     ? await getModelForRole("voice", {
-        userId: input.userId,
         projectId: input.projectId,
+        userId: input.userId,
       })
     : await getModelForRole("voice", { userId: input.userId });
   const threadId = input.thread ?? `voice:${input.userId}`;
@@ -437,8 +447,8 @@ async function runConversationalAssistant(
 
   const newMessage: UIMessage = {
     id: `voice-${Date.now()}`,
-    role: "user",
     parts: [{ type: "text", text: input.text }],
+    role: "user",
   };
 
   const cognitiveContext = formatCognitiveContext(persona.focusState);
@@ -452,23 +462,23 @@ async function runConversationalAssistant(
   }
 
   systemInstructions += `\n\n${buildPersonaPrompt({
-    modality: "voice",
-    honorific: persona.honorific,
     focusMode: persona.focusState?._ === "active",
+    honorific: persona.honorific,
+    modality: "voice",
   })}`;
 
   // Combine history with the new message
   const allMessages = [...historyMessages, newMessage];
 
-  const model = selection.model;
+  const { model } = selection;
   const modelIdStr = selection.modelKey;
 
   // Apply history context selection (budgeting)
   const historyContext = await buildHistoryContext({
+    aggressive: true,
     messages: allMessages,
     modelId: modelIdStr,
-    system: systemInstructions,
-    aggressive: true, // Be aggressive with pruning for voice latency
+    system: systemInstructions, // Be aggressive with pruning for voice latency
   });
 
   const modelMessages = await prepareModelMessagesForGenerate({
@@ -483,8 +493,8 @@ async function runConversationalAssistant(
     process.env.AI_TELEMETRY === "1"
       ? {
           experimental_telemetry: {
-            isEnabled: true,
             functionId: "api.voice.assistant",
+            isEnabled: true,
             recordInputs: false,
             recordOutputs: false,
           },
@@ -502,17 +512,53 @@ async function runConversationalAssistant(
   const durationSeconds = (performance.now() - assistantStart) / 1000;
   const sanitized = sanitizeResult(result);
   const finalSanitized = sanitized;
+
+  // Track token usage and cost
+  try {
+    const tracker = getOrCreateTracker({
+      budgetUsd: 1.0,
+      modelId: modelIdStr,
+      sessionId: threadId, // Default $1 budget for voice sessions
+    });
+
+    // Extract usage from result (AI SDK v6 format)
+    const usage = result.usage as
+      | {
+          inputTokens?: number;
+          outputTokens?: number;
+          cachedInputTokens?: number;
+          reasoningTokens?: number;
+        }
+      | undefined;
+
+    if (usage) {
+      tracker.record({
+        cachedTokens: usage.cachedInputTokens ?? 0,
+        inputTokens: usage.inputTokens ?? 0,
+        latencyMs: durationSeconds * 1000,
+        modelId: modelIdStr,
+        outputTokens: usage.outputTokens ?? 0,
+        reasoningTokens: usage.reasoningTokens ?? 0,
+      });
+    }
+  } catch (error) {
+    // Don't fail the request if tracking fails
+    logger.error("voice_cost_tracking_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      threadId,
+    });
+  }
   const replayId = await persistResult({
-    userId: input.userId,
-    projectId: input.projectId,
-    kind: "assistant",
     input: {
       projectId: input.projectId,
       thread: threadId,
       resource: resourceId,
       messages: [newMessage], // Persist the new interaction
     },
+    kind: "assistant",
+    projectId: input.projectId,
     result: finalSanitized,
+    userId: input.userId,
   });
 
   ctx.set?.("voiceAssistantLastRunAt", new Date().toISOString());
@@ -528,12 +574,12 @@ async function runConversationalAssistant(
     });
 
     await handleVoiceCognitiveEffects({
-      runtimeCtx: ctx,
-      runLoop: runCognitiveLoop,
-      streamId: threadId,
-      effects: result.effects,
-      sanitized: finalSanitized,
       durationSeconds,
+      effects: result.effects,
+      runLoop: runCognitiveLoop,
+      runtimeCtx: ctx,
+      sanitized: finalSanitized,
+      streamId: threadId,
     });
   } catch (error) {
     logger.error("voice_cognitive_integration_failed", {
@@ -542,8 +588,7 @@ async function runConversationalAssistant(
   }
 
   const base: VoiceAssistantResult = {
-    text: finalSanitized.text ?? "",
-    replayId,
+    durationSeconds,
     raw: {
       uiMessages: [
         {
@@ -557,17 +602,18 @@ async function runConversationalAssistant(
         resource: resourceId,
       },
     },
-    durationSeconds,
+    replayId,
+    text: finalSanitized.text ?? "",
   };
 
   return withPersonaTelemetry({
-    result: base,
-    speechAct: persona.sessionStart ? "greet" : "answer",
-    intent: { type: "conversational", confidence: null },
-    heuristicFallbackUsed: false,
     focusMode: persona.focusState?._ === "active",
+    heuristicFallbackUsed: false,
     honorific: persona.honorific,
+    intent: { type: "conversational", confidence: null },
+    result: base,
     sessionStart: persona.sessionStart,
+    speechAct: persona.sessionStart ? "greet" : "answer",
     toolCalls: finalSanitized.toolCalls,
     toolResults: finalSanitized.toolResults,
   });
@@ -579,14 +625,14 @@ type RunLoopFn = (
   event: Event
 ) => Promise<CognitiveLoopResult>;
 
-type VoiceEffectParams = {
+interface VoiceEffectParams {
   runtimeCtx: RuntimeContext;
   runLoop: RunLoopFn;
   streamId: string;
   effects: CognitiveEffect[];
   sanitized: ReturnType<typeof sanitizeResult>;
   durationSeconds: number;
-};
+}
 
 async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
   if (!params.effects.length) {
@@ -603,8 +649,8 @@ async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
         case "generate_response": {
           const outcome: Outcome = {
             _: "success",
-            result: params.sanitized,
             duration: Math.round(params.durationSeconds * 1000),
+            result: params.sanitized,
           };
           const followUp = await params.runLoop(
             params.runtimeCtx,
@@ -618,17 +664,18 @@ async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
           queue.push(...followUp.effects);
           break;
         }
-        default:
+        default: {
           logger.warn("voice_cognitive_effect_unhandled", {
             streamId: params.streamId,
             effect,
           });
+        }
       }
     } catch (error) {
       logger.error("voice_cognitive_effect_failed", {
-        streamId: params.streamId,
         effect,
         error: error instanceof Error ? error.message : String(error),
+        streamId: params.streamId,
       });
     }
   }

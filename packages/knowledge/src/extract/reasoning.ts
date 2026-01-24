@@ -1,6 +1,7 @@
 import type { KnowledgeEntry } from "./facts.js";
-import { extract } from "./facts.js";
 import type { ExtractionResult } from "./types.js";
+
+import { extract } from "./facts.js";
 
 /**
  * Extract knowledge from Codex reasoning traces.

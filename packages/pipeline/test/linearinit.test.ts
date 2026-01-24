@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+
 import { LinearSyncObserver } from "../src/observers/linear";
 import {
   getLinearCalls,

@@ -3,7 +3,6 @@
  * Exposes high-level functions for text summarization using LongCodeZip
  */
 
-import { SummarizeProcess } from "./process.js";
 import type {
   AmiOptions,
   AmiResult,
@@ -13,6 +12,8 @@ import type {
   SummarizeOptions,
   SummarizeResult,
 } from "./types.js";
+
+import { SummarizeProcess } from "./process.js";
 
 // Singleton process instance
 let _process: SummarizeProcess | null = null;

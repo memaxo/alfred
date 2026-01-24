@@ -1,6 +1,7 @@
 import { planRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { requireUserId, validateIntentUserId } from "../services/plan";
 import { authedProcedure, router } from "../trpc.js";
 
@@ -11,10 +12,10 @@ export const planRouter = router({
   parseIntent: authedProcedure
     .input(
       z.object({
+        codebase: z.string().optional(),
         input: z.string().min(1).max(500),
         source: z.enum(["voice", "chat", "api"]).default("chat"),
         workspace: z.string().optional(),
-        codebase: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -23,18 +24,18 @@ export const planRouter = router({
       try {
         const { parseIntent } = await import("@alfred/plan");
         const result = await parseIntent(input.input, {
-          userId,
-          source: input.source,
-          workspace: input.workspace,
           codebase: input.codebase,
+          source: input.source,
+          userId,
+          workspace: input.workspace,
         });
 
         return result;
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_intent_parse_failed",
-          cause: error,
         });
       }
     }),
@@ -48,14 +49,14 @@ export const planRouter = router({
         intent: z.unknown(),
         options: z
           .object({
-            maxResults: z.number().int().min(1).max(20).optional(),
-            minReliability: z.number().min(0).max(1).optional(),
             dateFilter: z.enum(["recent", "all"]).optional(),
             frameworkMatch: z.boolean().optional(),
+            includeContext: z.boolean().optional(),
+            maxResults: z.number().int().min(1).max(20).optional(),
+            minReliability: z.number().min(0).max(1).optional(),
             searchType: z
               .enum(["auto", "neural", "keyword", "fast", "deep"])
               .optional(),
-            includeContext: z.boolean().optional(),
           })
           .optional(),
       })
@@ -63,9 +64,8 @@ export const planRouter = router({
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx.session);
       try {
-        const { gatherExternalResearchService } = await import(
-          "../services/plan"
-        );
+        const { gatherExternalResearchService } =
+          await import("../services/plan");
         return await gatherExternalResearchService(
           input.intent,
           userId,
@@ -73,9 +73,9 @@ export const planRouter = router({
         );
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_research_external_failed",
-          cause: error,
         });
       }
     }),
@@ -87,16 +87,15 @@ export const planRouter = router({
     .input(
       z.object({
         intent: z.unknown(),
-        projectId: z.string().optional(),
         options: z.unknown().optional(),
+        projectId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const userId = requireUserId(ctx.session);
       try {
-        const { gatherInternalResearchService } = await import(
-          "../services/plan"
-        );
+        const { gatherInternalResearchService } =
+          await import("../services/plan");
         return await gatherInternalResearchService(
           input.intent,
           userId,
@@ -105,9 +104,9 @@ export const planRouter = router({
         );
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_research_internal_failed",
-          cause: error,
         });
       }
     }),
@@ -133,9 +132,9 @@ export const planRouter = router({
         );
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_research_full_failed",
-          cause: error,
         });
       }
     }),
@@ -147,7 +146,6 @@ export const planRouter = router({
     .input(
       z.object({
         intent: z.unknown(),
-        research: z.unknown(),
         options: z
           .object({
             maxPhases: z.number().int().min(1).max(10).optional(),
@@ -155,6 +153,7 @@ export const planRouter = router({
             agentTypes: z.array(z.unknown()).optional(),
           })
           .optional(),
+        research: z.unknown(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -170,9 +169,9 @@ export const planRouter = router({
       const research = researchResultSchema.parse(input.research);
       const optionsSchema = z
         .object({
+          agentTypes: z.array(agentTypeSchema).optional(),
           maxPhases: z.number().int().min(1).max(10).optional(),
           preferParallel: z.boolean().optional(),
-          agentTypes: z.array(agentTypeSchema).optional(),
         })
         .optional();
       const options = optionsSchema.parse(input.options);
@@ -185,9 +184,9 @@ export const planRouter = router({
         return plan;
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_generation_failed",
-          cause: error,
         });
       }
     }),
@@ -198,10 +197,10 @@ export const planRouter = router({
   critique: authedProcedure
     .input(
       z.object({
-        plan: z.unknown(),
         intent: z.unknown(),
-        research: z.unknown(),
         options: z.unknown().optional(),
+        plan: z.unknown(),
+        research: z.unknown(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -217,9 +216,9 @@ export const planRouter = router({
         );
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_critique_failed",
-          cause: error,
         });
       }
     }),
@@ -230,7 +229,6 @@ export const planRouter = router({
   evaluate: authedProcedure
     .input(
       z.object({
-        plan: z.unknown(),
         options: z
           .object({
             checks: z
@@ -238,6 +236,7 @@ export const planRouter = router({
               .optional(),
           })
           .optional(),
+        plan: z.unknown(),
       })
     )
     .mutation(async ({ input }) => {
@@ -249,9 +248,9 @@ export const planRouter = router({
         return evaluation;
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_evaluation_failed",
-          cause: error,
         });
       }
     }),
@@ -262,9 +261,9 @@ export const planRouter = router({
   create: authedProcedure
     .input(
       z.object({
-        projectId: z.string().uuid().optional(),
         intent: z.string(),
         plan: z.unknown(),
+        projectId: z.string().uuid().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -274,17 +273,17 @@ export const planRouter = router({
         const { structuredPlanSchema } = await import("@alfred/plan");
         const plan = structuredPlanSchema.parse(input.plan);
         return await planRepo.createPlan({
-          userId,
-          projectId: input.projectId,
           intent: input.intent,
           plan,
+          projectId: input.projectId,
           status: "pending",
+          userId,
         });
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_persist_failed",
-          cause: error,
         });
       }
     }),
@@ -327,9 +326,9 @@ export const planRouter = router({
         return await rejectPlan(input.planId, userId, input.reason);
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_rejection_failed",
-          cause: error,
         });
       }
     }),
@@ -360,9 +359,9 @@ export const planRouter = router({
         return plan;
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_retrieval_failed",
-          cause: error,
         });
       }
     }),
@@ -373,11 +372,11 @@ export const planRouter = router({
   list: authedProcedure
     .input(
       z.object({
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
         status: z
           .enum(["pending", "approved", "rejected", "executed"])
           .optional(),
-        limit: z.number().int().min(1).max(100).optional(),
-        offset: z.number().int().min(0).optional(),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -386,17 +385,17 @@ export const planRouter = router({
       try {
         const { listPlans } = await import("@alfred/plan");
         const plans = await listPlans({
-          userId,
-          status: input.status,
           limit: input.limit,
           offset: input.offset,
+          status: input.status,
+          userId,
         });
         return plans;
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_listing_failed",
-          cause: error,
         });
       }
     }),
@@ -407,6 +406,7 @@ export const planRouter = router({
   convertToWaves: authedProcedure
     .input(
       z.object({
+        maxConcurrency: z.number().int().optional(),
         plan: z.object({
           phases: z.array(z.unknown()),
           resources: z
@@ -421,23 +421,21 @@ export const planRouter = router({
             })
             .optional(),
         }),
-        maxConcurrency: z.number().int().optional(),
       })
     )
     .query(async ({ input }) => {
       try {
-        const { planToWaves, structuredPlanSchema } = await import(
-          "@alfred/plan"
-        );
+        const { planToWaves, structuredPlanSchema } =
+          await import("@alfred/plan");
         const waves = planToWaves(structuredPlanSchema.parse(input.plan), {
           maxConcurrency: input.maxConcurrency,
         });
         return waves;
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "wave_conversion_failed",
-          cause: error,
         });
       }
     }),
@@ -449,16 +447,15 @@ export const planRouter = router({
     .input(z.object({ plan: z.unknown() }))
     .query(async ({ input }) => {
       try {
-        const { exportPlanToYAML, structuredPlanSchema } = await import(
-          "@alfred/plan"
-        );
+        const { exportPlanToYAML, structuredPlanSchema } =
+          await import("@alfred/plan");
         const plan = structuredPlanSchema.parse(input.plan);
         return exportPlanToYAML(plan);
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_export_failed",
-          cause: error,
         });
       }
     }),
@@ -469,8 +466,8 @@ export const planRouter = router({
   patternsList: authedProcedure
     .input(
       z.object({
-        projectId: z.string().uuid().optional(),
         limit: z.number().int().min(1).max(100).optional().default(50),
+        projectId: z.string().uuid().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -485,9 +482,9 @@ export const planRouter = router({
         return filtered.slice(0, input.limit);
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "patterns_list_failed",
-          cause: error,
         });
       }
     }),
@@ -499,9 +496,9 @@ export const planRouter = router({
     .input(
       z.object({
         intent: z.string().min(1).max(1000),
-        projectId: z.string().uuid().optional(),
-        minSimilarity: z.number().min(0).max(1).optional().default(0.7),
         maxResults: z.number().int().min(1).max(10).optional().default(5),
+        minSimilarity: z.number().min(0).max(1).optional().default(0.7),
+        projectId: z.string().uuid().optional(),
         requireStructuralMatch: z.boolean().optional().default(true),
       })
     )
@@ -509,24 +506,23 @@ export const planRouter = router({
       const userId = requireUserId(ctx.session);
 
       try {
-        const { categorizePatterns, matchPatterns } = await import(
-          "@alfred/plan"
-        );
+        const { categorizePatterns, matchPatterns } =
+          await import("@alfred/plan");
         const matches = await matchPatterns(input.intent, input.projectId, {
-          minSimilarity: input.minSimilarity,
           maxResults: input.maxResults,
+          minSimilarity: input.minSimilarity,
           requireStructuralMatch: input.requireStructuralMatch,
         });
         return {
-          matches,
           categorized: categorizePatterns(matches),
+          matches,
           userId,
         };
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "pattern_match_failed",
-          cause: error,
         });
       }
     }),
@@ -548,14 +544,14 @@ export const planRouter = router({
         const { parseIntent } = await import("@alfred/plan");
         return await parseIntent(
           input.input,
-          { userId, source: input.source },
-          { maxClarifications: 5, autoResolve: false }
+          { source: input.source, userId },
+          { autoResolve: false, maxClarifications: 5 }
         );
       } catch (error) {
         throw new TRPCError({
+          cause: error,
           code: "INTERNAL_SERVER_ERROR",
           message: "debug_trace_failed",
-          cause: error,
         });
       }
     }),

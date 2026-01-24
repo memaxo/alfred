@@ -1,8 +1,9 @@
 import type { WorkflowIntent } from "../intent/types.js";
+import type { ResearchOptions, ResearchResult } from "./types.js";
+
 import { aggregateResearch } from "./aggregate.js";
 import { gatherExternalResearch } from "./external.js";
 import { gatherInternalResearch } from "./internal.js";
-import type { ResearchOptions, ResearchResult } from "./types.js";
 
 export * from "./aggregate.js";
 export * from "./codebase.js";

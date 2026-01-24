@@ -1,8 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import type { PipelineEvent } from "../../src/events";
-import type { PipelineConfig, PipelineContext } from "../../src/pipeline";
+
+import { type PipelineEvent } from "../../src/events";
+import { type PipelineConfig, type PipelineContext } from "../../src/pipeline";
 import { DEFAULT_CONFIG } from "../../src/pipeline";
-import type { ScheduleOutput, WavePlan } from "../../src/stages/types";
+import { type ScheduleOutput, type WavePlan } from "../../src/stages/types";
 
 /**
  * Execute Stage Tests
@@ -24,24 +25,24 @@ function createMockContext(
   const config = { ...DEFAULT_CONFIG, ...overrides.config };
 
   return {
-    runId: "test-run-1",
-    requirement: "test requirement",
-    workspace: "/tmp/test-workspace",
-    userId: "test-user",
-    signal: new AbortController().signal,
     config,
     emit: (event: PipelineEvent) => events.push(event),
     get: <T>(key: string) => storage.get(key) as T | undefined,
+    requirement: "test requirement",
+    runId: "test-run-1",
     set: (key: string, value: unknown) => storage.set(key, value),
+    signal: new AbortController().signal,
+    userId: "test-user",
+    workspace: "/tmp/test-workspace",
   };
 }
 
 // Mock schedule output
 function createMockScheduleOutput(waves: WavePlan[] = []): ScheduleOutput {
   return {
-    waves,
-    executionMode: "sequential",
     estimatedDuration: 0,
+    executionMode: "sequential",
+    waves,
   };
 }
 
@@ -50,8 +51,8 @@ describe("ExecuteStage", () => {
     it("respects stuck detection config", () => {
       const config: Partial<PipelineConfig> = {
         stuckDetection: {
-          noProgressMs: 30_000,
           maxTransitions: 100,
+          noProgressMs: 30_000,
           similarityThreshold: 0.95,
         },
       };
@@ -66,9 +67,9 @@ describe("ExecuteStage", () => {
     it("respects retry config", () => {
       const config: Partial<PipelineConfig> = {
         retries: {
+          backoffMs: 2000,
           maxAgentAttempts: 3,
           retryableStatuses: ["failure", "stuck"],
-          backoffMs: 2000,
         },
       };
 
@@ -83,8 +84,8 @@ describe("ExecuteStage", () => {
     it("respects wave abort config", () => {
       const config: Partial<PipelineConfig> = {
         waveAbort: {
-          waveFailureThreshold: 0.3,
           overallFailureThreshold: 0.2,
+          waveFailureThreshold: 0.3,
         },
       };
 
@@ -98,10 +99,10 @@ describe("ExecuteStage", () => {
   describe("Event Types", () => {
     it("defines agent:stuck event structure", () => {
       const event: PipelineEvent = {
-        type: "agent:stuck",
         agentId: "agent-1",
         reason: "no_progress",
         timestamp: Date.now(),
+        type: "agent:stuck",
       };
 
       expect(event.type).toBe("agent:stuck");
@@ -111,10 +112,10 @@ describe("ExecuteStage", () => {
 
     it("defines agent:escalated event structure", () => {
       const event: PipelineEvent = {
-        type: "agent:escalated",
         agentId: "agent-1",
         reason: "Need human review",
         timestamp: Date.now(),
+        type: "agent:escalated",
       };
 
       expect(event.type).toBe("agent:escalated");
@@ -123,11 +124,11 @@ describe("ExecuteStage", () => {
 
     it("defines agent:retry event structure", () => {
       const event: PipelineEvent = {
-        type: "agent:retry",
         agentId: "agent-1",
         attempt: 2,
         maxAttempts: 3,
         timestamp: Date.now(),
+        type: "agent:retry",
       };
 
       expect(event.type).toBe("agent:retry");
@@ -137,11 +138,11 @@ describe("ExecuteStage", () => {
 
     it("defines wave:aborted event structure", () => {
       const event: PipelineEvent = {
-        type: "wave:aborted",
-        waveId: "wave-1",
-        waveFailRate: 0.6,
         overallFailRate: 0.4,
         timestamp: Date.now(),
+        type: "wave:aborted",
+        waveFailRate: 0.6,
+        waveId: "wave-1",
       };
 
       expect(event.type).toBe("wave:aborted");
@@ -170,9 +171,9 @@ describe("ExecuteStage", () => {
       const ctx = createMockContext({ storage });
 
       const executeOutput = {
-        outcomes: [["task-1", { status: "success" }]],
         fileChanges: [{ path: "/file.ts", action: "modify" }],
         handoffs: ["Agent completed task"],
+        outcomes: [["task-1", { status: "success" }]],
       };
       ctx.set("executeOutputSerialized", executeOutput);
 
@@ -190,8 +191,8 @@ describe("ExecuteStage", () => {
 
     it("handles multiple waves", () => {
       const waves: WavePlan[] = [
-        { id: "wave-1", agents: ["task-1", "task-2"], dependsOn: [] },
-        { id: "wave-2", agents: ["task-3"], dependsOn: ["wave-1"] },
+        { agents: ["task-1", "task-2"], dependsOn: [], id: "wave-1" },
+        { agents: ["task-3"], dependsOn: ["wave-1"], id: "wave-2" },
       ];
       const input = createMockScheduleOutput(waves);
 
@@ -203,29 +204,27 @@ describe("ExecuteStage", () => {
 
   describe("TrackerContext Serialization", () => {
     it("serializes and restores TrackerContext correctly", async () => {
-      const { createTrackerContext } = await import(
-        "@alfred/agent/orchestrator/multi/tracker"
-      );
-      const { toSerializable, fromSerializable } = await import(
-        "../../src/snapshot"
-      );
+      const { createTrackerContext } =
+        await import("@alfred/agent/orchestrator/multi/tracker");
+      const { toSerializable, fromSerializable } =
+        await import("../../src/snapshot");
 
       const tasks = [
         {
-          id: "task-1",
-          title: "Test",
-          requirement: "req",
-          deps: [],
-          priority: 1,
           acceptance: [],
+          deps: [],
           filesHint: [],
+          id: "task-1",
+          priority: 1,
+          requirement: "req",
+          title: "Test",
         },
       ];
       const trackerContext = createTrackerContext(tasks);
       trackerContext.state.agents["agent-1"] = {
-        subTaskId: "task-1",
-        status: "running",
         lastEventTs: Date.now(),
+        status: "running",
+        subTaskId: "task-1",
       };
 
       const serializable = toSerializable(trackerContext);
@@ -236,16 +235,15 @@ describe("ExecuteStage", () => {
     });
 
     it("detects stuck agent correctly", async () => {
-      const { createTrackerContext, detectStuckWithContext } = await import(
-        "@alfred/agent/orchestrator/multi/tracker"
-      );
+      const { createTrackerContext, detectStuckWithContext } =
+        await import("@alfred/agent/orchestrator/multi/tracker");
 
       const trackerContext = createTrackerContext([]);
       const now = Date.now();
       trackerContext.state.agents["agent-1"] = {
-        subTaskId: "task-1",
+        lastEventTs: now - 70_000,
         status: "running",
-        lastEventTs: now - 70_000, // Older than 60s default
+        subTaskId: "task-1", // Older than 60s default
       };
 
       expect(detectStuckWithContext(trackerContext, "agent-1", now)).toBe(true);

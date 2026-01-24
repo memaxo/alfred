@@ -3,8 +3,8 @@
  * Exposes RAG capabilities as agent tools for document ingestion and retrieval
  */
 
-import { withPolicyApproval } from "../approval.js";
-import type { ToolExecuteArgs } from "../shared/context.js";
+import { withPolicyApproval, type AITool } from "../approval.js";
+import { type ToolExecuteArgs } from "../shared/context.js";
 import {
   type RagDeleteInput,
   type RagIngestInput,
@@ -61,38 +61,38 @@ export {
 // ============================================================================
 
 export const toolRagIngest = {
-  name: "rag_ingest",
   description:
     "Save documents to the RAG system for later semantic retrieval. Use for persisting documentation, articles, or any text content.",
-  inputSchema: ragIngestInputSchema,
-  outputSchema: ragIngestOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<RagIngestInput>) => {
     await enforceIngestPolicy(input);
     return executeIngest(input);
   },
+  inputSchema: ragIngestInputSchema,
+  name: "rag_ingest",
+  outputSchema: ragIngestOutputSchema,
 };
 
 const aiToolRagIngestBase = {
-  name: toolRagIngest.name,
   description: toolRagIngest.description,
-  parameters: toolRagIngest.inputSchema,
-  inputSchema: toolRagIngest.inputSchema,
   execute: async (input: RagIngestInput) => toolRagIngest.execute({ input }),
+  inputSchema: toolRagIngest.inputSchema,
+  name: toolRagIngest.name,
+  parameters: toolRagIngest.inputSchema,
 };
 
-export const aiToolRagIngest = withPolicyApproval(
+export const aiToolRagIngest: AITool<RagIngestInput, any> = withPolicyApproval(
   aiToolRagIngestBase,
   (input) => ({
     action: "rag.ingest",
+    authz: input.authz,
+    context: {
+      contentLength: input.content.length,
+    },
     resource: {
       kind: "rag",
       id: input.source,
     },
     scopes: ["rag.write"],
-    authz: input.authz,
-    context: {
-      contentLength: input.content.length,
-    },
   })
 );
 
@@ -101,35 +101,35 @@ export const aiToolRagIngest = withPolicyApproval(
 // ============================================================================
 
 export const toolRagQuery = {
-  name: "rag_query",
   description:
     "Semantic search over the document collection. Returns relevant chunks with similarity scores.",
-  inputSchema: ragQueryInputSchema,
-  outputSchema: ragQueryOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<RagQueryInput>) => {
     await enforceQueryPolicy(input);
     return executeQuery(input);
   },
+  inputSchema: ragQueryInputSchema,
+  name: "rag_query",
+  outputSchema: ragQueryOutputSchema,
 };
 
 const aiToolRagQueryBase = {
-  name: toolRagQuery.name,
   description: toolRagQuery.description,
-  parameters: toolRagQuery.inputSchema,
-  inputSchema: toolRagQuery.inputSchema,
   execute: async (input: RagQueryInput) => toolRagQuery.execute({ input }),
+  inputSchema: toolRagQuery.inputSchema,
+  name: toolRagQuery.name,
+  parameters: toolRagQuery.inputSchema,
 };
 
-export const aiToolRagQuery = withPolicyApproval(
+export const aiToolRagQuery: AITool<RagQueryInput, any> = withPolicyApproval(
   aiToolRagQueryBase,
   (input) => ({
     action: "rag.query",
+    authz: input.authz,
     resource: {
       kind: "rag",
       id: input.source ?? "all",
     },
     scopes: ["rag.read"],
-    authz: input.authz,
   })
 );
 
@@ -138,73 +138,76 @@ export const aiToolRagQuery = withPolicyApproval(
 // ============================================================================
 
 export const toolRagList = {
-  name: "rag_list",
   description:
     "List documents in the RAG system. Returns document metadata with chunk counts.",
-  inputSchema: ragListInputSchema,
-  outputSchema: ragListOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<RagListInput>) => {
     await enforceListPolicy(input);
     return executeList(input);
   },
+  inputSchema: ragListInputSchema,
+  name: "rag_list",
+  outputSchema: ragListOutputSchema,
 };
 
 const aiToolRagListBase = {
-  name: toolRagList.name,
   description: toolRagList.description,
-  parameters: toolRagList.inputSchema,
-  inputSchema: toolRagList.inputSchema,
   execute: async (input: RagListInput) => toolRagList.execute({ input }),
+  inputSchema: toolRagList.inputSchema,
+  name: toolRagList.name,
+  parameters: toolRagList.inputSchema,
 };
 
-export const aiToolRagList = withPolicyApproval(aiToolRagListBase, (input) => ({
-  action: "rag.list",
-  resource: {
-    kind: "rag",
-    id: input.source ?? "all",
-  },
-  scopes: ["rag.read"],
-  authz: input.authz,
-}));
+export const aiToolRagList: AITool<RagListInput, any> = withPolicyApproval(
+  aiToolRagListBase,
+  (input) => ({
+    action: "rag.list",
+    authz: input.authz,
+    resource: {
+      kind: "rag",
+      id: input.source ?? "all",
+    },
+    scopes: ["rag.read"],
+  })
+);
 
 // ============================================================================
 // Tool: rag_delete
 // ============================================================================
 
 export const toolRagDelete = {
-  name: "rag_delete",
   description:
     "Remove documents from the RAG system. Requires confirmation flag and elevated authorization.",
-  inputSchema: ragDeleteInputSchema,
-  outputSchema: ragDeleteOutputSchema,
   execute: async ({ input }: ToolExecuteArgs<RagDeleteInput>) => {
     await enforceDeletePolicy(input);
     return executeDelete(input);
   },
+  inputSchema: ragDeleteInputSchema,
+  name: "rag_delete",
+  outputSchema: ragDeleteOutputSchema,
 };
 
 const aiToolRagDeleteBase = {
-  name: toolRagDelete.name,
   description: toolRagDelete.description,
-  parameters: toolRagDelete.inputSchema,
-  inputSchema: toolRagDelete.inputSchema,
   execute: async (input: RagDeleteInput) => toolRagDelete.execute({ input }),
+  inputSchema: toolRagDelete.inputSchema,
+  name: toolRagDelete.name,
+  parameters: toolRagDelete.inputSchema,
 };
 
-export const aiToolRagDelete = withPolicyApproval(
+export const aiToolRagDelete: AITool<RagDeleteInput, any> = withPolicyApproval(
   aiToolRagDeleteBase,
   (input) => ({
     action: "rag.delete",
-    resource: {
-      kind: "rag",
-      id: input.documentId,
-    },
-    scopes: ["rag.write"],
     authz: input.authz,
     context: {
       requireElevated: true,
       requireBiometric: true,
     },
+    resource: {
+      kind: "rag",
+      id: input.documentId,
+    },
+    scopes: ["rag.write"],
   })
 );
 

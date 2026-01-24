@@ -7,13 +7,14 @@
 
 import type { PipelineEvent } from "../events";
 import type { StageName } from "../pipeline";
-import { STAGE_ORDER } from "../pipeline";
 import type { PipelineObserver } from "../runner";
 import type {
   PipelineSnapshot,
   PipelineStatus,
   SerializableValue,
 } from "../snapshot";
+
+import { STAGE_ORDER } from "../pipeline";
 
 /**
  * Storage interface for checkpoint persistence.

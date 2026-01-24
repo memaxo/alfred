@@ -7,6 +7,7 @@
  */
 
 import type { z } from "zod";
+
 import type { getRegistry } from "../registry";
 
 type Registry = Awaited<ReturnType<typeof getRegistry>>;

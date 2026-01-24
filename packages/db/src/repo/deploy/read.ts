@@ -8,9 +8,11 @@ import {
   or,
   type SQL,
 } from "drizzle-orm";
+
+import type { DeploymentRecord } from "./types";
+
 import { db } from "../../client";
 import { deployments } from "../../schema/deploy";
-import type { DeploymentRecord } from "./types";
 
 export async function findLatestDeployment(
   userId: string,

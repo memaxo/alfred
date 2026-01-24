@@ -1,27 +1,22 @@
-import { randomUUID } from "node:crypto";
 import {
   alfredCodexEventSchema,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
 } from "@alfred/agent/orchestrator/tool/codex/definition";
-import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+import { type AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import { codexRunRepo, codexSessionRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 
 const codexRunInputSchema = z.object({
-  prompt: z.string().min(1),
-  auto: z.enum(["read", "low", "medium", "high"]).default("read"),
   authz: z.string().optional(),
-  sessionId: z.string().min(1).max(255).optional(),
-  cw: z.string().optional(),
-  model: z.string().optional(),
-  profile: z.string().optional(),
-  outputSchema: z.record(z.string(), z.unknown()).optional(),
+  auto: z.enum(["read", "low", "medium", "high"]).default("read"),
   context: z
     .object({
       linearIssueId: z.string().optional(),
@@ -31,7 +26,13 @@ const codexRunInputSchema = z.object({
       relevantFiles: z.array(z.string()).optional(),
     })
     .optional(),
+  cw: z.string().optional(),
   env: z.record(z.string(), z.string()).optional(),
+  model: z.string().optional(),
+  outputSchema: z.record(z.string(), z.unknown()).optional(),
+  profile: z.string().optional(),
+  prompt: z.string().min(1),
+  sessionId: z.string().min(1).max(255).optional(),
   timeoutSec: z
     .number()
     .int()
@@ -42,7 +43,7 @@ const codexRunInputSchema = z.object({
 
 type CodexRunInput = z.infer<typeof codexRunInputSchema>;
 
-export type SanitizedCodexError = {
+export interface SanitizedCodexError {
   code:
     | "execution_failed"
     | "timeout"
@@ -51,7 +52,7 @@ export type SanitizedCodexError = {
     | "forbidden"
     | "internal_error";
   message: string;
-};
+}
 
 const CODEX_EXEC_FAILED_PREFIX = "codex_exec_failed";
 
@@ -93,12 +94,12 @@ export function sanitizeCodexError(error: Error): SanitizedCodexError {
   return { code: "internal_error", message: "An unexpected error occurred" };
 }
 
-type CodexErrorHandlingResult = {
+interface CodexErrorHandlingResult {
   sanitized: SanitizedCodexError;
   correlationId: string;
   trpcCode: TRPCError["code"];
   cause: Error;
-};
+}
 
 export function buildCodexErrorResponse(
   error: unknown,
@@ -112,8 +113,8 @@ export function buildCodexErrorResponse(
   const correlationId = randomUUID();
   logger.error(scope, {
     correlationId,
-    name: normalized.name,
     message: normalized.message,
+    name: normalized.name,
     stack: normalized.stack,
   });
   const trpcCode: TRPCError["code"] =
@@ -124,7 +125,7 @@ export function buildCodexErrorResponse(
         : sanitized.code === "forbidden"
           ? "FORBIDDEN"
           : "INTERNAL_SERVER_ERROR";
-  return { sanitized, correlationId, trpcCode, cause: normalized };
+  return { cause: normalized, correlationId, sanitized, trpcCode };
 }
 
 export function formatCodexErrorMessage(
@@ -142,7 +143,7 @@ type CodexStreamEvent =
   | {
       type: "complete";
       result: string;
-      artifacts?: Array<{ path: string; kind: string }>;
+      artifacts?: { path: string; kind: string }[];
     }
   | {
       type: "error";
@@ -153,30 +154,30 @@ type CodexStreamEvent =
 
 const stdoutChunkSchema = z
   .object({
-    type: z.literal("stdout"),
     text: z.string(),
+    type: z.literal("stdout"),
   })
   .passthrough();
 
 const stderrChunkSchema = z
   .object({
-    type: z.literal("stderr"),
     text: z.string(),
+    type: z.literal("stderr"),
   })
   .passthrough();
 
 const noticeChunkSchema = z
   .object({
-    type: z.literal("notice"),
     message: z.string(),
+    type: z.literal("notice"),
     usage: z.unknown().optional(),
   })
   .passthrough();
 
 const codexEventChunkSchema = z
   .object({
-    type: z.literal("codex_event"),
     event: alfredCodexEventSchema,
+    type: z.literal("codex_event"),
   })
   .passthrough();
 
@@ -220,9 +221,8 @@ function createCodexStreamObservable({
 
     void (async () => {
       try {
-        const { toolCodex } = await import(
-          "@alfred/agent/orchestrator/tool/codex/index"
-        );
+        const { toolCodex } =
+          await import("@alfred/agent/orchestrator/tool/codex/index");
         const result = await toolCodex.execute({
           input: {
             action: "exec" as const,
@@ -240,6 +240,7 @@ function createCodexStreamObservable({
             context: input.context,
             userId,
           },
+          signal: abortController.signal,
           writer: {
             write: (chunk: unknown) => {
               if (abortController.signal.aborted) {
@@ -275,7 +276,6 @@ function createCodexStreamObservable({
               }
             },
           },
-          signal: abortController.signal,
         });
 
         if (abortController.signal.aborted) {
@@ -283,9 +283,9 @@ function createCodexStreamObservable({
         }
 
         emit.next({
-          type: "complete",
-          result: result.result,
           artifacts: result.artifacts,
+          result: result.result,
+          type: "complete",
         });
         emit.complete();
       } catch (error) {
@@ -295,16 +295,16 @@ function createCodexStreamObservable({
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_stream_failed");
         emit.next({
-          type: "error",
-          message: sanitized.message,
           code: sanitized.code,
           correlationId,
+          message: sanitized.message,
+          type: "error",
         });
         emit.error(
           new TRPCError({
+            cause,
             code: trpcCode,
             message: formatCodexErrorMessage(sanitized, correlationId),
-            cause,
           })
         );
       }
@@ -331,14 +331,14 @@ async function requireOwnedRun(args: {
 }
 
 const codexListRunsInputSchema = z.object({
-  status: z.enum(["running", "completed", "failed", "cancelled"]).optional(),
-  sessionId: z.string().min(1).max(255).optional(),
-  threadId: z.string().min(1).max(255).optional(),
   environmentKind: z.enum(["host", "worktree", "container", "poof"]).optional(),
-  startedAfter: z.string().datetime().optional(),
-  startedBefore: z.string().datetime().optional(),
   limit: z.number().int().min(1).max(200).optional(),
   offset: z.number().int().min(0).max(10_000).optional(),
+  sessionId: z.string().min(1).max(255).optional(),
+  startedAfter: z.string().datetime().optional(),
+  startedBefore: z.string().datetime().optional(),
+  status: z.enum(["running", "completed", "failed", "cancelled"]).optional(),
+  threadId: z.string().min(1).max(255).optional(),
 });
 
 const codexGetRunInputSchema = z.object({
@@ -346,30 +346,30 @@ const codexGetRunInputSchema = z.object({
 });
 
 const codexEventsInputSchema = z.object({
-  runId: z.string().uuid(),
-  order: z.enum(["asc", "desc"]).optional(),
-  limit: z.number().int().min(1).max(5000).optional(),
   afterSeq: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(5000).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
+  runId: z.string().uuid(),
 });
 
 const codexSearchEventsInputSchema = z.object({
-  query: z.string().min(1).max(2000),
-  runId: z.string().uuid().optional(),
   eventTypes: z.array(z.string().min(1).max(100)).max(20).optional(),
   limit: z.number().int().min(1).max(500).optional(),
   offset: z.number().int().min(0).max(10_000).optional(),
+  query: z.string().min(1).max(2000),
+  runId: z.string().uuid().optional(),
 });
 
 const codexStreamEventsInputSchema = z.object({
-  runId: z.string().uuid(),
   afterSeq: z.number().int().min(0).optional(),
   pollMs: z.number().int().min(200).max(5000).optional(),
+  runId: z.string().uuid(),
 });
 
 const codexListSessionsInputSchema = z.object({
-  status: z.enum(["active", "completed", "failed"]).optional(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).max(10_000).optional(),
+  status: z.enum(["active", "completed", "failed"]).optional(),
 });
 
 const codexGetSessionInputSchema = z.object({
@@ -396,24 +396,23 @@ const codexProcedures = {
       const events: AlfredCodexEvent[] = [];
 
       try {
-        const { toolCodex } = await import(
-          "@alfred/agent/orchestrator/tool/codex/index"
-        );
+        const { toolCodex } =
+          await import("@alfred/agent/orchestrator/tool/codex/index");
         await toolCodex.execute({
           input: {
             action: "exec" as const,
-            prompt: input.prompt,
-            out: "text",
-            auto: input.auto,
-            cw: input.cw,
-            model: input.model,
-            profile: input.profile,
             authz: input.authz,
-            timeoutSec,
-            env: input.env,
-            sessionId: input.sessionId,
-            outputSchema: input.outputSchema,
+            auto: input.auto,
             context: input.context,
+            cw: input.cw,
+            env: input.env,
+            model: input.model,
+            out: "text",
+            outputSchema: input.outputSchema,
+            profile: input.profile,
+            prompt: input.prompt,
+            sessionId: input.sessionId,
+            timeoutSec,
             userId,
           },
           writer: {
@@ -438,15 +437,15 @@ const codexProcedures = {
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_run_failed");
         throw new TRPCError({
+          cause,
           code: trpcCode,
           message: formatCodexErrorMessage(sanitized, correlationId),
-          cause,
         });
       }
 
       return {
-        result: chunks.join("\n"),
         events,
+        result: chunks.join("\n"),
       };
     }),
 
@@ -484,15 +483,15 @@ const codexProcedures = {
         ? new Date(input.startedBefore)
         : undefined;
       return codexRunRepo.listRuns({
-        userId,
-        status: input.status,
-        sessionId: input.sessionId,
-        threadId: input.threadId,
         environmentKind: input.environmentKind,
-        startedAfter,
-        startedBefore,
         limit: input.limit,
         offset: input.offset,
+        sessionId: input.sessionId,
+        startedAfter,
+        startedBefore,
+        status: input.status,
+        threadId: input.threadId,
+        userId,
       });
     }),
 
@@ -521,10 +520,10 @@ const codexProcedures = {
       }
       await requireOwnedRun({ runId: input.runId, userId });
       return codexRunRepo.listEvents({
-        runId: input.runId,
-        order: input.order,
-        limit: input.limit,
         afterSeq: input.afterSeq,
+        limit: input.limit,
+        order: input.order,
+        runId: input.runId,
       });
     }),
 
@@ -542,12 +541,12 @@ const codexProcedures = {
         await requireOwnedRun({ runId: input.runId, userId });
       }
       return codexRunRepo.searchEvents({
-        userId,
-        query: input.query,
-        runId: input.runId,
         eventTypes: input.eventTypes,
         limit: input.limit,
         offset: input.offset,
+        query: input.query,
+        runId: input.runId,
+        userId,
       });
     }),
 
@@ -572,23 +571,23 @@ const codexProcedures = {
           try {
             await requireOwnedRun({ runId: input.runId, userId });
             const rows = await codexRunRepo.listEvents({
-              runId: input.runId,
-              order: "asc",
               afterSeq: lastSeq,
               limit: 2000,
+              order: "asc",
+              runId: input.runId,
             });
             for (const row of rows) {
               lastSeq = Math.max(lastSeq, row.seq);
-              emit.next({ type: "event", event: row });
+              emit.next({ event: row, type: "event" });
             }
           } catch (error) {
             const { sanitized, correlationId, trpcCode, cause } =
               buildCodexErrorResponse(error, "codex_stream_events_failed");
             emit.error(
               new TRPCError({
+                cause,
                 code: trpcCode,
                 message: formatCodexErrorMessage(sanitized, correlationId),
-                cause,
               })
             );
           }
@@ -621,10 +620,10 @@ const codexProcedures = {
         });
       }
       return codexSessionRepo.listSessions({
-        userId,
-        status: input.status,
         limit: input.limit,
         offset: input.offset,
+        status: input.status,
+        userId,
       });
     }),
 
@@ -638,9 +637,8 @@ const codexProcedures = {
           message: "session_required",
         });
       }
-      const { sessionManager } = await import(
-        "@alfred/agent/orchestrator/codex-session"
-      );
+      const { sessionManager } =
+        await import("@alfred/agent/orchestrator/codex-session");
       const session = await sessionManager.getSession(input.sessionId, userId);
       if (!session) {
         throw new TRPCError({
@@ -672,9 +670,8 @@ const codexProcedures = {
           message: "codex_session_not_found",
         });
       }
-      const { sessionManager } = await import(
-        "@alfred/agent/orchestrator/codex-session"
-      );
+      const { sessionManager } =
+        await import("@alfred/agent/orchestrator/codex-session");
       await sessionManager.terminateSession(input.sessionId);
       return { success: true };
     }),
@@ -704,20 +701,20 @@ const codexProcedures = {
         });
       }
       return {
-        runId: run.id,
         agentfsDbPath: run.agentfsDbPath,
         agentfsRunId: run.agentfsRunId,
         environmentKind: run.environmentKind,
         hasAgentFS: !!run.agentfsDbPath,
+        runId: run.id,
       };
     }),
 
   listAgentFSToolCalls: authedProcedure
     .input(
       z.object({
-        runId: z.string().uuid(),
         limit: z.number().int().min(1).max(500).default(100),
         offset: z.number().int().min(0).default(0),
+        runId: z.string().uuid(),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -747,17 +744,16 @@ const codexProcedures = {
 
       // Query tool calls from AgentFS database
       try {
-        const { processForLearning } = await import(
-          "@alfred/agent/agentfs/learning-bridge"
-        );
+        const { processForLearning } =
+          await import("@alfred/agent/agentfs/learning-bridge");
         // Note: This is a simplified implementation.
         // For production, consider adding a dedicated tool call query function.
         const result = await processForLearning(run.agentfsDbPath);
         const toolCalls = result.patterns.map((p) => ({
-          name: p.toolName,
-          totalCalls: p.totalCalls,
-          successRate: p.successRate,
           avgDurationMs: p.avgDurationMs,
+          name: p.toolName,
+          successRate: p.successRate,
+          totalCalls: p.totalCalls,
         }));
         return {
           toolCalls: toolCalls.slice(input.offset, input.offset + input.limit),
@@ -765,13 +761,13 @@ const codexProcedures = {
         };
       } catch (error) {
         logger.warn("agentfs_query_failed", {
-          runId: input.runId,
           error: error instanceof Error ? error.message : String(error),
+          runId: input.runId,
         });
         return {
+          error: error instanceof Error ? error.message : String(error),
           toolCalls: [],
           total: 0,
-          error: error instanceof Error ? error.message : String(error),
         };
       }
     }),
@@ -779,11 +775,11 @@ const codexProcedures = {
   suggest: authedProcedure
     .input(
       z.object({
-        path: z.string().min(1),
-        content: z.string(),
-        line: z.number().int(),
         column: z.number().int(),
+        content: z.string(),
         language: z.string().optional(),
+        line: z.number().int(),
+        path: z.string().min(1),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -796,22 +792,21 @@ const codexProcedures = {
       }
 
       try {
-        const { toolCodex } = await import(
-          "@alfred/agent/orchestrator/tool/codex/index"
-        );
+        const { toolCodex } =
+          await import("@alfred/agent/orchestrator/tool/codex/index");
 
         // Use codex in "read" mode to generate a suggestion
         const result = await toolCodex.execute({
           input: {
             action: "exec",
+            auto: "read",
+            out: "text",
             prompt: `Suggest a completion for the code in ${input.path} at line ${input.line}, column ${input.column}.
             
 Code context:
 \`\`\`${input.language ?? ""}
 ${input.content}
 \`\`\``,
-            out: "text",
-            auto: "read",
             userId,
           },
         });
@@ -823,9 +818,9 @@ ${input.content}
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_suggest_failed");
         throw new TRPCError({
+          cause,
           code: trpcCode,
           message: formatCodexErrorMessage(sanitized, correlationId),
-          cause,
         });
       }
     }),

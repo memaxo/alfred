@@ -2,74 +2,74 @@
   "name": "@alfred/agent",
   "type": "module",
   "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "bun": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "bun": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./integrations/*": {
+      "types": "./src/integrations/*.ts",
+      "bun": "./src/integrations/*.ts",
+      "default": "./src/integrations/*.ts"
+    },
+    "./orchestrator/*": {
+      "types": "./src/orchestrator/*.ts",
+      "bun": "./src/orchestrator/*.ts",
+      "default": "./src/orchestrator/*.ts"
+    },
+    "./orchestrator/tool/shared": {
+      "types": "./src/orchestrator/tool/shared/index.ts",
+      "bun": "./src/orchestrator/tool/shared/index.ts",
+      "default": "./src/orchestrator/tool/shared/index.ts"
+    },
+    "./utils/*": {
+      "types": "./src/utils/*.ts",
+      "bun": "./src/utils/*.ts",
+      "default": "./src/utils/*.ts"
+    },
+    "./workflow/*": {
+      "types": "./src/workflow/*.ts",
+      "bun": "./src/workflow/*.ts",
+      "default": "./src/workflow/*.ts"
+    },
+    "./eval/metrics": {
+      "types": "./src/eval/metrics.ts",
+      "bun": "./src/eval/metrics.ts",
+      "default": "./src/eval/metrics.ts"
+    },
+    "./assistant/src/adapter": {
+      "types": "./src/assistant/src/adapter.ts",
+      "bun": "./src/assistant/src/adapter.ts",
+      "default": "./src/assistant/src/adapter.ts"
+    },
+    "./assistant/src/jarvis-persona": {
+      "types": "./src/assistant/src/jarvis-persona.ts",
+      "bun": "./src/assistant/src/jarvis-persona.ts",
+      "default": "./src/assistant/src/jarvis-persona.ts"
+    },
+    "./services/*": {
+      "types": "./src/services/*.ts",
+      "bun": "./src/services/*.ts",
+      "default": "./src/services/*.ts"
+    },
+    "./assistant/*": {
+      "types": "./assistant/src/*.ts",
+      "bun": "./assistant/src/*.ts",
+      "default": "./assistant/src/*.ts"
+    }
+  },
   "scripts": {
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts",
     "typecheck": "tsgo -b",
     "build": "tsgo -b --emitDeclarationOnly",
     "build:bundle": "bun build ./src/index.ts --outdir ./dist/bundle --target=bun",
     "build:bundle:dev": "bun build --feature=LEGACY_WORKTREE ./src/index.ts --outdir ./dist/bundle-dev --target=bun"
-  },
-  "exports": {
-    ".": {
-      "bun": "./src/index.ts",
-      "default": "./src/index.ts",
-      "types": "./dist/index.d.ts"
-    },
-    "./*": {
-      "bun": "./src/*.ts",
-      "default": "./src/*.ts",
-      "types": "./dist/*.d.ts"
-    },
-    "./integrations/*": {
-      "bun": "./src/integrations/*.ts",
-      "default": "./src/integrations/*.ts",
-      "types": "./src/integrations/*.ts"
-    },
-    "./orchestrator/*": {
-      "bun": "./src/orchestrator/*.ts",
-      "default": "./src/orchestrator/*.ts",
-      "types": "./src/orchestrator/*.ts"
-    },
-    "./orchestrator/tool/shared": {
-      "bun": "./src/orchestrator/tool/shared/index.ts",
-      "default": "./src/orchestrator/tool/shared/index.ts",
-      "types": "./src/orchestrator/tool/shared/index.ts"
-    },
-    "./utils/*": {
-      "bun": "./src/utils/*.ts",
-      "default": "./src/utils/*.ts",
-      "types": "./src/utils/*.ts"
-    },
-    "./workflow/*": {
-      "bun": "./src/workflow/*.ts",
-      "default": "./src/workflow/*.ts",
-      "types": "./src/workflow/*.ts"
-    },
-    "./eval/metrics": {
-      "bun": "./src/eval/metrics.ts",
-      "default": "./src/eval/metrics.ts",
-      "types": "./src/eval/metrics.ts"
-    },
-    "./assistant/src/adapter": {
-      "bun": "./src/assistant/src/adapter.ts",
-      "default": "./src/assistant/src/adapter.ts",
-      "types": "./src/assistant/src/adapter.ts"
-    },
-    "./assistant/src/jarvis-persona": {
-      "bun": "./src/assistant/src/jarvis-persona.ts",
-      "default": "./src/assistant/src/jarvis-persona.ts",
-      "types": "./src/assistant/src/jarvis-persona.ts"
-    },
-    "./services/*": {
-      "bun": "./src/services/*.ts",
-      "default": "./src/services/*.ts",
-      "types": "./src/services/*.ts"
-    },
-    "./assistant/*": {
-      "bun": "./assistant/src/*.ts",
-      "default": "./assistant/src/*.ts",
-      "types": "./assistant/src/*.ts"
-    }
   },
   "dependencies": {
     "@ai-sdk/cerebras": "^1.0.8",

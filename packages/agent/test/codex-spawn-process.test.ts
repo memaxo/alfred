@@ -15,10 +15,10 @@ import path from "node:path";
 // NOTE: Use beforeAll for module mocks so this file does not poison other test files
 // during Bun's initial module load phase.
 const spawnWithSecureCwdMock = mock(() => ({
-  stdout: null,
-  stderr: null,
   exited: Promise.resolve(0),
   kill: () => {},
+  stderr: null,
+  stdout: null,
 }));
 
 const resolveExecutableMock = mock((cmd: string) => `/usr/bin/${cmd}`);
@@ -34,9 +34,8 @@ beforeAll(async () => {
     resolveExecutable: resolveExecutableMock,
   }));
 
-  ({ createCodexSpawn } = await import(
-    "../src/orchestrator/tool/codex/spawn-process"
-  ));
+  ({ createCodexSpawn } =
+    await import("../src/orchestrator/tool/codex/spawn-process"));
 });
 
 afterAll(() => {
@@ -45,9 +44,9 @@ afterAll(() => {
 
 function createMockCwdHandle(dirPath: string) {
   return {
-    path: dirPath,
-    fd: 123,
     close: () => {},
+    fd: 123,
+    path: dirPath,
   };
 }
 
@@ -64,7 +63,7 @@ describe("createCodexSpawn", () => {
   });
 
   afterEach(() => {
-    rmSync(tempDir, { recursive: true, force: true });
+    rmSync(tempDir, { force: true, recursive: true });
   });
 
   describe("host mode", () => {
@@ -73,8 +72,8 @@ describe("createCodexSpawn", () => {
       const spawn = await createCodexSpawn({}, cwdHandle);
 
       spawn({
-        cmd: "/usr/bin/codex",
         args: ["--version"],
+        cmd: "/usr/bin/codex",
         env: { PATH: "/usr/bin" },
       });
 
@@ -93,31 +92,31 @@ describe("createCodexSpawn", () => {
       );
 
       spawn({
-        cmd: "/usr/bin/codex",
         args: ["--version"],
+        cmd: "/usr/bin/codex",
         env: { CUSTOM_VAR: "value" },
       });
 
       expect(spawnWithSecureCwdMock).toHaveBeenCalledTimes(1);
       const call = spawnWithSecureCwdMock.mock.calls[0]?.[0];
       expect(call.env).toMatchObject({
-        CUSTOM_VAR: "value",
         AGENTFS_DB_PATH: "/tmp/agentfs.db",
+        CUSTOM_VAR: "value",
       });
     });
 
     it("returns wrapped process with stdout/stderr/exited/kill", async () => {
       const mockProc = {
-        stdout: new ReadableStream(),
-        stderr: new ReadableStream(),
         exited: Promise.resolve(0),
         kill: mock(() => {}),
+        stderr: new ReadableStream(),
+        stdout: new ReadableStream(),
       };
       spawnWithSecureCwdMock.mockReturnValue(mockProc);
 
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn({}, cwdHandle);
-      const result = spawn({ cmd: "codex", args: [], env: {} });
+      const result = spawn({ args: [], cmd: "codex", env: {} });
 
       expect(result.stdout).toBe(mockProc.stdout);
       expect(result.stderr).toBe(mockProc.stderr);
@@ -128,15 +127,15 @@ describe("createCodexSpawn", () => {
     it("wraps kill with signal handling", async () => {
       const killMock = mock(() => {});
       spawnWithSecureCwdMock.mockReturnValue({
-        stdout: null,
-        stderr: null,
         exited: Promise.resolve(0),
         kill: killMock,
+        stderr: null,
+        stdout: null,
       });
 
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn({}, cwdHandle);
-      const result = spawn({ cmd: "codex", args: [], env: {} });
+      const result = spawn({ args: [], cmd: "codex", env: {} });
 
       result.kill(9);
       expect(killMock).toHaveBeenCalledWith(9);
@@ -160,8 +159,8 @@ describe("createCodexSpawn", () => {
       );
 
       spawn({
-        cmd: "/usr/bin/codex",
         args: ["exec", "--prompt", "test"],
+        cmd: "/usr/bin/codex",
         env: { CODEX_API_KEY: "key" },
       });
 
@@ -188,13 +187,13 @@ describe("createCodexSpawn", () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
         {
-          containerName: "alfred-agentfs-container-xyz",
           containerCw: "/workspace/subdir/project",
+          containerName: "alfred-agentfs-container-xyz",
         },
         cwdHandle
       );
 
-      spawn({ cmd: "codex", args: [], env: {} });
+      spawn({ args: [], cmd: "codex", env: {} });
 
       const call = spawnWithSecureCwdMock.mock.calls[0]?.[0];
       expect(call.args).toContain("--workdir");
@@ -206,13 +205,13 @@ describe("createCodexSpawn", () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
         {
-          containerName: "alfred-agentfs-container-bad",
           containerCw: "/tmp/escape",
+          containerName: "alfred-agentfs-container-bad",
         },
         cwdHandle
       );
 
-      expect(() => spawn({ cmd: "codex", args: [], env: {} })).toThrow(
+      expect(() => spawn({ args: [], cmd: "codex", env: {} })).toThrow(
         "codex_container_cwd_invalid"
       );
     });
@@ -225,8 +224,8 @@ describe("createCodexSpawn", () => {
       );
 
       spawn({
-        cmd: "codex",
         args: [],
+        cmd: "codex",
         env: { CODEX_API_KEY: "key", CUSTOM_VAR: "value", PATH: "/usr/bin" },
       });
 
@@ -242,22 +241,22 @@ describe("createCodexSpawn", () => {
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn(
         {
-          containerName: "alfred-agentfs-container-agentfs",
           agentfsDbPath: "/tmp/agentfs.db",
+          containerName: "alfred-agentfs-container-agentfs",
         },
         cwdHandle
       );
 
       spawn({
-        cmd: "codex",
         args: [],
+        cmd: "codex",
         env: { CODEX_API_KEY: "key" },
       });
 
       const call = spawnWithSecureCwdMock.mock.calls[0]?.[0];
       expect(call.env).toMatchObject({
-        CODEX_API_KEY: "key",
         AGENTFS_DB_PATH: "/tmp/agentfs.db",
+        CODEX_API_KEY: "key",
       });
       expect(call.args).toContain("AGENTFS_DB_PATH");
     });
@@ -266,15 +265,15 @@ describe("createCodexSpawn", () => {
   describe("stdout/stderr handling", () => {
     it("returns null for numeric file descriptors", async () => {
       spawnWithSecureCwdMock.mockReturnValue({
-        stdout: 1,
-        stderr: 2,
         exited: Promise.resolve(0),
         kill: () => {},
+        stderr: 2,
+        stdout: 1,
       });
 
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn({}, cwdHandle);
-      const result = spawn({ cmd: "codex", args: [], env: {} });
+      const result = spawn({ args: [], cmd: "codex", env: {} });
 
       expect(result.stdout).toBeNull();
       expect(result.stderr).toBeNull();
@@ -282,15 +281,15 @@ describe("createCodexSpawn", () => {
 
     it("returns null for undefined streams", async () => {
       spawnWithSecureCwdMock.mockReturnValue({
-        stdout: undefined,
-        stderr: undefined,
         exited: Promise.resolve(0),
         kill: () => {},
+        stderr: undefined,
+        stdout: undefined,
       });
 
       const cwdHandle = createMockCwdHandle(tempDir);
       const spawn = await createCodexSpawn({}, cwdHandle);
-      const result = spawn({ cmd: "codex", args: [], env: {} });
+      const result = spawn({ args: [], cmd: "codex", env: {} });
 
       expect(result.stdout).toBeNull();
       expect(result.stderr).toBeNull();

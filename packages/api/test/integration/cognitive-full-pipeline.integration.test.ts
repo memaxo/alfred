@@ -16,6 +16,12 @@ if (!process.env.BUN_TEST) {
 }
 
 import {
+  type CognitiveState,
+  type Event,
+  type Outcome,
+} from "@alfred/cognitive/state";
+import { RuntimeContext } from "@alfred/type/runtime-context";
+import {
   afterAll,
   beforeAll,
   beforeEach,
@@ -23,8 +29,6 @@ import {
   expect,
   it,
 } from "bun:test";
-import type { CognitiveState, Event, Outcome } from "@alfred/cognitive/state";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 
 // Cognitive components
 let runCognitiveLoop: typeof import("@alfred/runtime/loops/cognitive").runCognitiveLoop;
@@ -63,16 +67,16 @@ const completeEvent = (outcome: Outcome): Event =>
 const interruptEvent = (reason: string, priority = 1): Event =>
   ({
     _: "interrupt",
-    reason,
     priority,
+    reason,
     ts: now(),
   }) as Event;
 
 const feedbackEvent = (expected: string, actual: string): Event =>
   ({
     _: "feedback",
-    expected,
     actual,
+    expected,
     ts: now(),
   }) as Event;
 
@@ -85,8 +89,8 @@ const _timeoutEvent = (deadline: number): Event =>
 // Outcome factories
 const successOutcome: Outcome = {
   _: "success",
-  result: "completed successfully",
   duration: 100,
+  result: "completed successfully",
 };
 
 const failureOutcome: Outcome = {
@@ -113,9 +117,8 @@ const stream = (suffix: string) => `cognitive-pipeline-${suffix}-${now()}`;
 async function resetCognitiveTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { cognitiveEvents, cognitiveSnapshots } = await import(
-      "@alfred/db/schema/cognitive"
-    );
+    const { cognitiveEvents, cognitiveSnapshots } =
+      await import("@alfred/db/schema/cognitive");
     await db.delete(cognitiveEvents);
     await db.delete(cognitiveSnapshots);
   } catch {
@@ -177,8 +180,8 @@ describe("Cognitive Full Pipeline Integration", () => {
       ).toBe("Plan the day");
       expect(result2.effects).toHaveLength(1);
       expect(result2.effects[0]).toMatchObject({
-        type: "generate_response",
         input: "Plan the day",
+        type: "generate_response",
       });
     });
 
@@ -625,7 +628,7 @@ describe("Cognitive Full Pipeline Integration", () => {
 
       expect(result.state._).toBe("reflecting");
       expect(result.effects).toEqual([
-        { type: "log_reflection", outcome: successOutcome },
+        { outcome: successOutcome, type: "log_reflection" },
       ]);
     });
   });
@@ -715,13 +718,13 @@ describe("Bayesian Autonomy Updates", () => {
   it("positive evidence increases autonomy level", () => {
     const ts = now();
     const auto = initialAutonomy(ts);
-    const physiology = { energy: 1, boredom: 0, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0 };
 
     const evidence = {
       _: "feedback" as const,
       positive: true,
-      strength: 0.8,
       reliability: 0.9,
+      strength: 0.8,
     };
 
     const updated = updateAutonomy(ts, auto, evidence, physiology);
@@ -733,13 +736,13 @@ describe("Bayesian Autonomy Updates", () => {
   it("negative evidence decreases autonomy level", () => {
     const ts = now();
     const auto = initialAutonomy(ts);
-    const physiology = { energy: 1, boredom: 0, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0 };
 
     const evidence = {
       _: "feedback" as const,
       positive: false,
-      strength: 0.8,
       reliability: 0.9,
+      strength: 0.8,
     };
 
     const updated = updateAutonomy(ts, auto, evidence, physiology);
@@ -751,15 +754,15 @@ describe("Bayesian Autonomy Updates", () => {
   it("maintains level within [0, 1] after multiple updates", () => {
     const ts = now();
     let auto = initialAutonomy(ts);
-    const physiology = { energy: 1, boredom: 0, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0 };
 
     // Many positive updates
     for (let i = 0; i < 20; i++) {
       const evidence = {
         _: "feedback" as const,
         positive: true,
-        strength: 0.9,
         reliability: 0.9,
+        strength: 0.9,
       };
       auto = updateAutonomy(ts + i, auto, evidence, physiology);
 
@@ -771,13 +774,13 @@ describe("Bayesian Autonomy Updates", () => {
   it("zero reliability evidence is no-op", () => {
     const ts = now();
     const auto = initialAutonomy(ts);
-    const physiology = { energy: 1, boredom: 0, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0 };
 
     const evidence = {
       _: "feedback" as const,
       positive: true,
-      strength: 1.0,
-      reliability: 0, // Zero reliability
+      reliability: 0,
+      strength: 1.0, // Zero reliability
     };
 
     const updated = updateAutonomy(ts, auto, evidence, physiology);

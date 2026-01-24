@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "bun:test";
 import { createMockDeps } from "@alfred/api/deps";
+import { afterEach, describe, expect, it, vi } from "bun:test";
+
 import {
   getAssistantAgentDefaultsMock,
   resetAgentMocks,

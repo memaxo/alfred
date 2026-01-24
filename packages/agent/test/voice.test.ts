@@ -1,13 +1,14 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
-import type {
-  VoiceControlInput,
-  VoiceStatusInput,
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+
+import {
+  type VoiceControlInput,
+  type VoiceStatusInput,
 } from "../assistant/src/tool/voice";
 
 // Install shared mocks
@@ -25,9 +26,8 @@ mock.module("@alfred/api/voice/session-registry", () => ({
 }));
 
 // Import tools after mocking
-const { toolVoiceStatus, toolVoiceControl } = await import(
-  "../assistant/src/tool/voice"
-);
+const { toolVoiceStatus, toolVoiceControl } =
+  await import("../assistant/src/tool/voice");
 
 describe("Voice Tools", () => {
   beforeEach(() => {
@@ -38,33 +38,33 @@ describe("Voice Tools", () => {
 
     // Default to allowing all policy checks
     authTokenMocks.requireToolScopesAndPolicy.mockResolvedValue({
-      decision: { allow: true },
       claims: {
         sub: "test-user",
         scopes: ["voice.read", "voice.write"],
       },
+      decision: { allow: true },
     });
   });
 
   describe("voice_status", () => {
     it("returns status for specific session", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "user-1",
-        surface: "web",
+        lastTranscript: "Hello world",
         mode: "stream",
         status: "recording",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
-        lastTranscript: "Hello world",
+        userId: "user-1",
       };
 
       mockGetVoiceSession.mockResolvedValue(session);
 
       const input: VoiceStatusInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       const result = await toolVoiceStatus.execute({ input });
@@ -78,30 +78,30 @@ describe("Voice Tools", () => {
     it("returns all sessions for user when sessionId omitted", async () => {
       const sessions = [
         {
+          createdAt: 1000,
           id: "session-1",
-          userId: "user-1",
-          surface: "web",
           mode: "stream",
           status: "recording",
-          createdAt: 1000,
+          surface: "web",
           updatedAt: 1500,
+          userId: "user-1",
         },
         {
+          createdAt: 2000,
           id: "session-2",
-          userId: "user-1",
-          surface: "native",
           mode: "clip",
           status: "idle",
-          createdAt: 2000,
+          surface: "native",
           updatedAt: 2500,
+          userId: "user-1",
         },
       ];
 
       mockListVoiceSessions.mockResolvedValue(sessions);
 
       const input: VoiceStatusInput = {
-        userId: "user-1",
         authz: "Bearer test-token",
+        userId: "user-1",
       };
 
       const result = await toolVoiceStatus.execute({ input });
@@ -115,9 +115,9 @@ describe("Voice Tools", () => {
       mockGetVoiceSession.mockResolvedValue(null);
 
       const input: VoiceStatusInput = {
-        userId: "user-1",
-        sessionId: "non-existent",
         authz: "Bearer test-token",
+        sessionId: "non-existent",
+        userId: "user-1",
       };
 
       const result = await toolVoiceStatus.execute({ input });
@@ -143,13 +143,13 @@ describe("Voice Tools", () => {
   describe("voice_control", () => {
     it("pauses session by setting status to idle", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "user-1",
-        surface: "web",
         mode: "stream",
         status: "recording",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
+        userId: "user-1",
       };
 
       const updatedSession = {
@@ -162,10 +162,10 @@ describe("Voice Tools", () => {
       mockUpdateVoiceSession.mockResolvedValue(updatedSession);
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "pause",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       const result = await toolVoiceControl.execute({ input });
@@ -180,13 +180,13 @@ describe("Voice Tools", () => {
 
     it("resumes session by setting status to recording", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "user-1",
-        surface: "web",
         mode: "stream",
         status: "idle",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
+        userId: "user-1",
       };
 
       const updatedSession = {
@@ -199,10 +199,10 @@ describe("Voice Tools", () => {
       mockUpdateVoiceSession.mockResolvedValue(updatedSession);
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "resume",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       const result = await toolVoiceControl.execute({ input });
@@ -217,14 +217,14 @@ describe("Voice Tools", () => {
 
     it("interrupts session by clearing transcript and setting to idle", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "user-1",
-        surface: "web",
+        lastTranscript: "Hello world",
         mode: "stream",
         status: "responding",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
-        lastTranscript: "Hello world",
+        userId: "user-1",
       };
 
       const updatedSession = {
@@ -238,10 +238,10 @@ describe("Voice Tools", () => {
       mockUpdateVoiceSession.mockResolvedValue(updatedSession);
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "interrupt",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       const result = await toolVoiceControl.execute({ input });
@@ -249,20 +249,20 @@ describe("Voice Tools", () => {
       expect(result.success).toBe(true);
       expect(result.action).toBe("interrupt");
       expect(mockUpdateVoiceSession).toHaveBeenCalledWith("session-1", {
-        status: "idle",
         lastTranscript: undefined,
+        status: "idle",
       });
     });
 
     it("stops session by setting status to idle", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "user-1",
-        surface: "web",
         mode: "stream",
         status: "recording",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
+        userId: "user-1",
       };
 
       const updatedSession = {
@@ -275,10 +275,10 @@ describe("Voice Tools", () => {
       mockUpdateVoiceSession.mockResolvedValue(updatedSession);
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "stop",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       const result = await toolVoiceControl.execute({ input });
@@ -294,10 +294,10 @@ describe("Voice Tools", () => {
       mockGetVoiceSession.mockResolvedValue(null);
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "non-existent",
         action: "pause",
         authz: "Bearer test-token",
+        sessionId: "non-existent",
+        userId: "user-1",
       };
 
       await expect(toolVoiceControl.execute({ input })).rejects.toThrow(
@@ -307,22 +307,22 @@ describe("Voice Tools", () => {
 
     it("throws error when user doesn't own session", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "other-user",
-        surface: "web",
         mode: "stream",
         status: "recording",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
+        userId: "other-user",
       };
 
       mockGetVoiceSession.mockResolvedValue(session);
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "pause",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       await expect(toolVoiceControl.execute({ input })).rejects.toThrow(
@@ -336,9 +336,9 @@ describe("Voice Tools", () => {
       );
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "pause",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       await expect(toolVoiceControl.execute({ input })).rejects.toThrow(
@@ -348,23 +348,23 @@ describe("Voice Tools", () => {
 
     it("handles update failure gracefully", async () => {
       const session = {
+        createdAt: 1000,
         id: "session-1",
-        userId: "user-1",
-        surface: "web",
         mode: "stream",
         status: "recording",
-        createdAt: 1000,
+        surface: "web",
         updatedAt: 1500,
+        userId: "user-1",
       };
 
       mockGetVoiceSession.mockResolvedValue(session);
       mockUpdateVoiceSession.mockResolvedValue(null); // Update fails
 
       const input: VoiceControlInput = {
-        userId: "user-1",
-        sessionId: "session-1",
         action: "pause",
         authz: "Bearer test-token",
+        sessionId: "session-1",
+        userId: "user-1",
       };
 
       const result = await toolVoiceControl.execute({ input });
@@ -375,19 +375,23 @@ describe("Voice Tools", () => {
     });
 
     it("handles all status transitions", async () => {
-      const statuses: Array<
-        "idle" | "recording" | "processing" | "responding" | "error"
-      > = ["idle", "recording", "processing", "responding", "error"];
+      const statuses: (
+        | "idle"
+        | "recording"
+        | "processing"
+        | "responding"
+        | "error"
+      )[] = ["idle", "recording", "processing", "responding", "error"];
 
       for (const status of statuses) {
         const session = {
+          createdAt: 1000,
           id: "session-1",
-          userId: "user-1",
-          surface: "web",
           mode: "stream",
           status,
-          createdAt: 1000,
+          surface: "web",
           updatedAt: 1500,
+          userId: "user-1",
         };
 
         const updatedSession = {
@@ -402,10 +406,10 @@ describe("Voice Tools", () => {
         mockUpdateVoiceSession.mockResolvedValue(updatedSession);
 
         const input: VoiceControlInput = {
-          userId: "user-1",
-          sessionId: "session-1",
           action: "pause",
           authz: "Bearer test-token",
+          sessionId: "session-1",
+          userId: "user-1",
         };
 
         const result = await toolVoiceControl.execute({ input });
@@ -438,8 +442,8 @@ describe("Voice Tools", () => {
 
       it("accepts optional authz token", () => {
         const result = toolVoiceStatus.inputSchema.safeParse({
-          userId: "user-1",
           authz: "Bearer token",
+          userId: "user-1",
         });
         expect(result.success).toBe(true);
       });
@@ -448,8 +452,8 @@ describe("Voice Tools", () => {
         mockListVoiceSessions.mockResolvedValue([]);
 
         const input: VoiceStatusInput = {
-          userId: "user-1",
           authz: "Bearer test-token",
+          userId: "user-1",
         };
 
         const result = await toolVoiceStatus.execute({ input });
@@ -465,28 +469,28 @@ describe("Voice Tools", () => {
 
     describe("voice_control", () => {
       it("requires userId", () => {
-        const invalid = { sessionId: "session-1", action: "pause" };
+        const invalid = { action: "pause", sessionId: "session-1" };
         const result = toolVoiceControl.inputSchema.safeParse(invalid);
         expect(result.success).toBe(false);
       });
 
       it("requires sessionId", () => {
-        const invalid = { userId: "user-1", action: "pause" };
+        const invalid = { action: "pause", userId: "user-1" };
         const result = toolVoiceControl.inputSchema.safeParse(invalid);
         expect(result.success).toBe(false);
       });
 
       it("requires action", () => {
-        const invalid = { userId: "user-1", sessionId: "session-1" };
+        const invalid = { sessionId: "session-1", userId: "user-1" };
         const result = toolVoiceControl.inputSchema.safeParse(invalid);
         expect(result.success).toBe(false);
       });
 
       it("requires non-empty userId", () => {
         const invalid = {
-          userId: "",
-          sessionId: "session-1",
           action: "pause",
+          sessionId: "session-1",
+          userId: "",
         };
         const result = toolVoiceControl.inputSchema.safeParse(invalid);
         expect(result.success).toBe(false);
@@ -494,9 +498,9 @@ describe("Voice Tools", () => {
 
       it("requires non-empty sessionId", () => {
         const invalid = {
-          userId: "user-1",
-          sessionId: "",
           action: "pause",
+          sessionId: "",
+          userId: "user-1",
         };
         const result = toolVoiceControl.inputSchema.safeParse(invalid);
         expect(result.success).toBe(false);
@@ -506,9 +510,9 @@ describe("Voice Tools", () => {
         const validActions = ["pause", "resume", "interrupt", "stop"];
         for (const action of validActions) {
           const result = toolVoiceControl.inputSchema.safeParse({
-            userId: "user-1",
-            sessionId: "session-1",
             action,
+            sessionId: "session-1",
+            userId: "user-1",
           });
           expect(result.success).toBe(true);
         }
@@ -516,9 +520,9 @@ describe("Voice Tools", () => {
 
       it("rejects invalid action values", () => {
         const invalid = {
-          userId: "user-1",
-          sessionId: "session-1",
           action: "invalid",
+          sessionId: "session-1",
+          userId: "user-1",
         };
         const result = toolVoiceControl.inputSchema.safeParse(invalid);
         expect(result.success).toBe(false);
@@ -526,23 +530,23 @@ describe("Voice Tools", () => {
 
       it("accepts optional authz token", () => {
         const result = toolVoiceControl.inputSchema.safeParse({
-          userId: "user-1",
-          sessionId: "session-1",
           action: "pause",
           authz: "Bearer token",
+          sessionId: "session-1",
+          userId: "user-1",
         });
         expect(result.success).toBe(true);
       });
 
       it("validates output schema structure", async () => {
         const session = {
+          createdAt: 1000,
           id: "session-1",
-          userId: "user-1",
-          surface: "web",
           mode: "stream",
           status: "recording",
-          createdAt: 1000,
+          surface: "web",
           updatedAt: 1500,
+          userId: "user-1",
         };
 
         const updatedSession = {
@@ -555,10 +559,10 @@ describe("Voice Tools", () => {
         mockUpdateVoiceSession.mockResolvedValue(updatedSession);
 
         const input: VoiceControlInput = {
-          userId: "user-1",
-          sessionId: "session-1",
           action: "pause",
           authz: "Bearer test-token",
+          sessionId: "session-1",
+          userId: "user-1",
         };
 
         const result = await toolVoiceControl.execute({ input });

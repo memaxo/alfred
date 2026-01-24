@@ -1,14 +1,16 @@
-import { randomUUID } from "node:crypto";
+import type { VoiceStreamEvent } from "@alfred/type/voice";
+
 import { logger } from "@alfred/logger";
 import { markVoice } from "@alfred/metrics/performance";
-import type { VoiceStreamEvent } from "@alfred/type/voice";
 import {
   voiceStreamEventsTotal,
   voiceStreamLatencySeconds,
 } from "@alfred/voice/metrics";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
+
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 import { toTRPCError } from "../utils/error";

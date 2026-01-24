@@ -50,6 +50,7 @@ mock.module("@linear/sdk", () => ({
 
 import * as plan from "@alfred/plan";
 import { TRPCError } from "@trpc/server";
+
 import { projectRouter } from "../src/routers/project";
 
 describe("projectRouter", () => {

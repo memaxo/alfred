@@ -1,5 +1,3 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-
 // Use shared test utilities - install BEFORE importing tool modules.
 import {
   authTokenMocks,
@@ -7,6 +5,7 @@ import {
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 installAuthTokenMock();
 installLoggerMock();

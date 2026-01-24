@@ -13,4 +13,3 @@
 6. **Schema alignment.** Vector columns in Drizzle schemas must use `vector("embedding", { dimensions: VECTOR_DIM })` where `VECTOR_DIM = EMBEDDING_DIM`. Never hardcode dimension values in schema files.
 
 7. **Test Mocking.** Use random distribution vectors (not constant values) in tests to validate similarity search; avoids false positives from uniform distribution bias in dot-product operations.
-

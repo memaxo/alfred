@@ -1,4 +1,5 @@
 import type { UIMessage } from "@alfred/type/stream";
+
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { projects } from "./project";

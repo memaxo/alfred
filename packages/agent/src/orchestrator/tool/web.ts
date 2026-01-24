@@ -1,6 +1,9 @@
-import { clearTimeout, setTimeout as scheduleTimeout } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { clearTimeout, setTimeout as scheduleTimeout } from "node:timers";
 import { z } from "zod";
+
+import type { ToolExecuteArgs } from "./shared/context.js";
+
 import {
   type ExaSearchOptions,
   exaGetContents,
@@ -9,7 +12,6 @@ import {
   exaSearch,
   hasExaApiKey,
 } from "./exa.js";
-import type { ToolExecuteArgs } from "./shared/context.js";
 
 type WebProvider = "ddg" | "serpapi" | "tavily" | "exa";
 

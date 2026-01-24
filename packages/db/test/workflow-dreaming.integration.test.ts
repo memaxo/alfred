@@ -1,6 +1,7 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { and, eq, isNull, sql } from "drizzle-orm";
+
 import { workflowRuns } from "../src/schema/workflow";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";

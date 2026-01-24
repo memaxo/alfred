@@ -12,6 +12,7 @@ import type {
   WorkingSet,
   WorkingSetItem,
 } from "@alfred/type/sense";
+
 import {
   bundleSchema,
   captureEvidenceSchema,
@@ -20,6 +21,7 @@ import {
   workingSetSchema,
 } from "@alfred/type/sense.zod";
 import { and, desc, eq, sql } from "drizzle-orm";
+
 import { db } from "../client";
 import {
   senseBundles,

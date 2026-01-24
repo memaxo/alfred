@@ -1,3 +1,7 @@
+import type { CognitiveState, Event, Outcome } from "@alfred/cognitive/state";
+
+import { timestamp } from "@alfred/cognitive/state";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   afterAll,
   beforeAll,
@@ -6,9 +10,7 @@ import {
   expect,
   it,
 } from "bun:test";
-import type { CognitiveState, Event, Outcome } from "@alfred/cognitive/state";
-import { timestamp } from "@alfred/cognitive/state";
-import { RuntimeContext } from "@alfred/type/runtime-context";
+
 import { resetCognitiveTables } from "./utils/cognitive-fixtures";
 
 if (!process.env.BUN_TEST) {

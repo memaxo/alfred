@@ -1,8 +1,9 @@
+import { createTestSandbox } from "@alfred/test-kit";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import { promisify } from "node:util";
-import { createTestSandbox } from "@alfred/test-kit";
+
 import {
   type ConflictArbiterLike,
   executeMergePlan,

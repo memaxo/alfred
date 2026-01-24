@@ -6,6 +6,7 @@ installAuthTokenMock();
 import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
+
 import { AgentFSWorkspace } from "../src/environment/agentfs";
 import {
   cleanupTestDir,

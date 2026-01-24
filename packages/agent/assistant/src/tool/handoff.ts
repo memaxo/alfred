@@ -1,6 +1,8 @@
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+
 import {
   recordAssistantEscalation,
   recordAssistantToolCall,

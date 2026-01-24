@@ -1,4 +1,5 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
+
 import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
 

@@ -3,11 +3,11 @@
  * Tests for model ID tracking and filtering
  */
 
-import { describe, expect, test } from "bun:test";
 import {
   ragIngestInputSchema,
   ragQueryInputSchema,
 } from "@alfred/agent/orchestrator/tool/rag/definition";
+import { describe, expect, test } from "bun:test";
 
 describe("RAG Repository - Embedding Model Types", () => {
   test("SearchChunksOptions accepts modelId", () => {

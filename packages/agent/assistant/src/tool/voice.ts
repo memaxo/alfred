@@ -5,6 +5,7 @@
 
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+
 import { recordAssistantToolCall } from "../../../src/metrics";
 
 // Dynamic imports to avoid bundling issues

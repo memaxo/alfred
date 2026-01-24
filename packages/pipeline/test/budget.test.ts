@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "bun:test";
 import { clearRunCosts, getTrackedRuns } from "@alfred/metrics";
+import { afterEach, describe, expect, it } from "bun:test";
+
 import {
   getBudgetUsd,
   getTotalCost,

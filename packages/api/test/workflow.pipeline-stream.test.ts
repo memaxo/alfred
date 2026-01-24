@@ -1,5 +1,7 @@
-import { beforeAll, describe, expect, it, mock } from "bun:test";
 import type { PipelineEvent } from "@alfred/pipeline";
+
+import { beforeAll, describe, expect, it, mock } from "bun:test";
+
 import { installPipelineMocks } from "./utils/pipeline";
 import { setupTestEnv } from "./utils/router-helpers";
 import { toObservable } from "./utils/stream";

@@ -1,24 +1,28 @@
-import type { WorkflowEvent, WorkflowState } from "@alfred/type/plan";
-import type { Snapshot, SnapshotReconstructor } from "@alfred/type/reconstruct";
+import { type WorkflowEvent, type WorkflowState } from "@alfred/type/plan";
+import {
+  type Snapshot,
+  type SnapshotReconstructor,
+} from "@alfred/type/reconstruct";
 
 /**
  * Reconstructs WorkflowState from event streams.
  */
-export class WorkflowReconstructor
-  implements SnapshotReconstructor<WorkflowState, WorkflowEvent>
-{
+export class WorkflowReconstructor implements SnapshotReconstructor<
+  WorkflowState,
+  WorkflowEvent
+> {
   readonly initialState: WorkflowState = {
-    status: "idle",
-    progress: 0,
-    phases: {},
     agents: {},
+    phases: {},
+    progress: 0,
+    status: "idle",
   };
 
   reduce(state: WorkflowState, event: WorkflowEvent): WorkflowState {
     const next = { ...state };
 
     switch (event._) {
-      case "progress":
+      case "progress": {
         next.status = "running";
         if (event.pct !== undefined) {
           next.progress = event.pct;
@@ -31,8 +35,9 @@ export class WorkflowReconstructor
           next.progress = 100;
         }
         break;
+      }
 
-      case "phase-start":
+      case "phase-start": {
         next.status = "running";
         next.currentPhaseId = event.phaseId;
         next.phases = {
@@ -43,8 +48,9 @@ export class WorkflowReconstructor
           },
         };
         break;
+      }
 
-      case "phase-complete":
+      case "phase-complete": {
         next.phases = {
           ...next.phases,
           [event.phaseId]: {
@@ -57,6 +63,7 @@ export class WorkflowReconstructor
           next.currentPhaseId = undefined;
         }
         break;
+      }
 
       case "phase-progress": {
         const existing = next.phases[event.phaseId];
@@ -72,7 +79,7 @@ export class WorkflowReconstructor
         break;
       }
 
-      case "agent-start":
+      case "agent-start": {
         next.currentAgentId = event.agentId;
         next.agents = {
           ...next.agents,
@@ -81,8 +88,9 @@ export class WorkflowReconstructor
           },
         };
         break;
+      }
 
-      case "agent-complete":
+      case "agent-complete": {
         next.agents = {
           ...next.agents,
           [event.agentId]: {
@@ -94,15 +102,18 @@ export class WorkflowReconstructor
           next.currentAgentId = undefined;
         }
         break;
+      }
 
-      case "obligation":
+      case "obligation": {
         next.status = "suspended";
         break;
+      }
 
-      case "error":
+      case "error": {
         next.status = "failed";
         next.error = event.message;
         break;
+      }
     }
 
     return next;

@@ -29,7 +29,9 @@ const activitiesDroppedStub = { inc: vi.fn() };
 const activityBatchesStub = { inc: vi.fn() };
 
 import { logger } from "@alfred/metrics";
+
 import type { AlfredCodexEvent } from "../src/orchestrator/tool/codex/index";
+
 import {
   configureCodexLinearMetrics,
   flushCodexLinearBatches,

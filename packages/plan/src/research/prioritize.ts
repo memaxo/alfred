@@ -1,5 +1,6 @@
-import { estimateSourceTokens, estimateTextTokens } from "./token.js";
 import type { ResearchResult, ResearchSource } from "./types.js";
+
+import { estimateSourceTokens, estimateTextTokens } from "./token.js";
 
 export type PriorityMode = "external" | "internal" | "balanced";
 

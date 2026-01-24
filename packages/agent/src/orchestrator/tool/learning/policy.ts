@@ -4,6 +4,7 @@
  */
 
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+
 import type {
   LearnMistakeInput,
   LearnPatternInput,

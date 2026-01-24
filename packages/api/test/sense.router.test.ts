@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { Bundle, Capture, Receipt, WorkingSet } from "@alfred/type/sense";
+
 import { TRPCError } from "@trpc/server";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 

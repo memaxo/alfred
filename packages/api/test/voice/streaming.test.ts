@@ -1,6 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import type { STTPool } from "@alfred/voice/process/stt";
 import type { TTSPool } from "@alfred/voice/process/tts";
+
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+
 import { VoiceSessionManager } from "../../src/voice/session";
 
 // Mock pools

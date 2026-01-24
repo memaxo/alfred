@@ -4,9 +4,10 @@
  * Benchmarks STT/TTS pipeline performance.
  */
 
+import { logger } from "@alfred/logger";
 import { Buffer } from "node:buffer";
 import { join } from "node:path";
-import { logger } from "@alfred/logger";
+
 import type { ProcessConfig } from "../process/tts";
 
 type BenchmarkResult = {

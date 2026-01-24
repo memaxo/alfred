@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import { loggerMocks } from "@alfred/test-kit/logger";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { loggerMocks } from "@alfred/test-kit/logger";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 // Import mock-metrics first - it provides logger, metrics, ai, and policy stubs
 import { aiStub, metricsStub } from "./utils/mock-metrics";
 

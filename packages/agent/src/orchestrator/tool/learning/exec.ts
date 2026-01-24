@@ -3,13 +3,13 @@
  * Persists explicit learning artifacts into the knowledge graph store.
  */
 
-import { randomUUID } from "node:crypto";
+import type { KnowledgeInsight } from "@alfred/type/knowledge";
+
 import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { supervise } from "@alfred/learning/self_supervision";
 import { logger } from "@alfred/logger";
-import type { KnowledgeInsight } from "@alfred/type/knowledge";
-import { recordAudit } from "../../../utils/audit.js";
-import { redactObject, redactSecrets } from "../../../utils/redaction.js";
+import { randomUUID } from "node:crypto";
+
 import type {
   LearnMistakeInput,
   LearnMistakeOutput,
@@ -18,6 +18,9 @@ import type {
   LearnRecordInput,
   LearnRecordOutput,
 } from "./definition.js";
+
+import { recordAudit } from "../../../utils/audit.js";
+import { redactObject, redactSecrets } from "../../../utils/redaction.js";
 
 type NodeRow = {
   id: string;

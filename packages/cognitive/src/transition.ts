@@ -1,11 +1,13 @@
 import { performance } from "node:perf_hooks";
-import { cognitiveTransitionDuration } from "./metrics";
+
 import type {
   AutonomyGradient,
   CognitiveState,
   Event,
   Physiology,
 } from "./state";
+
+import { cognitiveTransitionDuration } from "./metrics";
 import {
   capturing,
   executing,

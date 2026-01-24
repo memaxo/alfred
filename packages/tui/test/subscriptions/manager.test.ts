@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import type { PollingConfig } from "../../src/tui/subscriptions/manager";
+
 import { SubscriptionManager } from "../../src/tui/subscriptions/manager";
 
 describe("SubscriptionManager", () => {

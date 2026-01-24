@@ -1,18 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   plansPath,
   rootPlanPath,
   runPlansDir,
   subtaskPlanPath,
 } from "@alfred/agent/orchestrator/plans";
-import type { OrchestratorContext } from "@alfred/runtime/src/orchestrator/types";
+import { type OrchestratorContext } from "@alfred/runtime/src/orchestrator/types";
 import { withWorkflowRuntime } from "@alfred/test-kit/workflow/runtime-fixture";
-import type { ContextBundle, WorkflowEvent } from "@alfred/type/plan";
+import { type ContextBundle, type WorkflowEvent } from "@alfred/type/plan";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 
 const agentScripts = new Map<string, WriterChunk[]>();
 
@@ -24,12 +24,12 @@ mock.module("@alfred/agent/environment/factory", () => ({
       runId: string,
       workspace: string
     ) => ({
-      id: `${runId}-${agentId}`,
-      root: workspace,
-      initialize: async () => {},
-      cleanup: async () => {},
       checkpoint: async () => {},
+      cleanup: async () => {},
+      id: `${runId}-${agentId}`,
+      initialize: async () => {},
       restore: async () => {},
+      root: workspace,
     }),
   },
 }));
@@ -47,8 +47,8 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
 
 const mergeExecutorMock = mock(() =>
   Promise.resolve({
-    status: "completed" as const,
     mergedBranches: ["agent/run"],
+    status: "completed" as const,
     targetBranch: "main",
   })
 );
@@ -59,10 +59,10 @@ mock.module("@alfred/agent/orchestrator/multi/merge-executor", () => ({
 
 const toolRunnerExecute = mock(() =>
   Promise.resolve({
-    stdout: "ok",
-    stderr: "",
-    exitCode: 0,
     durationMs: 10,
+    exitCode: 0,
+    stderr: "",
+    stdout: "ok",
   })
 );
 
@@ -74,8 +74,8 @@ mock.module("@alfred/agent/orchestrator/tool/runner", () => ({
 
 const smokeVerifyMock = mock(() =>
   Promise.resolve({
-    success: true,
     message: "ok",
+    success: true,
   })
 );
 
@@ -86,15 +86,12 @@ mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
 }));
 
 const { runWaves } = await import("../../runtime/src/orchestrator/waves.ts");
-const { runMergePhase, runMergeAnalysis } = await import(
-  "../../runtime/src/orchestrator/merge.ts"
-);
-const { runReviewPhase } = await import(
-  "../../runtime/src/orchestrator/review.ts"
-);
-const { decomposeTask } = await import(
-  "@alfred/agent/orchestrator/multi/decompose"
-);
+const { runMergePhase, runMergeAnalysis } =
+  await import("../../runtime/src/orchestrator/merge.ts");
+const { runReviewPhase } =
+  await import("../../runtime/src/orchestrator/review.ts");
+const { decomposeTask } =
+  await import("@alfred/agent/orchestrator/multi/decompose");
 
 type AgentEventDef =
   | { kind: "thought"; text: string }
@@ -105,7 +102,7 @@ type AgentEventDef =
     }
   | { kind: "artifact"; path: string };
 
-type WriterChunk = {
+interface WriterChunk {
   type: "stdout";
   event: {
     type: "thought" | "command" | "artifact";
@@ -116,7 +113,7 @@ type WriterChunk = {
     kind?: string;
     timestamp: number;
   };
-};
+}
 
 const tempDirs: string[] = [];
 
@@ -129,9 +126,9 @@ beforeEach(() => {
 
 afterEach(async () => {
   agentScripts.clear();
-  const dirs = tempDirs.splice(0, tempDirs.length);
+  const dirs = tempDirs.splice(0);
   await Promise.all(
-    dirs.map((dir) => rm(dir, { recursive: true, force: true }))
+    dirs.map((dir) => rm(dir, { force: true, recursive: true }))
   );
 });
 
@@ -144,9 +141,8 @@ describe("multi-agent orchestrator integration", () => {
       const previewTasks = tasksFor(bundle, requirement);
 
       const { events, result, runId, tasks } = await runScenario({
-        requirement,
-        workspace,
         bundle,
+        requirement,
         scripts: {
           [previewTasks[0]?.id ?? ""]: [
             { kind: "thought", text: "starting" },
@@ -154,6 +150,7 @@ describe("multi-agent orchestrator integration", () => {
             { kind: "artifact", path: "src/cli.ts" },
           ],
         },
+        workspace,
       });
 
       expect(events.some((evt) => evt.kind === "wave-result")).toBe(true);
@@ -189,16 +186,16 @@ describe("multi-agent orchestrator integration", () => {
       for (const task of initialTasks) {
         scripts[task.id] = [
           { kind: "thought", text: task.title },
-          { kind: "command", command: "bun fmt", status: "completed" },
+          { command: "bun fmt", kind: "command", status: "completed" },
           { kind: "artifact", path: `${task.id}.ts` },
         ];
       }
 
       const { events, result } = await runScenario({
-        requirement,
-        workspace,
         bundle,
+        requirement,
         scripts,
+        workspace,
       });
 
       const wavePlanEvents = events.filter(
@@ -235,17 +232,17 @@ describe("multi-agent orchestrator integration", () => {
         for (const task of initialTasks) {
           scripts[task.id] = [
             { kind: "thought", text: task.title },
-            { kind: "command", command: "bun fmt", status: "completed" },
+            { command: "bun fmt", kind: "command", status: "completed" },
             { kind: "artifact", path: `${task.id}/result.ts` },
           ];
         }
 
         const scenario = await runScenario({
-          requirement,
-          workspace,
-          bundle,
-          scripts,
           auto: "low",
+          bundle,
+          requirement,
+          scripts,
+          workspace,
         });
 
         await materializeAgentFiles(workspace, scenario.result.agentFileHints);
@@ -297,8 +294,8 @@ describe("multi-agent orchestrator integration", () => {
           expect(reviewContent.length).toBeGreaterThan(0);
         } finally {
           await rm(reviewDir, {
-            recursive: true,
             force: true,
+            recursive: true,
           });
         }
       } finally {
@@ -322,8 +319,8 @@ describe("multi-agent orchestrator integration", () => {
 
       const initialTasks = tasksFor(bundle, requirement);
       const stuckScript: AgentEventDef[] = Array.from({ length: 6 }, () => ({
-        kind: "command",
         command: "bun test",
+        kind: "command",
         status: "running",
       }));
       const scripts: Record<string, AgentEventDef[]> = {};
@@ -332,10 +329,10 @@ describe("multi-agent orchestrator integration", () => {
       }
 
       const { events, result } = await runScenario({
-        requirement,
-        workspace,
         bundle,
+        requirement,
         scripts,
+        workspace,
       });
 
       expect(result.aborted).toBe(true);
@@ -347,13 +344,12 @@ describe("multi-agent orchestrator integration", () => {
 function defaultScript(): WriterChunk[] {
   return toChunks([
     { kind: "thought", text: "idle" },
-    { kind: "command", command: "echo done", status: "completed" },
+    { command: "echo done", kind: "command", status: "completed" },
   ]);
 }
 
 function makeBundle(paths: string[]): ContextBundle {
   return {
-    maxTokens: 2000,
     estimatedTokens: 200,
     files: paths.map((path) => ({
       path,
@@ -363,6 +359,7 @@ function makeBundle(paths: string[]): ContextBundle {
       content: undefined,
     })),
     links: undefined,
+    maxTokens: 2000,
     note: "integration",
   };
 }
@@ -372,24 +369,24 @@ function toChunks(defs: AgentEventDef[]): WriterChunk[] {
     const timestamp = Date.now() + index;
     if (def.kind === "thought") {
       return {
-        type: "stdout",
         event: { type: "thought", content: def.text, timestamp },
+        type: "stdout",
       };
     }
     if (def.kind === "command") {
       return {
-        type: "stdout",
         event: {
           type: "command",
           command: def.command,
           status: def.status ?? "completed",
           timestamp,
         },
+        type: "stdout",
       };
     }
     return {
-      type: "stdout",
       event: { type: "artifact", path: def.path, timestamp },
+      type: "stdout",
     };
   });
 }
@@ -410,7 +407,7 @@ function registerScripts(
 }
 
 function tasksFor(bundle: ContextBundle, requirement: string): SubTask[] {
-  return decomposeTask(requirement, { requirement, bundle });
+  return decomposeTask(requirement, { bundle, requirement });
 }
 
 async function runScenario(options: {
@@ -431,14 +428,14 @@ async function runScenario(options: {
       workspace: options.workspace,
     },
     runId,
-    signal: new AbortController().signal,
-    workspace: options.workspace,
     scanContext: {
       requirement: options.requirement,
       receipts: { created: new Date() } as any,
       bundle: options.bundle,
       totalTokens: 0,
     },
+    signal: new AbortController().signal,
+    workspace: options.workspace,
   };
 
   const events: WorkflowEvent[] = [];
@@ -454,7 +451,7 @@ async function runScenario(options: {
     events.push(next.value as WorkflowEvent);
   }
 
-  return { events, result, runId, tasks, ctx };
+  return { ctx, events, result, runId, tasks };
 }
 
 async function drainGenerator<T>(

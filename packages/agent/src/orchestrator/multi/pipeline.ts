@@ -1,10 +1,12 @@
 import type { ContextBundle } from "@alfred/type/plan";
-import { rootPlanPath, subtaskPlanPath } from "../plans";
+
 import type { SubTask, SubTaskId } from "./decompose";
 import type { ExecPlanSnapshot } from "./execplan";
 import type { AgentOutcome, MergePlan } from "./merge";
 import type { ReviewFailureDetail, ReviewPlan } from "./review";
 import type { AgentId, AgentSpec, WaveId, WavePlan } from "./spawn";
+
+import { rootPlanPath, subtaskPlanPath } from "../plans";
 import {
   createTrackerContext,
   type StuckDetectionOptions,

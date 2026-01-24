@@ -5,6 +5,8 @@
  */
 
 import type { TerminalSize } from "../renderer";
+import type { CheckDefinition, SystemCheck } from "./checks";
+
 import {
   clearScreen,
   getCurrentSize,
@@ -14,7 +16,6 @@ import {
 } from "../renderer";
 import { colors } from "../theme";
 import { dim, fg } from "../typography";
-import type { CheckDefinition, SystemCheck } from "./checks";
 import {
   createDefaultChecks,
   renderChecks,

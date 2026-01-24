@@ -2,16 +2,18 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+
 import type { PipelineEvent } from "../../src/events";
+import type { PipelineContext, StageName } from "../../src/pipeline";
+import type { PipelineSnapshot } from "../../src/snapshot";
+
 import { createEvent } from "../../src/events";
 import {
   CheckpointObserver,
   InMemoryCheckpointStorage,
 } from "../../src/observers/checkpoint";
-import type { PipelineContext, StageName } from "../../src/pipeline";
 import { DEFAULT_CONFIG } from "../../src/pipeline";
 import { PipelineRunner } from "../../src/runner";
-import type { PipelineSnapshot } from "../../src/snapshot";
 import { PipelineReconstructor } from "../../src/snapshot";
 import { registerDefaultStages } from "../../src/stages";
 

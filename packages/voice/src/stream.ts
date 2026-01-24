@@ -5,6 +5,7 @@ import type {
   VoiceStreamStartPayload,
   VoiceStreamStatusEvent,
 } from "@alfred/type/voice";
+
 import { PCM_MIME_TYPE } from "./audio/pcm";
 
 type StartPayload = Omit<VoiceStreamStartPayload, "_">;

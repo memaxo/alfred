@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+
 import type { KnowledgeEntry } from "../extractor";
+import type { Knowledge } from "../hypergraph";
+
 import {
   detectContradiction,
   extract,
@@ -8,7 +11,6 @@ import {
   extractTemporal,
   toKnowledge,
 } from "../extractor";
-import type { Knowledge } from "../hypergraph";
 
 type RelationEntry = KnowledgeEntry & {
   data: Extract<Knowledge, { _: "relation" }>;

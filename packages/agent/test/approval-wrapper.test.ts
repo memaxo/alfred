@@ -1,14 +1,3 @@
-import {
-  afterAll,
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
-
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
@@ -20,13 +9,23 @@ import {
   loggerMocks,
   resetLoggerMocks,
 } from "@alfred/test-kit/logger";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 // Install shared mocks
 installAuthTokenMock();
 installLoggerMock();
 
 // Use shared mocks for assertions
-const requireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+const { requireToolScopesAndPolicy } = authTokenMocks;
 const loggerWarn = loggerMocks.warn;
 const _loggerError = loggerMocks.error;
 
@@ -36,9 +35,8 @@ const recordPolicyCheckFailureSpy = vi.spyOn(
   "recordPolicyCheckFailure"
 );
 
-const { withPolicyApproval } = await import(
-  "../src/orchestrator/tool/approval"
-);
+const { withPolicyApproval } =
+  await import("../src/orchestrator/tool/approval");
 
 describe("withPolicyApproval", () => {
   beforeEach(() => {
@@ -62,15 +60,15 @@ describe("withPolicyApproval", () => {
 
     const wrapped = withPolicyApproval(
       {
-        name: "test_tool",
         description: "Test tool",
         execute: vi.fn(),
+        name: "test_tool",
       },
       () => ({
         action: "test.action",
+        authz: "token",
         resource: { kind: "repo", id: "123" },
         scopes: ["test.scope"],
-        authz: "token",
       })
     );
 
@@ -79,10 +77,10 @@ describe("withPolicyApproval", () => {
     expect(needsApproval).toBe(true);
     expect(loggerWarn).toHaveBeenCalledTimes(1);
     expect(loggerWarn).toHaveBeenCalledWith("policy_check_failed_in_approval", {
-      tool: "test_tool",
       action: "test.action",
-      resource: { kind: "repo", id: "123" },
       error: "pdp_unavailable",
+      resource: { kind: "repo", id: "123" },
+      tool: "test_tool",
     });
     expect(recordPolicyCheckFailureSpy).toHaveBeenCalledWith("test_tool");
   });
@@ -99,20 +97,23 @@ describe("withPolicyApproval", () => {
       } as any,
       () => ({
         action: "fallback.action",
+        authz: "token",
         resource: { kind: "task", id: "run" },
         scopes: ["task.read"],
-        authz: "token",
       })
     );
 
     await wrapped.needsApproval({} as never);
 
     expect(loggerWarn).toHaveBeenCalledWith("policy_check_failed_in_approval", {
-      tool: "Fallback tool",
       action: "fallback.action",
-      resource: { kind: "task", id: "run" },
       error: "policy_timeout",
+      resource: { kind: "task", id: "run" },
+      tool: "Fallback tool",
     });
-    expect(recordPolicyCheckFailureSpy).toHaveBeenCalledWith("Fallback tool");
+    expect(recordPolicyCheckFailureSpy).toHaveBeenCalledTimes(1);
+    expect(recordPolicyCheckFailureSpy.mock.calls[0]?.[0]).toBe(
+      "Fallback tool"
+    );
   });
 });

@@ -1,13 +1,13 @@
+import { getAggregateStats, getTracker } from "@alfred/history";
 import { calculateCostUsd, getModelPricing } from "@alfred/metrics";
 import { parseModelKey } from "@alfred/type/model";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { getMetricsJSON } from "../metrics";
 import { protectedProcedure, router } from "../trpc";
 
 export const metricsRouter = router({
-  getSnapshot: protectedProcedure.query(async () => await getMetricsJSON()),
-
   estimateCost: protectedProcedure
     .input(
       z.object({
@@ -86,4 +86,21 @@ export const metricsRouter = router({
         },
       };
     }),
+
+  getAggregateUsage: protectedProcedure.query(() => {
+    return getAggregateStats();
+  }),
+
+  getBudgetStatus: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.string().min(1),
+      })
+    )
+    .query(({ input }) => {
+      const tracker = getTracker(input.sessionId);
+      return tracker?.getBudgetStatus() ?? null;
+    }),
+
+  getSnapshot: protectedProcedure.query(async () => await getMetricsJSON()),
 });

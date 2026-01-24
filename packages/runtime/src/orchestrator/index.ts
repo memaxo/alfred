@@ -1,16 +1,17 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { planRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { RuntimeMcpServer } from "@alfred/mcp";
-import type { StructuredPlan } from "@alfred/plan";
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { ExecutionContext } from "../context";
-import type { RuntimeInput } from "../types";
+import { type StructuredPlan } from "@alfred/plan";
+import { type WorkflowEvent } from "@alfred/type/plan";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+import { type ExecutionContext } from "../context";
+import { type RuntimeInput } from "../types";
 import { runConflictPhase } from "./conflict";
 import { runMergeAnalysis, runMergePhase } from "./merge";
 import { runReviewPhase } from "./review";
-import type { OrchestratorContext, ProjectConfig } from "./types";
+import { type OrchestratorContext, type ProjectConfig } from "./types";
 import { runWaves, type WavesResult } from "./waves";
 
 export { assignAgentTypes } from "./agents.js";
@@ -21,13 +22,13 @@ export * from "./types.js";
 export type { WavesResult } from "./waves.js";
 export { runWaves } from "./waves.js";
 
-export type OrchestratorDeps = {
+export interface OrchestratorDeps {
   runWaves?: typeof runWaves;
   runMergePhase?: typeof runMergePhase;
   runConflictPhase?: typeof runConflictPhase;
   runMergeAnalysis?: typeof runMergeAnalysis;
   runReviewPhase?: typeof runReviewPhase;
-};
+}
 
 export async function* runOrchestrator(
   input: RuntimeInput,
@@ -55,8 +56,8 @@ export async function* runOrchestrator(
   if (enableMcp) {
     runtimeMcp = new RuntimeMcpServer({
       bindHost: process.env.ORCH_MCP_BIND_HOST?.trim() || "0.0.0.0",
-      port: Number.parseInt(process.env.ORCH_MCP_PORT ?? "0", 10),
       path: "/mcp",
+      port: Number.parseInt(process.env.ORCH_MCP_PORT ?? "0", 10),
     });
     runtimeMcpUrl = await runtimeMcp.start().then((r) => r.url);
   }
@@ -66,8 +67,8 @@ export async function* runOrchestrator(
   if (input.auto === "medium" || input.auto === "high") {
     yield {
       _: "require-scope",
-      scopes: ["repo.write", "droid.exec"],
       event: "bio-authz",
+      scopes: ["repo.write", "droid.exec"],
     } as WorkflowEvent;
   }
 
@@ -81,17 +82,13 @@ export async function* runOrchestrator(
   }
 
   const ctx: OrchestratorContext = {
-    input,
-    runId,
-    signal,
-    workspace,
-    history,
-    projectConfig,
-    escalationContext,
     authz,
-    scanContext,
-    userId,
+    escalationContext,
+    history,
+    input,
     plan,
+    projectConfig,
+    runId,
     runtimeMcp:
       runtimeMcp && runtimeMcpUrl
         ? {
@@ -99,6 +96,10 @@ export async function* runOrchestrator(
             url: runtimeMcpUrl,
           }
         : undefined,
+    scanContext,
+    signal,
+    userId,
+    workspace,
   };
 
   let wavesResult: WavesResult | null = null;
@@ -164,20 +165,19 @@ export async function* runOrchestrator(
       }
     } catch (error) {
       logger.warn("runtime_mcp_server_stop_failed", {
-        runId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
 
     try {
-      const { stopAllServers } = await import(
-        "@alfred/agent/orchestrator/tool/shared/server"
-      );
+      const { stopAllServers } =
+        await import("@alfred/agent/orchestrator/tool/shared/server");
       await stopAllServers("workflow_complete");
     } catch (error) {
       logger.warn("executor_server_cleanup_failed", {
-        runId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
 
@@ -187,8 +187,8 @@ export async function* runOrchestrator(
         await ws.cleanup();
       } catch (error) {
         logger.warn("workspace_cleanup_failed", {
-          workspaceId: ws.id,
           error: error instanceof Error ? error.message : String(error),
+          workspaceId: ws.id,
         });
       }
     }
@@ -199,15 +199,14 @@ export async function* runOrchestrator(
         .then(() => true)
         .catch(() => false);
       if (isGitWorkspace) {
-        const { worktreeManager } = await import(
-          "@alfred/agent/orchestrator/tool/worktree"
-        );
+        const { worktreeManager } =
+          await import("@alfred/agent/orchestrator/tool/worktree");
         await worktreeManager.cleanup(workspace, runId);
       }
     } catch (error) {
       logger.warn("worktree_cleanup_failed", {
-        runId,
         error: error instanceof Error ? error.message : String(error),
+        runId,
       });
     }
   }

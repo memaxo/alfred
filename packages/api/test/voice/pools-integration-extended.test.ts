@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { hasPythonDependencies } from "@alfred/voice/test/utils/python-helpers";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+
 import {
   getVoicePools,
   initializeVoicePools,

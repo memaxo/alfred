@@ -4,6 +4,7 @@
  */
 
 import type { Hypergraph, Knowledge, NodeId } from "./hypergraph.js";
+
 import { knn } from "./indices/knn.js";
 import { measureSync } from "./metrics.js";
 import { LRUCache } from "./util/lru.js";

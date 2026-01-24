@@ -3,9 +3,11 @@ import type {
   RiskAssessment,
   RiskLevel,
 } from "@alfred/cognitive/logic/autonomy";
+
 import { RISK_ANCHORS } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
+
 import {
   runtimeSafetyAssessmentTotal,
   runtimeSafetyClassificationDurationSeconds,

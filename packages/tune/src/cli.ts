@@ -2,9 +2,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
+
+import type { FineTuneJobOptions, FineTuneLogEvent } from "./run-types";
+
 import { parseFineTuneConfig } from "./config";
 import { runFineTuneJob } from "./job";
-import type { FineTuneJobOptions, FineTuneLogEvent } from "./run-types";
 
 type CliArgs = {
   configPath: string | null;

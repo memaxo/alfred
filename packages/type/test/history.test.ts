@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { limitUiMessages, MAX_HISTORY_MESSAGES } from "../src/history";
+
 import type { UIMessage } from "../src/stream";
+
+import { limitUiMessages, MAX_HISTORY_MESSAGES } from "../src/history";
 
 function createTextMessage(id: number): UIMessage {
   return {

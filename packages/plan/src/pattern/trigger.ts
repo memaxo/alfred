@@ -1,4 +1,5 @@
 import { generateText } from "ai";
+
 import { getModelId, getOpenAI } from "../ai.js";
 
 /**

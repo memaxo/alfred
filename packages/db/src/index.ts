@@ -45,6 +45,7 @@ export * as templateRepo from "./repo/template";
 export * as trajectoryRepo from "./repo/trajectory";
 export * as userRepo from "./repo/user";
 export * as workflowRepo from "./repo/workflow";
+export * as reviewRepo from "./repo/review";
 
 // Schemas are exposed under namespaces to avoid duplicate export collisions.
 export * as alertSchema from "./schema/alert";
@@ -75,3 +76,4 @@ export * as tokenSchema from "./schema/token";
 export * as tuneSchema from "./schema/tune";
 export * as userSchema from "./schema/user";
 export * as workflowSchema from "./schema/workflow";
+export * as reviewSchema from "./schema/review";

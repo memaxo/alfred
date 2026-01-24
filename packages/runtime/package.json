@@ -3,12 +3,6 @@
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
-  "scripts": {
-    "build": "tsgo -b",
-    "dev": "echo 'Skipping runtime dev watch'",
-    "typecheck": "tsgo -b --pretty false",
-    "test": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_WATCHDOG_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --max-concurrency=1"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -22,6 +16,12 @@
       "types": "./dist/trajectory/*.d.ts",
       "default": "./src/trajectory/*.ts"
     }
+  },
+  "scripts": {
+    "build": "tsgo -b",
+    "dev": "echo 'Skipping runtime dev watch'",
+    "typecheck": "tsgo -b --pretty false",
+    "test": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_WATCHDOG_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --max-concurrency=1"
   },
   "dependencies": {
     "@ai-sdk/openai": "catalog:",

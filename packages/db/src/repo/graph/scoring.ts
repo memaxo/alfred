@@ -6,6 +6,7 @@
  */
 
 import { cosineSimilarity } from "@alfred/embed";
+
 import type { NodeRow } from "./types";
 
 // Re-export for backward compatibility

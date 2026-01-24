@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
 import { eventToUiMessages, normalizeToUiMessages } from "@alfred/agent";
+import { describe, expect, it } from "bun:test";
 
 describe("normalizeToUiMessages (non-stream)", () => {
   it("maps text, tool-calls and tool-results", () => {

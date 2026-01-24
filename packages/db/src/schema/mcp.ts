@@ -6,6 +6,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { user } from "./auth";
 
 export type McpTransport = "http" | "sse" | "streamable-http";

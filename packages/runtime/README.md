@@ -5,6 +5,7 @@ Workflow execution runtime for ALFRED. Provides pure execution engine with Async
 ## Purpose
 
 The runtime package implements the core workflow execution engine that orchestrates:
+
 - Context building and caching
 - AI streaming via AI SDK v6
 - Domain package integration (cognitive, knowledge, learning, policy)
@@ -30,25 +31,25 @@ Runtime is a **leaf package** that depends on domain packages but is never depen
 ## Usage
 
 ```typescript
-import { createRuntime } from '@alfred/runtime';
+import { createRuntime } from "@alfred/runtime";
 
 const runtime = createRuntime({
   user: session.user,
   input: {
-    requirement: 'Build a todo app',
-    workspace: '/path/to/repo',
-    auto: 'medium',
+    requirement: "Build a todo app",
+    workspace: "/path/to/repo",
+    auto: "medium",
   },
   signal: abortController.signal,
 });
 
 // Execute workflow and consume events
 for await (const event of runtime.execute()) {
-  console.log('Event:', event.type);
-  
+  console.log("Event:", event.type);
+
   // Handle specific events
-  if (event.type === 'tool-call') {
-    console.log('Tool:', event.toolName);
+  if (event.type === "tool-call") {
+    console.log("Tool:", event.toolName);
   }
 }
 ```
@@ -86,11 +87,11 @@ The runtime detects stuck agents using three heuristics that can be tuned via en
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `STUCK_NO_PROGRESS_MS` | `60000` | Time without events before agent is stuck (ms) |
-| `STUCK_MAX_REPEATS` | `5` | Consecutive identical commands before stuck |
-| `STUCK_MAX_FILE_FLIP_FLOPS` | `4` | Same file modifications before stuck |
+| Variable                    | Default | Description                                    |
+| --------------------------- | ------- | ---------------------------------------------- |
+| `STUCK_NO_PROGRESS_MS`      | `60000` | Time without events before agent is stuck (ms) |
+| `STUCK_MAX_REPEATS`         | `5`     | Consecutive identical commands before stuck    |
+| `STUCK_MAX_FILE_FLIP_FLOPS` | `4`     | Same file modifications before stuck           |
 
 ### Project Configuration
 
@@ -98,13 +99,13 @@ Add `stuckDetection` to your project config:
 
 ```typescript
 const projectConfig: ProjectConfig = {
-  type: 'node',
-  testCommand: 'bun test',
+  type: "node",
+  testCommand: "bun test",
   // ... other config
   stuckDetection: {
-    noProgressMs: 300_000,  // 5 minutes for complex tasks
-    maxRepeats: 10,         // Allow more retries
-    maxFileFlipFlops: 8,    // Allow more refactoring
+    noProgressMs: 300_000, // 5 minutes for complex tasks
+    maxRepeats: 10, // Allow more retries
+    maxFileFlipFlops: 8, // Allow more refactoring
   },
 };
 ```
@@ -115,4 +116,3 @@ const projectConfig: ProjectConfig = {
 - **Iterative tasks**: Increase `maxRepeats` for tasks requiring multiple test/fix cycles
 - **Refactoring tasks**: Increase `maxFileFlipFlops` for tasks touching the same files repeatedly
 - **Quick feedback**: Decrease all values for faster stuck detection in simple tasks
-

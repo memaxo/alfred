@@ -1,7 +1,7 @@
-import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 // Install shared logger mock first
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
-import type { WorkflowEvent } from "@alfred/type";
+import { type WorkflowEvent } from "@alfred/type";
+import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 installLoggerMock();
 
@@ -16,11 +16,11 @@ const workflowRepoMock = {
 };
 
 const envelopeMock = {
+  unwrapEventEnvelope: vi.fn((data: unknown) => data),
   wrapEventEnvelope: vi.fn((data: unknown) => ({
     wrapped: true,
     ...(data as object),
   })),
-  unwrapEventEnvelope: vi.fn((data: unknown) => data),
 };
 
 const eventIdMock = {
@@ -45,9 +45,8 @@ mock.module("../../src/utils/event-id", () => eventIdMock);
 mock.module("../../src/utils/normalize", () => normalizeMock);
 mock.module("../../src/utils/redaction", () => redactionMock);
 
-const { persistWorkflowEvent, persistEventSafe } = await import(
-  "../../src/workflow/event-persistence"
-);
+const { persistWorkflowEvent, persistEventSafe } =
+  await import("../../src/workflow/event-persistence");
 
 afterAll(() => {
   mock.restore();
@@ -56,37 +55,37 @@ afterAll(() => {
 describe("event-persistence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    workflowRepoMock.appendEvent.mockResolvedValue(undefined);
+    workflowRepoMock.appendEvent.mockResolvedValue();
     normalizeMock.eventToUiMessages.mockReturnValue(null);
   });
 
   describe("persistWorkflowEvent", () => {
     it("persists event with redaction and envelope wrapping", async () => {
       const event: WorkflowEvent = {
-        type: "progress",
-        pct: 10,
         message: "starting",
+        pct: 10,
+        type: "progress",
       } as any;
 
       const result = await persistWorkflowEvent("run-123", event);
 
       expect(redactionMock.redactEventData).toHaveBeenCalledWith(event);
       expect(eventIdMock.makeEventId).toHaveBeenCalledWith({
+        data: expect.objectContaining({ redacted: true }),
         runId: "run-123",
         type: "progress",
-        data: expect.objectContaining({ redacted: true }),
       });
       expect(envelopeMock.wrapEventEnvelope).toHaveBeenCalledWith({
-        id: "progress-generated-id",
-        type: "progress",
-        resource: "user",
         data: expect.objectContaining({ redacted: true }),
+        id: "progress-generated-id",
+        resource: "user",
+        type: "progress",
       });
       expect(workflowRepoMock.appendEvent).toHaveBeenCalledWith({
-        runId: "run-123",
+        eventData: expect.objectContaining({ wrapped: true }),
         eventId: "progress-generated-id",
         eventType: "progress",
-        eventData: expect.objectContaining({ wrapped: true }),
+        runId: "run-123",
       });
       expect(result.eventId).toBe("progress-generated-id");
       expect(result.eventType).toBe("progress");
@@ -150,8 +149,8 @@ describe("event-persistence", () => {
       const uiMessages = [
         {
           id: "msg-1",
-          role: "assistant",
           parts: [{ type: "text", text: "Hi" }],
+          role: "assistant",
         },
       ];
       normalizeMock.eventToUiMessages.mockReturnValue(uiMessages);
@@ -165,13 +164,13 @@ describe("event-persistence", () => {
 
       const secondCall = workflowRepoMock.appendEvent.mock.calls[1];
       expect(secondCall[0]).toMatchObject({
-        runId: "run-123",
         eventType: "ui-message",
+        runId: "run-123",
       });
     });
 
     it("generates separate eventId for UI messages", async () => {
-      const uiMessages = [{ id: "msg-1", role: "assistant", parts: [] }];
+      const uiMessages = [{ id: "msg-1", parts: [], role: "assistant" }];
       normalizeMock.eventToUiMessages.mockReturnValue(uiMessages);
       const event = { type: "assistant" } as WorkflowEvent;
 
@@ -180,9 +179,9 @@ describe("event-persistence", () => {
       // makeEventId should be called twice: once for main event, once for ui-message
       expect(eventIdMock.makeEventId).toHaveBeenCalledTimes(2);
       expect(eventIdMock.makeEventId).toHaveBeenCalledWith({
+        data: uiMessages,
         runId: "run-123",
         type: "ui-message",
-        data: uiMessages,
       });
     });
   });
@@ -207,9 +206,9 @@ describe("event-persistence", () => {
       expect(loggerMocks.warn).toHaveBeenCalledWith(
         "workflow_event_persistence_failed",
         expect.objectContaining({
-          runId: "run-123",
-          eventType: "progress",
           error: "db_error",
+          eventType: "progress",
+          runId: "run-123",
         })
       );
     });

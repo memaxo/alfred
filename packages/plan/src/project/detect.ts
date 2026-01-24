@@ -1,7 +1,9 @@
 // packages/plan/src/project/detect.ts
 import { projectRepo } from "@alfred/db";
-import { detectConfig } from "./config.js";
+
 import type { Project } from "./types.js";
+
+import { detectConfig } from "./config.js";
 
 /**
  * Detect or create a project based on workspace path and user ID

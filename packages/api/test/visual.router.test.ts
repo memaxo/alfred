@@ -5,6 +5,7 @@
  * Uses mock DB to test router logic.
  */
 
+import { type VisualConfig } from "@alfred/type";
 import {
   beforeAll,
   beforeEach,
@@ -14,7 +15,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { VisualConfig } from "@alfred/type";
+
 import { dbModuleStub } from "./utils/mock-db-client";
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
@@ -23,22 +24,13 @@ mockPolicyAudit();
 
 // Define test preset configurations
 const PRESET_BALANCED: VisualConfig = {
-  preset: "balanced",
-  particles: {
-    count: 3000,
-    spawnRadius: 600,
-    gravityConstant: 5000,
-    damping: 0.998,
-    minDistance: 50,
-  },
-  corona: {
-    fiberCount: 2000,
-    segmentsPerFiber: 50,
-    innerRadius: 150,
-    outerRadius: 400,
-    rotationSpeed: 0.104_72,
-    spiralTightness: 0.15,
-    wobbleAmplitude: 0.15,
+  atmosphere: {
+    enabled: true,
+    fogDensity: 0.15,
+    fogInnerRadius: 200,
+    fogOuterRadius: 600,
+    fiberIntensity: 0.08,
+    vignetteIntensity: 0.3,
   },
   bloom: {
     enabled: true,
@@ -57,20 +49,14 @@ const PRESET_BALANCED: VisualConfig = {
     void: "oklch(0.05 0 0)",
     biolum: "oklch(0.99 0 0)",
   },
-  atmosphere: {
-    enabled: true,
-    fogDensity: 0.15,
-    fogInnerRadius: 200,
-    fogOuterRadius: 600,
-    fiberIntensity: 0.08,
-    vignetteIntensity: 0.3,
-  },
-  nodes: {
-    glowIntensity: 0.5,
-    outerGlowFalloff: 0.05,
-    innerGlowIntensity: 0.4,
-    ringWidth: 2,
-    activityPulseSpeed: 3,
+  corona: {
+    fiberCount: 2000,
+    segmentsPerFiber: 50,
+    innerRadius: 150,
+    outerRadius: 400,
+    rotationSpeed: 0.104_72,
+    spiralTightness: 0.15,
+    wobbleAmplitude: 0.15,
   },
   edges: {
     particleSpeed: 0.15,
@@ -80,6 +66,21 @@ const PRESET_BALANCED: VisualConfig = {
     dormantAlpha: 0.1,
     activeAlpha: 0.8,
   },
+  nodes: {
+    glowIntensity: 0.5,
+    outerGlowFalloff: 0.05,
+    innerGlowIntensity: 0.4,
+    ringWidth: 2,
+    activityPulseSpeed: 3,
+  },
+  particles: {
+    count: 3000,
+    spawnRadius: 600,
+    gravityConstant: 5000,
+    damping: 0.998,
+    minDistance: 50,
+  },
+  preset: "balanced",
 };
 
 const PRESET_MINIMAL: VisualConfig = {
@@ -99,6 +100,10 @@ const PRESET_MAXIMUM: VisualConfig = {
 
 // Mock @alfred/cortex
 mock.module("@alfred/cortex", () => ({
+  PRESET_BALANCED,
+  PRESET_MAXIMUM,
+  PRESET_MINIMAL,
+  getDefaultPreset: vi.fn(() => PRESET_BALANCED),
   getPreset: vi.fn((name: string): VisualConfig => {
     if (name === "minimal") {
       return PRESET_MINIMAL;
@@ -108,10 +113,6 @@ mock.module("@alfred/cortex", () => ({
     }
     return PRESET_BALANCED;
   }),
-  getDefaultPreset: vi.fn(() => PRESET_BALANCED),
-  PRESET_BALANCED,
-  PRESET_MINIMAL,
-  PRESET_MAXIMUM,
 }));
 
 // Set up mocks for userRepo
@@ -124,7 +125,7 @@ dbModuleStub.userRepo.setPreference = setPreferenceMock;
 dbModuleStub.userRepo.deletePreference = deletePreferenceMock;
 
 let caller: Awaited<
-  ReturnType<typeof import("./utils/trpc")["createTestCaller"]>
+  ReturnType<(typeof import("./utils/trpc"))["createTestCaller"]>
 >;
 
 beforeAll(async () => {
@@ -143,12 +144,12 @@ beforeEach(() => {
   setPreferenceMock.mockImplementation(
     (userId: string, key: string, value: unknown) =>
       Promise.resolve({
-        id: `pref-${Date.now()}`,
-        userId,
-        key,
-        value,
         confidence: 1.0,
+        id: `pref-${Date.now()}`,
+        key,
         source: "user",
+        userId,
+        value,
       })
   );
 });
@@ -205,7 +206,7 @@ describe("visual router", () => {
       // Should have called setPreference multiple times
       expect(setPreferenceMock).toHaveBeenCalled();
       // Count the calls (preset + particles fields + corona fields + etc)
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       expect(calls.length).toBeGreaterThan(10);
 
       // Check specific calls
@@ -223,7 +224,7 @@ describe("visual router", () => {
     it("stores all nested properties", async () => {
       await caller.visual.setConfig(PRESET_BALANCED);
 
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const keys = calls.map((c: unknown[]) => c[1]);
 
       // Check various nested keys exist
@@ -245,7 +246,7 @@ describe("visual router", () => {
       });
 
       // Check that the specified field was updated
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const countCall = calls.find(
         (c: unknown[]) => c[1] === "visual.particles.count"
       );
@@ -255,11 +256,11 @@ describe("visual router", () => {
 
     it("updates multiple nested fields", async () => {
       await caller.visual.updateConfig({
-        particles: { count: 4000, spawnRadius: 700 },
         bloom: { intensity: 0.7 },
+        particles: { count: 4000, spawnRadius: 700 },
       });
 
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const keys = calls.map((c: unknown[]) => c[1]);
 
       // Verify our specific updates are included
@@ -287,7 +288,7 @@ describe("visual router", () => {
         "test-user",
         "visual.preset",
         "minimal",
-        1.0,
+        1,
         "user"
       );
     });
@@ -298,7 +299,7 @@ describe("visual router", () => {
         // corona is undefined, should not create any calls
       });
 
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const keys = calls.map((c: unknown[]) => c[1] as string);
       expect(keys.every((k) => k.startsWith("visual.particles"))).toBe(true);
     });
@@ -311,7 +312,7 @@ describe("visual router", () => {
       expect(result.preset).toBe("minimal");
 
       // Should have stored all preset values
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const presetCall = calls.find((c: unknown[]) => c[1] === "visual.preset");
       expect(presetCall?.[2]).toBe("minimal");
 
@@ -324,7 +325,7 @@ describe("visual router", () => {
     it("stores maximum preset values", async () => {
       await caller.visual.setPreset({ preset: "maximum" });
 
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const particleCall = calls.find(
         (c: unknown[]) => c[1] === "visual.particles.count"
       );
@@ -397,18 +398,18 @@ describe("visual router", () => {
   describe("importConfig", () => {
     it("imports config from export format", async () => {
       const importData = {
-        version: 1 as const,
         config: {
           ...PRESET_BALANCED,
           particles: { ...PRESET_BALANCED.particles, count: 7000 },
         },
+        version: 1 as const,
       };
 
       const result = await caller.visual.importConfig(importData);
 
       expect(result.imported).toBe(true);
 
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       const particleCall = calls.find(
         (c: unknown[]) => c[1] === "visual.particles.count"
       );
@@ -417,11 +418,11 @@ describe("visual router", () => {
 
     it("stores all imported values", async () => {
       await caller.visual.importConfig({
-        version: 1,
         config: PRESET_MINIMAL,
+        version: 1,
       });
 
-      const calls = setPreferenceMock.mock.calls;
+      const { calls } = setPreferenceMock.mock;
       expect(calls.length).toBeGreaterThan(10);
 
       // Verify specific values from minimal preset
@@ -478,8 +479,8 @@ describe("visual router", () => {
       // importConfig
       await expect(
         unauthedCaller.visual.importConfig({
-          version: 1,
           config: PRESET_BALANCED,
+          version: 1,
         })
       ).rejects.toMatchObject({
         code: "UNAUTHORIZED",

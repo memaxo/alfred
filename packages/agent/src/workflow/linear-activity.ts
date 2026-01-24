@@ -1,5 +1,8 @@
-import { setTimeout as delay } from "node:timers/promises";
 import { logger } from "@alfred/logger";
+import { setTimeout as delay } from "node:timers/promises";
+
+import type { ReviewCheckStatus } from "./review-gate";
+
 import {
   commentOnLinearIssue,
   emitLinearActivity,
@@ -10,7 +13,6 @@ import {
   setLinearSessionExternalUrl,
   setLinearStarted,
 } from "../orchestrator/linear";
-import type { ReviewCheckStatus } from "./review-gate";
 
 type LinearConfig = {
   sessionId?: string;

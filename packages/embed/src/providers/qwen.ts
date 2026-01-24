@@ -3,8 +3,9 @@
  * Multimodal embedding provider supporting text, images, and video
  */
 
-import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
+import { join } from "node:path";
+
 import {
   type EmbeddingInput,
   type EmbeddingModelConfig,

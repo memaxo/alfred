@@ -1,15 +1,17 @@
+import { spawn } from "bun";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "bun";
+
 import type { FineTuneConfig } from "../config";
-import { createRunPaths, defaults } from "../config";
-import { fineTuneSamplesTotal, fineTuneTokensTotal } from "../metrics";
 import type {
   FineTuneJobOptions,
   FineTuneLogEvent,
   FineTuneRunResult,
   FineTuneRunSummary,
 } from "../run-types";
+
+import { createRunPaths, defaults } from "../config";
+import { fineTuneSamplesTotal, fineTuneTokensTotal } from "../metrics";
 
 type StreamSource = "stdout" | "stderr";
 

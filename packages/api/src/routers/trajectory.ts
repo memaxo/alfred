@@ -1,14 +1,18 @@
 import * as trajectoryRepo from "@alfred/db/repo/trajectory";
 import * as workflowRepo from "@alfred/db/repo/workflow";
-import type { WorkflowTrajectoryFormat } from "@alfred/db/schema/workflow";
+import { type WorkflowTrajectoryFormat } from "@alfred/db/schema/workflow";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
 const formatSchema = z.literal("atif");
 
-type ValidationErr = { path: string; message: string };
+interface ValidationErr {
+  path: string;
+  message: string;
+}
 
 function isValidationErrArray(val: unknown): val is ValidationErr[] {
   if (!Array.isArray(val)) {
@@ -30,7 +34,7 @@ function mapWorkflowRunResourceLocal(raw: unknown) {
     typeof input.runId === "string" && input.runId.length > 0
       ? input.runId
       : "unknown";
-  return { kind: "workflow.run" as const, id, attrs: { scope: "self" } };
+  return { attrs: { scope: "self" }, id, kind: "workflow.run" as const };
 }
 
 async function buildAndPersistAtif(args: { runId: string; format: "atif" }) {
@@ -44,16 +48,12 @@ async function buildAndPersistAtif(args: { runId: string; format: "atif" }) {
   );
 
   const rawEvents = await workflowRepo.listEvents(args.runId);
-  const { buildAtifTrajectory } = await import(
-    "@alfred/runtime/trajectory/atif"
-  );
-  const { validateAtifTrajectory } = await import(
-    "@alfred/runtime/trajectory/validate"
-  );
+  const { buildAtifTrajectory } =
+    await import("@alfred/runtime/trajectory/atif");
+  const { validateAtifTrajectory } =
+    await import("@alfred/runtime/trajectory/validate");
 
   const trajectory = buildAtifTrajectory({
-    runId: args.runId,
-    requirement: typeof run.requirement === "string" ? run.requirement : null,
     events: rawEvents.map((e) => ({
       eventId: e.eventId,
       eventType: e.eventType,
@@ -61,28 +61,30 @@ async function buildAndPersistAtif(args: { runId: string; format: "atif" }) {
       timestamp: e.timestamp ?? null,
       seq: e.seq ?? null,
     })),
+    requirement: typeof run.requirement === "string" ? run.requirement : null,
+    runId: args.runId,
   });
 
   const validation = validateAtifTrajectory(trajectory);
 
   const stored = await trajectoryRepo.upsertTrajectory({
-    runId: args.runId,
-    format: args.format,
-    schemaVersion: trajectory.schema_version,
     data: trajectory,
+    errors: validation.ok ? null : validation.errors,
+    format: args.format,
     lastEventId,
     lastSeq,
+    runId: args.runId,
+    schemaVersion: trajectory.schema_version,
     valid: validation.ok,
-    errors: validation.ok ? null : validation.errors,
   });
 
   return {
+    lastEventId: stored.lastEventId,
+    lastSeq: stored.lastSeq,
     schemaVersion: stored.schemaVersion,
+    storedAt: stored.updatedAt,
     trajectory: stored.data,
     validation,
-    storedAt: stored.updatedAt,
-    lastSeq: stored.lastSeq,
-    lastEventId: stored.lastEventId,
   };
 }
 
@@ -93,8 +95,8 @@ export const trajectoryRouter = router({
     )
     .input(
       z.object({
-        runId: z.string().uuid(),
         format: formatSchema.optional().default("atif"),
+        runId: z.string().uuid(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -113,11 +115,11 @@ export const trajectoryRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
       }
 
-      const format: WorkflowTrajectoryFormat = input.format;
+      const { format } = input;
       const marker = await trajectoryRepo.getRunEventMarker(input.runId);
       const existing = await trajectoryRepo.getTrajectoryByRunId({
-        runId: input.runId,
         format,
+        runId: input.runId,
       });
 
       const isFresh =
@@ -130,16 +132,16 @@ export const trajectoryRouter = router({
           ? existing.errors
           : [];
         return {
+          lastEventId: existing.lastEventId,
+          lastSeq: existing.lastSeq,
           schemaVersion: existing.schemaVersion,
+          storedAt: existing.updatedAt,
           trajectory: existing.data,
           validation: { ok: existing.valid, errors },
-          storedAt: existing.updatedAt,
-          lastSeq: existing.lastSeq,
-          lastEventId: existing.lastEventId,
         };
       }
 
-      return buildAndPersistAtif({ runId: input.runId, format: "atif" });
+      return buildAndPersistAtif({ format: "atif", runId: input.runId });
     }),
 
   refresh: authedProcedure
@@ -148,8 +150,8 @@ export const trajectoryRouter = router({
     )
     .input(
       z.object({
-        runId: z.string().uuid(),
         format: formatSchema.optional().default("atif"),
+        runId: z.string().uuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -168,6 +170,6 @@ export const trajectoryRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
       }
 
-      return buildAndPersistAtif({ runId: input.runId, format: "atif" });
+      return buildAndPersistAtif({ format: "atif", runId: input.runId });
     }),
 });

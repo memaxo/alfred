@@ -9,20 +9,22 @@
  */
 
 import { logger } from "@alfred/logger";
+
 import {
   agentfsActiveWorkspaces,
   agentfsKvOpsTotal,
   agentfsOperationLatencyMs,
   agentfsToolCallsTotal,
 } from "./metrics.js";
-import type { AgentFSSDK } from "./sdk.js";
-import type {
-  AgentFSChange,
-  AgentFSInitOptions,
-  AgentFSInterface,
-  AgentFSKVEntry,
-  AgentFSToolCall,
-  AgentFSToolCallStats,
+import { type AgentFSSDK } from "./sdk.js";
+import {
+  type AgentFSChange,
+  type AgentFSInitOptions,
+  type AgentFSInterface,
+  type AgentFSKVEntry,
+  type AgentFSReadFileOptions,
+  type AgentFSToolCall,
+  type AgentFSToolCallStats,
 } from "./types.js";
 
 // Cached SDK module
@@ -111,8 +113,8 @@ export class AlfredAgentFS implements AgentFSInterface {
 
       logger.debug("agentfs_opened", {
         agentId: options.id,
-        path: options.path,
         duration,
+        path: options.path,
       });
       agentfsActiveWorkspaces.inc();
       agentfsOperationLatencyMs.observe({ operation_type: "open" }, duration);
@@ -166,18 +168,21 @@ export class AlfredAgentFS implements AgentFSInterface {
   // --- Key-Value Store ---
 
   kv = {
-    set: async (key: string, value: unknown): Promise<void> => {
+    delete: async (key: string): Promise<void> => {
       const startTime = Date.now();
       try {
-        await this.inner.kv.set(key, value);
-        agentfsKvOpsTotal.inc({ operation: "set" });
+        await this.inner.kv.delete(key);
+        agentfsKvOpsTotal.inc({ operation: "delete" });
         agentfsOperationLatencyMs.observe(
           { operation_type: "kv" },
           Date.now() - startTime
         );
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        throw new AgentFSError("KV_SET_FAILED", `Failed to set ${key}: ${msg}`);
+        throw new AgentFSError(
+          "KV_DELETE_FAILED",
+          `Failed to delete ${key}: ${msg}`
+        );
       }
     },
 
@@ -197,24 +202,6 @@ export class AlfredAgentFS implements AgentFSInterface {
       }
     },
 
-    delete: async (key: string): Promise<void> => {
-      const startTime = Date.now();
-      try {
-        await this.inner.kv.delete(key);
-        agentfsKvOpsTotal.inc({ operation: "delete" });
-        agentfsOperationLatencyMs.observe(
-          { operation_type: "kv" },
-          Date.now() - startTime
-        );
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        throw new AgentFSError(
-          "KV_DELETE_FAILED",
-          `Failed to delete ${key}: ${msg}`
-        );
-      }
-    },
-
     list: async (prefix?: string): Promise<AgentFSKVEntry[]> => {
       const startTime = Date.now();
       try {
@@ -225,13 +212,40 @@ export class AlfredAgentFS implements AgentFSInterface {
           Date.now() - startTime
         );
         // Normalize result to match our interface
-        return result.map((entry: { key: string; value: unknown }) => ({
-          key: entry.key,
-          value: entry.value,
-        }));
+        return result.map((entry: { key: string; value: unknown }) => {
+          const rec = entry as unknown as {
+            key: string;
+            value: unknown;
+            created_at?: unknown;
+            updated_at?: unknown;
+          };
+          return {
+            key: rec.key,
+            value: rec.value,
+            created_at:
+              typeof rec.created_at === "number" ? rec.created_at : undefined,
+            updated_at:
+              typeof rec.updated_at === "number" ? rec.updated_at : undefined,
+          };
+        });
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError("KV_LIST_FAILED", `Failed to list keys: ${msg}`);
+      }
+    },
+
+    set: async (key: string, value: unknown): Promise<void> => {
+      const startTime = Date.now();
+      try {
+        await this.inner.kv.set(key, value);
+        agentfsKvOpsTotal.inc({ operation: "set" });
+        agentfsOperationLatencyMs.observe(
+          { operation_type: "kv" },
+          Date.now() - startTime
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new AgentFSError("KV_SET_FAILED", `Failed to set ${key}: ${msg}`);
       }
     },
   };
@@ -239,13 +253,10 @@ export class AlfredAgentFS implements AgentFSInterface {
   // --- Filesystem Operations ---
 
   fs = {
-    writeFile: async (
-      path: string,
-      content: string | Buffer
-    ): Promise<void> => {
+    deleteFile: async (path: string): Promise<void> => {
       const startTime = Date.now();
       try {
-        await this.inner.fs.writeFile(path, content);
+        await this.inner.fs.deleteFile(path);
         agentfsOperationLatencyMs.observe(
           { operation_type: "fs" },
           Date.now() - startTime
@@ -253,16 +264,19 @@ export class AlfredAgentFS implements AgentFSInterface {
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError(
-          "FS_WRITE_FAILED",
-          `Failed to write ${path}: ${msg}`
+          "FS_DELETE_FAILED",
+          `Failed to delete ${path}: ${msg}`
         );
       }
     },
 
-    readFile: async (path: string): Promise<string> => {
+    readFile: async (
+      path: string,
+      options?: AgentFSReadFileOptions
+    ): Promise<string | Buffer> => {
       const startTime = Date.now();
       try {
-        const result = await this.inner.fs.readFile(path);
+        const result = await this.inner.fs.readFile(path, options ?? "utf8");
         agentfsOperationLatencyMs.observe(
           { operation_type: "fs" },
           Date.now() - startTime
@@ -295,23 +309,6 @@ export class AlfredAgentFS implements AgentFSInterface {
       }
     },
 
-    deleteFile: async (path: string): Promise<void> => {
-      const startTime = Date.now();
-      try {
-        await this.inner.fs.deleteFile(path);
-        agentfsOperationLatencyMs.observe(
-          { operation_type: "fs" },
-          Date.now() - startTime
-        );
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        throw new AgentFSError(
-          "FS_DELETE_FAILED",
-          `Failed to delete ${path}: ${msg}`
-        );
-      }
-    },
-
     stat: async (path: string) => {
       const startTime = Date.now();
       try {
@@ -326,6 +323,26 @@ export class AlfredAgentFS implements AgentFSInterface {
         throw new AgentFSError(
           "FS_STAT_FAILED",
           `Failed to stat ${path}: ${msg}`
+        );
+      }
+    },
+
+    writeFile: async (
+      path: string,
+      content: string | Buffer
+    ): Promise<void> => {
+      const startTime = Date.now();
+      try {
+        await this.inner.fs.writeFile(path, content);
+        agentfsOperationLatencyMs.observe(
+          { operation_type: "fs" },
+          Date.now() - startTime
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new AgentFSError(
+          "FS_WRITE_FAILED",
+          `Failed to write ${path}: ${msg}`
         );
       }
     },
@@ -383,51 +400,6 @@ export class AlfredAgentFS implements AgentFSInterface {
   // --- Tool Call Tracking ---
 
   tools = {
-    record: async (
-      name: string,
-      startedAt: number,
-      completedAt: number,
-      parameters?: unknown,
-      result?: unknown,
-      error?: string
-    ): Promise<number> => {
-      const startTime = Date.now();
-      try {
-        const id = await this.inner.tools.record(
-          name,
-          startedAt,
-          completedAt,
-          parameters,
-          result,
-          error
-        );
-
-        agentfsToolCallsTotal.inc({
-          tool_name: name,
-          status: error ? "error" : "success",
-        });
-        agentfsOperationLatencyMs.observe(
-          { operation_type: "tools" },
-          Date.now() - startTime
-        );
-
-        logger.debug("agentfs_tool_recorded", {
-          agentId: this.agentId,
-          toolName: name,
-          toolCallId: id,
-          hasError: !!error,
-        });
-
-        return id;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        throw new AgentFSError(
-          "TOOL_RECORD_FAILED",
-          `Failed to record tool call ${name}: ${msg}`
-        );
-      }
-    },
-
     get: async (id: number): Promise<AgentFSToolCall | undefined> => {
       try {
         return await this.inner.tools.get(id);
@@ -481,6 +453,51 @@ export class AlfredAgentFS implements AgentFSInterface {
         );
       }
     },
+
+    record: async (
+      name: string,
+      startedAt: number,
+      completedAt: number,
+      parameters?: unknown,
+      result?: unknown,
+      error?: string
+    ): Promise<number> => {
+      const startTime = Date.now();
+      try {
+        const id = await this.inner.tools.record(
+          name,
+          startedAt,
+          completedAt,
+          parameters,
+          result,
+          error
+        );
+
+        agentfsToolCallsTotal.inc({
+          tool_name: name,
+          status: error ? "error" : "success",
+        });
+        agentfsOperationLatencyMs.observe(
+          { operation_type: "tools" },
+          Date.now() - startTime
+        );
+
+        logger.debug("agentfs_tool_recorded", {
+          agentId: this.agentId,
+          toolName: name,
+          toolCallId: id,
+          hasError: !!error,
+        });
+
+        return id;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new AgentFSError(
+          "TOOL_RECORD_FAILED",
+          `Failed to record tool call ${name}: ${msg}`
+        );
+      }
+    },
   };
 }
 
@@ -511,7 +528,7 @@ export function createRunAgentFS(
   agentId: string,
   basePath?: string
 ): Promise<AlfredAgentFS> {
-  const sanitizedRunId = runId.replace(/[^a-zA-Z0-9-]/g, "-");
+  const sanitizedRunId = runId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
   const dbPath = basePath
     ? `${basePath}/.agentfs/${sanitizedRunId}/agentfs.db`
     : `.agentfs/${sanitizedRunId}/agentfs.db`;

@@ -4,8 +4,9 @@
  * Polls performance metrics for system health visualization.
  */
 
-import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+
+import { getApiClient } from "../api/client";
 import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────

@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test";
+
 import {
   getModelSpec,
-  listModelIds,
   listModels,
   listModelsByProvider,
-  MODEL_REGISTRY,
+  listModelIds,
   requireModelSpec,
   resolveModelId,
+  MODEL_REGISTRY,
 } from "../src/registry";
 
 describe("Model Registry", () => {
@@ -142,7 +143,7 @@ describe("Model Registry", () => {
 
     it("returns sorted list", () => {
       const ids = listModelIds();
-      const sorted = [...ids].sort();
+      const sorted = [...ids].toSorted();
       expect(ids).toEqual(sorted);
     });
   });

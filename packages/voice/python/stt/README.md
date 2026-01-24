@@ -19,26 +19,27 @@ Modular Python implementation of the Speech-to-Text server using NVIDIA Nemotron
 ## Usage
 
 Run as a module:
+
 ```bash
 python -m stt
 ```
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VOICE_STT_MODEL` | `nvidia/nemotron-speech-streaming-en-0.6b` | HuggingFace model ID |
-| `VOICE_STT_DEVICE` | auto | Device: `cuda`, `mps`, or `cpu` |
-| `VOICE_STT_CHUNK_SIZE` | `medium` | Chunk size for latency/accuracy tradeoff |
+| Variable               | Default                                    | Description                              |
+| ---------------------- | ------------------------------------------ | ---------------------------------------- |
+| `VOICE_STT_MODEL`      | `nvidia/nemotron-speech-streaming-en-0.6b` | HuggingFace model ID                     |
+| `VOICE_STT_DEVICE`     | auto                                       | Device: `cuda`, `mps`, or `cpu`          |
+| `VOICE_STT_CHUNK_SIZE` | `medium`                                   | Chunk size for latency/accuracy tradeoff |
 
 ### Chunk Sizes
 
-| Setting | Chunk Size | Latency | Use Case |
-|---------|------------|---------|----------|
-| `fast` | 80ms | Lowest | Real-time feedback |
-| `low` | 160ms | Very Low | Voice assistants |
-| `medium` | 560ms | Balanced | General use (default) |
-| `accurate` | 1.12s | Higher | Transcription tasks |
+| Setting    | Chunk Size | Latency  | Use Case              |
+| ---------- | ---------- | -------- | --------------------- |
+| `fast`     | 80ms       | Lowest   | Real-time feedback    |
+| `low`      | 160ms      | Very Low | Voice assistants      |
+| `medium`   | 560ms      | Balanced | General use (default) |
+| `accurate` | 1.12s      | Higher   | Transcription tasks   |
 
 ## IPC Protocol
 
@@ -47,6 +48,7 @@ The server communicates via JSON over stdin/stdout.
 ### Requests
 
 **transcribe**
+
 ```json
 {
   "id": "request-123",
@@ -63,6 +65,7 @@ The server communicates via JSON over stdin/stdout.
 ```
 
 **clear_cache**
+
 ```json
 {
   "id": "request-124",
@@ -74,6 +77,7 @@ The server communicates via JSON over stdin/stdout.
 ```
 
 **session_info**
+
 ```json
 {
   "id": "request-125",
@@ -87,6 +91,7 @@ The server communicates via JSON over stdin/stdout.
 ### Responses
 
 **transcript**
+
 ```json
 {
   "id": "request-123",
@@ -123,6 +128,7 @@ If the model doesn't support cache-aware streaming (e.g., Parakeet), the server 
 ## Legacy Model Support
 
 To use the older Parakeet 120M model:
+
 ```bash
 VOICE_STT_MODEL=nvidia/parakeet_realtime_eou_120m-v1 python -m stt
 ```

@@ -1,5 +1,5 @@
-import { beforeAll, beforeEach, expect, it } from "bun:test";
 import { describeSqlite, requireSqliteTestEnv } from "@alfred/db/testing";
+import { beforeAll, beforeEach, expect, it } from "bun:test";
 
 describeSqlite("focus/attention/delta repos (sqlite drift-catcher)", () => {
   let db: typeof import("@alfred/db").db;

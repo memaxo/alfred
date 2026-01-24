@@ -1,9 +1,10 @@
-import { describe, expect, it } from "bun:test";
+import type { ContextBundle } from "@alfred/type/plan";
+
 import {
   __internals,
   decomposeTask,
 } from "@alfred/agent/orchestrator/multi/decompose";
-import type { ContextBundle } from "@alfred/type/plan";
+import { describe, expect, it } from "bun:test";
 
 type BundleOptions = {
   includeContent?: boolean;

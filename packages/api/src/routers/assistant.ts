@@ -2,6 +2,7 @@ import { buildPersonaPrompt } from "@alfred/persona";
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
+
 import { buildAssistantContext } from "../ai/assistant-context";
 import * as generateModule from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
@@ -20,12 +21,6 @@ const ASSISTANT_MAX_STEPS = 12;
 
 const memorySchema = z
   .object({
-    workingMemory: z
-      .object({
-        scope: z.enum(["thread", "resource"]).optional(),
-        template: z.string().optional(),
-      })
-      .optional(),
     semanticRecall: z
       .object({
         topK: z.number().int().min(1).max(10).optional(),
@@ -39,26 +34,32 @@ const memorySchema = z
       })
       .partial()
       .optional(),
+    workingMemory: z
+      .object({
+        scope: z.enum(["thread", "resource"]).optional(),
+        template: z.string().optional(),
+      })
+      .optional(),
   })
   .partial();
 
 const generateInput = z.object({
-  projectId: z.string().uuid().optional(),
-  thread: z.string().optional(),
-  resource: z.string().optional(),
-  messages: z.array(z.unknown()).min(1),
-  toolChoice: z.enum(["auto", "none", "required"]).optional(),
   maxSteps: z.number().int().min(1).max(ASSISTANT_MAX_STEPS).optional(),
   memory: memorySchema.optional(),
+  messages: z.array(z.unknown()).min(1),
+  projectId: z.string().uuid().optional(),
+  resource: z.string().optional(),
+  thread: z.string().optional(),
+  toolChoice: z.enum(["auto", "none", "required"]).optional(),
 });
 
 const escalateInput = z.object({
-  requirement: z.string().min(1),
-  auto: z.enum(["read", "low"]).default("read"),
   authz: z.string().optional(),
-  workspace: z.string().optional(),
-  repoBase: z.string().optional(),
+  auto: z.enum(["read", "low"]).default("read"),
   context: z.record(z.string(), z.unknown()).optional(),
+  repoBase: z.string().optional(),
+  requirement: z.string().min(1),
+  workspace: z.string().optional(),
 });
 
 type AssistantGenerateInput = z.infer<typeof generateInput>;
@@ -68,34 +69,82 @@ function mapResource(raw: unknown) {
     requirement?: string;
   };
   return {
-    kind: "assistant" as const,
-    id: payload.thread ?? payload.resource ?? "default",
     attrs: {
       scope: payload.resource ?? "self",
     },
+    id: payload.thread ?? payload.resource ?? "default",
+    kind: "assistant" as const,
   };
 }
 
 export const assistantRouter = router({
-  getConfig: authedProcedure.query(async ({ ctx }) => {
-    try {
-      const { getModelSpec } = await import("@alfred/agent/models");
-      const { getModelForRole } = await import("@alfred/agent/selector");
+  escalate: authedProcedure
+    .use(requirePolicy("assistant.escalate", (raw) => mapResource(raw)))
+    .input(escalateInput)
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      try {
+        // Use injected dependency or fall back to direct import
+        const handoffExecuteFn = ctx.deps?.assistant?.handoffExecute;
+        if (handoffExecuteFn) {
+          const runtimeExtras: [string, unknown][] = [
+            ["assistantEscalateRequirement", input.requirement],
+            ["assistantEscalateAuto", input.auto],
+          ];
+          if (input.workspace) {
+            runtimeExtras.push(["assistantEscalateWorkspace", input.workspace]);
+          }
+          if (input.repoBase) {
+            runtimeExtras.push(["assistantEscalateRepoBase", input.repoBase]);
+          }
+          const runtimeContext = cloneRuntimeContext(
+            ctx.runtimeContext,
+            runtimeExtras
+          );
+          const result = await handoffExecuteFn({
+            input: {
+              ...input,
+              userId: ctx.session.user.id,
+            },
+            runtimeContext,
+          });
+          return result;
+        }
 
-      const userId = ctx.session?.user?.id;
-      const selected = userId
-        ? await getModelForRole("chat", { userId })
-        : getModelForRole("chat");
-      const modelKey = selected.modelKey;
-      const spec = getModelSpec(modelKey);
-      return {
-        modelId: spec.id,
-        contextWindow: spec.contextWindow,
-      };
-    } catch (error) {
-      throw toTRPCError(error, "assistant_getconfig_failed");
-    }
-  }),
+        // Fallback to direct import
+        const { toolHandoff } =
+          await import("@alfred/agent/assistant/tool/handoff");
+        const runtimeExtras: [string, unknown][] = [
+          ["assistantEscalateRequirement", input.requirement],
+          ["assistantEscalateAuto", input.auto],
+        ];
+        if (input.workspace) {
+          runtimeExtras.push(["assistantEscalateWorkspace", input.workspace]);
+        }
+        if (input.repoBase) {
+          runtimeExtras.push(["assistantEscalateRepoBase", input.repoBase]);
+        }
+        const runtimeContext = cloneRuntimeContext(
+          ctx.runtimeContext,
+          runtimeExtras
+        );
+        const result = await toolHandoff.execute({
+          input: {
+            ...input,
+            userId: ctx.session.user.id,
+          },
+          runtimeContext,
+        });
+        return result;
+      } catch (error) {
+        throw toTRPCError(error, "assistant_error");
+      }
+    }),
 
   generate: authedProcedure
     .use(rateLimit)
@@ -113,9 +162,8 @@ export const assistantRouter = router({
         }
 
         const userId = ctx.session.user.id;
-        const { getAssistantAgentDefaults } = await import(
-          "@alfred/agent/agents"
-        );
+        const { getAssistantAgentDefaults } =
+          await import("@alfred/agent/agents");
         const { getModelForRole } = await import("@alfred/agent/selector");
         const defaults = getAssistantAgentDefaults();
         const selection = input.projectId
@@ -219,72 +267,23 @@ export const assistantRouter = router({
         throw toTRPCError(error, "assistant_error");
       }
     }),
-  escalate: authedProcedure
-    .use(requirePolicy("assistant.escalate", (raw) => mapResource(raw)))
-    .input(escalateInput)
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.session) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-      try {
-        // Use injected dependency or fall back to direct import
-        const handoffExecuteFn = ctx.deps?.assistant?.handoffExecute;
-        if (handoffExecuteFn) {
-          const runtimeExtras: [string, unknown][] = [
-            ["assistantEscalateRequirement", input.requirement],
-            ["assistantEscalateAuto", input.auto],
-          ];
-          if (input.workspace) {
-            runtimeExtras.push(["assistantEscalateWorkspace", input.workspace]);
-          }
-          if (input.repoBase) {
-            runtimeExtras.push(["assistantEscalateRepoBase", input.repoBase]);
-          }
-          const runtimeContext = cloneRuntimeContext(
-            ctx.runtimeContext,
-            runtimeExtras
-          );
-          const result = await handoffExecuteFn({
-            input: {
-              ...input,
-              userId: ctx.session.user.id,
-            },
-            runtimeContext,
-          });
-          return result;
-        }
+  getConfig: authedProcedure.query(async ({ ctx }) => {
+    try {
+      const { getModelSpec } = await import("@alfred/agent/models");
+      const { getModelForRole } = await import("@alfred/agent/selector");
 
-        // Fallback to direct import
-        const { toolHandoff } = await import(
-          "@alfred/agent/assistant/tool/handoff"
-        );
-        const runtimeExtras: [string, unknown][] = [
-          ["assistantEscalateRequirement", input.requirement],
-          ["assistantEscalateAuto", input.auto],
-        ];
-        if (input.workspace) {
-          runtimeExtras.push(["assistantEscalateWorkspace", input.workspace]);
-        }
-        if (input.repoBase) {
-          runtimeExtras.push(["assistantEscalateRepoBase", input.repoBase]);
-        }
-        const runtimeContext = cloneRuntimeContext(
-          ctx.runtimeContext,
-          runtimeExtras
-        );
-        const result = await toolHandoff.execute({
-          input: {
-            ...input,
-            userId: ctx.session.user.id,
-          },
-          runtimeContext,
-        });
-        return result;
-      } catch (error) {
-        throw toTRPCError(error, "assistant_error");
-      }
-    }),
+      const userId = ctx.session?.user?.id;
+      const selected = userId
+        ? await getModelForRole("chat", { userId })
+        : getModelForRole("chat");
+      const modelKey = selected.modelKey;
+      const spec = getModelSpec(modelKey);
+      return {
+        modelId: spec.id,
+        contextWindow: spec.contextWindow,
+      };
+    } catch (error) {
+      throw toTRPCError(error, "assistant_getconfig_failed");
+    }
+  }),
 });

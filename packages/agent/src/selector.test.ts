@@ -1,10 +1,12 @@
+import {
+  type PreferenceDetail,
+  type PreferenceKey,
+} from "@alfred/type/preference";
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
 
 const loader = await import("./preference/loader");
-const { getModelForRole, hasCapability, supportsGenUI } = await import(
-  "./selector"
-);
+const { getModelForRole, hasCapability, supportsGenUI } =
+  await import("./selector");
 const { resetGatewayForTests } = await import("./v6");
 
 const ENV_KEYS = [
@@ -57,9 +59,9 @@ function makePrefs(
   const prefs = new Map<PreferenceKey, PreferenceDetail>();
   for (const [key, value] of Object.entries(entries)) {
     prefs.set(key as PreferenceKey, {
-      value,
-      source: "user",
       confidence: 1,
+      source: "user",
+      value,
     });
   }
   return prefs;
@@ -116,7 +118,7 @@ describe("getModelForRole", () => {
       new Map([
         [
           "domain.ai.model.chat" as PreferenceKey,
-          { value: 123, source: "user", confidence: 1 } as PreferenceDetail,
+          { confidence: 1, source: "user", value: 123 } as PreferenceDetail,
         ],
       ])
     );

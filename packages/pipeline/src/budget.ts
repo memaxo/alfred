@@ -1,13 +1,15 @@
+import { getOrCreateTracker } from "@alfred/history";
 import { checkBudget, recordCost } from "@alfred/metrics";
-import type { ModelProvider } from "@alfred/type/model";
+import { type ModelProvider } from "@alfred/type/model";
+
 import { createEvent } from "./events";
-import type { PipelineContext } from "./pipeline";
+import { type PipelineContext } from "./pipeline";
 
 /**
  * Budget enforcement for pipeline workflows.
  */
 
-const DEFAULT_BUDGET_USD = 10.0; // $10 per workflow by default
+const DEFAULT_BUDGET_USD = 10; // $10 per workflow by default
 
 export function getBudgetUsd(ctx: PipelineContext): number {
   return ctx.get<number>("budget:limit") ?? DEFAULT_BUDGET_USD;
@@ -35,6 +37,24 @@ export function recordPipelineCost(
     ctx.runId
   );
 
+  // Also record in unified history tracker for metrics
+  try {
+    const tracker = getOrCreateTracker({
+      budgetUsd: getBudgetUsd(ctx),
+      modelId,
+      sessionId: ctx.runId,
+    });
+    tracker.record({
+      inputTokens: promptTokens,
+      latencyMs: 0,
+      modelId,
+      outputTokens: completionTokens, // Not tracked at pipeline level
+    });
+  } catch {
+    // Don't fail pipeline if tracking fails
+    // Error is logged by tracker internally
+  }
+
   // Track cumulative cost in context
   const currentTotal = ctx.get<number>("cost:total") ?? 0;
   ctx.set("cost:total", currentTotal + costUsd);
@@ -46,8 +66,8 @@ export function recordPipelineCost(
   if (budgetStatus.approaching && !budgetStatus.exceeded) {
     ctx.emit(
       createEvent("budget:warning", {
-        costUsd: budgetStatus.costUsd,
         budgetUsd: budgetStatus.budgetUsd,
+        costUsd: budgetStatus.costUsd,
         percentUsed: (budgetStatus.costUsd / budgetStatus.budgetUsd) * 100,
       })
     );
@@ -56,8 +76,8 @@ export function recordPipelineCost(
   if (budgetStatus.exceeded) {
     ctx.emit(
       createEvent("budget:exceeded", {
-        costUsd: budgetStatus.costUsd,
         budgetUsd: budgetStatus.budgetUsd,
+        costUsd: budgetStatus.costUsd,
       })
     );
   }

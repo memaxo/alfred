@@ -1,8 +1,8 @@
 {
   "name": "@alfred/code-analysis",
   "version": "0.1.0",
-  "type": "module",
   "description": "Code diff parsing and bug detection for ALFRED Reviews",
+  "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./diff": "./src/diff.ts",

@@ -1,15 +1,16 @@
 /// <reference types="bun-types" />
 
-import { Database } from "bun:sqlite";
-import { createRequire } from "node:module";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { logger } from "@alfred/logger";
+import { Database } from "bun:sqlite";
 import {
   drizzle as drizzlePostgres,
   type NodePgDatabase,
 } from "drizzle-orm/node-postgres";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Client, type ClientConfig, Pool, type PoolConfig } from "pg";
+
 import { ensureSqliteTestSchema } from "./sqlite/schema";
 
 type PgSource = Client | Pool;
@@ -17,19 +18,19 @@ type PgSource = Client | Pool;
 export type DbDriver = "postgres" | "sqlite";
 export let dbDriver: DbDriver = "postgres";
 
-type RetryOptions = {
+interface RetryOptions {
   enabled?: boolean;
   maxRetries?: number;
   initialDelay?: number;
   maxDelay?: number;
   sleep?: (ms: number) => Promise<void>;
-};
+}
 
 const SQLITE_MEMORY_URL = "sqlite::memory:";
 const require = createRequire(import.meta.url);
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic load
+// oxlint-disable noExplicitAny: Drizzle dynamic load
 const drizzleSqlite: (...args: any[]) => any =
-  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic load
+  // oxlint-disable noExplicitAny: Drizzle dynamic load
   (require("drizzle-orm/bun-sqlite") as { drizzle: (...args: any[]) => any })
     .drizzle;
 
@@ -137,10 +138,10 @@ function createSqliteDrizzle(connectionString: string) {
     const normalized =
       typeof source === "string"
         ? source
-            .replace(/gen_random_uuid\(\)/g, "lower(hex(randomblob(16)))")
-            .replace(/\bnow\(\)/gi, "CURRENT_TIMESTAMP")
+            .replaceAll(/gen_random_uuid\(\)/g, "lower(hex(randomblob(16)))")
+            .replaceAll(/\bnow\(\)/gi, "CURRENT_TIMESTAMP")
         : source;
-    // biome-ignore lint/suspicious/noExplicitAny: Internal Bun-SQLite binding
+    // oxlint-disable noExplicitAny: Internal Bun-SQLite binding
     return originalPrepare(normalized as string, ...(params as any[]));
   }) as typeof sqlite.prepare;
   ensureSqliteTestSchema(sqlite);
@@ -193,9 +194,9 @@ export async function connectWithRetry(
 
       logger.warn("db_connection_retry", {
         attempt: attempt + 1,
-        maxRetries,
         delay,
         error: lastError.message,
+        maxRetries,
       });
 
       await sleep(delay);
@@ -230,9 +231,9 @@ export function createPgClient(
   if (shouldRetry) {
     const maxRetries = retry?.maxRetries ?? 5;
     connectWithRetry(client, {
-      maxRetries,
       initialDelay: retry?.initialDelay ?? 100,
       maxDelay: retry?.maxDelay ?? 5000,
+      maxRetries,
       sleep: retry?.sleep,
     }).catch((error) => {
       logger.error("db_client_connection_failed_after_retries", {

@@ -1,9 +1,11 @@
 import { logger } from "@alfred/logger";
 import { generateObject } from "ai";
-import { getModelId, getOpenAI } from "../ai.js";
+
 import type { StructuredPlan } from "../generate/types.js";
 import type { WorkflowIntent } from "../intent/types.js";
 import type { ResearchResult } from "../research/types.js";
+
+import { getModelId, getOpenAI } from "../ai.js";
 import { type PlanCritique, planCritiqueSchema } from "./types.js";
 
 /**

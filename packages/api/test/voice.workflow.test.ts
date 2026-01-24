@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -27,14 +28,14 @@ mock.module("ai", () => ({
 // Mock the agent selector
 mock.module("@alfred/agent/selector", () => ({
   getClassificationModel: () => ({
+    capabilities: ["genui"],
     model: {},
     modelKey: "test-model",
-    capabilities: ["genui"],
   }),
   getModelForRole: () => ({
+    capabilities: [],
     model: {},
     modelKey: "test-model",
-    capabilities: [],
   }),
 }));
 
@@ -72,11 +73,12 @@ describe("voice workflow", () => {
 
     it("detects approval in awaiting_approval state", async () => {
       const { classifyVoiceIntent } = await import("../src/voice/intent.js");
-      const { createAwaitingApprovalState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createAwaitingApprovalState } =
+        await import("../src/voice/workflow-state.js");
 
       const sessionContext = {
+        createdAt: new Date(),
+        originalTranscript: "build something",
         state: createAwaitingApprovalState({
           runId: "test-run",
           planId: "test-plan",
@@ -84,8 +86,6 @@ describe("voice workflow", () => {
           waveCount: 2,
           subtaskCount: 5,
         }),
-        originalTranscript: "build something",
-        createdAt: new Date(),
         updatedAt: new Date(),
       };
 
@@ -99,11 +99,12 @@ describe("voice workflow", () => {
 
     it("detects rejection in awaiting_approval state", async () => {
       const { classifyVoiceIntent } = await import("../src/voice/intent.js");
-      const { createAwaitingApprovalState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createAwaitingApprovalState } =
+        await import("../src/voice/workflow-state.js");
 
       const sessionContext = {
+        createdAt: new Date(),
+        originalTranscript: "build something",
         state: createAwaitingApprovalState({
           runId: "test-run",
           planId: "test-plan",
@@ -111,8 +112,6 @@ describe("voice workflow", () => {
           waveCount: 2,
           subtaskCount: 5,
         }),
-        originalTranscript: "build something",
-        createdAt: new Date(),
         updatedAt: new Date(),
       };
 
@@ -139,8 +138,8 @@ describe("voice workflow", () => {
       const { planToSpeech } = await import("../src/voice/plan-speech.js");
 
       const plan = {
+        evaluationCriteria: [],
         id: "test-plan",
-        title: "Test Plan",
         intent: "Build authentication",
         phases: [
           {
@@ -158,7 +157,7 @@ describe("voice workflow", () => {
           strategy: "sequential" as const,
           isolation: "agentfs" as const,
         },
-        evaluationCriteria: [],
+        title: "Test Plan",
       };
 
       const speech = planToSpeech(plan as Parameters<typeof planToSpeech>[0]);
@@ -173,8 +172,8 @@ describe("voice workflow", () => {
       const { planToSpeech } = await import("../src/voice/plan-speech.js");
 
       const plan = {
+        evaluationCriteria: [],
         id: "test-plan",
-        title: "Complex Plan",
         intent: "Build feature",
         phases: [
           {
@@ -205,17 +204,17 @@ describe("voice workflow", () => {
             agentType: "codex" as const,
           },
         ],
-        waves: [
-          { id: "w1", agents: ["t1", "t2"], dependsOn: [] },
-          { id: "w2", agents: ["t3", "t4", "t5"], dependsOn: ["w1"] },
-          { id: "w3", agents: ["t6"], dependsOn: ["w2"] },
-        ],
         resources: {
           agentCount: 3,
           strategy: "topological" as const,
           isolation: "agentfs" as const,
         },
-        evaluationCriteria: [],
+        title: "Complex Plan",
+        waves: [
+          { id: "w1", agents: ["t1", "t2"], dependsOn: [] },
+          { id: "w2", agents: ["t3", "t4", "t5"], dependsOn: ["w1"] },
+          { id: "w3", agents: ["t6"], dependsOn: ["w2"] },
+        ],
       };
 
       const speech = planToSpeech(plan as Parameters<typeof planToSpeech>[0]);
@@ -230,8 +229,8 @@ describe("voice workflow", () => {
       const { planToSpeech } = await import("../src/voice/plan-speech.js");
 
       const plan = {
+        evaluationCriteria: [],
         id: "test-plan",
-        title: "Timed Plan",
         intent: "Build feature",
         phases: [
           {
@@ -249,7 +248,7 @@ describe("voice workflow", () => {
           strategy: "sequential" as const,
           isolation: "agentfs" as const,
         },
-        evaluationCriteria: [],
+        title: "Timed Plan",
       };
 
       const speech = planToSpeech(plan as Parameters<typeof planToSpeech>[0]);
@@ -260,9 +259,8 @@ describe("voice workflow", () => {
 
   describe("workflow state machine", () => {
     it("creates idle state", async () => {
-      const { createIdleState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createIdleState } =
+        await import("../src/voice/workflow-state.js");
 
       const state = createIdleState();
 
@@ -270,9 +268,8 @@ describe("voice workflow", () => {
     });
 
     it("creates planning state", async () => {
-      const { createPlanningState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createPlanningState } =
+        await import("../src/voice/workflow-state.js");
 
       const state = createPlanningState("run-123");
 
@@ -281,16 +278,15 @@ describe("voice workflow", () => {
     });
 
     it("creates awaiting approval state", async () => {
-      const { createAwaitingApprovalState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createAwaitingApprovalState } =
+        await import("../src/voice/workflow-state.js");
 
       const state = createAwaitingApprovalState({
-        runId: "run-123",
         planId: "plan-456",
+        runId: "run-123",
+        subtaskCount: 5,
         summary: "Test plan summary",
         waveCount: 2,
-        subtaskCount: 5,
       });
 
       expect(state.phase).toBe("awaiting_approval");
@@ -303,9 +299,8 @@ describe("voice workflow", () => {
     });
 
     it("creates executing state", async () => {
-      const { createExecutingState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createExecutingState } =
+        await import("../src/voice/workflow-state.js");
 
       const state = createExecutingState("run-123");
 
@@ -324,6 +319,8 @@ describe("voice workflow", () => {
       } = await import("../src/voice/workflow-state.js");
 
       const context = {
+        createdAt: new Date(),
+        originalTranscript: "build a feature",
         state: createAwaitingApprovalState({
           runId: "run-123",
           planId: "plan-456",
@@ -331,8 +328,6 @@ describe("voice workflow", () => {
           waveCount: 1,
           subtaskCount: 3,
         }),
-        originalTranscript: "build a feature",
-        createdAt: new Date(),
         updatedAt: new Date(),
       };
 
@@ -352,15 +347,14 @@ describe("voice workflow", () => {
         getVoiceWorkflowContext,
         setVoiceWorkflowContext,
       } = await import("../src/voice/session-context.js");
-      const { createPlanningState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createPlanningState } =
+        await import("../src/voice/workflow-state.js");
 
       const userId = "test-user-123";
       const context = {
-        state: createPlanningState("run-abc"),
-        originalTranscript: "test request",
         createdAt: new Date(),
+        originalTranscript: "test request",
+        state: createPlanningState("run-abc"),
         updatedAt: new Date(),
       };
 
@@ -382,9 +376,8 @@ describe("voice workflow", () => {
         hasActiveWorkflowContext,
         setVoiceWorkflowContext,
       } = await import("../src/voice/session-context.js");
-      const { createExecutingState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { createExecutingState } =
+        await import("../src/voice/workflow-state.js");
 
       const userId = "test-user-456";
 
@@ -394,9 +387,9 @@ describe("voice workflow", () => {
 
       // Executing = active
       await setVoiceWorkflowContext(userId, {
-        state: createExecutingState("run-xyz"),
-        originalTranscript: "test",
         createdAt: new Date(),
+        originalTranscript: "test",
+        state: createExecutingState("run-xyz"),
         updatedAt: new Date(),
       });
 
@@ -414,20 +407,20 @@ describe("voice workflow", () => {
       const { detectApprovalFallback } = _internal;
 
       expect(detectApprovalFallback("approve")).toEqual({
-        type: "approval",
         action: "approve",
+        type: "approval",
       });
       expect(detectApprovalFallback("reject")).toEqual({
-        type: "approval",
         action: "reject",
+        type: "approval",
       });
       expect(detectApprovalFallback("yes")).toEqual({
-        type: "approval",
         action: "approve",
+        type: "approval",
       });
       expect(detectApprovalFallback("no")).toEqual({
-        type: "approval",
         action: "reject",
+        type: "approval",
       });
 
       expect(detectApprovalFallback("yes, approve it")).toBeNull();
@@ -438,14 +431,13 @@ describe("voice workflow", () => {
 
   describe("clarification formatting", () => {
     it("formats single clarification question", async () => {
-      const { clarificationToSpeech } = await import(
-        "../src/voice/plan-speech.js"
-      );
+      const { clarificationToSpeech } =
+        await import("../src/voice/plan-speech.js");
 
       const result = clarificationToSpeech([
         {
-          question: "Which component should I update?",
           options: ["Header", "Footer", "Sidebar"],
+          question: "Which component should I update?",
         },
       ]);
 
@@ -455,9 +447,8 @@ describe("voice workflow", () => {
     });
 
     it("formats multiple clarification questions", async () => {
-      const { clarificationToSpeech } = await import(
-        "../src/voice/plan-speech.js"
-      );
+      const { clarificationToSpeech } =
+        await import("../src/voice/plan-speech.js");
 
       const result = clarificationToSpeech([
         { question: "First question?" },
@@ -469,9 +460,8 @@ describe("voice workflow", () => {
     });
 
     it("handles empty questions", async () => {
-      const { clarificationToSpeech } = await import(
-        "../src/voice/plan-speech.js"
-      );
+      const { clarificationToSpeech } =
+        await import("../src/voice/plan-speech.js");
 
       const result = clarificationToSpeech([]);
 
@@ -481,13 +471,12 @@ describe("voice workflow", () => {
 
   describe("completion summary", () => {
     it("formats successful completion", async () => {
-      const { planCompletionSummary } = await import(
-        "../src/voice/plan-speech.js"
-      );
+      const { planCompletionSummary } =
+        await import("../src/voice/plan-speech.js");
 
       const plan = {
+        evaluationCriteria: [],
         id: "test",
-        title: "Test",
         intent: "Test",
         phases: [
           {
@@ -505,7 +494,7 @@ describe("voice workflow", () => {
           strategy: "sequential" as const,
           isolation: "agentfs" as const,
         },
-        evaluationCriteria: [],
+        title: "Test",
       };
 
       const result = planCompletionSummary(
@@ -520,13 +509,12 @@ describe("voice workflow", () => {
     });
 
     it("formats failed completion", async () => {
-      const { planCompletionSummary } = await import(
-        "../src/voice/plan-speech.js"
-      );
+      const { planCompletionSummary } =
+        await import("../src/voice/plan-speech.js");
 
       const plan = {
+        evaluationCriteria: [],
         id: "test",
-        title: "Test",
         intent: "Test",
         phases: [],
         resources: {
@@ -534,7 +522,7 @@ describe("voice workflow", () => {
           strategy: "sequential" as const,
           isolation: "agentfs" as const,
         },
-        evaluationCriteria: [],
+        title: "Test",
       };
 
       const result = planCompletionSummary(
@@ -550,8 +538,8 @@ describe("voice workflow", () => {
 
   describe("verbosity levels", () => {
     const createTestPlan = () => ({
+      evaluationCriteria: [],
       id: "test-plan",
-      title: "Test Plan",
       intent: "Build feature",
       phases: [
         {
@@ -578,7 +566,7 @@ describe("voice workflow", () => {
         strategy: "sequential" as const,
         isolation: "agentfs" as const,
       },
-      evaluationCriteria: [],
+      title: "Test Plan",
     });
 
     it("brief verbosity is shorter than standard", async () => {
@@ -631,9 +619,8 @@ describe("voice workflow", () => {
 
   describe("approval timeout", () => {
     it("calculates approval deadline", async () => {
-      const { calculateApprovalDeadline } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { calculateApprovalDeadline } =
+        await import("../src/voice/workflow-state.js");
 
       // No timeout (0 minutes)
       const noTimeout = calculateApprovalDeadline(0);
@@ -652,11 +639,13 @@ describe("voice workflow", () => {
     });
 
     it("detects expired approval", async () => {
-      const { isApprovalExpired, createAwaitingApprovalState } = await import(
-        "../src/voice/workflow-state.js"
-      );
+      const { isApprovalExpired, createAwaitingApprovalState } =
+        await import("../src/voice/workflow-state.js");
 
       const expiredContext = {
+        approvalDeadline: new Date(Date.now() - 1000),
+        createdAt: new Date(),
+        originalTranscript: "test",
         state: createAwaitingApprovalState({
           runId: "run-1",
           planId: "plan-1",
@@ -664,10 +653,7 @@ describe("voice workflow", () => {
           waveCount: 1,
           subtaskCount: 1,
         }),
-        originalTranscript: "test",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        approvalDeadline: new Date(Date.now() - 1000), // 1 second ago
+        updatedAt: new Date(), // 1 second ago
       };
 
       expect(isApprovalExpired(expiredContext)).toBe(true);
@@ -689,6 +675,9 @@ describe("voice workflow", () => {
 
       const deadline = new Date(Date.now() + 300_000); // 5 minutes from now
       const context = {
+        approvalDeadline: deadline,
+        createdAt: new Date(),
+        originalTranscript: "test",
         state: createAwaitingApprovalState({
           runId: "run-1",
           planId: "plan-1",
@@ -696,10 +685,7 @@ describe("voice workflow", () => {
           waveCount: 1,
           subtaskCount: 1,
         }),
-        originalTranscript: "test",
-        createdAt: new Date(),
         updatedAt: new Date(),
-        approvalDeadline: deadline,
       };
 
       const serialized = serializeWorkflowContext(context);
@@ -714,9 +700,8 @@ describe("voice workflow", () => {
 
   describe("preference defaults", () => {
     it("provides correct defaults", async () => {
-      const { VOICE_WORKFLOW_DEFAULTS } = await import(
-        "../src/voice/preferences.js"
-      );
+      const { VOICE_WORKFLOW_DEFAULTS } =
+        await import("../src/voice/preferences.js");
 
       expect(VOICE_WORKFLOW_DEFAULTS.enabled).toBe(true);
       expect(VOICE_WORKFLOW_DEFAULTS.verbosity).toBe("standard");
@@ -728,9 +713,8 @@ describe("voice workflow", () => {
     });
 
     it("has correct preference keys", async () => {
-      const { VOICE_WORKFLOW_KEYS } = await import(
-        "../src/voice/preferences.js"
-      );
+      const { VOICE_WORKFLOW_KEYS } =
+        await import("../src/voice/preferences.js");
 
       expect(VOICE_WORKFLOW_KEYS.enabled).toBe("domain.voice.workflow_enabled");
       expect(VOICE_WORKFLOW_KEYS.verbosity).toBe(

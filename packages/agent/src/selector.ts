@@ -1,5 +1,6 @@
 import { createCerebras } from "@ai-sdk/cerebras";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   type ModelCapability,
   type ModelRef,
@@ -7,7 +8,10 @@ import {
   parseModelRef,
   toModelKey,
 } from "@alfred/type/model";
-import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
+import {
+  type PreferenceDetail,
+  type PreferenceKey,
+} from "@alfred/type/preference";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
   type LanguageModel,
@@ -19,16 +23,16 @@ import { MockLanguageModelV3 } from "ai/test";
 import * as prefLoader from "./preference/loader";
 import { getOpenAI } from "./v6";
 
-export type ModelSelection = {
+export interface ModelSelection {
   model: LanguageModel;
   modelKey: string;
   capabilities: ModelCapability[];
-};
+}
 
-export type ModelSelectionOpts = {
+export interface ModelSelectionOpts {
   userId?: string;
   projectId?: string;
-};
+}
 
 /**
  * Known model capabilities by model ID pattern.
@@ -116,30 +120,30 @@ export function supportsGenUI(selection: ModelSelection): boolean {
 }
 
 const ENV_KEYS: Record<ModelRole, string> = {
+  background: "AI_MODEL_BACKGROUND",
   chat: "AI_MODEL_CHAT",
+  classify: "AI_MODEL_CLASSIFY",
   orchestrator: "AI_MODEL_ORCHESTRATOR",
   planner: "AI_MODEL_PLANNER",
-  background: "AI_MODEL_BACKGROUND",
   voice: "AI_MODEL_VOICE",
-  classify: "AI_MODEL_CLASSIFY",
 };
 
 const ENV_KEYS_REF: Record<ModelRole, string> = {
+  background: "AI_MODEL_REF_BACKGROUND",
   chat: "AI_MODEL_REF_CHAT",
+  classify: "AI_MODEL_REF_CLASSIFY",
   orchestrator: "AI_MODEL_REF_ORCHESTRATOR",
   planner: "AI_MODEL_REF_PLANNER",
-  background: "AI_MODEL_REF_BACKGROUND",
   voice: "AI_MODEL_REF_VOICE",
-  classify: "AI_MODEL_REF_CLASSIFY",
 };
 
 const FALLBACK_REFS: Record<ModelRole, ModelRef> = {
+  background: parseModelRef("openai:gpt-4o-mini").ref,
   chat: parseModelRef("openai:gpt-4o-mini").ref,
+  classify: parseModelRef("cerebras:gpt-oss-120b").ref,
   orchestrator: parseModelRef("openai:gpt-4o-mini").ref,
   planner: parseModelRef("openai:gpt-4o").ref,
-  background: parseModelRef("openai:gpt-4o-mini").ref,
   voice: parseModelRef("openai:gpt-4o-mini").ref,
-  classify: parseModelRef("cerebras:gpt-oss-120b").ref,
 };
 
 function firstEnv(...keys: string[]): string | null {
@@ -275,24 +279,24 @@ function isMissingKeyError(error: unknown): boolean {
 function createDevFallbackModel(): LanguageModel {
   const base = new MockLanguageModelV3({
     doGenerate: async () => ({
-      finishReason: "stop",
-      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       content: [
         {
           type: "text",
           text: "Mock Alfred (no API key). Set AI_GATEWAY_API_KEY or OPENAI_API_KEY to enable real responses.",
         },
       ],
+      finishReason: "stop",
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       warnings: [],
     }),
   });
 
   // Ensure streamText gets a streaming-capable model surface.
   return wrapLanguageModel({
-    model: base as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
     middleware: simulateStreamingMiddleware() as unknown as Parameters<
       typeof wrapLanguageModel
     >[0]["middleware"],
+    model: base as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
   }) as unknown as LanguageModel;
 }
 
@@ -326,7 +330,35 @@ function buildSelection(ref: ModelRef): ModelSelection {
       ) as unknown as LanguageModel;
       break;
     }
-    default:
+    case "local": {
+      // OpenAI-compatible local server (e.g., vllm-mlx).
+      // Must include `/v1` suffix (OpenAI base).
+      const baseURL =
+        process.env.LOCAL_OPENAI_BASE_URL?.trim() ??
+        process.env.OPENAI_BASE_URL?.trim();
+      if (!baseURL) {
+        throw new Error(
+          "openai_base_url_missing: Set LOCAL_OPENAI_BASE_URL (or OPENAI_BASE_URL) to an OpenAI-compatible /v1 endpoint (e.g. http://host.docker.internal:8000/v1)"
+        );
+      }
+
+      // Optional: only needed if your local server enforces auth.
+      const apiKey =
+        process.env.LOCAL_OPENAI_API_KEY?.trim() ??
+        process.env.OPENAI_API_KEY?.trim();
+
+      const local = createOpenAICompatible({
+        name: "local",
+        baseURL,
+        ...(apiKey ? { apiKey } : {}),
+      });
+
+      // Use the raw modelId from `local:<modelId>` so the server sees e.g. "default" or
+      // "mlx-community/GLM-4.7-Flash-8bit-gs32" (not "local/<...>").
+      model = local(modelId) as unknown as LanguageModel;
+      break;
+    }
+    default: {
       // OpenAI, Anthropic, Google all use gateway/OpenAI provider
       if (isDev() && !hasGatewayKey()) {
         model = createDevFallbackModel();
@@ -342,6 +374,7 @@ function buildSelection(ref: ModelRef): ModelSelection {
         throw error;
       }
       break;
+    }
   }
 
   if (
@@ -349,15 +382,15 @@ function buildSelection(ref: ModelRef): ModelSelection {
     process.env.NODE_ENV !== "production"
   ) {
     model = wrapLanguageModel({
-      model: model as unknown as Parameters<
-        typeof wrapLanguageModel
-      >[0]["model"],
       middleware: devToolsMiddleware() as unknown as Parameters<
         typeof wrapLanguageModel
       >[0]["middleware"],
+      model: model as unknown as Parameters<
+        typeof wrapLanguageModel
+      >[0]["model"],
     }) as unknown as LanguageModel;
   }
-  return { model, modelKey, capabilities };
+  return { capabilities, model, modelKey };
 }
 
 export function getModelForRole(role: ModelRole): ModelSelection;
@@ -374,8 +407,8 @@ export function getModelForRole(
   opts?: ModelSelectionOpts
 ): ModelSelection | Promise<ModelSelection> {
   if (opts?.userId) {
-    const userId = opts.userId;
-    const projectId = opts.projectId;
+    const { userId } = opts;
+    const { projectId } = opts;
     return (async () => {
       const user = await readUserModelForRole(role, userId, projectId);
       const ref = user ?? resolveRefSync(role);

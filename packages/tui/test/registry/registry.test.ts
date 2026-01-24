@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { PackageRegistry } from "../../src/registry";
+
 import type { CliManifest } from "../../src/registry/manifest";
+
+import { PackageRegistry } from "../../src/registry";
 
 describe("PackageRegistry", () => {
   let registry: PackageRegistry;

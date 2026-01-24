@@ -1,5 +1,6 @@
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
 import { logger } from "@alfred/logger";
+
 import {
   preferenceCacheInvalidationsTotal,
   preferenceRefreshTotal,
@@ -10,23 +11,22 @@ const DEFAULT_DEBOUNCE_MS = 5000;
 let flushTimer: NodeJS.Timeout | null = null;
 
 async function drainQueue() {
-  const batch = Array.from(pendingUsers);
+  const batch = [...pendingUsers];
   if (batch.length === 0) {
     return;
   }
   pendingUsers.clear();
 
-  const { runPreferenceInference } = await import(
-    "../scheduler/preference-inference"
-  );
+  const { runPreferenceInference } =
+    await import("../scheduler/preference-inference");
   for (const userId of batch) {
     try {
       await runPreferenceInference(userId);
       logger.info("preference_refresh_completed", { userId });
     } catch (error) {
       logger.warn("preference_refresh_failed", {
-        userId,
         error: error instanceof Error ? error.message : String(error),
+        userId,
       });
     }
   }
@@ -61,13 +61,13 @@ export function triggerPreferenceRefresh(
     })
     .catch((error) => {
       logger.warn("preference_cache_invalidation_failed", {
-        userId,
-        reason,
         error: error instanceof Error ? error.message : String(error),
+        reason,
+        userId,
       });
     });
 
-  logger.info("preference_refresh_scheduled", { userId, reason });
+  logger.info("preference_refresh_scheduled", { reason, userId });
   scheduleFlush(debounceMs);
 }
 

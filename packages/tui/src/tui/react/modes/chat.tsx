@@ -7,29 +7,75 @@
 
 /** @jsxImportSource @opentui/react */
 
-import type { KeyEvent } from "@opentui/core";
+import { type KeyEvent } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamAssistant, type UIMessage } from "../../api/sse";
 
-export type ChatModeProps = {
+import {
+  loadChatHistory,
+  saveChatHistory,
+  type ChatMessage,
+} from "../../api/history";
+import { streamMLXChat } from "../../api/mlx";
+import { streamAssistant, type UIMessage } from "../../api/sse";
+import { useMlxHealth } from "../../hooks/usemlxhealth";
+import { colors } from "../../theme";
+import { fg } from "../../typography";
+import { MessageContent } from "../components/message";
+import { MODELS, ModelPicker, type ModelOption } from "../overlays/modelpicker";
+
+export interface ChatModeProps {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
-type Message = {
+interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   status: "complete" | "streaming" | "error";
-};
+}
 
 export function ChatMode({ isOpen, onClose }: ChatModeProps) {
   const { width, height } = useTerminalDimensions();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(MODELS[0]!);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const { healthy: mlxHealthy } = useMlxHealth();
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load history on mount
+  useEffect(() => {
+    loadChatHistory().then((history) => {
+      if (history.length > 0) {
+        setMessages(
+          history.map((m) => ({
+            content: m.content,
+            id: m.id,
+            role: m.role,
+            status: "complete",
+          }))
+        );
+      }
+    });
+  }, []);
+
+  // Save history when messages change
+  useEffect(() => {
+    if (messages.length > 0 && !isStreaming) {
+      const history: ChatMessage[] = messages
+        .filter((m) => m.status === "complete")
+        .map((m) => ({
+          content: m.content,
+          id: m.id,
+          role: m.role,
+          timestamp: Date.now(),
+        }));
+      saveChatHistory(history);
+    }
+  }, [messages, isStreaming]);
 
   // Auto-scroll to bottom when messages change
   // Note: scrollbox doesn't have an auto-scroll prop yet, but we can manage focused index if needed
@@ -50,17 +96,17 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
       }
 
       const userMsg: Message = {
+        content,
         id: Math.random().toString(36).slice(2),
         role: "user",
-        content,
         status: "complete",
       };
 
       const assistantId = Math.random().toString(36).slice(2);
       const assistantMsg: Message = {
+        content: "",
         id: assistantId,
         role: "assistant",
-        content: "",
         status: "streaming",
       };
 
@@ -73,14 +119,30 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
 
       try {
         const history: UIMessage[] = [...messages, userMsg].map((m) => ({
-          role: m.role,
           content: m.content,
+          role: m.role,
         }));
 
+        let stream: AsyncGenerator<import("../../api/sse").StreamChunk>;
+
+        if (selectedModel.provider === "mlx") {
+          const baseUrl =
+            process.env.VLLM_MLX_BASE_URL ?? "http://localhost:8000/v1";
+          const apiKey = process.env.VLLM_MLX_API_KEY;
+
+          stream = streamMLXChat(history, {
+            apiKey,
+            baseUrl,
+            model: selectedModel.id,
+          });
+        } else {
+          stream = streamAssistant(history, {
+            signal: abortController.signal,
+          });
+        }
+
         let accumulatedContent = "";
-        for await (const chunk of streamAssistant(history, {
-          signal: abortController.signal,
-        })) {
+        for await (const chunk of stream) {
           if (chunk.type === "text" && chunk.content) {
             accumulatedContent += chunk.content;
             setMessages((prev) =>
@@ -115,15 +177,15 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
             );
           }
         }
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
                 ? {
                     ...m,
                     status: "error",
-                    content: `${m.content}\n\nError: ${(err as Error).message}`,
+                    content: `${m.content}\n\nError: ${(error as Error).message}`,
                   }
                 : m
             )
@@ -143,10 +205,18 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
         return;
       }
 
-      const alt = (event as { alt?: boolean }).alt ?? false;
+      if (modelPickerOpen) {
+        // ModelPicker handles its own keys
+        return;
+      }
 
       if (event.name === "escape") {
         onClose();
+        return;
+      }
+
+      if (event.name === "m" && event.ctrl) {
+        setModelPickerOpen(true);
         return;
       }
 
@@ -155,23 +225,8 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
         setIsStreaming(false);
         return;
       }
-
-      if (event.name === "enter") {
-        void sendMessage(inputValue);
-        return;
-      }
-
-      if (event.name === "backspace") {
-        setInputValue((v) => v.slice(0, -1));
-        return;
-      }
-
-      if (event.name.length === 1 && !event.ctrl && !alt) {
-        setInputValue((v) => v + event.name);
-        return;
-      }
     },
-    [isOpen, onClose, inputValue, isStreaming, sendMessage]
+    [isOpen, onClose, isStreaming, sendMessage, modelPickerOpen]
   );
 
   useKeyboard(handleKeyboard);
@@ -197,20 +252,25 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
       <box
         border
         height={headerHeight}
-        style={{ borderStyle: "single", borderColor: "#39BAE6" }}
+        style={{ borderColor: "#39BAE6", borderStyle: "single" }}
         title="ALFRED Chat"
         top={0}
         width={width}
       >
-        <text
-          content=" Interactive conversation with ALFRED"
-          style={{ fg: "#8A9199" }}
-        />
+        <box style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <text
+            content=" Interactive conversation with ALFRED"
+            style={{ fg: "#8A9199" }}
+          />
+          <text
+            content={` Model: ${fg(colors.primary)(selectedModel.label)} | MLX: ${mlxHealthy ? fg(colors.success)("Connected") : fg(colors.error)("Offline")} `}
+          />
+        </box>
       </box>
 
       {/* Message History */}
       <box height={historyHeight} top={headerHeight} width={width}>
-        <scrollbox focused={true}>
+        <scrollbox focused={!modelPickerOpen && !isStreaming}>
           {messages.length === 0 && (
             <>
               <text content="" />
@@ -228,13 +288,11 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
               <text
                 content={m.role === "user" ? " You" : " ALFRED"}
                 style={{
-                  fg: m.role === "user" ? "#39BAE6" : "#98C379",
-                  attributes: 1, // BOLD
+                  attributes: 1,
+                  fg: m.role === "user" ? "#39BAE6" : "#98C379", // BOLD
                 }}
               />
-              {m.content.split("\n").map((line, i) => (
-                <text content={` ${line}`} key={i} style={{ fg: "#E6E6E6" }} />
-              ))}
+              <MessageContent content={m.content} width={width} />
               {m.status === "streaming" && (
                 <text content=" ▌" style={{ fg: "#39BAE6" }} />
               )}
@@ -248,21 +306,24 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
         border
         height={inputHeight}
         style={{
-          borderStyle: "single",
           borderColor: isStreaming ? "#5C6370" : "#39BAE6",
+          borderStyle: "single",
         }}
         top={headerHeight + historyHeight}
         width={width}
       >
-        <text
-          content={
-            isStreaming
-              ? " [Streaming...]"
-              : ` > ${inputValue}${inputValue ? "▌" : "Type a message...▌"}`
-          }
-          style={{
-            fg: isStreaming ? "#5C6370" : "#E6E6E6",
+        <input
+          focused={!modelPickerOpen && !isStreaming}
+          onInput={(v) => setInputValue(v)}
+          onSubmit={(v) => {
+            void sendMessage(v);
           }}
+          placeholder="Type a message..."
+          style={{
+            focusedBackgroundColor: "#1A1F29",
+            textColor: "#E6E6E6",
+          }}
+          value={inputValue}
         />
       </box>
 
@@ -274,10 +335,20 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
         width={width}
       >
         <text
-          content=" [Enter] Send | [Esc] Back | [Ctrl+C] Cancel Stream"
+          content=" [Enter] Send | [Esc] Back | [Ctrl+M] Model | [Ctrl+C] Cancel Stream"
           style={{ fg: "#0A0E14" }}
         />
       </box>
+
+      {/* Overlays */}
+      <ModelPicker
+        height={height}
+        isOpen={modelPickerOpen}
+        onClose={() => setModelPickerOpen(false)}
+        onSelect={(m) => setSelectedModel(m)}
+        selectedId={selectedModel.id}
+        width={width}
+      />
     </box>
   );
 }

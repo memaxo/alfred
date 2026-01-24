@@ -2,11 +2,11 @@ import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { getLinearByWorkspace } from "@alfred/db/repo/linear";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
-import { withPolicyApproval } from "./approval.js";
-import type { ToolExecuteArgs } from "./shared/context.js";
+
+import { withPolicyApproval, type AITool } from "./approval.js";
+import { type ToolExecuteArgs } from "./shared/context.js";
 
 const ticketInputSchema = z.object({
-  space: z.string().min(1),
   action: z.enum([
     "create",
     "update",
@@ -23,21 +23,22 @@ const ticketInputSchema = z.object({
     "add-relation",
     "remove-relation",
   ]),
-  teamId: z.string().optional(),
-  issueId: z.string().optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
+  authz: z.string().optional(),
   delegateId: z.string().optional(),
-  sessionId: z.string().optional(),
-  url: z.string().optional(),
-  parameter: z.string().optional(),
-  result: z.string().optional(),
+  description: z.string().optional(),
   ephemeral: z.boolean().optional(),
+  issueId: z.string().optional(),
+  parameter: z.string().optional(),
+  relatedIssueId: z.string().optional(),
   relationType: z
     .enum(["blocks", "duplicate", "related", "similar"])
     .optional(),
-  relatedIssueId: z.string().optional(),
-  authz: z.string().optional(),
+  result: z.string().optional(),
+  sessionId: z.string().optional(),
+  space: z.string().min(1),
+  teamId: z.string().optional(),
+  title: z.string().optional(),
+  url: z.string().optional(),
 });
 
 type TicketInput = z.infer<typeof ticketInputSchema>;
@@ -46,8 +47,8 @@ async function enforcePolicy(input: TicketInput) {
   await requireToolScopesAndPolicy(input.authz, ["linear.write"], {
     action: `ticket.${input.action}`,
     resource: {
-      kind: "linear",
       id: input.space,
+      kind: "linear",
     },
   });
 }
@@ -70,9 +71,9 @@ async function runCreate(client: LinearClient, input: TicketInput) {
   const title = ensure(input.title, "ticket_title_required");
 
   const payload = await client.createIssue({
+    description: input.description ?? undefined,
     teamId,
     title,
-    description: input.description ?? undefined,
   });
 
   if (!payload.success) {
@@ -82,8 +83,8 @@ async function runCreate(client: LinearClient, input: TicketInput) {
   const issue = payload.issue ? await payload.issue : null;
 
   return {
-    ok: true,
     id: payload.issueId ?? issue?.id ?? undefined,
+    ok: true,
     url: issue?.url ?? undefined,
   };
 }
@@ -108,7 +109,7 @@ async function runUpdate(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_update_failed");
   }
 
-  return { ok: true, id: issueId };
+  return { id: issueId, ok: true };
 }
 
 async function runComment(client: LinearClient, input: TicketInput) {
@@ -116,8 +117,8 @@ async function runComment(client: LinearClient, input: TicketInput) {
   const body = ensure(input.description, "ticket_comment_body_required");
 
   const payload = await client.createComment({
-    issueId,
     body,
+    issueId,
   });
 
   if (!payload.success) {
@@ -125,7 +126,7 @@ async function runComment(client: LinearClient, input: TicketInput) {
   }
 
   const comment = payload.comment ? await payload.comment : null;
-  return { ok: true, id: payload.commentId ?? comment?.id ?? undefined };
+  return { id: payload.commentId ?? comment?.id ?? undefined, ok: true };
 }
 
 async function runDelegate(
@@ -144,7 +145,7 @@ async function runDelegate(
     throw new Error("ticket_delegate_failed");
   }
 
-  return { ok: true, id: issueId };
+  return { id: issueId, ok: true };
 }
 
 async function runSetStarted(client: LinearClient, input: TicketInput) {
@@ -179,7 +180,7 @@ async function runSetStarted(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_state_update_failed");
   }
 
-  return { ok: true, id: issueId, stateId: targetState.id };
+  return { id: issueId, ok: true, stateId: targetState.id };
 }
 
 async function runSetCancelled(client: LinearClient, input: TicketInput) {
@@ -216,7 +217,7 @@ async function runSetCancelled(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_state_update_failed");
   }
 
-  return { ok: true, id: issueId, stateId: targetState.id };
+  return { id: issueId, ok: true, stateId: targetState.id };
 }
 
 async function runSetCompleted(client: LinearClient, input: TicketInput) {
@@ -252,7 +253,7 @@ async function runSetCompleted(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_state_update_failed");
   }
 
-  return { ok: true, id: issueId, stateId: targetState.id };
+  return { id: issueId, ok: true, stateId: targetState.id };
 }
 
 function ensureSession(input: TicketInput) {
@@ -281,7 +282,7 @@ async function runAgentActivity(
     throw new Error("ticket_activity_failed");
   }
 
-  return { ok: true, id: activity.id };
+  return { id: activity.id, ok: true };
 }
 
 async function runSessionExternalUrl(client: LinearClient, input: TicketInput) {
@@ -295,7 +296,7 @@ async function runSessionExternalUrl(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_session_external_url_failed");
   }
 
-  return { ok: true, id: sessionId, url };
+  return { id: sessionId, ok: true, url };
 }
 
 async function runAddRelation(client: LinearClient, input: TicketInput) {
@@ -320,7 +321,7 @@ async function runAddRelation(client: LinearClient, input: TicketInput) {
   }
 
   const relation = response.issueRelation ? await response.issueRelation : null;
-  return { ok: true, id: relation?.id ?? undefined };
+  return { id: relation?.id ?? undefined, ok: true };
 }
 
 async function runRemoveRelation(client: LinearClient, input: TicketInput) {
@@ -341,7 +342,7 @@ async function runRemoveRelation(client: LinearClient, input: TicketInput) {
   );
 
   if (!targetRelation) {
-    return { ok: true, id: undefined };
+    return { id: undefined, ok: true };
   }
 
   const response = await client.deleteIssueRelation(targetRelation.id);
@@ -349,19 +350,11 @@ async function runRemoveRelation(client: LinearClient, input: TicketInput) {
     throw new Error("ticket_remove_relation_failed");
   }
 
-  return { ok: true, id: targetRelation.id };
+  return { id: targetRelation.id, ok: true };
 }
 
 export const toolTicket = {
-  name: "ticket",
   description: "Create or update Linear issues with policy enforcement.",
-  inputSchema: ticketInputSchema,
-  outputSchema: z.object({
-    ok: z.boolean(),
-    id: z.string().optional(),
-    url: z.string().optional(),
-    stateId: z.string().optional(),
-  }),
   execute: async ({ input }: ToolExecuteArgs<TicketInput>) => {
     await enforcePolicy(input);
 
@@ -430,24 +423,35 @@ export const toolTicket = {
         throw new Error("ticket_action_not_supported");
     }
   },
+  inputSchema: ticketInputSchema,
+  name: "ticket",
+  outputSchema: z.object({
+    ok: z.boolean(),
+    id: z.string().optional(),
+    url: z.string().optional(),
+    stateId: z.string().optional(),
+  }),
 };
 
 const aiToolTicketBase = {
-  name: toolTicket.name,
   description: toolTicket.description,
-  parameters: toolTicket.inputSchema,
-  inputSchema: toolTicket.inputSchema,
   execute: async (input: TicketInput) => toolTicket.execute({ input }),
+  inputSchema: toolTicket.inputSchema,
+  name: toolTicket.name,
+  parameters: toolTicket.inputSchema,
 };
 
-export const aiToolTicket = withPolicyApproval(aiToolTicketBase, (input) => ({
-  action: `ticket.${input.action}`,
-  resource: {
-    kind: "linear",
-    id: input.space,
-  },
-  scopes: ["linear.write"],
-  authz: input.authz,
-}));
+export const aiToolTicket: AITool<TicketInput, any> = withPolicyApproval(
+  aiToolTicketBase,
+  (input) => ({
+    action: `ticket.${input.action}`,
+    authz: input.authz,
+    resource: {
+      kind: "linear",
+      id: input.space,
+    },
+    scopes: ["linear.write"],
+  })
+);
 
 export type ToolTicket = typeof toolTicket;

@@ -71,10 +71,10 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
       const [newUser] = await db
         .insert(user)
         .values({
-          id: "cascade-test-user",
-          email: "cascade-test@example.com",
-          name: "Cascade Test",
           createdAt: new Date(),
+          email: "cascade-test@example.com",
+          id: "cascade-test-user",
+          name: "Cascade Test",
           updatedAt: new Date(),
         })
         .returning();
@@ -85,12 +85,12 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
       const [run1] = await db
         .insert(workflowRuns)
         .values({
-          userId: newUser.id,
-          workflowId: "test-workflow",
-          status: "completed",
+          completedAt: new Date(),
           inputData: {},
           stateData: {},
-          completedAt: new Date(),
+          status: "completed",
+          userId: newUser.id,
+          workflowId: "test-workflow",
         })
         .returning();
 
@@ -110,20 +110,19 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
 
     it("respects cascade deletion for graph nodes", async () => {
       const { db } = await import("@alfred/db");
-      const { memoryNodes, memoryEdges } = await import(
-        "@alfred/db/schema/graph"
-      );
+      const { memoryNodes, memoryEdges } =
+        await import("@alfred/db/schema/graph");
       const { graphRepo } = await import("@alfred/db");
       const { eq } = await import("drizzle-orm");
 
       // Create a node
       const [nodeId] = await graphRepo.upsertNodes([
         {
-          resource: "cascade-graph-test",
           hash: "test-node",
           kind: "fact",
           label: "Test Node",
           properties: {},
+          resource: "cascade-graph-test",
           sanitized: true,
         },
       ]);
@@ -132,11 +131,11 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
       await graphRepo.upsertEdges([
         {
           fromId: nodeId[0]!,
-          toId: nodeId[0]!,
           kind: "self-loop",
-          weight: 1.0,
-          resource: "cascade-graph-test",
           metadata: {},
+          resource: "cascade-graph-test",
+          toId: nodeId[0]!,
+          weight: 1.0,
         },
       ]);
 
@@ -160,10 +159,10 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
 
       // Try to insert two users with the same email
       await db.insert(user).values({
-        id: "unique-test-1",
-        email: "unique@example.com",
-        name: "User 1",
         createdAt: new Date(),
+        email: "unique@example.com",
+        id: "unique-test-1",
+        name: "User 1",
         updatedAt: new Date(),
       });
 
@@ -198,11 +197,11 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
       const [node] = await db
         .insert(memoryNodes)
         .values({
+          hash: "default-hash",
           kind: "fact",
           label: "Default Test",
-          resource: "default-test",
-          hash: "default-hash",
           properties: {},
+          resource: "default-test",
         })
         .returning();
 
@@ -222,25 +221,25 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
       // Create multiple nodes with the same resource
       await db.insert(memoryNodes).values([
         {
+          hash: "hash-1",
           kind: "fact",
           label: "Node 1",
-          resource: "index-test",
-          hash: "hash-1",
           properties: {},
+          resource: "index-test",
         },
         {
+          hash: "hash-2",
           kind: "fact",
           label: "Node 2",
-          resource: "index-test",
-          hash: "hash-2",
           properties: {},
+          resource: "index-test",
         },
         {
+          hash: "hash-3",
           kind: "fact",
           label: "Node 3",
-          resource: "index-test",
-          hash: "hash-3",
           properties: {},
+          resource: "index-test",
         },
       ]);
 
@@ -261,11 +260,11 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
       const testHash = "hash-lookup-test";
 
       await db.insert(memoryNodes).values({
+        hash: testHash,
         kind: "fact",
         label: "Hash Lookup Test",
-        resource: "hash-test",
-        hash: testHash,
         properties: {},
+        resource: "hash-test",
       });
 
       // Query by hash - should be efficient

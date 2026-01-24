@@ -1,11 +1,11 @@
-import { describe, expect, it } from "bun:test";
-import { Buffer } from "node:buffer";
 import {
   decodeToPCM16,
   encodeFromPCM16,
   ensureFfmpegAvailable,
   PCM_MIME_TYPE,
 } from "@alfred/voice/audio/codec";
+import { describe, expect, it } from "bun:test";
+import { Buffer } from "node:buffer";
 
 const ffmpegAvailable = (() => {
   try {

@@ -47,10 +47,7 @@ export {
 } from "./focus/types.js";
 export type { Physiology, PhysiologyEvent } from "./physiology/types.js";
 // Physiology exports
-export {
-  defaultPhysiology,
-  updatePhysiology,
-} from "./physiology/update.js";
+export { defaultPhysiology, updatePhysiology } from "./physiology/update.js";
 // Plan domain exports
 export {
   type Criteria,

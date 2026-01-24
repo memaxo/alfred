@@ -1,8 +1,8 @@
+import type { Obligation } from "@alfred/type";
+
 import { mock, vi } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Obligation } from "@alfred/type";
-
 import "@alfred/test-kit/logger";
 
 const createMetricStub = () => ({

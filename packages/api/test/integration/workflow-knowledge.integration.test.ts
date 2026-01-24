@@ -17,6 +17,7 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
+import { type WorkflowEvent } from "@alfred/type";
 import {
   afterAll,
   afterEach,
@@ -27,7 +28,6 @@ import {
   it,
 } from "bun:test";
 import path from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
 
 // VCR for AI provider responses
 const cassettePath = path.join(
@@ -56,14 +56,12 @@ let toConfidence: typeof import("@alfred/knowledge/hypergraph").toConfidence;
 // Table cleanup
 async function resetTables() {
   try {
-    const { memoryNodes, memoryEdges } = await import(
-      "@alfred/db/schema/graph"
-    );
-    const { workflowEvents, workflowRuns } = await import(
-      "@alfred/db/schema/workflow"
-    );
+    const { memoryNodes, memoryEdges } =
+      await import("@alfred/db/schema/graph");
+    const { workflowEvents, workflowRuns } =
+      await import("@alfred/db/schema/workflow");
     const dbModule = await import("@alfred/db");
-    db = dbModule.db;
+    ({ db } = dbModule);
 
     await db.delete(memoryEdges);
     await db.delete(memoryNodes);
@@ -83,9 +81,8 @@ beforeAll(async () => {
   ({ toObservable } = await import("../utils/stream"));
 
   // Load knowledge components
-  ({ empty, fact, relation, toConfidence } = await import(
-    "@alfred/knowledge/hypergraph"
-  ));
+  ({ empty, fact, relation, toConfidence } =
+    await import("@alfred/knowledge/hypergraph"));
   _graphRepo = await import("@alfred/db/repo/graph");
 
   // Create and start VCR
@@ -108,8 +105,8 @@ describe("Workflow → Knowledge Integration", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "wf-knowledge-user",
         email: "wf-knowledge@test.local",
+        id: "wf-knowledge-user",
         name: "Workflow Knowledge Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -185,14 +182,14 @@ describe("Workflow → Knowledge Integration", () => {
       let _contextEvent: WorkflowEvent | undefined;
 
       const subscription = await caller.stream({
-        requirement: "Analyze existing code patterns",
         auto: "low" as const,
-        mode: "sequential" as const,
         context: {
           enable: true,
           topK: 5,
           maxTokens: 2000,
         },
+        mode: "sequential" as const,
+        requirement: "Analyze existing code patterns",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -200,21 +197,21 @@ describe("Workflow → Knowledge Integration", () => {
         const timeout = setTimeout(() => resolve(), 15_000);
 
         const sub = observable.subscribe({
-          next: (event) => {
-            events.push(event);
-            if (event.type === "context") {
-              _contextEvent = event;
-            }
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
           },
           error: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
+          next: (event) => {
+            events.push(event);
+            if (event.type === "context") {
+              _contextEvent = event;
+            }
           },
         });
       });
@@ -229,9 +226,9 @@ describe("Workflow → Knowledge Integration", () => {
       let _cacheHandoff: WorkflowEvent | undefined;
 
       const subscription = await caller.stream({
-        requirement: "Quick query using cached data",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Quick query using cached data",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -239,21 +236,21 @@ describe("Workflow → Knowledge Integration", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
 
         const sub = observable.subscribe({
-          next: (event) => {
-            events.push(event);
-            if (event.type === "data-cache-handoff") {
-              _cacheHandoff = event;
-            }
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
           },
           error: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
+          next: (event) => {
+            events.push(event);
+            if (event.type === "data-cache-handoff") {
+              _cacheHandoff = event;
+            }
           },
         });
       });
@@ -433,8 +430,8 @@ describe("Cross-Boundary Knowledge Flow", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "knowledge-flow-user",
         email: "knowledge@test.local",
+        id: "knowledge-flow-user",
         name: "Knowledge Flow Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -500,9 +497,9 @@ describe("Semantic Knowledge Operations", () => {
 
     // Entity extraction would produce knowledge nodes
     const entities = [
-      { name: "UserService", type: "class", confidence: 0.9 },
-      { name: "authenticate", type: "method", confidence: 0.85 },
-      { name: "JWT", type: "concept", confidence: 0.95 },
+      { confidence: 0.9, name: "UserService", type: "class" },
+      { confidence: 0.85, name: "authenticate", type: "method" },
+      { confidence: 0.95, name: "JWT", type: "concept" },
     ];
 
     for (const entity of entities) {

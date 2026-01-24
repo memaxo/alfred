@@ -1,6 +1,6 @@
+import { type WorkflowEvent } from "@alfred/type/plan";
+import { type LanguageModel } from "ai";
 import { afterAll, beforeEach, describe, expect, it } from "bun:test";
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { LanguageModel } from "ai";
 
 const { createRuntime } = await import("../src/core");
 
@@ -10,12 +10,12 @@ const originalTestOrch = process.env.RUNTIME_TEST_ORCHESTRATION;
 // SKIP: These tests pass in isolation but fail when run with other tests due to
 // Bun's mock.module() pollution from earlier test files affecting cognitive/workflow modules.
 // NOTE: Refactor to use dependency injection instead of mock.module().
-// biome-ignore lint/suspicious/noSkippedTests: Known test isolation issue with mock.module()
+// oxlint-disable noSkippedTests: Known test isolation issue with mock.module()
 describe.skip("WorkflowRuntime supervisor integration", () => {
   let mockModel: LanguageModel;
   const baseInput = {
-    requirement: "supervisor integration check",
     auto: "low" as const,
+    requirement: "supervisor integration check",
     workspace: "/tmp/supervisor",
   };
 
@@ -48,9 +48,9 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
       });
 
       // LoopDetector uses exact_match for identical content
@@ -86,11 +86,11 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
-        supervisorHeartbeatMs: 150,
         supervisorCheckIntervalMs: 20,
+        supervisorHeartbeatMs: 150,
       });
 
       await expect(consume(runtime)).rejects.toThrow(
@@ -113,9 +113,9 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
       });
 
       // Should detect the repetitive pattern via exact_match (identical strings)
@@ -150,11 +150,11 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
-        supervisorHeartbeatMs: 100,
         supervisorCheckIntervalMs: 20,
+        supervisorHeartbeatMs: 100,
       });
 
       await expect(consume(runtime)).rejects.toThrow(/heartbeat_failed/);
@@ -179,9 +179,9 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
       });
 
       try {
@@ -216,10 +216,10 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
         runId,
-        createAiAdapter,
       });
 
       try {
@@ -250,7 +250,7 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
           typeof interruptPayload === "object" &&
           "data" in interruptPayload
         ) {
-          const data = (interruptPayload as any).data;
+          const { data } = interruptPayload as any;
           expect(data.reason).toBeDefined();
           expect(data.priority).toBe(2); // Supervisor interrupts use priority 2
         }
@@ -285,12 +285,12 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
         runId,
-        createAiAdapter,
-        supervisorHeartbeatMs: 100,
         supervisorCheckIntervalMs: 20,
+        supervisorHeartbeatMs: 100,
       });
 
       try {
@@ -321,7 +321,7 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
           typeof interruptPayload === "object" &&
           "data" in interruptPayload
         ) {
-          const data = (interruptPayload as any).data;
+          const { data } = interruptPayload as any;
           expect(data.reason).toContain("process_heartbeat_failed");
           expect(data.priority).toBe(2);
         }
@@ -350,9 +350,9 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
       });
 
       // Should NOT throw - distinct reasoning traces should be allowed
@@ -399,9 +399,9 @@ describe.skip("WorkflowRuntime supervisor integration", () => {
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
+        createAiAdapter,
         input: baseInput,
         model: mockModel,
-        createAiAdapter,
         supervisorCheckIntervalMs: 50,
         supervisorHeartbeatMs: 10_000, // Very long heartbeat to avoid premature interruption for this test
       });

@@ -1,7 +1,5 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import os from "node:os";
-import { join } from "node:path";
+import type { Subprocess } from "bun";
+
 import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
 import {
   cleanupTestVenv,
@@ -10,7 +8,10 @@ import {
   restoreEnvVars,
   saveEnvVars,
 } from "@alfred/voice/test/utils/python-helpers";
-import type { Subprocess } from "bun";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import { join } from "node:path";
 
 // Skip these tests in fast test runs - they require voice dependencies
 const shouldSkip = !process.env.RUN_VOICE_TESTS;

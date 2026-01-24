@@ -1,4 +1,5 @@
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
 import { workflowRuns } from "./workflow";
 
 export const clarificationRequests = pgTable("clarification_requests", {

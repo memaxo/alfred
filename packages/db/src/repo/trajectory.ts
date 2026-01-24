@@ -3,8 +3,10 @@
  */
 
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db } from "../client";
+
 import type { WorkflowTrajectoryFormat } from "../schema/workflow";
+
+import { db } from "../client";
 import { workflowEvents, workflowTrajectories } from "../schema/workflow";
 
 export type WorkflowTrajectoryRow = typeof workflowTrajectories.$inferSelect;

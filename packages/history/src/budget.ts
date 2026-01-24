@@ -1,4 +1,5 @@
 import type { UIMessage } from "@alfred/type/stream";
+
 import type { HistoryBudget } from "./types";
 
 const DEFAULT_MIN_SYSTEM_RESERVE = 2000;

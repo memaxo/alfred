@@ -9,7 +9,8 @@
     "composite": true,
     "tsBuildInfoFile": "dist/rag.tsbuildinfo",
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],

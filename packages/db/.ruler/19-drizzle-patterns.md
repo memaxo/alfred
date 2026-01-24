@@ -27,4 +27,3 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 10. **Bulk updates.** For bulk updates of the same column (e.g., confidence decay), prefer single SQL `UPDATE ... FROM (VALUES ...)` statement over `Promise.all` loops. This reduces DB roundtrips and improves performance.
 
 11. **SQL-level JSON filtering.** When filtering rows by JSONB properties, use SQL-level filtering (`sql\`json_extract(column, '$.path') LIKE '%pattern%'\``) instead of fetching all rows and filtering in memory. This reduces data transfer and improves performance.
-

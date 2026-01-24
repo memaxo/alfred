@@ -1,8 +1,10 @@
+import type { Session, User } from "better-auth/types";
+
+import { createAuthClient } from "better-auth/client";
 import { mkdir, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { createAuthClient } from "better-auth/client";
-import type { Session, User } from "better-auth/types";
+
 import {
   decryptCredentials,
   encryptCredentials,

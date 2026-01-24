@@ -9,6 +9,7 @@ import type {
   ToolCallHistory,
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
+
 import {
   detectToneSemantic,
   inferResponsePreferencesSemantic,

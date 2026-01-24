@@ -5,8 +5,9 @@
  * Tracks span hierarchies with nanosecond precision.
  */
 
-import { nowNs } from "@alfred/metrics/performance";
 import type { EventEnvelope } from "@alfred/type/envelope";
+
+import { nowNs } from "@alfred/metrics/performance";
 import { makeEventId } from "@alfred/type/id";
 
 /**

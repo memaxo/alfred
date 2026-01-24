@@ -2,6 +2,7 @@ import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
+
 import { PolicyObligationError } from "../../errors";
 import { requirePolicy } from "../../gate";
 import { triggerPreferenceRefresh } from "../../preference/refresh";
@@ -17,7 +18,7 @@ export const workflowStartProcedure = authedProcedure
   .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
   .input(workflowInputSchema)
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -34,8 +35,8 @@ export const workflowStartProcedure = authedProcedure
       const obligations = ctx.policy?.obligations ?? [];
       if (obligations.length > 0 && requiresBiometric(obligations)) {
         throw new PolicyObligationError("workflow.plan", obligations, {
-          reason: "workflow_autonomy",
           auto: workflow.auto,
+          reason: "workflow_autonomy",
         });
       }
     }
@@ -61,8 +62,8 @@ export const workflowStartProcedure = authedProcedure
 
       const abortController = new AbortController();
       const { linear: preparedLinear, ticket } = await ensureLinearTicket({
-        linear: workflow.linear,
         authzLinear: workflow.authzLinear,
+        linear: workflow.linear,
         requirement: workflow.requirement,
       });
       const workflowPayload = {
@@ -89,22 +90,22 @@ export const workflowStartProcedure = authedProcedure
 
       await workflowRepo.createRun({
         id: executor.runId,
-        userId: session.user.id,
-        projectId: workflow.projectId,
-        planId: workflow.planId,
-        requirement: workflow.requirement,
-        workflowId: "plan",
-        status: "running",
         inputData: storedInput,
-        linearSessionId: preparedLinear?.sessionId,
-        linearSpace: preparedLinear?.space,
         linearIssueId,
         linearIssueUrl,
+        linearSessionId: preparedLinear?.sessionId,
+        linearSpace: preparedLinear?.space,
+        planId: workflow.planId,
+        projectId: workflow.projectId,
+        requirement: workflow.requirement,
+        status: "running",
+        userId: session.user.id,
+        workflowId: "plan",
       });
 
       // Trigger Linear metadata sync if project is associated
       if (workflow.projectId) {
-        const projectId = workflow.projectId;
+        const { projectId } = workflow;
         void (async () => {
           const url = process.env.DATABASE_URL;
           if (url && !url.startsWith("sqlite")) {
@@ -121,8 +122,8 @@ export const workflowStartProcedure = authedProcedure
         "user",
         [
           {
-            kind: "workflow_run",
             id: executor.runId,
+            kind: "workflow_run",
             label: deriveWorkflowTitle(workflowPayload.requirement),
             properties: {
               entity: { kind: "workflow_run", id: executor.runId },
@@ -138,22 +139,22 @@ export const workflowStartProcedure = authedProcedure
 
       try {
         const { conversation, created } = await ensureWorkflowConversation({
+          projectId: workflow.projectId,
+          title: deriveWorkflowTitle(workflowPayload.requirement),
           userId: session.user.id,
           workflowId: executor.runId,
-          title: deriveWorkflowTitle(workflowPayload.requirement),
-          projectId: workflow.projectId,
         });
         if (created) {
           const persisted = await persistWorkflowMessages({
-            userId: session.user.id,
             conversationId: conversation.id,
+            eventId: executor.runId,
+            eventType: "workflow.requirement",
             messages: [
               createRequirementMessage(workflowPayload, executor.runId),
             ],
             persistedKeys: new Set(),
             runId: executor.runId,
-            eventType: "workflow.requirement",
-            eventId: executor.runId,
+            userId: session.user.id,
           });
           if (persisted > 0) {
             triggerPreferenceRefresh(session.user.id, {
@@ -163,25 +164,25 @@ export const workflowStartProcedure = authedProcedure
         }
       } catch (error) {
         logger.warn("workflow_conversation_init_failed", {
-          runId: executor.runId,
           error: error instanceof Error ? error.message : String(error),
+          runId: executor.runId,
         });
       }
 
       await recordAudit({
-        userId: session.user.id,
-        projectId: workflow.projectId ?? undefined,
         action: "workflow.start",
-        resource: { kind: "workflow", id: executor.runId },
-        decision: "allow",
         context: { auto: workflow.auto, mode: workflow.mode },
+        decision: "allow",
+        projectId: workflow.projectId ?? undefined,
+        resource: { kind: "workflow", id: executor.runId },
+        userId: session.user.id,
       });
 
       await registerRunHandle(executor.runId, {
         resume: async ({ resumeData }: { resumeData: unknown }) => {
           await executor.resume(resumeData);
         },
-        // biome-ignore lint/suspicious/useAwait: Cancel is synchronous or returns a promise
+        // oxlint-disable useAwait: Cancel is synchronous or returns a promise
         cancel: async () => {
           executor.cancel();
         },
@@ -189,15 +190,15 @@ export const workflowStartProcedure = authedProcedure
       });
 
       return {
+        plan: null,
+        planArtifact: null,
+        report: null,
+        results: [],
         runId: executor.runId,
         summary: executor.summary,
-        results: [],
-        plan: null,
-        vcs: null,
-        report: null,
-        planArtifact: null,
         ticketId: linearIssueId,
         ticketUrl: linearIssueUrl,
+        vcs: null,
       };
     } catch (error) {
       throw toTRPCError(error, "workflow_start_failed");

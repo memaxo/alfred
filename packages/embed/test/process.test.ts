@@ -4,6 +4,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { EmbedProcess } from "../src/process";
 
 const RUN_EMBED_MODEL_TESTS = process.env.RUN_EMBED_MODEL_TESTS === "1";

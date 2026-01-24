@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { requirePolicy } from "../../../gate";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
@@ -23,7 +24,7 @@ const phaseExecuteProcedure = isTestMode
 export const workflowPhaseApproveAndExecuteProcedure = phaseExecuteProcedure
   .input(z.object({ runId: z.string().min(1) }))
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -32,9 +33,8 @@ export const workflowPhaseApproveAndExecuteProcedure = phaseExecuteProcedure
     }
 
     try {
-      const { createContextFromSnapshot } = await import(
-        "@alfred/pipeline/snapshot"
-      );
+      const { createContextFromSnapshot } =
+        await import("@alfred/pipeline/snapshot");
 
       const storage = isTestMode
         ? new WorkflowCheckpointStorage(getTestCheckpointStorage())
@@ -67,37 +67,36 @@ export const workflowPhaseApproveAndExecuteProcedure = phaseExecuteProcedure
       }
 
       if (isTestMode) {
-        return { runId: input.runId, planId };
+        return { planId, runId: input.runId };
       }
 
-      const { workflowRepo: dbWorkflowRepo, planRepo } = await import(
-        "@alfred/db"
-      );
+      const { workflowRepo: dbWorkflowRepo, planRepo } =
+        await import("@alfred/db");
 
       // Ensure plan exists, then approve.
       const existing = await planRepo.getPlanById(planId);
       if (!existing) {
         await planRepo.createPlan({
           id: planId,
-          userId: session.user.id,
-          projectId: null,
           intent: snapshot.requirement,
           plan: planOutput?.structuredPlan ?? {},
+          projectId: null,
           status: "pending",
+          userId: session.user.id,
         });
       }
       await planRepo.updatePlanStatus(planId, "approved", session.user.id);
 
       // Transition run to running (resume subscription performs actual execution).
       await dbWorkflowRepo.updateRun(input.runId, {
-        status: "running",
-        planId,
-        suspendedAt: null,
-        resumedAt: new Date(),
         errorMessage: null,
+        planId,
+        resumedAt: new Date(),
+        status: "running",
+        suspendedAt: null,
       });
 
-      return { runId: input.runId, planId };
+      return { planId, runId: input.runId };
     } catch (error) {
       throw toTRPCError(error, "workflow_phase_approve_failed");
     }

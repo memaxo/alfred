@@ -5,8 +5,9 @@
  * Includes model-aware retrieval tests for heterogeneous embedding support
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { getCurrentModelId, ingest } from "@alfred/rag";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
 import { ContextBuilder } from "../src/context";
 import { KnowledgeEngine } from "../src/engines/knowledge";
 

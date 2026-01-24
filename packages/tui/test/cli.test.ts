@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
+
 import { runCli } from "../src/cli";
 
 async function readText(stream: ReadableStream<Uint8Array> | null) {

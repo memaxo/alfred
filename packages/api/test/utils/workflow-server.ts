@@ -1,3 +1,5 @@
+import type { Obligation } from "@alfred/type";
+
 import { auth } from "@alfred/auth";
 import { db, workflowSchema } from "@alfred/db";
 import {
@@ -6,7 +8,7 @@ import {
   serializeTestSession,
   type TestSession,
 } from "@alfred/test-kit/auth";
-import type { Obligation } from "@alfred/type";
+
 import { getHeaderValue } from "../../src/utils/headers";
 import {
   createWorkflowCaller,

@@ -1,12 +1,13 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import type { ToolExecuteArgs } from "./shared/context.js";
+
+import { type ToolExecuteArgs } from "./shared/context.js";
 
 const runtimeInputSchema = z.object({
   action: z.enum(["status", "recover", "logs"]),
+  authz: z.string().optional(),
   component: z.enum(["voice", "embed", "alfred", "all"]).optional(),
   tail: z.number().int().min(1).max(1000).default(100).optional(),
-  authz: z.string().optional(),
 });
 
 type RuntimeInput = z.infer<typeof runtimeInputSchema>;
@@ -16,26 +17,22 @@ async function enforcePolicy(input: RuntimeInput) {
   await requireToolScopesAndPolicy(input.authz, [scope], {
     action: `runtime.${input.action}`,
     resource: {
-      kind: "runtime",
       id: input.component ?? "all",
+      kind: "runtime",
     },
   });
 }
 
 export const toolRuntime = {
-  name: "runtime",
   description:
     "Monitor and recover ALFRED runtime components (voice, embed, alfred).",
-  inputSchema: runtimeInputSchema,
-  outputSchema: z.any(),
   execute: async ({ input }: ToolExecuteArgs<RuntimeInput>) => {
     await enforcePolicy(input);
 
     switch (input.action) {
       case "status": {
-        const { getVoicePools, isVoiceInitialized } = await import(
-          "@alfred/voice/process/pool-manager"
-        );
+        const { getVoicePools, isVoiceInitialized } =
+          await import("@alfred/voice/process/pool-manager");
         const { getHealth: getEmbedHealth } = await import("@alfred/embed");
 
         let voiceStatus: { stt: unknown[]; tts: unknown[] } = {
@@ -71,9 +68,8 @@ export const toolRuntime = {
         const component = input.component ?? "all";
 
         if (component === "voice" || component === "all") {
-          const { shutdownVoicePools, initializeVoicePools } = await import(
-            "@alfred/voice/process/pool-manager"
-          );
+          const { shutdownVoicePools, initializeVoicePools } =
+            await import("@alfred/voice/process/pool-manager");
           await shutdownVoicePools().catch(() => {});
           await initializeVoicePools();
           results.voice = true;
@@ -177,6 +173,9 @@ export const toolRuntime = {
         throw new Error("runtime_action_not_supported");
     }
   },
+  inputSchema: runtimeInputSchema,
+  name: "runtime",
+  outputSchema: z.any(),
 };
 
 export type ToolRuntime = typeof toolRuntime;

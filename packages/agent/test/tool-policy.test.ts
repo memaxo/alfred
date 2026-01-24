@@ -1,14 +1,13 @@
-import { afterAll, beforeEach, describe, expect, it } from "bun:test";
-import * as fs from "node:fs";
-import os from "node:os";
-import * as path from "node:path";
-
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
+import { afterAll, beforeEach, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import os from "node:os";
+import * as path from "node:path";
 
 // Install shared mocks
 installAuthTokenMock();

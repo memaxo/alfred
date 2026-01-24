@@ -7,6 +7,8 @@
  * - OUTPUT_CAP_BYTES enforced incrementally via appendOutput()
  */
 
+import { runStreamed } from "@alfred/codex";
+import { logger } from "@alfred/logger";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -14,14 +16,14 @@ import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
-import { runStreamed } from "@alfred/codex";
-import { logger } from "@alfred/logger";
+
 import { persistCodexExecution } from "../../../../assistant/src/graphstore.js";
+import { persistArtifact } from "../../../artifact/persist.js";
 import {
   recordCodexWriterError,
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
-import type { CodexSessionState } from "../../codex-session.js";
+import { type CodexSessionState } from "../../codex-session.js";
 import {
   assessSessionResumeEligibility,
   sessionManager,
@@ -65,7 +67,9 @@ import { CodexRunRecorder } from "./record.js";
 import { executeWithCodexServer } from "./server.js";
 import { createCodexSpawn } from "./spawn-process.js";
 
-type WriterPayload = { [key: string]: unknown };
+interface WriterPayload {
+  [key: string]: unknown;
+}
 type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
 
 const WRITER_FAILURE_WARN_THRESHOLD = 10;
@@ -105,12 +109,12 @@ function isDisconnectError(error: unknown): boolean {
     }
   }
 
-  const code = (error as { code?: string }).code;
+  const { code } = error as { code?: string };
   if (code && DISCONNECT_ERROR_CODES.has(code)) {
     return true;
   }
 
-  const cause = (error as { cause?: unknown }).cause;
+  const { cause } = error as { cause?: unknown };
   if (cause) {
     return isDisconnectError(cause);
   }
@@ -145,9 +149,9 @@ function createSafeWriter(
       recordCodexWriterError(errorType);
 
       const logContext = {
+        consecutiveFailures,
         context,
         totalFailures,
-        consecutiveFailures,
       };
 
       const now = Date.now();
@@ -213,14 +217,14 @@ function emitAlfredEvents(
   events: AlfredCodexEvent[]
 ): void {
   for (const event of events) {
-    void writeFn({ type: "codex_event", event }, "codex_event");
+    void writeFn({ event, type: "codex_event" }, "codex_event");
   }
 }
 
-export type CodexTurnOptions = {
+export interface CodexTurnOptions {
   signal: AbortSignal;
   outputSchema?: unknown;
-};
+}
 
 export function buildTurnOptions(
   input: CodexToolInput,
@@ -275,7 +279,7 @@ async function resolveProjectId(args: {
   session: CodexSessionState | undefined;
 }): Promise<string | undefined> {
   if (args.session?.projectId) {
-    const projectId = args.session.projectId;
+    const { projectId } = args.session;
     if (process.env.DATABASE_URL) {
       import("@alfred/db/repo/project")
         .then((repo) => repo.updateProjectLastActive(projectId))
@@ -341,9 +345,9 @@ function createFilesystemThreadValidator(
         return false;
       }
       logger.warn("codex_thread_validation_error", {
-        threadId,
-        path: filePath,
         err: error instanceof Error ? error.message : String(error),
+        path: filePath,
+        threadId,
       });
       return false;
     }
@@ -363,14 +367,14 @@ export async function executeWithCodex({
     if (profile === "server") {
       try {
         const output = await executeWithCodexServer({
-          input,
-          writer,
-          signal,
           cwdHandle,
+          input,
+          signal,
+          writer,
         });
         return {
-          result: output.result,
           artifacts: output.artifacts,
+          result: output.result,
         };
       } catch (error) {
         if (
@@ -381,17 +385,17 @@ export async function executeWithCodex({
           executorServerFallbackTotal.inc({ executor: "codex" });
           void Promise.resolve(
             writer?.write?.({
-              type: "notice",
               message: "executor_server_fallback_default",
+              type: "notice",
             })
           ).catch(() => {});
 
-          return await runCodexWithCodex({ input, writer, signal, cwdHandle });
+          return await runCodexWithCodex({ cwdHandle, input, signal, writer });
         }
         throw error;
       }
     }
-    return await runCodexWithCodex({ input, writer, signal, cwdHandle });
+    return await runCodexWithCodex({ cwdHandle, input, signal, writer });
   } finally {
     cwdHandle.close();
   }
@@ -427,30 +431,30 @@ async function runCodexWithCodex({
   }
 
   const projectId = await resolveProjectId({
-    workingDirectory: resolvedCw,
-    userId: sessionOwnerId,
     session: existingSession,
+    userId: sessionOwnerId,
+    workingDirectory: resolvedCw,
   });
 
   const recorder = await CodexRunRecorder.start({
-    userId: sessionOwnerId,
-    projectId,
-    sessionId,
-    threadId: undefined,
-    auto: input.auto,
-    model: input.model,
-    profile: input.profile,
-    environmentKind: "agentfs",
-    workingDirectory: resolvedCw,
-    workspaceRoot: process.env.ORCH_WORKSPACE_ROOT,
     agentfsDbPath: input.agentfsDbPath,
     agentfsRunId: process.env.ORCH_RUN_ID,
+    auto: input.auto,
+    environmentKind: "agentfs",
+    model: input.model,
     outputSchema:
       input.outputSchema && validateOutputSchema(input.outputSchema)
         ? input.outputSchema
         : null,
+    profile: input.profile,
+    projectId,
+    sessionId,
+    threadId: undefined,
+    userId: sessionOwnerId,
+    workingDirectory: resolvedCw,
+    workspaceRoot: process.env.ORCH_WORKSPACE_ROOT,
   });
-  recorder.recordWriterChunk({ type: "notice", message: "codex_run_started" });
+  recorder.recordWriterChunk({ message: "codex_run_started", type: "notice" });
 
   const stopTimer = startToolTimer("codex", input.auto);
   const recordStage = createStageRecorder("codex");
@@ -470,8 +474,8 @@ async function runCodexWithCodex({
     write: (payload: unknown) => {
       try {
         recorder.recordWriterChunk(payload);
-      } catch (err) {
-        logger.debug("codex_recorder_error", { err });
+      } catch (error) {
+        logger.debug("codex_recorder_error", { error });
       }
       return Promise.resolve(writer?.write?.(payload));
     },
@@ -486,7 +490,7 @@ async function runCodexWithCodex({
     recordStage("timeout");
     timeoutController.abort();
     void safeWriter(
-      { type: "notice", message: "codex_exec_timeout" },
+      { message: "codex_exec_timeout", type: "notice" },
       "codex_exec_timeout_notice"
     );
   }, timeoutSec * 1000);
@@ -518,8 +522,8 @@ async function runCodexWithCodex({
   const SESSION_VALIDATION_TIMEOUT_MS = 5000;
   const validationPromise = assessSessionResumeEligibility({
     session: existingSession,
-    workingDirectory: resolvedCw,
     validateThread: threadValidator,
+    workingDirectory: resolvedCw,
   });
 
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
@@ -551,7 +555,7 @@ async function runCodexWithCodex({
     });
     import("@alfred/metrics/shared")
       .then((m) => m.codexSessionValidationTimeoutTotal.inc())
-      .catch((err) => logger.debug("codex_metrics_import_error", { err }));
+      .catch((error) => logger.debug("codex_metrics_import_error", { error }));
   }
 
   const resumeOutcome = resumeAssessment.canResume
@@ -570,9 +574,9 @@ async function runCodexWithCodex({
   if (!resumeThreadId && existingSession?.threadId) {
     void safeWriter(
       {
-        type: "notice",
         message: "codex_session_thread_reset",
         reason: resumeReason,
+        type: "notice",
       },
       "codex_session_thread_reset"
     );
@@ -589,9 +593,8 @@ async function runCodexWithCodex({
 
     // Inject learning context from similar past executions
     try {
-      const { buildCodexLearningContext } = await import(
-        "@alfred/db/repo/codex-learning"
-      );
+      const { buildCodexLearningContext } =
+        await import("@alfred/db/repo/codex-learning");
 
       const learningResource = projectId
         ? `project:${projectId}:${resolvedCw}`
@@ -612,9 +615,8 @@ async function runCodexWithCodex({
 
     // Inject heuristic context from past failures/corrections
     try {
-      const { buildCodexHeuristicContext } = await import(
-        "@alfred/db/repo/codex-learning"
-      );
+      const { buildCodexHeuristicContext } =
+        await import("@alfred/db/repo/codex-learning");
       const heuristicContext = await buildCodexHeuristicContext(
         input.prompt,
         1200
@@ -636,22 +638,22 @@ async function runCodexWithCodex({
     };
 
     for await (const event of runStreamed({
-      cmd: codexBin,
-      prompt: enrichedPrompt,
-      env,
-      spawn,
-      model: input.model,
-      profile: input.profile,
-      sandbox: sandbox.sandbox,
       approval: sandbox.approval,
+      cmd: codexBin,
+      env,
+      model: input.model,
+      onStderr: (text) =>
+        void safeWriter({ type: "stderr", text }, "codex_stderr_chunk"),
       outputSchema: turnOptions.outputSchema as unknown as
         | boolean
         | Record<string, unknown>
         | undefined,
+      profile: input.profile,
+      prompt: enrichedPrompt,
       resumeThreadId,
+      sandbox: sandbox.sandbox,
       signal: turnOptions.signal,
-      onStderr: (text) =>
-        void safeWriter({ type: "stderr", text }, "codex_stderr_chunk"),
+      spawn,
     })) {
       recorder.recordThreadEvent(event);
 
@@ -665,19 +667,19 @@ async function runCodexWithCodex({
       if (processed.turnStarted) {
         turnStartTime = Date.now();
         void safeWriter(
-          { type: "notice", message: "codex_turn_started" },
+          { message: "codex_turn_started", type: "notice" },
           "codex_turn_started_notice"
         );
       }
 
       if (processed.turnCompleted) {
         if (processed.tokenUsage) {
-          tokenUsage = processed.tokenUsage;
+          ({ tokenUsage } = processed);
         }
         void safeWriter(
           {
-            type: "notice",
             message: "codex_turn_completed",
+            type: "notice",
             usage: processed.tokenUsage,
           },
           "codex_turn_completed_notice"
@@ -691,11 +693,11 @@ async function runCodexWithCodex({
         }
         logger.error("codex_event_error", {
           detail: processed.error.message,
-          threadId: threadIdFromEvents,
           stage: processed.error.stage,
+          threadId: threadIdFromEvents,
         });
         void safeWriter(
-          { type: "stderr", text: `Codex error: ${processed.error.message}` },
+          { text: `Codex error: ${processed.error.message}`, type: "stderr" },
           "codex_error"
         );
       }
@@ -708,7 +710,7 @@ async function runCodexWithCodex({
         );
         if (eventContext.outputDebug) {
           void safeWriter(
-            { type: "reasoning", text: processed.reasoning },
+            { text: processed.reasoning, type: "reasoning" },
             "codex_reasoning"
           );
         }
@@ -717,7 +719,7 @@ async function runCodexWithCodex({
       if (processed.outputChunk) {
         appendOutput(finalAccumulator, processed.outputChunk);
         void safeWriter(
-          { type: "stdout", text: processed.outputChunk },
+          { text: processed.outputChunk, type: "stdout" },
           "codex_output"
         );
       }
@@ -730,7 +732,7 @@ async function runCodexWithCodex({
 
       emitAlfredEvents(safeWriter, processed.alfredEvents);
 
-      const context = input.context;
+      const { context } = input;
       if (context && processed.alfredEvents.length > 0) {
         import("../codex-linear.js")
           .then(async ({ mapCodexEventToLinearActivity }) => {
@@ -738,23 +740,23 @@ async function runCodexWithCodex({
               await mapCodexEventToLinearActivity(alfredEvent, context);
             }
           })
-          .catch((err) => logger.debug("codex_linear_emit_error", { err }));
+          .catch((error) => logger.debug("codex_linear_emit_error", { error }));
       }
     }
   } catch (error) {
     if (didTimeout) {
       await recorder.finalizeError({
-        exitCode: 1,
         errorCode: "timeout",
         errorMessage: "codex_exec_timeout",
+        exitCode: 1,
       });
       throw CodexError.timeout();
     }
     if (timeoutController.signal.aborted && abortedByExternalSignal) {
       await recorder.finalizeError({
-        exitCode: null,
         errorCode: "aborted",
         errorMessage: "codex_exec_aborted",
+        exitCode: null,
       });
       throw CodexError.runtime("codex_exec_aborted");
     }
@@ -762,9 +764,9 @@ async function runCodexWithCodex({
       recordStage("spawn");
     }
     await recorder.finalizeError({
-      exitCode: 1,
       errorCode: "execution_failed",
       errorMessage: error instanceof Error ? error.message : String(error),
+      exitCode: 1,
     });
     throw error;
   } finally {
@@ -779,25 +781,25 @@ async function runCodexWithCodex({
 
   if (didTimeout) {
     await recorder.finalizeError({
-      exitCode: 1,
       errorCode: "timeout",
       errorMessage: "codex_exec_timeout",
+      exitCode: 1,
     });
     throw CodexError.timeout();
   }
 
   if (runtimeFailure) {
     await recorder.finalizeError({
-      exitCode: 1,
       errorCode: "execution_failed",
       errorMessage: runtimeFailure.message,
+      exitCode: 1,
     });
     throw runtimeFailure;
   }
 
   if (finalAccumulator.truncated) {
     void safeWriter(
-      { type: "notice", message: "output_truncated" },
+      { message: "output_truncated", type: "notice" },
       "codex_output_truncated"
     );
   }
@@ -814,23 +816,25 @@ async function runCodexWithCodex({
   if (reasoningAccumulator.traces.length > 0) {
     const executionId = input.sessionId ?? threadId ?? resource;
     persistReasoning(resource, reasoningAccumulator.traces, {
-      threadId,
-      executionId,
       auto: input.auto,
+      executionId,
       projectId,
-    }).catch((err) => logger.debug("codex_persist_reasoning_error", { err }));
+      threadId,
+    }).catch((error) =>
+      logger.debug("codex_persist_reasoning_error", { error })
+    );
   }
 
   const resultText = getAccumulatedOutput(finalAccumulator);
 
   persistCodexExecution(resource, {
-    sessionId,
-    threadId,
+    artifacts,
     auto: input.auto,
     projectId,
     result: resultText,
-    artifacts,
-  }).catch((err) => logger.debug("codex_persist_execution_error", { err }));
+    sessionId,
+    threadId,
+  }).catch((error) => logger.debug("codex_persist_execution_error", { error }));
 
   if (sessionId && threadId && !existingSession) {
     if (!sessionOwnerId) {
@@ -855,17 +859,17 @@ async function runCodexWithCodex({
       }
     } catch (error) {
       await recorder.finalizeError({
-        exitCode: 1,
         errorCode: "session_persist_failed",
         errorMessage: error instanceof Error ? error.message : String(error),
+        exitCode: 1,
       });
       throw error;
     }
   }
 
   await recorder.finalizeSuccess({
-    resultText,
     artifacts: artifacts.length > 0 ? artifacts : [],
+    resultText,
     structuredOutput: null,
     structuredOutputStatus: "skipped",
   });
@@ -874,40 +878,61 @@ async function runCodexWithCodex({
 
   const metadata = {
     agentName: "codex" as const,
-    threadId,
-    sessionId,
-    turnDurationMs,
-    tokenUsage,
-    resumedFromThread: Boolean(resumeThreadId),
-    workingDirectory: resolvedCw,
     autonomyLevel: input.auto,
     modelUsed: input.model,
+    resumedFromThread: Boolean(resumeThreadId),
+    sessionId,
+    threadId,
+    tokenUsage,
+    turnDurationMs,
+    workingDirectory: resolvedCw,
   };
 
   const sessionState = sessionId
     ? {
-        sessionId,
-        threadId: threadId ?? "",
         canResume: Boolean(threadId),
         isResumed: Boolean(resumeThreadId),
         resumeReason: threadId ? undefined : "no_thread_id",
+        sessionId,
+        threadId: threadId ?? "",
       }
     : undefined;
 
+  void persistArtifact({
+    category: "codex",
+    content: JSON.stringify(
+      {
+        sessionId,
+        threadId,
+        auto: input.auto,
+        projectId,
+        result: resultText,
+        artifacts,
+        metadata,
+        sessionState,
+      },
+      null,
+      2
+    ),
+    format: "json",
+    repoRoot: resolvedCw,
+    tool: "codex",
+  }).catch((error) => logger.debug("codex_persist_artifact_error", { error }));
+
   return {
-    result: resultText,
     artifacts: artifacts.length > 0 ? artifacts : undefined,
+    metadata,
     reasoning:
       reasoningAccumulator.traces.length > 0
         ? reasoningAccumulator.traces
         : undefined,
-    metadata,
+    result: resultText,
     sessionState,
   };
 }
 
 export const __internals = {
-  resolveThreadValidator,
   createFilesystemThreadValidatorForTests: (codexHome: string) =>
     createFilesystemThreadValidator(codexHome),
+  resolveThreadValidator,
 };

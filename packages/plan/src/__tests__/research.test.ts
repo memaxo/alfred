@@ -2,6 +2,15 @@ import { describe, expect, it, mock } from "bun:test";
 
 // Mock @alfred/agent with enhanced Exa fields
 mock.module("@alfred/agent/orchestrator/flow/context", () => ({
+  buildContextBundle: async () => ({
+    maxTokens: 24_000,
+    estimatedTokens: 0,
+    files: [],
+  }),
+  gatherCodeContext: async () => ({
+    code: [],
+    summary: "No files found",
+  }),
   gatherWebContext: async ({ requirement }: { requirement: string }) => {
     await Promise.resolve(); // satisfy lint
     const today = new Date();
@@ -90,15 +99,6 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
 
     return { web: [] };
   },
-  gatherCodeContext: async () => ({
-    code: [],
-    summary: "No files found",
-  }),
-  buildContextBundle: async () => ({
-    maxTokens: 24_000,
-    estimatedTokens: 0,
-    files: [],
-  }),
 }));
 
 mock.module("@alfred/agent/orchestrator/tool/web", () => ({
@@ -107,8 +107,8 @@ mock.module("@alfred/agent/orchestrator/tool/web", () => ({
       await Promise.resolve(); // satisfy lint
       if (input.action === "research") {
         return {
-          ok: true,
           action: "research",
+          ok: true,
           researchId: "test-research-id",
           results: [
             {
@@ -128,15 +128,12 @@ mock.module("@alfred/agent/orchestrator/tool/web", () => ({
 }));
 
 // Import AFTER mocks
-const { gatherExternalResearch, gatherFullResearch } = await import(
-  "../research/external.js"
-);
-const { calculateReliability, calculateRelevance } = await import(
-  "../research/score.js"
-);
-const { detectFrameworkVersion, applyDateFilter } = await import(
-  "../research/filter.js"
-);
+const { gatherExternalResearch, gatherFullResearch } =
+  await import("../research/external.js");
+const { calculateReliability, calculateRelevance } =
+  await import("../research/score.js");
+const { detectFrameworkVersion, applyDateFilter } =
+  await import("../research/filter.js");
 const { researchSourceSchema, researchResultSchema, researchOptionsSchema } =
   await import("../research/schema.js");
 const { exaSearchResultSchema, exaSearchResponseSchema, exaCostSchema } =
@@ -144,38 +141,38 @@ const { exaSearchResultSchema, exaSearchResponseSchema, exaCostSchema } =
 
 describe("Research Aggregator", () => {
   const mockIntent = {
-    id: "test-id",
-    description: "Upgrade to React 18",
-    userId: "user-123",
-    source: "chat" as const,
-    timestamp: new Date(),
     context: {
       existingPatterns: [],
       constraints: [],
     },
+    description: "Upgrade to React 18",
+    id: "test-id",
+    source: "chat" as const,
+    timestamp: new Date(),
+    userId: "user-123",
   };
 
   describe("Reliability Scoring", () => {
     it("should score official docs as 1.0", () => {
       const score = calculateReliability({
-        url: "https://react.dev/docs",
         content: "React documentation",
+        url: "https://react.dev/docs",
       });
-      expect(score).toBe(1.0);
+      expect(score).toBe(1);
     });
 
     it("should score non-https sources as 0.0", () => {
       const score = calculateReliability({
-        url: "http://react.dev/docs",
         content: "React documentation",
+        url: "http://react.dev/docs",
       });
-      expect(score).toBe(0.0);
+      expect(score).toBe(0);
     });
 
     it("should score blogs lower than official docs", () => {
       const score = calculateReliability({
-        url: "https://medium.com/react-article",
         content: "React article",
+        url: "https://medium.com/react-article",
       });
       expect(score).toBe(0.5);
     });
@@ -185,11 +182,11 @@ describe("Research Aggregator", () => {
       fourYearsAgo.setFullYear(fourYearsAgo.getFullYear() - 4);
 
       const score = calculateReliability({
-        url: "https://react.dev/docs",
-        publishedDate: fourYearsAgo,
         content: "Old React docs",
+        publishedDate: fourYearsAgo,
+        url: "https://react.dev/docs",
       });
-      expect(score).toBeLessThan(1.0);
+      expect(score).toBeLessThan(1);
       expect(score).toBeCloseTo(0.6, 1);
     });
   });
@@ -197,11 +194,11 @@ describe("Research Aggregator", () => {
   describe("Relevance Scoring", () => {
     it("should score higher when title matches query", () => {
       const scoreMatch = calculateRelevance(
-        { title: "React 18 Guide", summary: "Learn React 18" },
+        { summary: "Learn React 18", title: "React 18 Guide" },
         "React 18"
       );
       const scoreNoMatch = calculateRelevance(
-        { title: "Vue 3 Guide", summary: "Learn Vue 3" },
+        { summary: "Learn Vue 3", title: "Vue 3 Guide" },
         "React 18"
       );
       expect(scoreMatch).toBeGreaterThan(scoreNoMatch);
@@ -239,8 +236,8 @@ describe("Research Aggregator", () => {
       threeYearsAgo.setFullYear(today.getFullYear() - 3);
 
       const results = [
-        { title: "New", date: today },
-        { title: "Old", date: threeYearsAgo },
+        { date: today, title: "New" },
+        { date: threeYearsAgo, title: "Old" },
       ];
 
       const filtered = applyDateFilter(results, "recent");
@@ -251,7 +248,7 @@ describe("Research Aggregator", () => {
     it("should keep results without dates when filtering for recent", () => {
       const today = new Date();
       const results = [
-        { title: "New", date: today },
+        { date: today, title: "New" },
         { title: "Undated" }, // No date field
       ];
 
@@ -341,26 +338,26 @@ describe("Research Aggregator", () => {
   describe("Exa Schema Validation", () => {
     it("should validate ExaSearchResult schema", () => {
       const validResult = {
-        id: "result-123",
-        url: "https://example.com",
-        title: "Example",
         author: "John Doe",
+        extras: {
+          links: ["https://link1.com"],
+          imageLinks: ["https://image1.png"],
+        },
+        highlightScores: [0.9],
+        highlights: ["Important part"],
+        id: "result-123",
         publishedDate: "2024-01-15",
         score: 0.95,
-        text: "Full text content",
-        highlights: ["Important part"],
-        highlightScores: [0.9],
-        summary: "AI summary",
         subpages: [
           {
             url: "https://example.com/sub",
             title: "Subpage",
           },
         ],
-        extras: {
-          links: ["https://link1.com"],
-          imageLinks: ["https://image1.png"],
-        },
+        summary: "AI summary",
+        text: "Full text content",
+        title: "Example",
+        url: "https://example.com",
       };
 
       const parsed = exaSearchResultSchema.safeParse(validResult);
@@ -369,6 +366,12 @@ describe("Research Aggregator", () => {
 
     it("should validate ExaSearchResponse schema", () => {
       const validResponse = {
+        context: "Combined context for LLM",
+        costDollars: {
+          total: 0.005,
+          search: 0.003,
+          contents: 0.002,
+        },
         requestId: "req-123",
         results: [
           {
@@ -377,12 +380,6 @@ describe("Research Aggregator", () => {
           },
         ],
         searchType: "neural",
-        context: "Combined context for LLM",
-        costDollars: {
-          total: 0.005,
-          search: 0.003,
-          contents: 0.002,
-        },
       };
 
       const parsed = exaSearchResponseSchema.safeParse(validResponse);
@@ -391,9 +388,6 @@ describe("Research Aggregator", () => {
 
     it("should validate ExaCost schema", () => {
       const validCost = {
-        total: 0.01,
-        search: 0.005,
-        contents: 0.005,
         breakdown: {
           neuralSearch: 0.003,
           deepSearch: 0.002,
@@ -401,6 +395,9 @@ describe("Research Aggregator", () => {
           contentHighlight: 0.001,
           contentSummary: 0.001,
         },
+        contents: 0.005,
+        search: 0.005,
+        total: 0.01,
       };
 
       const parsed = exaCostSchema.safeParse(validCost);
@@ -411,20 +408,18 @@ describe("Research Aggregator", () => {
   describe("Research Schema Validation", () => {
     it("should validate ResearchSource schema with all fields", () => {
       const validSource = {
-        id: "source-123",
-        source: "https://example.com",
-        title: "Example Title",
         author: "John Doe",
-        summary: "This is a summary",
-        highlights: ["Important highlight"],
-        fullText: "Full text content...",
-        reliability: 0.85,
-        relevanceScore: 0.9,
-        highlightScores: [0.92],
+        category: "github",
         date: new Date(),
         frameworkVersion: "React 18.2",
-        category: "github",
+        fullText: "Full text content...",
+        highlightScores: [0.92],
+        highlights: ["Important highlight"],
+        id: "source-123",
         links: ["https://github.com/example"],
+        relevanceScore: 0.9,
+        reliability: 0.85,
+        source: "https://example.com",
         subpages: [
           {
             id: "sub-1",
@@ -435,6 +430,8 @@ describe("Research Aggregator", () => {
             relevanceScore: 0.85,
           },
         ],
+        summary: "This is a summary",
+        title: "Example Title",
       };
 
       const parsed = researchSourceSchema.safeParse(validSource);
@@ -446,32 +443,32 @@ describe("Research Aggregator", () => {
         external: [
           {
             id: "source-1",
-            source: "https://example.com",
-            title: "Example",
-            summary: "Summary",
-            reliability: 0.9,
             relevanceScore: 0.85,
+            reliability: 0.9,
+            source: "https://example.com",
+            summary: "Summary",
+            title: "Example",
           },
         ],
         internal: {
+          conventions: [
+            { id: "conv-1", description: "Use TypeScript", confidence: 0.9 },
+          ],
           existingCode: ["/src/components/Button.tsx"],
           patterns: [
             { id: "pattern-1", name: "Component Pattern", confidence: 0.95 },
           ],
-          conventions: [
-            { id: "conv-1", description: "Use TypeScript", confidence: 0.9 },
-          ],
         },
         metadata: {
-          totalSources: 1,
-          tokenCount: 500,
-          researchDurationMs: 1234,
-          searchType: "neural",
           context: "Combined LLM context",
           cost: {
             total: 0.01,
             perSource: 0.01,
           },
+          researchDurationMs: 1234,
+          searchType: "neural",
+          tokenCount: 500,
+          totalSources: 1,
         },
       };
 
@@ -481,13 +478,13 @@ describe("Research Aggregator", () => {
 
     it("should validate ResearchOptions schema with Exa fields", () => {
       const validOptions = {
-        maxResults: 10,
-        minReliability: 0.7,
+        category: "github",
         dateFilter: "recent",
         frameworkMatch: true,
-        category: "github",
-        searchType: "deep",
         includeContext: true,
+        maxResults: 10,
+        minReliability: 0.7,
+        searchType: "deep",
       };
 
       const parsed = researchOptionsSchema.safeParse(validOptions);

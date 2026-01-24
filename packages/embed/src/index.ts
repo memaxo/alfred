@@ -3,8 +3,9 @@
  * Provides embed() and embedMany() functions matching @alfred/rag interface
  */
 
-import { EmbedPool } from "./pool.js";
 import type { QueueStats } from "./queue.js";
+
+import { EmbedPool } from "./pool.js";
 
 // Configuration
 export {

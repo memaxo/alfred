@@ -1,9 +1,10 @@
 import { logger } from "@alfred/logger";
-import type { WorkflowIntent } from "../intent/types.js";
+
+import { type WorkflowIntent } from "../intent/types.js";
 import { gatherCodebaseContext } from "./codebase.js";
 import { extractConventions } from "./conventions.js";
 import { lookupPatterns } from "./patterns.js";
-import type { Convention, ResearchResult } from "./types.js";
+import { type Convention, type ResearchResult } from "./types.js";
 
 /**
  * Gather internal research context for a workflow intent
@@ -28,17 +29,16 @@ export async function gatherInternalResearch(
     // 1. Codebase context gathering (Wrap existing)
     const existingCode = await gatherCodebaseContext({
       requirement: intent.description,
-      workspace: intent.context.workspace,
       topK: maxFiles,
+      workspace: intent.context.workspace,
     });
 
     // 2. Import analysis
-    const { analyzeImports } = await import(
-      "@alfred/agent/orchestrator/reasoning/decompose-semantic"
-    );
+    const { analyzeImports } =
+      await import("@alfred/agent/orchestrator/reasoning/decompose-semantic");
     const imports = await analyzeImports({
-      workspace: intent.context.workspace,
       requirement: intent.description,
+      workspace: intent.context.workspace,
     });
 
     // 3. Pattern lookup (Stub)
@@ -56,9 +56,9 @@ export async function gatherInternalResearch(
       ? [
           ...extractedConventions,
           ...(imports?.detectedPatterns || []).map((p) => ({
-            id: `import-${p.pattern}`,
-            description: `Import pattern: ${p.pattern}`,
             confidence: p.confidence,
+            description: `Import pattern: ${p.pattern}`,
+            id: `import-${p.pattern}`,
           })),
         ]
       : [];
@@ -77,17 +77,17 @@ export async function gatherInternalResearch(
 
     const durationMs = Date.now() - startTime;
     logger.info("internal_research_complete", {
-      intentId: intent.id,
-      existingCodeCount: existingCode.length,
-      patternsCount: patterns.length,
       conventionsCount: conventions.length,
       durationMs,
+      existingCodeCount: existingCode.length,
+      intentId: intent.id,
+      patternsCount: patterns.length,
     });
 
     return {
+      conventions,
       existingCode,
       patterns,
-      conventions,
     };
   } catch (error) {
     logger.error("internal_research_failed", {
@@ -95,9 +95,9 @@ export async function gatherInternalResearch(
       intentId: intent.id,
     });
     return {
+      conventions: [],
       existingCode: [],
       patterns: [],
-      conventions: [],
     };
   }
 }

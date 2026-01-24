@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+
 import { qwen3vlRerank } from "../src/client.js";
 
 let server: ReturnType<typeof Bun.serve> | null = null;

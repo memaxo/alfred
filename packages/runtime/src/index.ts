@@ -6,10 +6,7 @@
  */
 
 export { createRuntime, WorkflowRuntime } from "./core";
-export type {
-  CognitiveEffect,
-  CognitiveLoopResult,
-} from "./loops/cognitive";
+export type { CognitiveEffect, CognitiveLoopResult } from "./loops/cognitive";
 export {
   computeEffects,
   runAssistantGeneration,

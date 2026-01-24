@@ -1,7 +1,9 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+
+import type { EdgeRow, NodeRow } from "./types";
+
 import { db } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
-import type { EdgeRow, NodeRow } from "./types";
 import { buildEdgeWhere } from "./utils";
 
 /**

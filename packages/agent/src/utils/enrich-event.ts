@@ -5,10 +5,12 @@
  * This is the async version for use in event stream processing.
  */
 
-import { randomUUID } from "node:crypto";
 import type { WorkflowEvent } from "@alfred/type";
 import type { SchemaContext } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
+
+import { randomUUID } from "node:crypto";
+
 import { enrich } from "./enrich";
 import { eventToUiMessages } from "./normalize";
 

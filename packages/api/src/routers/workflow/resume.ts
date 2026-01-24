@@ -1,9 +1,10 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { PipelineEvent } from "@alfred/pipeline";
+import { type PipelineEvent } from "@alfred/pipeline";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
+
 import { CompilationObserver } from "../../services/compilation";
 import { ConciergeObserver } from "../../services/concierge";
 import { upsertWorkflowPatternFromCompletion } from "../../services/pattern";
@@ -20,13 +21,13 @@ const isTestMode =
 export const workflowResumePipelineProcedure = authedProcedure
   .input(
     z.object({
-      runId: z.string().min(1),
       dryRun: z.boolean().optional(),
+      runId: z.string().min(1),
     })
   )
   .subscription(({ input, ctx }) =>
     observable<PipelineEvent>((emit) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         emit.error(
           new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
@@ -77,7 +78,7 @@ export const workflowResumePipelineProcedure = authedProcedure
               const updatedSnapshot = { ...snapshot };
               const contextMap = new Map(updatedSnapshot.contextEntries);
               contextMap.set("dryRun", true);
-              updatedSnapshot.contextEntries = Array.from(contextMap.entries());
+              updatedSnapshot.contextEntries = [...contextMap.entries()];
               await storage.save(input.runId, updatedSnapshot);
             } catch {
               // Best-effort.
@@ -121,14 +122,14 @@ export const workflowResumePipelineProcedure = authedProcedure
           runner.addObserver(new CheckpointObserver(storage));
           runner.addObserver(
             new CompilationObserver({
-              runId: input.runId,
               requirement: resumeSnapshot.requirement,
+              runId: input.runId,
             })
           );
           runner.addObserver(
             new ConciergeObserver({
-              userId,
               runId: input.runId,
+              userId,
             })
           );
 
@@ -136,10 +137,10 @@ export const workflowResumePipelineProcedure = authedProcedure
           try {
             const { workflowRepo } = await import("@alfred/db");
             await workflowRepo.updateRun(input.runId, {
+              errorMessage: null,
+              resumedAt: new Date(),
               status: "running",
               suspendedAt: null,
-              resumedAt: new Date(),
-              errorMessage: null,
             });
           } catch {
             // Ignore; streaming resume should still proceed.
@@ -154,26 +155,26 @@ export const workflowResumePipelineProcedure = authedProcedure
           ) {
             runner.addObserver(
               new LinearSyncObserver({
-                syncIntervalMs: 30_000,
-                space: linearSpace,
-                issueId: linearIssueId,
                 authz: linearAuthz,
+                issueId: linearIssueId,
+                space: linearSpace,
+                syncIntervalMs: 30_000,
               })
             );
           }
 
           const abortController = new AbortController();
           await registerRunHandle(input.runId, {
+            abortController,
+            cancel: () => {
+              abortController.abort();
+              return Promise.resolve();
+            },
             resume: () => Promise.resolve(),
             suspend: () => {
               abortController.abort();
               return Promise.resolve();
             },
-            cancel: () => {
-              abortController.abort();
-              return Promise.resolve();
-            },
-            abortController,
           });
 
           cleanup = () => {
@@ -183,10 +184,6 @@ export const workflowResumePipelineProcedure = authedProcedure
           };
 
           const pipelineInput = {
-            runId: input.runId,
-            requirement: resumeSnapshot.requirement,
-            workspace,
-            userId,
             authz: undefined,
             linear:
               typeof linearSessionId === "string" &&
@@ -207,6 +204,10 @@ export const workflowResumePipelineProcedure = authedProcedure
                     authz: linearAuthz,
                   }
                 : undefined,
+            requirement: resumeSnapshot.requirement,
+            runId: input.runId,
+            userId,
+            workspace,
           };
 
           void (async () => {
@@ -225,9 +226,8 @@ export const workflowResumePipelineProcedure = authedProcedure
 
                 if (finalSnapshot && finalStatus === "completed") {
                   try {
-                    const { createContextFromSnapshot } = await import(
-                      "@alfred/pipeline/snapshot"
-                    );
+                    const { createContextFromSnapshot } =
+                      await import("@alfred/pipeline/snapshot");
                     const ctxDecoded = createContextFromSnapshot(
                       finalSnapshot,
                       {
@@ -250,9 +250,9 @@ export const workflowResumePipelineProcedure = authedProcedure
                       !Array.isArray(value);
 
                     if (isRecord(plan)) {
-                      const phases = plan.phases;
-                      const resources = plan.resources;
-                      const evaluationCriteria = plan.evaluationCriteria;
+                      const { phases } = plan;
+                      const { resources } = plan;
+                      const { evaluationCriteria } = plan;
                       const intent =
                         typeof plan.intent === "string" &&
                         plan.intent.length > 0
@@ -261,18 +261,18 @@ export const workflowResumePipelineProcedure = authedProcedure
 
                       if (phases && resources && evaluationCriteria) {
                         await upsertWorkflowPatternFromCompletion({
-                          userId,
-                          projectId: initOutput?.projectId ?? null,
+                          durationMs: Math.max(
+                            0,
+                            finalSnapshot.lastEventAt - finalSnapshot.startedAt
+                          ),
                           intent,
                           planTemplate: {
                             phases,
                             resources,
                             evaluationCriteria,
                           },
-                          durationMs: Math.max(
-                            0,
-                            finalSnapshot.lastEventAt - finalSnapshot.startedAt
-                          ),
+                          projectId: initOutput?.projectId ?? null,
+                          userId,
                         });
                       }
                     }
@@ -283,13 +283,6 @@ export const workflowResumePipelineProcedure = authedProcedure
 
                 const { workflowRepo } = await import("@alfred/db");
                 await workflowRepo.updateRun(input.runId, {
-                  status:
-                    finalStatus === "completed"
-                      ? "completed"
-                      : finalStatus === "suspended"
-                        ? "suspended"
-                        : "failed",
-                  suspendedAt: finalStatus === "suspended" ? new Date() : null,
                   completedAt:
                     finalStatus === "completed" || finalStatus === "failed"
                       ? new Date()
@@ -298,22 +291,29 @@ export const workflowResumePipelineProcedure = authedProcedure
                     finalStatus === "failed"
                       ? (finalSnapshot?.error ?? "pipeline_failed")
                       : null,
+                  status:
+                    finalStatus === "completed"
+                      ? "completed"
+                      : finalStatus === "suspended"
+                        ? "suspended"
+                        : "failed",
+                  suspendedAt: finalStatus === "suspended" ? new Date() : null,
                 });
               } catch {
                 // Best-effort.
               }
             } catch (error) {
               logger.warn("pipeline_resume_failed", {
-                runId: input.runId,
                 error: error instanceof Error ? error.message : String(error),
+                runId: input.runId,
               });
               try {
                 const { workflowRepo } = await import("@alfred/db");
                 await workflowRepo.updateRun(input.runId, {
-                  status: "failed",
                   completedAt: new Date(),
                   errorMessage:
                     error instanceof Error ? error.message : String(error),
+                  status: "failed",
                 });
               } catch {
                 // Best-effort.
@@ -324,9 +324,8 @@ export const workflowResumePipelineProcedure = authedProcedure
             }
           })();
 
-          const { wrapEventEnvelope } = await import(
-            "@alfred/agent/utils/envelope"
-          );
+          const { wrapEventEnvelope } =
+            await import("@alfred/agent/utils/envelope");
 
           const persistTasks = new Set<Promise<void>>();
           const persistPipelineEvent = (event: PipelineEvent): void => {
@@ -342,7 +341,7 @@ export const workflowResumePipelineProcedure = authedProcedure
               data: Record<string, unknown>;
             } | null => {
               switch (event.type) {
-                case "pipeline:start":
+                case "pipeline:start": {
                   return {
                     eventType: "run",
                     data: {
@@ -351,12 +350,14 @@ export const workflowResumePipelineProcedure = authedProcedure
                       requirement: event.requirement,
                     },
                   };
-                case "stage:enter":
+                }
+                case "stage:enter": {
                   return {
                     eventType: "step-start",
                     data: { kind: "stage_enter", stage: event.stage },
                   };
-                case "stage:exit":
+                }
+                case "stage:exit": {
                   return {
                     eventType: "step-complete",
                     data: {
@@ -365,7 +366,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                       durationMs: event.durationMs,
                     },
                   };
-                case "stage:error":
+                }
+                case "stage:error": {
                   return {
                     eventType: "error",
                     data: {
@@ -374,7 +376,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                       message: event.error,
                     },
                   };
-                case "agent:spawn":
+                }
+                case "agent:spawn": {
                   return {
                     eventType: "agent-start",
                     data: {
@@ -383,7 +386,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                       taskId: event.taskId,
                     },
                   };
-                case "agent:complete":
+                }
+                case "agent:complete": {
                   return {
                     eventType: "agent-complete",
                     data: {
@@ -392,7 +396,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                       outcome: event.outcome,
                     },
                   };
-                case "agent:escalate-request":
+                }
+                case "agent:escalate-request": {
                   return {
                     eventType: "notice",
                     data: {
@@ -405,12 +410,14 @@ export const workflowResumePipelineProcedure = authedProcedure
                       timestamp: event.timestamp,
                     },
                   };
-                case "pipeline:suspend":
+                }
+                case "pipeline:suspend": {
                   return {
                     eventType: "suspend",
                     data: { kind: "pipeline_suspend", reason: event.reason },
                   };
-                case "pipeline:resume":
+                }
+                case "pipeline:resume": {
                   return {
                     eventType: "resume",
                     data: {
@@ -418,7 +425,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                       fromStage: event.fromStage,
                     },
                   };
-                case "pipeline:complete":
+                }
+                case "pipeline:complete": {
                   return {
                     eventType: "finish",
                     data: {
@@ -427,7 +435,8 @@ export const workflowResumePipelineProcedure = authedProcedure
                       summaryText: event.summaryText,
                     },
                   };
-                case "pipeline:failed":
+                }
+                case "pipeline:failed": {
                   return {
                     eventType: "error",
                     data: {
@@ -436,6 +445,7 @@ export const workflowResumePipelineProcedure = authedProcedure
                       message: event.error,
                     },
                   };
+                }
               }
               return null;
             })();
@@ -446,22 +456,22 @@ export const workflowResumePipelineProcedure = authedProcedure
 
             const p = workflowRepo
               .appendEvent({
-                runId: input.runId,
-                eventType: mapped.eventType,
-                timestamp: new Date(event.timestamp),
                 eventData: wrapEventEnvelope({
                   id: crypto.randomUUID(),
                   type: mapped.eventType,
                   resource: "user",
                   data: mapped.data,
                 }),
+                eventType: mapped.eventType,
+                runId: input.runId,
+                timestamp: new Date(event.timestamp),
               })
               .then(() => {})
               .catch((error) => {
                 logger.warn("workflow_pipeline_event_persist_failed", {
-                  runId: input.runId,
-                  eventType: event.type,
                   error: error instanceof Error ? error.message : String(error),
+                  eventType: event.type,
+                  runId: input.runId,
                 });
               })
               .finally(() => {
@@ -475,7 +485,7 @@ export const workflowResumePipelineProcedure = authedProcedure
             persistPipelineEvent(event);
             emit.next(event);
           }
-          await Promise.allSettled(Array.from(persistTasks));
+          await Promise.allSettled([...persistTasks]);
           emit.complete();
         } catch (error) {
           emit.error(toTRPCError(error, "workflow_resume_failed"));

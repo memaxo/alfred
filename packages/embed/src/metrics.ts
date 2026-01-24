@@ -4,6 +4,7 @@
  */
 
 import client from "prom-client";
+
 import type { QueueStats } from "./queue";
 
 // Create a dedicated registry for embed metrics

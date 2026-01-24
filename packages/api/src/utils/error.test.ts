@@ -1,4 +1,3 @@
-import { describe, expect, it } from "bun:test";
 import {
   APICallError,
   DownloadError,
@@ -25,6 +24,7 @@ import {
   TypeValidationError,
   UnsupportedFunctionalityError,
 } from "ai";
+import { describe, expect, it } from "bun:test";
 
 import { toTRPCError } from "./error";
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
 import {
   __sessionInternals,
   toolSession,
@@ -18,29 +19,26 @@ describe("session tool", () => {
 
   describe("input schema validation", () => {
     it("requires action and sessionId", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const result = sessionInputSchema.safeParse({});
       expect(result.success).toBe(false);
     });
 
     it("accepts valid start action", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const result = sessionInputSchema.safeParse({
         action: "start",
-        sessionId: "test-session",
         command: "npm run dev",
+        sessionId: "test-session",
       });
       expect(result.success).toBe(true);
     });
 
     it("accepts valid stop action", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const result = sessionInputSchema.safeParse({
         action: "stop",
         sessionId: "test-session",
@@ -49,9 +47,8 @@ describe("session tool", () => {
     });
 
     it("accepts valid list action", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const result = sessionInputSchema.safeParse({
         action: "list",
         sessionId: "any",
@@ -60,21 +57,19 @@ describe("session tool", () => {
     });
 
     it("accepts valid peek action with lines", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const result = sessionInputSchema.safeParse({
         action: "peek",
-        sessionId: "test-session",
         lines: 50,
+        sessionId: "test-session",
       });
       expect(result.success).toBe(true);
     });
 
     it("accepts valid send action", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const result = sessionInputSchema.safeParse({
         action: "send",
         sessionId: "test-session",
@@ -84,39 +79,37 @@ describe("session tool", () => {
     });
 
     it("validates sessionId length", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const tooShort = sessionInputSchema.safeParse({
         action: "start",
-        sessionId: "",
         command: "test",
+        sessionId: "",
       });
       expect(tooShort.success).toBe(false);
 
       const tooLong = sessionInputSchema.safeParse({
         action: "start",
-        sessionId: "a".repeat(51),
         command: "test",
+        sessionId: "a".repeat(51),
       });
       expect(tooLong.success).toBe(false);
     });
 
     it("validates lines range for peek", async () => {
-      const { sessionInputSchema } = await import(
-        "../src/orchestrator/tool/session"
-      );
+      const { sessionInputSchema } =
+        await import("../src/orchestrator/tool/session");
       const tooFew = sessionInputSchema.safeParse({
         action: "peek",
-        sessionId: "test",
         lines: 0,
+        sessionId: "test",
       });
       expect(tooFew.success).toBe(false);
 
       const tooMany = sessionInputSchema.safeParse({
         action: "peek",
-        sessionId: "test",
         lines: 1001,
+        sessionId: "test",
       });
       expect(tooMany.success).toBe(false);
     });
@@ -128,8 +121,8 @@ describe("session tool", () => {
         const result = await toolSession.execute({
           input: {
             action: "start",
-            sessionId: "dev-server",
             command: "npm run dev",
+            sessionId: "dev-server",
           },
         });
 
@@ -178,9 +171,7 @@ describe("session tool", () => {
 
     describe("list action", () => {
       it("returns list of sessions", async () => {
-        mockRunner.mockImplementationOnce(() =>
-          Promise.resolve("session1\nsession2\nsession3")
-        );
+        mockRunner.mockResolvedValueOnce("session1\nsession2\nsession3");
 
         const result = await toolSession.execute({
           input: {
@@ -199,9 +190,7 @@ describe("session tool", () => {
       });
 
       it("returns empty array when no sessions", async () => {
-        mockRunner.mockImplementationOnce(() =>
-          Promise.reject(new Error("no sessions"))
-        );
+        mockRunner.mockRejectedValueOnce(new Error("no sessions"));
 
         const result = await toolSession.execute({
           input: {
@@ -217,9 +206,7 @@ describe("session tool", () => {
 
     describe("peek action", () => {
       it("captures pane content with default lines", async () => {
-        mockRunner.mockImplementationOnce(() =>
-          Promise.resolve("line1\nline2\nline3")
-        );
+        mockRunner.mockResolvedValueOnce("line1\nline2\nline3");
 
         const result = await toolSession.execute({
           input: {
@@ -241,13 +228,13 @@ describe("session tool", () => {
       });
 
       it("captures specified number of lines", async () => {
-        mockRunner.mockImplementationOnce(() => Promise.resolve("output"));
+        mockRunner.mockResolvedValueOnce("output");
 
         await toolSession.execute({
           input: {
             action: "peek",
-            sessionId: "dev-server",
             lines: 100,
+            sessionId: "dev-server",
           },
         });
 
@@ -308,8 +295,8 @@ describe("session tool", () => {
       });
 
       it("propagates tmux errors", async () => {
-        mockRunner.mockImplementationOnce(() =>
-          Promise.reject(new Error("tmux_failed: session not found"))
+        mockRunner.mockRejectedValueOnce(
+          new Error("tmux_failed: session not found")
         );
 
         await expect(

@@ -11,12 +11,13 @@
  * before invoking bun test so @alfred/db initialises the sqlite driver.
  */
 
-import { beforeAll, describe, expect, it } from "bun:test";
 import type {
   KnowledgeConfidence,
   KnowledgeFact,
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
+
+import { beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 
 type BridgeModule = typeof import("../src/engines/bridge");

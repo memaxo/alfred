@@ -1,13 +1,15 @@
-import type { Workspace, WorkspaceKind } from "./types.js";
+import { type Workspace, type WorkspaceKind } from "./types.js";
 
 /**
  * Options for workspace creation.
  */
-export type WorkspaceFactoryOptions = {
+export interface WorkspaceFactoryOptions {
   /** Enable AgentFS overlay mode (copy-on-write) */
   agentfsOverlay?: boolean;
   /** Custom AgentFS database path */
   agentfsDbPath?: string;
+  /** Optional base AgentFS DB path to copy from before first open (run-to-run sharing). */
+  agentfsBaseDbPath?: string;
   /** Docker image to use (default: node:18-slim) */
   image?: string;
   /** Authorization token for Docker operations */
@@ -20,7 +22,7 @@ export type WorkspaceFactoryOptions = {
   projectId?: string;
   /** Container kind for project attachment tracking */
   containerKind?: string;
-};
+}
 
 /**
  * WorkspaceFactory creates AgentFS execution environments inside Docker.
@@ -38,14 +40,15 @@ export const WorkspaceFactory = {
   ): Promise<Workspace> => {
     const { AgentFSWorkspace } = await import("./agentfs.js");
     return new AgentFSWorkspace(id, runId, repoBase, {
-      overlay: options?.agentfsOverlay,
+      authz: options?.authz,
+      baseDbPath: options?.agentfsBaseDbPath,
+      containerKind: options?.containerKind,
+      containerName: options?.containerName,
       dbPath: options?.agentfsDbPath,
       image: options?.image,
-      authz: options?.authz,
-      containerName: options?.containerName,
-      retainContainer: options?.retainContainer,
+      overlay: options?.agentfsOverlay,
       projectId: options?.projectId,
-      containerKind: options?.containerKind,
+      retainContainer: options?.retainContainer,
     });
   },
 };

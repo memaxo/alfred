@@ -17,6 +17,7 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
+import { type WorkflowEvent } from "@alfred/type";
 import {
   afterAll,
   afterEach,
@@ -27,7 +28,6 @@ import {
   it,
 } from "bun:test";
 import path from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
 
 // VCR for AI provider responses
 const cassettePath = path.join(import.meta.dir, "__cassettes__", "chaos.json");
@@ -44,9 +44,8 @@ let toObservable: typeof import("../utils/stream").toObservable;
 async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { workflowEvents, workflowRuns } = await import(
-      "@alfred/db/schema/workflow"
-    );
+    const { workflowEvents, workflowRuns } =
+      await import("@alfred/db/schema/workflow");
     await db.delete(workflowEvents);
     await db.delete(workflowRuns);
   } catch {
@@ -82,8 +81,8 @@ describe("Service Degradation", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "chaos-test-user",
         email: "chaos@test.local",
+        id: "chaos-test-user",
         name: "Chaos Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -104,9 +103,9 @@ describe("Service Degradation", () => {
       const events: WorkflowEvent[] = [];
 
       const subscription = await caller.stream({
-        requirement: "Simple test task",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Simple test task",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -114,17 +113,17 @@ describe("Service Degradation", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
 
         const sub = observable.subscribe({
-          next: (event) => events.push(event),
-          error: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
-          },
           complete: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          next: (event) => events.push(event),
         });
       });
 
@@ -138,29 +137,29 @@ describe("Service Degradation", () => {
       // First request should work
       let runId1: string | undefined;
       const sub1 = await caller.stream({
-        requirement: "First task",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "First task",
       });
       const obs1 = toObservable<WorkflowEvent>(sub1);
 
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => resolve(), 10_000);
         const sub = obs1.subscribe({
-          next: (event) => {
-            if (event._ === "run" && (event as any).id) {
-              runId1 = (event as any).id;
-            }
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
           },
           error: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
+          next: (event) => {
+            if (event._ === "run" && (event as any).id) {
+              runId1 = (event as any).id;
+            }
           },
         });
       });
@@ -170,29 +169,29 @@ describe("Service Degradation", () => {
       // Second request should also work
       let runId2: string | undefined;
       const sub2 = await caller.stream({
-        requirement: "Second task",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Second task",
       });
       const obs2 = toObservable<WorkflowEvent>(sub2);
 
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => resolve(), 10_000);
         const sub = obs2.subscribe({
-          next: (event) => {
-            if (event._ === "run" && (event as any).id) {
-              runId2 = (event as any).id;
-            }
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
           },
           error: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
-          complete: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
+          next: (event) => {
+            if (event._ === "run" && (event as any).id) {
+              runId2 = (event as any).id;
+            }
           },
         });
       });
@@ -209,9 +208,9 @@ describe("Service Degradation", () => {
       const events: WorkflowEvent[] = [];
 
       const subscription = await caller.stream({
-        requirement: "Task without voice",
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: "Task without voice",
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -219,17 +218,17 @@ describe("Service Degradation", () => {
         const timeout = setTimeout(() => resolve(), 10_000);
 
         const sub = observable.subscribe({
-          next: (event) => events.push(event),
-          error: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
-          },
           complete: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          next: (event) => events.push(event),
         });
       });
 
@@ -246,8 +245,8 @@ describe("Network Failures", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "network-fail-user",
         email: "network@test.local",
+        id: "network-fail-user",
         name: "Network Fail Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -266,14 +265,22 @@ describe("Network Failures", () => {
     let aborted = false;
 
     const subscription = await caller.stream({
-      requirement: "Task to be aborted",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Task to be aborted",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
     await new Promise<void>((resolve) => {
       const sub = observable.subscribe({
+        complete: () => {
+          sub.unsubscribe?.();
+          resolve();
+        },
+        error: () => {
+          sub.unsubscribe?.();
+          resolve();
+        },
         next: (event) => {
           if (event._ === "run" && (event as any).id) {
             runId = (event as any).id;
@@ -282,14 +289,6 @@ describe("Network Failures", () => {
             aborted = true;
             resolve();
           }
-        },
-        error: () => {
-          sub.unsubscribe?.();
-          resolve();
-        },
-        complete: () => {
-          sub.unsubscribe?.();
-          resolve();
         },
       });
 
@@ -311,9 +310,9 @@ describe("Network Failures", () => {
     for (let i = 0; i < 3; i++) {
       const promise = (async () => {
         const subscription = await caller.stream({
-          requirement: `Concurrent task ${i}`,
           auto: "low" as const,
           mode: "sequential" as const,
+          requirement: `Concurrent task ${i}`,
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -321,20 +320,20 @@ describe("Network Failures", () => {
           const timeout = setTimeout(() => resolve(), 10_000);
 
           const sub = observable.subscribe({
-            next: (event) => {
-              if (event._ === "run" && (event as any).id) {
-                results.push((event as any).id);
-              }
+            complete: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
             },
             error: () => {
               clearTimeout(timeout);
               sub.unsubscribe?.();
               resolve();
             },
-            complete: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
+            next: (event) => {
+              if (event._ === "run" && (event as any).id) {
+                results.push((event as any).id);
+              }
             },
           });
         });
@@ -359,8 +358,8 @@ describe("Timeout Handling", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "timeout-user",
         email: "timeout@test.local",
+        id: "timeout-user",
         name: "Timeout Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -379,9 +378,9 @@ describe("Timeout Handling", () => {
 
     // Start a workflow
     const subscription = await caller.stream({
-      requirement: "Quick task",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Quick task",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -389,20 +388,20 @@ describe("Timeout Handling", () => {
       const timeout = setTimeout(() => resolve(), 10_000);
 
       const sub = observable.subscribe({
-        next: (event) => {
-          if (event._ === "run" && (event as any).id) {
-            runId = (event as any).id;
-          }
+        complete: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
         },
         error: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
-        complete: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
+        next: (event) => {
+          if (event._ === "run" && (event as any).id) {
+            runId = (event as any).id;
+          }
         },
       });
     });
@@ -422,9 +421,9 @@ describe("Timeout Handling", () => {
     const startTime = performance.now();
 
     const subscription = await caller.stream({
-      requirement: "Complex multi-step task",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Complex multi-step task",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -432,17 +431,17 @@ describe("Timeout Handling", () => {
       const timeout = setTimeout(() => resolve(), 15_000);
 
       const sub = observable.subscribe({
-        next: (event) => events.push(event),
-        error: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
-        },
         complete: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
+        error: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        next: (event) => events.push(event),
       });
     });
 
@@ -486,8 +485,8 @@ describe("Graceful Degradation", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "degradation-user",
         email: "degrade@test.local",
+        id: "degradation-user",
         name: "Degradation Test",
         roles: ["owner"],
         scopes: ["workflow.plan", "workflow.stream", "workflow.read"],
@@ -506,9 +505,9 @@ describe("Graceful Degradation", () => {
 
     // System should work even without optional services
     const subscription = await caller.stream({
-      requirement: "Task with missing optional services",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Task with missing optional services",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -516,17 +515,17 @@ describe("Graceful Degradation", () => {
       const timeout = setTimeout(() => resolve(), 10_000);
 
       const sub = observable.subscribe({
-        next: (event) => events.push(event),
-        error: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
-        },
         complete: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
+        error: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        next: (event) => events.push(event),
       });
     });
 
@@ -538,9 +537,9 @@ describe("Graceful Degradation", () => {
     const events: WorkflowEvent[] = [];
 
     const subscription = await caller.stream({
-      requirement: "Task that may have non-critical failures",
       auto: "low" as const,
       mode: "sequential" as const,
+      requirement: "Task that may have non-critical failures",
     });
     const observable = toObservable<WorkflowEvent>(subscription);
 
@@ -548,22 +547,22 @@ describe("Graceful Degradation", () => {
       const timeout = setTimeout(() => resolve(), 10_000);
 
       const sub = observable.subscribe({
-        next: (event) => {
-          events.push(event);
-          // Check for notice events (warnings)
-          if (event._ === "notice") {
-            // Warnings are acceptable, not failures
-          }
+        complete: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
         },
         error: () => {
           clearTimeout(timeout);
           sub.unsubscribe?.();
           resolve();
         },
-        complete: () => {
-          clearTimeout(timeout);
-          sub.unsubscribe?.();
-          resolve();
+        next: (event) => {
+          events.push(event);
+          // Check for notice events (warnings)
+          if (event._ === "notice") {
+            // Warnings are acceptable, not failures
+          }
         },
       });
     });
@@ -579,8 +578,8 @@ describe("Recovery Scenarios", () => {
     await resetTables();
     harness = new WorkflowTestHarness({
       user: {
-        id: "recovery-user",
         email: "recovery@test.local",
+        id: "recovery-user",
         name: "Recovery Test",
         roles: ["owner"],
         scopes: [
@@ -604,26 +603,26 @@ describe("Recovery Scenarios", () => {
     // Create some workflows
     for (let i = 0; i < 2; i++) {
       const subscription = await caller.stream({
-        requirement: `Recovery task ${i}`,
         auto: "low" as const,
         mode: "sequential" as const,
+        requirement: `Recovery task ${i}`,
       });
       const observable = toObservable<WorkflowEvent>(subscription);
 
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => resolve(), 5000);
         const sub = observable.subscribe({
-          next: () => {},
-          error: () => {
-            clearTimeout(timeout);
-            sub.unsubscribe?.();
-            resolve();
-          },
           complete: () => {
             clearTimeout(timeout);
             sub.unsubscribe?.();
             resolve();
           },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          next: () => {},
         });
       });
     }
@@ -641,27 +640,27 @@ describe("Recovery Scenarios", () => {
     for (let i = 0; i < 5; i++) {
       try {
         const subscription = await caller.stream({
-          requirement: `Stability test ${i}`,
           auto: "low" as const,
           mode: "sequential" as const,
+          requirement: `Stability test ${i}`,
         });
         const observable = toObservable<WorkflowEvent>(subscription);
 
         await new Promise<void>((resolve) => {
           const timeout = setTimeout(() => resolve(), 5000);
           const sub = observable.subscribe({
-            next: () => {},
-            error: () => {
-              clearTimeout(timeout);
-              sub.unsubscribe?.();
-              resolve();
-            },
             complete: () => {
               clearTimeout(timeout);
               sub.unsubscribe?.();
               successCount++;
               resolve();
             },
+            error: () => {
+              clearTimeout(timeout);
+              sub.unsubscribe?.();
+              resolve();
+            },
+            next: () => {},
           });
         });
       } catch {

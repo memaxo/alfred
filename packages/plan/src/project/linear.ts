@@ -1,6 +1,7 @@
 import { linearRepo, projectRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { LinearClient } from "@linear/sdk";
+
 import type { Project } from "./types.js";
 
 /**

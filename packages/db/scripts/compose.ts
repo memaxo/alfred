@@ -6,9 +6,9 @@ function isNonEmptyArray<T>(
 
 async function run(cmd: string, args: readonly string[]): Promise<number> {
   const proc = Bun.spawn([cmd, ...args], {
+    stderr: "inherit",
     stdin: "inherit",
     stdout: "inherit",
-    stderr: "inherit",
   });
   return await proc.exited;
 }
@@ -16,9 +16,9 @@ async function run(cmd: string, args: readonly string[]): Promise<number> {
 async function probe(cmd: string, args: readonly string[]): Promise<boolean> {
   try {
     const proc = Bun.spawn([cmd, ...args], {
+      stderr: "ignore",
       stdin: "ignore",
       stdout: "ignore",
-      stderr: "ignore",
     });
     return (await proc.exited) === 0;
   } catch {
@@ -26,19 +26,26 @@ async function probe(cmd: string, args: readonly string[]): Promise<boolean> {
   }
 }
 
-const args = process.argv.slice(2);
+async function main() {
+  const args = process.argv.slice(2);
 
-if (isNonEmptyArray(args)) {
-  if (await probe("docker", ["compose", "version"])) {
-    process.exitCode = await run("docker", ["compose", ...args]);
-  } else if (await probe("docker-compose", ["version"])) {
-    process.exitCode = await run("docker-compose", args);
+  if (isNonEmptyArray(args)) {
+    if (await probe("docker", ["compose", "version"])) {
+      process.exitCode = await run("docker", ["compose", ...args]);
+    } else if (await probe("docker-compose", ["version"])) {
+      process.exitCode = await run("docker-compose", args);
+    } else {
+      throw new Error(
+        "docker_compose_unavailable: Install Docker or Docker Desktop to use db:start. Verify with: docker ps"
+      );
+    }
   } else {
-    throw new Error(
-      "docker_compose_unavailable: Install Docker or Docker Desktop to use db:start. Verify with: docker ps"
-    );
+    console.error("usage: bun scripts/compose.ts <compose-args...>");
+    process.exitCode = 2;
   }
-} else {
-  console.error("usage: bun scripts/compose.ts <compose-args...>");
-  process.exitCode = 2;
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -3,6 +3,7 @@
  */
 
 import type { AtifTrajectory } from "../types.js";
+
 import { TrajectoryAssertionError } from "../types.js";
 import { extractWaves, querySteps, queryToolCalls } from "./query.js";
 

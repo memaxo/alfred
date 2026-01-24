@@ -1,5 +1,7 @@
-import { logger } from "@alfred/logger";
 import type { DecomposeContext, SubTask, SubTaskId } from "@alfred/type/plan";
+
+import { logger } from "@alfred/logger";
+
 import { decomposeSemantically } from "../reasoning/decompose-semantic";
 
 // Re-export types for backward compatibility with existing imports from ./decompose

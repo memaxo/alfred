@@ -3,10 +3,12 @@
  * Wraps @alfred/rag and @alfred/db/repo/rag functions
  */
 
+import type { Chunk } from "@alfred/rag";
+
 import * as ragRepo from "@alfred/db/repo/rag";
 import { logger } from "@alfred/logger";
-import type { Chunk } from "@alfred/rag";
 import { ingest, ingestWithOptions, retrieve } from "@alfred/rag";
+
 import type {
   RagDeleteInput,
   RagDeleteOutput,

@@ -1,13 +1,15 @@
+import { logger as globalLogger } from "@alfred/logger";
 import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
-import { logger as globalLogger } from "@alfred/logger";
+
+import type { ChunkSize, STTPool, STTResult } from "../process/stt";
+import type { TTSPool } from "../process/tts";
+
 import {
   recordVoiceStt,
   recordVoiceTts,
   voiceStreamLatencySeconds,
 } from "../metrics";
-import type { ChunkSize, STTPool, STTResult } from "../process/stt";
-import type { TTSPool } from "../process/tts";
 
 export type VoiceLogger = {
   info(message: string, meta?: Record<string, unknown>): void;

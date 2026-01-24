@@ -4,8 +4,10 @@
  * Tests for AI SDK adapter and Storage adapter
  */
 
-import { describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
+
+import { describe, expect, it } from "bun:test";
+
 import { AISDKAdapter } from "../src/adapters/ai";
 import { NoOpStorageAdapter } from "../src/adapters/storage";
 

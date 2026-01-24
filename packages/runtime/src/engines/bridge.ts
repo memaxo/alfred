@@ -1,3 +1,12 @@
+import type {
+  KnowledgeFact,
+  KnowledgeInsight,
+  KnowledgeNode,
+  KnowledgePattern,
+  KnowledgeRelation,
+  KnowledgeUpdate,
+} from "@alfred/type/knowledge";
+
 import { persistHypergraphToDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import {
   empty as createHypergraph,
@@ -8,14 +17,6 @@ import {
   relation as hyperRelation,
   nodeFromHash,
 } from "@alfred/knowledge/hypergraph";
-import type {
-  KnowledgeFact,
-  KnowledgeInsight,
-  KnowledgeNode,
-  KnowledgePattern,
-  KnowledgeRelation,
-  KnowledgeUpdate,
-} from "@alfred/type/knowledge";
 
 export type RuntimeKnowledgeContext = {
   resource: string;

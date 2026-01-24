@@ -1,4 +1,5 @@
 import type { Knowledge } from "../hypergraph.js";
+
 import { pattern } from "../hypergraph.js";
 
 /**

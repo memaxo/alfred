@@ -5,15 +5,18 @@
  * Orchestrates workflow phases, handles cancellation/resume, integrates domain packages.
  */
 
-import { randomUUID } from "node:crypto";
-import { BrainstemSupervisor } from "@alfred/cognitive/brainstem";
 import type { Event } from "@alfred/cognitive/state";
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { LanguageModel } from "ai";
+
+import { BrainstemSupervisor } from "@alfred/cognitive/brainstem";
 import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type/plan";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import type { LanguageModel } from "ai";
+import { randomUUID } from "node:crypto";
+
 import type { AiAdapter } from "./adapters/ai";
+
 import { runCognitiveLoop } from "./loops/cognitive";
 import {
   runtimeExecutionDurationSeconds,
@@ -33,12 +36,13 @@ const DEFAULT_WORKFLOW_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const DEFAULT_SUPERVISOR_HEARTBEAT_MS = 60_000; // 60 seconds
 const DEFAULT_SUPERVISOR_CHECK_INTERVAL_MS = 1000; // 1 second
 
+import type { PipelineState } from "./pipeline/types";
+
 import { ActPhase } from "./pipeline/phases/act";
 import { PlanPhase } from "./pipeline/phases/plan";
 import { ReportPhase } from "./pipeline/phases/report";
 import { ScanPhase } from "./pipeline/phases/scan";
 import { PhaseRunner } from "./pipeline/runner";
-import type { PipelineState } from "./pipeline/types";
 
 export class WorkflowRuntime implements IWorkflowRuntime {
   readonly runId: string;

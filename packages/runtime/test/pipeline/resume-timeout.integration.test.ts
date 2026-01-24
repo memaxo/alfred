@@ -1,7 +1,9 @@
-import { describe, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { PhaseRunner, PhaseTimeoutError } from "../../src/pipeline/runner";
+import { describe, expect, it } from "bun:test";
+
 import type { Phase, PipelineState } from "../../src/pipeline/types";
+
+import { PhaseRunner, PhaseTimeoutError } from "../../src/pipeline/runner";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

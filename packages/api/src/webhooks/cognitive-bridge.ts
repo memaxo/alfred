@@ -1,4 +1,4 @@
-import type { Event } from "@alfred/cognitive/state";
+import { type Event } from "@alfred/cognitive/state";
 import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
 import {
@@ -7,7 +7,7 @@ import {
 } from "@alfred/metrics/shared";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 
-export type BridgeReminderPayload = {
+export interface BridgeReminderPayload {
   type: "reminder";
   id: string;
   title: string;
@@ -16,9 +16,9 @@ export type BridgeReminderPayload = {
   intentType?: string;
   intentData?: unknown;
   status?: "pending" | "completed" | "failed";
-};
+}
 
-// biome-ignore lint/suspicious/useAwait: Bridge logic will be async in future
+// oxlint-disable useAwait: Bridge logic will be async in future
 export async function bridgeReminder(
   userId: string,
   payload: BridgeReminderPayload
@@ -32,8 +32,8 @@ export async function bridgeReminder(
 
   try {
     cognitiveBridgeTriggerTotal.inc({
-      source: "reminder",
       action: "trigger",
+      source: "reminder",
     });
 
     const contentParts = [
@@ -62,9 +62,9 @@ export async function bridgeReminder(
     await runCognitiveLoop(runtimeCtx, "default", event);
 
     logger.info("cognitive_bridge_reminder", {
-      userId,
       reminderId: payload.id,
       title: payload.title,
+      userId,
     });
 
     cognitiveBridgeProcessingMs.observe(
@@ -73,16 +73,16 @@ export async function bridgeReminder(
     );
 
     return {
-      success: true,
       action: "cognitive.append",
+      success: true,
       taskId: payload.id,
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error("cognitive_bridge_reminder_failed", {
-      userId,
-      reminderId: payload.id,
       error: errorMsg,
+      reminderId: payload.id,
+      userId,
     });
 
     cognitiveBridgeProcessingMs.observe(
@@ -90,6 +90,6 @@ export async function bridgeReminder(
       Date.now() - startTime
     );
 
-    return { success: false, error: errorMsg };
+    return { error: errorMsg, success: false };
   }
 }

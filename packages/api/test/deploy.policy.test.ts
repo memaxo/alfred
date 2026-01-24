@@ -1,7 +1,7 @@
-import { beforeAll, describe, expect, mock, test } from "bun:test";
 import { createTestSession } from "@alfred/test-kit/auth";
-import type { Obligation } from "@alfred/type";
+import { type Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+import { beforeAll, describe, expect, mock, test } from "bun:test";
 
 // Install stable DB stubs so this test doesn't override @alfred/db.
 import "./utils/mock-db-client";
@@ -9,15 +9,15 @@ import "./utils/mock-metrics";
 import { dbModuleStub } from "./utils/mock-db-client";
 
 Object.assign(dbModuleStub.deployRepo, {
-  listDeployments: mock(() => []),
-  getDeploymentById: mock(() => null),
   getDeploymentByApp: mock(() => ({
     id: "deploy-123",
     domain: "example.com",
   })),
-  upsertDeployment: mock(() => ({ id: "deploy-123" })),
-  setDeploymentStatus: mock(() => {}),
+  getDeploymentById: mock(() => null),
+  listDeployments: mock(() => []),
   recordHealthCheck: mock(() => {}),
+  setDeploymentStatus: mock(() => {}),
+  upsertDeployment: mock(() => ({ id: "deploy-123" })),
 });
 
 mock.module("@alfred/db/repo/policy", () => ({
@@ -27,23 +27,23 @@ mock.module("@alfred/db/repo/policy", () => ({
 mock.module("@alfred/agent/orchestrator/tool/docker", () => ({
   toolDocker: {
     build: mock(() => {}),
+    execute: mock(() => ({ details: { hostPort: 3000 } })),
     run: mock(() => {}),
     stop: mock(() => {}),
-    execute: mock(() => ({ details: { hostPort: 3000 } })),
   },
 }));
 
 mock.module("@alfred/agent/orchestrator/tool/router", () => ({
   toolRouter: {
     addRoute: mock(() => {}),
-    removeRoute: mock(() => {}),
     execute: mock(() => {}),
+    removeRoute: mock(() => {}),
   },
 }));
 
 describe("Deploy Router Policy Enforcement", () => {
-  let deployRouter: typeof import("../src/routers/deploy")["deployRouter"];
-  let evaluate: typeof import("@alfred/policy")["evaluate"];
+  let deployRouter: (typeof import("../src/routers/deploy"))["deployRouter"];
+  let evaluate: (typeof import("@alfred/policy"))["evaluate"];
 
   beforeAll(async () => {
     ({ evaluate } = await import("@alfred/policy"));
@@ -53,9 +53,9 @@ describe("Deploy Router Policy Enforcement", () => {
   test("promote throws PRECONDITION_FAILED when obligations exist", async () => {
     // Force evaluate to return obligations for this test
     const biometricObligation: Obligation = {
-      type: "biometric",
-      reason: "biometric_required",
       metadata: { code: "requireBio" },
+      reason: "biometric_required",
+      type: "biometric",
     };
     (
       evaluate as unknown as {
@@ -74,8 +74,8 @@ describe("Deploy Router Policy Enforcement", () => {
     try {
       await caller.promote({
         app: "my-app",
-        upstream: "http://localhost:3000",
         authz: "token",
+        upstream: "http://localhost:3000",
       });
       expect(true).toBe(false);
     } catch (error) {
@@ -90,9 +90,9 @@ describe("Deploy Router Policy Enforcement", () => {
 
   test("remove throws PRECONDITION_FAILED when obligations exist", async () => {
     const approvalObligation: Obligation = {
-      type: "confirmation",
-      reason: "manual_approval",
       metadata: { code: "approval" },
+      reason: "manual_approval",
+      type: "confirmation",
     };
     (
       evaluate as unknown as {

@@ -5,8 +5,10 @@
  * based on user preferences (voice, sound, silent).
  */
 
-import { logger } from "@alfred/logger";
 import type { StructuredPlan } from "@alfred/plan";
+
+import { logger } from "@alfred/logger";
+
 import { planCompletionSummary, planStatusSummary } from "./plan-speech.js";
 import { getVoicePools } from "./pools.js";
 import {

@@ -7,6 +7,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { deviceAuthorization, oidcProvider } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+
 import { autoGrantBiometricIfBypassed, setBiometricTicket } from "./biometric";
 
 const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3001";

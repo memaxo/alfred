@@ -3,6 +3,7 @@ import type {
   PipelineSnapshot,
   PipelineSnapshot as TypedPipelineSnapshot,
 } from "@alfred/pipeline";
+
 import { InMemoryCheckpointStorage } from "@alfred/pipeline/observers";
 import {
   isSerializable,

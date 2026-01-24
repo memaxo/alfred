@@ -1,6 +1,6 @@
+import { TRPCError } from "@trpc/server";
 import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
-import { TRPCError } from "@trpc/server";
 
 // Security: Only allow access within the project root
 const PROJECT_ROOT = realpathSync.native(process.cwd());

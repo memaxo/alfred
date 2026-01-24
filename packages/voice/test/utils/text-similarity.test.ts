@@ -2,6 +2,7 @@
  * Unit tests for text similarity and WER utilities.
  */
 import { describe, expect, it } from "bun:test";
+
 import {
   analyzeWer,
   calculateSimilarity,

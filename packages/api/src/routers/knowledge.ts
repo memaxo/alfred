@@ -2,6 +2,7 @@ import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { and, count, desc, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 
 function asProps(value: unknown): Record<string, unknown> {

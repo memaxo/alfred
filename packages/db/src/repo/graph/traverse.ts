@@ -1,8 +1,9 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+
 import { db, isSqliteDriver } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import { DEFAULT_MIN_SCORE, DEFAULT_TOP_K } from "./scoring";
-import type { EdgeRow, NodeRow } from "./types";
+import { type EdgeRow, type NodeRow } from "./types";
 import {
   normalizeEdge,
   normalizeNode,
@@ -13,7 +14,7 @@ import {
 /**
  * Options for findNearestConcept with top-K retrieval
  */
-export type FindConceptOptions = {
+export interface FindConceptOptions {
   /** Maximum BFS depth (default: 3) */
   maxDepth?: number;
   /** Resource scope filter */
@@ -29,7 +30,7 @@ export type FindConceptOptions = {
    * Legacy threshold for backwards compatibility
    */
   matchThreshold?: number;
-};
+}
 
 // Graph Algorithm: Find Nearest Concept (BFS)
 // Optimized to run in SQL for performance
@@ -55,12 +56,12 @@ export async function findNearestConcept(
           matchThreshold: matchThresholdOrOptions,
         }
       : {
-          maxDepth: matchThresholdOrOptions.maxDepth ?? maxDepth,
-          resource: matchThresholdOrOptions.resource ?? resource,
           embedding: matchThresholdOrOptions.embedding ?? embedding,
-          topK: matchThresholdOrOptions.topK ?? DEFAULT_TOP_K,
-          minScore: matchThresholdOrOptions.minScore ?? DEFAULT_MIN_SCORE,
           matchThreshold: matchThresholdOrOptions.matchThreshold,
+          maxDepth: matchThresholdOrOptions.maxDepth ?? maxDepth,
+          minScore: matchThresholdOrOptions.minScore ?? DEFAULT_MIN_SCORE,
+          resource: matchThresholdOrOptions.resource ?? resource,
+          topK: matchThresholdOrOptions.topK ?? DEFAULT_TOP_K,
         };
 
   // Use legacy threshold if explicitly provided, otherwise use top-K approach
@@ -76,12 +77,12 @@ export async function findNearestConcept(
 
   if (isSqliteDriver()) {
     return findNearestConceptSqlite({
-      startNodeLabel,
-      targetConcepts,
-      maxDepth: effectiveMaxDepth,
-      resource: effectiveResource,
       embedding: effectiveEmbedding,
       matchThreshold: effectiveThreshold,
+      maxDepth: effectiveMaxDepth,
+      resource: effectiveResource,
+      startNodeLabel,
+      targetConcepts,
       topK: effectiveTopK,
     });
   }
@@ -173,10 +174,10 @@ export async function findNearestConcept(
     | (NodeRow & { depth: number; path: string[] })
     | undefined;
 
-  return row ? { node: row, concept: row.label, path: row.path } : null;
+  return row ? { concept: row.label, node: row, path: row.path } : null;
 }
 
-type SqliteTraversalInput = {
+interface SqliteTraversalInput {
   startNodeLabel?: string;
   targetConcepts: string[];
   maxDepth: number;
@@ -185,7 +186,7 @@ type SqliteTraversalInput = {
   matchThreshold: number;
   /** Number of candidates to retrieve (default: 20) */
   topK?: number;
-};
+}
 
 async function findNearestConceptSqlite({
   startNodeLabel,
@@ -212,8 +213,8 @@ async function findNearestConceptSqlite({
   }
 
   const normalizedStart = (startNodeLabel ?? "").trim().toLowerCase();
-  const queue: Array<{ node: NodeRow; path: string[]; depth: number }> = [
-    { node: startNode, path: [startNode.id], depth: 0 },
+  const queue: { node: NodeRow; path: string[]; depth: number }[] = [
+    { depth: 0, node: startNode, path: [startNode.id] },
   ];
   const visited = new Set<string>([startNode.id]);
 
@@ -231,8 +232,8 @@ async function findNearestConceptSqlite({
     if (isTarget && (current.depth > 0 || !isStartLabel)) {
       return {
         concept: current.node.label,
-        path: current.path,
         node: current.node,
+        path: current.path,
       };
     }
 
@@ -257,8 +258,8 @@ async function findNearestConceptSqlite({
 
       visited.add(neighborId);
       queue.push({
-        node: neighbor,
         depth: current.depth + 1,
+        node: neighbor,
         path: [...current.path, neighborId],
       });
     }
@@ -290,7 +291,7 @@ async function loadGraphContext(resource?: string): Promise<{
     addNeighbor(adjacency, edge.toId, edge.fromId);
   }
 
-  return { nodes: nodeMap, adjacency };
+  return { adjacency, nodes: nodeMap };
 }
 
 function addNeighbor(
@@ -365,7 +366,7 @@ function selectStartNodeByEmbedding(
       continue;
     }
     if (!best || distance < best.distance) {
-      best = { node, distance };
+      best = { distance, node };
     }
   }
 
@@ -401,7 +402,7 @@ function normalizeEmbedding(value: unknown): number[] | null {
   }
 
   if (value instanceof ArrayBuffer) {
-    const arr = Array.from(new Float32Array(value));
+    const arr = [...new Float32Array(value)];
     return arr.length > 0 ? arr : null;
   }
 
@@ -500,14 +501,14 @@ export async function findPath(
     return [];
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+  // oxlint-disable noExplicitAny: Internal PG driver row structure
   const nodePath = Array.isArray((row as any).node_path)
-    ? // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+    ? // oxlint-disable noExplicitAny: Internal PG driver row structure
       ((row as any).node_path as string[])
     : [];
-  // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+  // oxlint-disable noExplicitAny: Internal PG driver row structure
   const edgePath = Array.isArray((row as any).edge_path)
-    ? // biome-ignore lint/suspicious/noExplicitAny: Internal PG driver row structure
+    ? // oxlint-disable noExplicitAny: Internal PG driver row structure
       ((row as any).edge_path as string[])
     : [];
 
@@ -529,10 +530,10 @@ export async function getSubgraph(
   edges: EdgeRow[];
 }> {
   if (nodeIds.length === 0) {
-    return { nodes: [], edges: [] };
+    return { edges: [], nodes: [] };
   }
 
-  const uniqueIds = Array.from(new Set(nodeIds));
+  const uniqueIds = [...new Set(nodeIds)];
 
   const nodePredicates = [inArray(memoryNodes.id, uniqueIds)];
   if (resource) {
@@ -560,7 +561,7 @@ export async function getSubgraph(
     .where(and(...edgePredicates))
     .orderBy(desc(memoryEdges.created));
 
-  return { nodes, edges };
+  return { edges, nodes };
 }
 
 export async function getReasoningChain(args: {
@@ -611,7 +612,7 @@ export async function getReasoningChain(args: {
         );
         return ts >= (args.since ?? Number.NEGATIVE_INFINITY);
       })
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const aIndex = numberFromProps(
           a.properties as Record<string, unknown>,
           "sequenceIndex",
@@ -641,7 +642,7 @@ export async function getReasoningChain(args: {
 
     const nodeIds = filteredNodes.map((node) => node.id);
     if (nodeIds.length === 0) {
-      return { nodes: filteredNodes, edges: [] };
+      return { edges: [], nodes: filteredNodes };
     }
 
     const rawEdges = await db
@@ -654,7 +655,7 @@ export async function getReasoningChain(args: {
         )
       );
 
-    const normalizedEdges = rawEdges.map(normalizeEdge).sort((a, b) => {
+    const normalizedEdges = rawEdges.map(normalizeEdge).toSorted((a, b) => {
       const aIndex = numberFromProps(
         a.metadata as Record<string, unknown>,
         "fromIndex",
@@ -668,7 +669,7 @@ export async function getReasoningChain(args: {
       return aIndex - bIndex;
     });
 
-    return { nodes: filteredNodes, edges: normalizedEdges };
+    return { edges: normalizedEdges, nodes: filteredNodes };
   }
 
   const conditions = [
@@ -703,7 +704,7 @@ export async function getReasoningChain(args: {
   const nodeIds = normalizedNodes.map((node) => node.id);
 
   if (nodeIds.length === 0) {
-    return { nodes: normalizedNodes, edges: [] };
+    return { edges: [], nodes: normalizedNodes };
   }
 
   const edges = await db
@@ -719,7 +720,7 @@ export async function getReasoningChain(args: {
 
   const normalizedEdges = edges.map(normalizeEdge);
 
-  return { nodes: normalizedNodes, edges: normalizedEdges };
+  return { edges: normalizedEdges, nodes: normalizedNodes };
 }
 
 /**
@@ -787,9 +788,7 @@ async function getTransitiveClosureSqlite(
   }
 
   const visited = new Set<string>();
-  const queue: Array<{ id: string; depth: number }> = [
-    { id: nodeId, depth: 0 },
-  ];
+  const queue: { id: string; depth: number }[] = [{ depth: 0, id: nodeId }];
 
   visited.add(nodeId);
 
@@ -810,10 +809,10 @@ async function getTransitiveClosureSqlite(
       }
 
       visited.add(neighborId);
-      queue.push({ id: neighborId, depth: current.depth + 1 });
+      queue.push({ depth: current.depth + 1, id: neighborId });
     }
   }
 
   visited.delete(nodeId);
-  return Array.from(visited);
+  return [...visited];
 }

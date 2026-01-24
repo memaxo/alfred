@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { ThreadEvent } from "@alfred/codex";
+
+import { describe, expect, it } from "bun:test";
+
 import {
   type EventProcessorContext,
   formatArtifactReasoning,

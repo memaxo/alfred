@@ -1,6 +1,7 @@
+import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
+
 import { describe, expect, it } from "bun:test";
 
-import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
 import { sanitizePreferences } from "../../src/preference/sanitize";
 
 describe("sanitizePreferences", () => {

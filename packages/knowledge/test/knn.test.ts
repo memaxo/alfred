@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { nodeFromHash } from "../src/hypergraph";
 import { cosineSim, knn } from "../src/indices/knn";
 

@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
  */
 export function stableStringify(value: unknown): string {
   const seen = new WeakSet();
-  // biome-ignore lint/suspicious/noExplicitAny: Internal recursive encoding
+  // oxlint-disable noExplicitAny: Internal recursive encoding
   const encode = (v: unknown): any => {
     if (v === null || typeof v !== "object") {
       return v;
@@ -28,7 +28,7 @@ export function stableStringify(value: unknown): string {
       Object.getPrototypeOf(v) === Object.prototype
     ) {
       const out: Record<string, unknown> = {};
-      for (const key of Object.keys(v).sort()) {
+      for (const key of Object.keys(v).toSorted()) {
         out[key] = encode((v as Record<string, unknown>)[key]);
       }
       return out;

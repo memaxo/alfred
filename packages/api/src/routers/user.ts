@@ -1,6 +1,7 @@
 import { getPreferences, setPreference } from "@alfred/db/repo/user";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { authedProcedure, router } from "../trpc";
 
 export const userRouter = router({

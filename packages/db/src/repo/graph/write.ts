@@ -1,10 +1,12 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
+
+import type { EdgeRow, EdgeSeed, NodeInsert, NodeRow, NodeSeed } from "./types";
+
 import { db } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import { sanitizeContextText, sanitizeGraphValue } from "../sanitize";
 import { getNode } from "./read";
 import { findPath } from "./traverse";
-import type { EdgeRow, EdgeSeed, NodeInsert, NodeRow, NodeSeed } from "./types";
 import { sanitize, uniqSeeds } from "./utils";
 
 const UUID_RE =

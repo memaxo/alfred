@@ -1,9 +1,10 @@
-import { logger } from "@alfred/metrics";
 import type {
   DomainName,
   PreferenceDetail,
   PreferenceKey,
 } from "@alfred/type/preference";
+
+import { logger } from "@alfred/metrics";
 
 import { detectDomain } from "./domain";
 import { loadPreferencesWithDefaults } from "./loader";

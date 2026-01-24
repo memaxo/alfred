@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
+
+import { describe, expect, it } from "bun:test";
+
 import { mergePreferences } from "../../src/preference/merger";
 
 function mapFromEntries(

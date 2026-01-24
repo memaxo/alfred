@@ -1,4 +1,5 @@
 import * as client from "prom-client";
+
 import type { PipelineEvent } from "../events";
 import type { StageName } from "../pipeline";
 import type { PipelineObserver } from "../runner";

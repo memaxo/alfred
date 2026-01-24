@@ -1,6 +1,8 @@
-import { describe, expect, it } from "bun:test";
-import { benchmarkOperation } from "@alfred/test-kit";
 import type { WorkflowEvent } from "@alfred/type/plan";
+
+import { benchmarkOperation } from "@alfred/test-kit";
+import { describe, expect, it } from "bun:test";
+
 import { WorkflowReconstructor } from "../src/workflow/reconstruct";
 
 // budget: state-reconstruction

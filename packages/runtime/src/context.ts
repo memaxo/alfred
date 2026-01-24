@@ -5,7 +5,8 @@
  * Reuses existing functions from @alfred/agent/orchestrator/flow/context
  */
 
-import { createHash } from "node:crypto";
+import type { ContextBundle, SearchReceipt } from "@alfred/type/plan";
+
 import {
   buildContextBundle,
   gatherCodeContext,
@@ -13,7 +14,8 @@ import {
 } from "@alfred/agent/orchestrator/flow/context";
 import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
 import { logger } from "@alfred/logger";
-import type { ContextBundle, SearchReceipt } from "@alfred/type/plan";
+import { createHash } from "node:crypto";
+
 import { KnowledgeEngine } from "./engines/knowledge";
 import {
   runtimeContextBuildDurationSeconds,

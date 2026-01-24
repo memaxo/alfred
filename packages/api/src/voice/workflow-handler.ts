@@ -8,13 +8,17 @@
 import * as planRepo from "@alfred/db/repo/plan";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { StructuredPlan } from "@alfred/plan";
-import type { RuntimeContext } from "@alfred/type/runtime-context";
-import type { UIMessage } from "@alfred/type/stream";
-import type { VoiceAssistantRaw } from "@alfred/type/voice";
+import { type StructuredPlan } from "@alfred/plan";
+import { type RuntimeContext } from "@alfred/type/runtime-context";
+import { type UIMessage } from "@alfred/type/stream";
+import { type VoiceAssistantRaw } from "@alfred/type/voice";
+
 import { getHonorificPreference } from "../persona/honorific";
 import { SchemaGenerator } from "../services/schema.js";
-import type { VoiceAssistantInput, VoiceAssistantResult } from "./assistant.js";
+import {
+  type VoiceAssistantInput,
+  type VoiceAssistantResult,
+} from "./assistant.js";
 import {
   clarificationToSpeech,
   planCompletionSummary,
@@ -59,8 +63,8 @@ export async function handleWorkflowIntent(
     // 1. Parse intent to check for ambiguity
     const { parseIntent } = await import("@alfred/plan");
     const intentResult = await parseIntent(input.text, {
-      userId: input.userId,
       source: "voice",
+      userId: input.userId,
     });
 
     // 2. Handle clarification needed
@@ -97,36 +101,39 @@ export async function handleWorkflowIntent(
         input.userId
       );
       await workflowRepo.updateRun(planResult.runId, {
+        errorMessage: null,
+        resumedAt: new Date(),
         status: "running",
         suspendedAt: null,
-        resumedAt: new Date(),
-        errorMessage: null,
       });
 
       // Store state as executing
       await setVoiceWorkflowContext(input.userId, {
-        state: createExecutingState(planResult.runId),
-        originalTranscript: input.text,
         createdAt: new Date(),
+        originalTranscript: input.text,
+        state: createExecutingState(planResult.runId),
         updatedAt: new Date(),
       });
 
       // Return auto-approved message
       const autoApproveText = `${planResult.summary.replace(/Say 'approve'.*$/, "")} Auto-approved based on your settings. Agents are now executing.`;
       const raw = await buildVoiceWorkflowRaw({
-        text: autoApproveText.trim(),
-        runId: planResult.runId,
-        planId: planResult.planId,
-        plan: planResult.structuredPlan,
         mode: "executing",
-        userId: input.userId,
+        plan: planResult.structuredPlan,
+        planId: planResult.planId,
         prefs,
+        runId: planResult.runId,
+        text: autoApproveText.trim(),
+        userId: input.userId,
       });
       return createVoiceResult(autoApproveText.trim(), startTime, raw);
     }
 
     // 6. Store state in session for approval flow (with timeout)
     await setVoiceWorkflowContext(input.userId, {
+      approvalDeadline: calculateApprovalDeadline(prefs.timeout),
+      createdAt: new Date(),
+      originalTranscript: input.text,
       state: createAwaitingApprovalState({
         runId: planResult.runId,
         planId: planResult.planId,
@@ -134,27 +141,24 @@ export async function handleWorkflowIntent(
         waveCount: planResult.waveCount,
         subtaskCount: planResult.subtaskCount,
       }),
-      originalTranscript: input.text,
-      createdAt: new Date(),
       updatedAt: new Date(),
-      approvalDeadline: calculateApprovalDeadline(prefs.timeout),
     });
 
     // 7. Return plan summary for TTS
     const raw = await buildVoiceWorkflowRaw({
-      text: planResult.summary,
-      runId: planResult.runId,
-      planId: planResult.planId,
-      plan: planResult.structuredPlan,
       mode: "awaiting_approval",
-      userId: input.userId,
+      plan: planResult.structuredPlan,
+      planId: planResult.planId,
       prefs,
+      runId: planResult.runId,
+      text: planResult.summary,
+      userId: input.userId,
     });
     return createVoiceResult(planResult.summary, startTime, raw);
   } catch (error) {
     logger.error("voice_workflow_intent_failed", {
-      userId: input.userId,
       error: error instanceof Error ? error.message : String(error),
+      userId: input.userId,
     });
 
     const errorText =
@@ -219,10 +223,10 @@ export async function handleApprovalIntent(
 
       // Update run status to running
       await workflowRepo.updateRun(runId, {
+        errorMessage: null,
+        resumedAt: new Date(),
         status: "running",
         suspendedAt: null,
-        resumedAt: new Date(),
-        errorMessage: null,
       });
 
       // Update session state to executing
@@ -236,13 +240,13 @@ export async function handleApprovalIntent(
         "Plan approved. Agents are now executing. I'll let you know when they're done, or ask for status updates anytime.";
       const status = await getWorkflowStatus(runId).catch(() => null);
       const raw = await buildVoiceWorkflowRaw({
-        text,
-        runId,
-        planId,
-        plan: status?.plan as StructuredPlan | undefined,
         mode: "executing",
-        userId: input.userId,
+        plan: status?.plan as StructuredPlan | undefined,
+        planId,
         prefs,
+        runId,
+        text,
+        userId: input.userId,
       });
       return createVoiceResult(text, startTime, raw);
     }
@@ -250,30 +254,30 @@ export async function handleApprovalIntent(
     // Rejection
     await planRepo.updatePlanStatus(planId, "rejected", input.userId);
     await workflowRepo.updateRun(runId, {
-      status: "failed",
       completedAt: new Date(),
       errorMessage: "Rejected via voice",
+      status: "failed",
     });
     await clearVoiceWorkflowContext(input.userId);
 
     const text =
       "Plan rejected. Let me know if you'd like to try a different approach or refine your requirements.";
     const raw = await buildVoiceWorkflowRaw({
-      text,
-      runId,
-      planId,
-      plan: undefined,
       mode: "rejected",
-      userId: input.userId,
+      plan: undefined,
+      planId,
       prefs,
+      runId,
+      text,
+      userId: input.userId,
     });
     return createVoiceResult(text, startTime, raw);
   } catch (error) {
     logger.error("voice_approval_intent_failed", {
-      userId: input.userId,
       action,
-      runId,
       error: error instanceof Error ? error.message : String(error),
+      runId,
+      userId: input.userId,
     });
 
     const errorText =
@@ -325,13 +329,13 @@ export async function handleStatusQuery(
         status.durationMs
       );
       const raw = await buildVoiceWorkflowRaw({
-        text,
-        runId: targetRunId,
-        planId: (status.plan as StructuredPlan).id,
-        plan: status.plan as StructuredPlan,
         mode: "completed",
-        userId: input.userId,
+        plan: status.plan as StructuredPlan,
+        planId: (status.plan as StructuredPlan).id,
         prefs,
+        runId: targetRunId,
+        text,
+        userId: input.userId,
       });
       return createVoiceResult(text, startTime, raw);
     }
@@ -343,13 +347,13 @@ export async function handleStatusQuery(
         status.totalTasks
       );
       const raw = await buildVoiceWorkflowRaw({
-        text,
-        runId: targetRunId,
-        planId: (status.plan as StructuredPlan).id,
-        plan: status.plan as StructuredPlan,
         mode: "executing",
-        userId: input.userId,
+        plan: status.plan as StructuredPlan,
+        planId: (status.plan as StructuredPlan).id,
         prefs,
+        runId: targetRunId,
+        text,
+        userId: input.userId,
       });
       return createVoiceResult(text, startTime, raw);
     }
@@ -359,13 +363,13 @@ export async function handleStatusQuery(
       const text =
         "The workflow encountered an error and stopped. Check the web interface for details on what went wrong.";
       const raw = await buildVoiceWorkflowRaw({
-        text,
-        runId: targetRunId,
-        planId: (status.plan as StructuredPlan).id,
-        plan: status.plan as StructuredPlan,
         mode: "failed",
-        userId: input.userId,
+        plan: status.plan as StructuredPlan,
+        planId: (status.plan as StructuredPlan).id,
         prefs,
+        runId: targetRunId,
+        text,
+        userId: input.userId,
       });
       return createVoiceResult(text, startTime, raw);
     }
@@ -375,9 +379,9 @@ export async function handleStatusQuery(
     return createVoiceResult(text, startTime);
   } catch (error) {
     logger.error("voice_status_query_failed", {
-      userId: input.userId,
-      runId: targetRunId,
       error: error instanceof Error ? error.message : String(error),
+      runId: targetRunId,
+      userId: input.userId,
     });
 
     const text =
@@ -404,8 +408,8 @@ function toWorkflowTimeline(
   const planPhase = {
     id: "plan",
     name: "Plan",
-    status: "completed" as const,
     progress: 100,
+    status: "completed" as const,
     tasks: [
       {
         id: "plan_generated",
@@ -418,13 +422,13 @@ function toWorkflowTimeline(
   const approvalPhase = {
     id: "approval",
     name: "Approval",
+    progress: mode === "awaiting_approval" ? 50 : mode === "rejected" ? 0 : 100,
     status:
       mode === "awaiting_approval"
         ? ("running" as const)
         : mode === "rejected"
           ? ("error" as const)
           : ("completed" as const),
-    progress: mode === "awaiting_approval" ? 50 : mode === "rejected" ? 0 : 100,
     tasks: [
       {
         id: "approve_plan",
@@ -451,10 +455,10 @@ function toWorkflowTimeline(
   const execPhases = (plan?.phases ?? []).map((phase, idx) => ({
     id: phase.id,
     name: phase.name,
-    status:
-      idx === 0 && mode === "executing" ? ("running" as const) : execStatus,
     progress:
       execStatus === "completed" ? 100 : execStatus === "running" ? 10 : 0,
+    status:
+      idx === 0 && mode === "executing" ? ("running" as const) : execStatus,
     tasks: phase.tasks.map((task) => ({
       id: task.id,
       name: task.title,
@@ -468,15 +472,15 @@ function toWorkflowTimeline(
 
 function toPlanData(plan: StructuredPlan | undefined): {
   requirement: string;
-  tasks: Array<{ id: string; title: string; status: "pending" }>;
+  tasks: { id: string; title: string; status: "pending" }[];
 } {
   const requirement = plan?.intent ?? "";
   const tasks =
     plan?.phases.flatMap((p) =>
       p.tasks.map((t) => ({
         id: t.id,
-        title: t.title,
         status: "pending" as const,
+        title: t.title,
       }))
     ) ?? [];
 
@@ -508,22 +512,22 @@ async function buildVoiceWorkflowRaw(input: {
   prefs?: VoiceWorkflowPreferences;
 }): Promise<VoiceAssistantRaw> {
   const ctx = {
-    userId: input.userId,
-    surface: "voice" as const,
     mode: "workflow" as const,
     preference: {
       verbosity: toSchemaVerbosity(input.prefs?.verbosity),
     },
+    surface: "voice" as const,
+    userId: input.userId,
   };
 
   const timelinePart = await schemaGenerator.toDataUiPart({
     ctx,
-    preferredComponent: "workflow-timeline",
     data: {
       kind: "workflow-timeline",
       runId: input.runId,
       planId: input.planId,
     },
+    preferredComponent: "workflow-timeline",
     uiData: {
       workflowId: input.runId,
       title: input.plan?.title ?? "Workflow",
@@ -534,14 +538,13 @@ async function buildVoiceWorkflowRaw(input: {
 
   const planPart = await schemaGenerator.toDataUiPart({
     ctx,
-    preferredComponent: "plan",
     data: { kind: "plan", runId: input.runId, planId: input.planId },
+    preferredComponent: "plan",
     uiData: { plan: toPlanData(input.plan) },
   });
 
   const message: UIMessage = {
     id: `voice-workflow-${Date.now()}`,
-    role: "assistant",
     parts: [
       { type: "text", text: input.text },
       ...(timelinePart
@@ -549,11 +552,12 @@ async function buildVoiceWorkflowRaw(input: {
         : []),
       ...(planPart ? [planPart as unknown as UIMessage["parts"][number]] : []),
     ],
+    role: "assistant",
   };
 
   return {
-    uiMessages: [message],
     meta: { runId: input.runId, planId: input.planId, mode: input.mode },
+    uiMessages: [message],
   };
 }
 
@@ -572,18 +576,14 @@ async function generatePlanViaPipeline(
   subtaskCount: number;
   structuredPlan: StructuredPlan;
 }> {
-  const { PipelineRunner, registerDefaultStages } = await import(
-    "@alfred/pipeline"
-  );
-  const { CheckpointObserver, MetricsObserver } = await import(
-    "@alfred/pipeline/observers"
-  );
-  const { PostgresCheckpointStorage } = await import(
-    "@alfred/db/repo/workflow"
-  );
-  const { createContextFromSnapshot } = await import(
-    "@alfred/pipeline/snapshot"
-  );
+  const { PipelineRunner, registerDefaultStages } =
+    await import("@alfred/pipeline");
+  const { CheckpointObserver, MetricsObserver } =
+    await import("@alfred/pipeline/observers");
+  const { PostgresCheckpointStorage } =
+    await import("@alfred/db/repo/workflow");
+  const { createContextFromSnapshot } =
+    await import("@alfred/pipeline/snapshot");
 
   // Type for pipeline snapshot
   type PipelineSnapshot = Parameters<typeof createContextFromSnapshot>[0];
@@ -594,13 +594,13 @@ async function generatePlanViaPipeline(
   // Ensure a workflow run row exists before snapshots are persisted
   await workflowRepo.createRun({
     id: runId,
-    userId,
-    projectId: undefined,
-    planId: undefined,
-    requirement,
-    workflowId: "pipeline",
-    status: "running",
     inputData: { requirement, workspace, runId },
+    planId: undefined,
+    projectId: undefined,
+    requirement,
+    status: "running",
+    userId,
+    workflowId: "pipeline",
   });
 
   const runner = new PipelineRunner({
@@ -614,14 +614,14 @@ async function generatePlanViaPipeline(
   const storage = new PostgresCheckpointStorage();
   runner.addObserver(new MetricsObserver());
   // Use type assertion for CheckpointObserver which expects CheckpointStorage
-  // biome-ignore lint/suspicious/noExplicitAny: PostgresCheckpointStorage conforms to CheckpointStorage interface
+  // oxlint-disable noExplicitAny: PostgresCheckpointStorage conforms to CheckpointStorage interface
   runner.addObserver(new CheckpointObserver(storage as any));
 
   const pipelineInput = {
-    runId,
     requirement,
-    workspace,
+    runId,
     userId,
+    workspace,
   };
 
   // Run pipeline up to and including 'schedule' stage
@@ -640,7 +640,7 @@ async function generatePlanViaPipeline(
 
   const scheduleOutput = ctxDecoded.get("scheduleOutput") as
     | {
-        waves: Array<{ id: string; agents: string[] }>;
+        waves: { id: string; agents: string[] }[];
       }
     | undefined;
 
@@ -648,7 +648,7 @@ async function generatePlanViaPipeline(
     | {
         planId: string;
         structuredPlan: unknown;
-        subtasks: Array<{ id: string }>;
+        subtasks: { id: string }[];
       }
     | undefined;
 
@@ -658,8 +658,8 @@ async function generatePlanViaPipeline(
 
   // Mark the run as awaiting approval
   await workflowRepo.updateRun(runId, {
-    status: "suspended",
     planId: planOutput.planId,
+    status: "suspended",
     suspendedAt: new Date(),
   });
 
@@ -667,17 +667,17 @@ async function generatePlanViaPipeline(
   const structuredPlan = planOutput.structuredPlan as StructuredPlan;
   const honorific = await getHonorificPreference(userId);
   const summary = planToSpeech(structuredPlan, {
-    verbosity: prefs.verbosity,
     honorific,
+    verbosity: prefs.verbosity,
   });
 
   return {
-    runId,
     planId: planOutput.planId,
+    runId,
+    structuredPlan,
+    subtaskCount: planOutput.subtasks?.length ?? 0,
     summary,
     waveCount: scheduleOutput?.waves?.length ?? 1,
-    subtaskCount: planOutput.subtasks?.length ?? 0,
-    structuredPlan,
   };
 }
 
@@ -692,12 +692,10 @@ async function getWorkflowStatus(runId: string): Promise<{
   durationMs: number;
   plan: Parameters<typeof planStatusSummary>[0];
 }> {
-  const { PostgresCheckpointStorage } = await import(
-    "@alfred/db/repo/workflow"
-  );
-  const { createContextFromSnapshot } = await import(
-    "@alfred/pipeline/snapshot"
-  );
+  const { PostgresCheckpointStorage } =
+    await import("@alfred/db/repo/workflow");
+  const { createContextFromSnapshot } =
+    await import("@alfred/pipeline/snapshot");
 
   const run = await workflowRepo.getRun(runId);
   if (!run) {
@@ -709,12 +707,12 @@ async function getWorkflowStatus(runId: string): Promise<{
 
   // Default plan structure
   let plan: Parameters<typeof planStatusSummary>[0] = {
+    evaluationCriteria: [],
     id: runId,
-    title: "Workflow",
     intent: run.requirement ?? "",
     phases: [],
     resources: { agentCount: 1, strategy: "sequential", isolation: "agentfs" },
-    evaluationCriteria: [],
+    title: "Workflow",
   };
 
   let totalTasks = 0;
@@ -757,6 +755,9 @@ async function getWorkflowStatus(runId: string): Promise<{
   const durationMs = endedAt - startedAt;
 
   return {
+    completedTasks,
+    durationMs,
+    plan,
     status: run.status as
       | "running"
       | "completed"
@@ -764,10 +765,7 @@ async function getWorkflowStatus(runId: string): Promise<{
       | "suspended"
       | "idle",
     success: run.status === "completed",
-    completedTasks,
     totalTasks,
-    durationMs,
-    plan,
   };
 }
 
@@ -782,8 +780,7 @@ function createVoiceResult(
   const durationSeconds = (performance.now() - startTime) / 1000;
 
   return {
-    text,
-    replayId: null,
+    durationSeconds,
     raw:
       raw ??
       ({
@@ -795,6 +792,7 @@ function createVoiceResult(
           } satisfies UIMessage,
         ],
       } satisfies VoiceAssistantRaw),
-    durationSeconds,
+    replayId: null,
+    text,
   };
 }

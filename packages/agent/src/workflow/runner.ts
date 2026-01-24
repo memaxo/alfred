@@ -1,7 +1,8 @@
+import { logger } from "@alfred/metrics";
+import { type WorkflowEvent } from "@alfred/type";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
-import { logger } from "@alfred/metrics";
-import type { WorkflowEvent } from "@alfred/type";
+
 import {
   emitLinearActivity,
   extractIssueIdFromSession,
@@ -11,14 +12,14 @@ import {
 } from "../orchestrator/linear";
 
 // Lazy metrics loader to avoid heavy deps during unit tests
-type RunnerCounters = {
+interface RunnerCounters {
   runnerStepsTotal: {
     inc: (labels: { phase: string; outcome: string }) => void;
   };
   runnerErrorsTotal: {
     inc: (labels: { phase: string; reason: string }) => void;
   };
-};
+}
 let metricsRef: RunnerCounters | null = null;
 async function metrics(): Promise<RunnerCounters> {
   if (metricsRef) {
@@ -28,19 +29,19 @@ async function metrics(): Promise<RunnerCounters> {
     // We now import from local metrics module
     const m = await import("./metrics");
     metricsRef = {
-      runnerStepsTotal: m.runnerStepsTotal,
       runnerErrorsTotal: m.runnerErrorsTotal,
+      runnerStepsTotal: m.runnerStepsTotal,
     };
   } catch {
     metricsRef = {
-      runnerStepsTotal: { inc: () => {} },
       runnerErrorsTotal: { inc: () => {} },
+      runnerStepsTotal: { inc: () => {} },
     };
   }
   return metricsRef;
 }
 
-export type RunPlanInput = {
+export interface RunPlanInput {
   requirement: string;
   auto: "read" | "low" | "medium" | "high";
   workspace?: string;
@@ -61,7 +62,7 @@ export type RunPlanInput = {
     ignore?: string[];
     seeds?: string[];
   };
-};
+}
 
 const lastActivityTime = new Map<string, number>();
 
@@ -73,7 +74,7 @@ const stringify = (value: unknown): string | undefined => {
   }
 };
 
-export type ResumePayload = {
+export interface ResumePayload {
   event:
     | "deploy-authz"
     | "linear-authz"
@@ -81,15 +82,15 @@ export type ResumePayload = {
     | "mfa-authz"
     | "human-authz";
   authz: string;
-};
+}
 
-export type RunPlanV6 = {
+export interface RunPlanV6 {
   runId: string;
   summary: string;
   stream: AsyncGenerator<WorkflowEvent, void, void>;
   resume(payload: ResumePayload): Promise<void>;
   cancel(): void;
-};
+}
 
 const DEFAULT_STEP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_WORKFLOW_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -108,26 +109,26 @@ function createNoticeEvent(message: string): WorkflowEvent {
 }
 
 function createProgressEvent(pct: number, message: string): WorkflowEvent {
-  return { _: "progress", pct, message } as WorkflowEvent;
+  return { _: "progress", message, pct } as WorkflowEvent;
 }
 
 function createContextEvent(phase: string, message: string): WorkflowEvent {
-  return { _: "context", phase, message } as WorkflowEvent;
+  return { _: "context", message, phase } as WorkflowEvent;
 }
 
 function createRequireScopeEvent(
   scopes: string[],
   event: string
 ): WorkflowEvent {
-  return { _: "require-scope", scopes, event } as WorkflowEvent;
+  return { _: "require-scope", event, scopes } as WorkflowEvent;
 }
 
 type WorkflowPhase = "scan" | "plan" | "act" | "report";
 
-type PhaseConfig = {
+interface PhaseConfig {
   name: WorkflowPhase;
   timeoutMs: number;
-};
+}
 
 async function* executePhaseWithTimeout(
   phase: WorkflowPhase,
@@ -135,23 +136,23 @@ async function* executePhaseWithTimeout(
   generator: () => AsyncGenerator<WorkflowEvent, void, void>
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const start = Date.now();
-  (await metrics()).runnerStepsTotal.inc({ phase, outcome: "start" });
+  (await metrics()).runnerStepsTotal.inc({ outcome: "start", phase });
   yield { _: "step-start", phase } as WorkflowEvent;
 
   try {
     for await (const evt of generator()) {
       if (Date.now() - start > timeoutMs) {
-        (await metrics()).runnerStepsTotal.inc({ phase, outcome: "timeout" });
+        (await metrics()).runnerStepsTotal.inc({ outcome: "timeout", phase });
         (await metrics()).runnerErrorsTotal.inc({ phase, reason: "timeout" });
         yield createErrorEvent("step_timeout");
         return;
       }
       yield evt;
     }
-    (await metrics()).runnerStepsTotal.inc({ phase, outcome: "complete" });
+    (await metrics()).runnerStepsTotal.inc({ outcome: "complete", phase });
     yield { _: "step-complete", phase } as WorkflowEvent;
   } catch (error) {
-    (await metrics()).runnerStepsTotal.inc({ phase, outcome: "error" });
+    (await metrics()).runnerStepsTotal.inc({ outcome: "error", phase });
     (await metrics()).runnerErrorsTotal.inc({
       phase,
       reason: error instanceof Error ? error.name : "error",
@@ -260,14 +261,14 @@ export function runPlanV6(
 
       if (linear?.sessionId) {
         const thoughtActivityPromise = emitLinearActivity("thought", {
-          sessionId: linear.sessionId,
-          space: linear.space,
           authz: linear.authz,
           body: `Starting workflow: ${input.requirement}`,
+          sessionId: linear.sessionId,
+          space: linear.space,
         }).catch((error) => {
           logger.warn("linear_thought_activity_failed", {
-            runId,
             error: error instanceof Error ? error.message : String(error),
+            runId,
           });
           return { ok: false };
         });
@@ -283,24 +284,24 @@ export function runPlanV6(
 
       if (linear && issueId) {
         setLinearDelegate({
-          space: linear.space,
-          issueId,
           authz: linear.authz,
+          issueId,
+          space: linear.space,
         }).catch((error) => {
           logger.warn("linear_delegate_setup_failed", {
-            runId,
             error: error instanceof Error ? error.message : String(error),
+            runId,
           });
         });
 
         setLinearStarted({
-          space: linear.space,
-          issueId,
           authz: linear.authz,
+          issueId,
+          space: linear.space,
         }).catch((error) => {
           logger.warn("linear_started_setup_failed", {
-            runId,
             error: error instanceof Error ? error.message : String(error),
+            runId,
           });
         });
 
@@ -316,8 +317,8 @@ export function runPlanV6(
             workflowUrl
           ).catch((error) => {
             logger.warn("linear_external_url_setup_failed", {
-              runId,
               error: error instanceof Error ? error.message : String(error),
+              runId,
             });
           });
         } else if (!externalUrlBase) {
@@ -427,7 +428,7 @@ export function runPlanV6(
       yield* executePhaseWithTimeout(
         planPhase.name,
         planPhase.timeoutMs,
-        // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
+        // oxlint-disable useAwait: Async generator required by type signature
         async function* () {
           yield {
             _: "assistant",
@@ -451,19 +452,19 @@ export function runPlanV6(
           const args = { text: "hello" };
           yield {
             _: "tool-call",
+            input: args,
             toolCallId: tcId,
             toolName,
-            input: args,
           } as WorkflowEvent;
 
           await delay(20);
           const result = { text: "hello" };
           yield {
             _: "tool-result",
-            toolCallId: tcId,
-            toolName,
             input: args,
             output: result,
+            toolCallId: tcId,
+            toolName,
           } as WorkflowEvent;
 
           if (linear?.sessionId) {
@@ -472,19 +473,19 @@ export function runPlanV6(
             if (now - last > 30_000) {
               lastActivityTime.set(runId, now);
               emitLinearActivity("action", {
-                sessionId: linear.sessionId,
-                space: linear.space,
                 authz: linear.authz,
-                title: `Executed tool: ${toolName}`,
                 body: "Tool execution completed",
+                ephemeral: true,
                 parameter: stringify(args),
                 result: stringify(result),
-                ephemeral: true,
+                sessionId: linear.sessionId,
+                space: linear.space,
+                title: `Executed tool: ${toolName}`,
               }).catch((error) => {
                 logger.warn("linear_action_activity_failed", {
+                  error: error instanceof Error ? error.message : String(error),
                   runId,
                   toolName,
-                  error: error instanceof Error ? error.message : String(error),
                 });
               });
             }
@@ -505,7 +506,7 @@ export function runPlanV6(
       yield* executePhaseWithTimeout(
         reportPhase.name,
         reportPhase.timeoutMs,
-        // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
+        // oxlint-disable useAwait: Async generator required by type signature
         async function* () {
           const reportText = "Report complete.";
           yield { _: "assistant", text: reportText } as WorkflowEvent;
@@ -549,14 +550,14 @@ export function runPlanV6(
               ? `Workflow completed successfully. Results: ${completionResult}`
               : "Workflow completed successfully.";
           emitLinearActivity("response", {
-            sessionId: linear.sessionId,
-            space: linear.space,
             authz: linear.authz,
             body,
+            sessionId: linear.sessionId,
+            space: linear.space,
           }).catch((error) => {
             logger.warn("linear_response_activity_failed", {
-              runId,
               error: error instanceof Error ? error.message : String(error),
+              runId,
             });
           });
         } else if (finalStatus === "failed") {
@@ -567,14 +568,14 @@ export function runPlanV6(
               ? `Workflow failed: ${failureMessage}`
               : "Workflow failed.";
           emitLinearActivity("error", {
-            sessionId: linear.sessionId,
-            space: linear.space,
             authz: linear.authz,
             body,
+            sessionId: linear.sessionId,
+            space: linear.space,
           }).catch((error) => {
             logger.warn("linear_error_activity_failed", {
-              runId,
               error: error instanceof Error ? error.message : String(error),
+              runId,
             });
           });
         }
@@ -584,18 +585,6 @@ export function runPlanV6(
   }
 
   return {
-    runId,
-    summary,
-    stream: generator(),
-    resume(payload: ResumePayload): Promise<void> {
-      return Promise.resolve().then(() => {
-        if (resumeResolver) {
-          resumeResolver(payload);
-        } else {
-          resumeQueue.push(payload);
-        }
-      });
-    },
     cancel() {
       cancelled = true;
       if (finalStatus === null) {
@@ -606,5 +595,17 @@ export function runPlanV6(
         resumeResolver(null);
       }
     },
+    resume(payload: ResumePayload): Promise<void> {
+      return Promise.resolve().then(() => {
+        if (resumeResolver) {
+          resumeResolver(payload);
+        } else {
+          resumeQueue.push(payload);
+        }
+      });
+    },
+    runId,
+    stream: generator(),
+    summary,
   };
 }

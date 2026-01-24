@@ -1,5 +1,5 @@
 import nlp from "compromise";
-import { clampConfidence, extractEntities } from "./entities.js";
+
 import type {
   BaseView,
   Entity,
@@ -9,6 +9,8 @@ import type {
   TermJson,
   VerbJson,
 } from "./types.js";
+
+import { clampConfidence, extractEntities } from "./entities.js";
 import { asTextView } from "./types.js";
 
 /**

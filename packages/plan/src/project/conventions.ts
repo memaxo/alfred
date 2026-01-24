@@ -2,8 +2,10 @@ import { projectRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { generateObject, type LanguageModel } from "ai";
 import { z } from "zod";
-import { getModelId, getOpenAI } from "../ai.js";
+
 import type { WorkflowRunLike } from "../pattern/extract.js";
+
+import { getModelId, getOpenAI } from "../ai.js";
 
 /**
  * Extract project conventions from a successful workflow run and update the project entity.

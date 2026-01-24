@@ -1,17 +1,16 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 const metricsMock = {
-  multiAgentTasksTotal: { inc: vi.fn() },
-  multiAgentWavesTotal: { inc: vi.fn() },
   multiAgentAgentDurationSeconds: { observe: vi.fn() },
   multiAgentErrorsTotal: { inc: vi.fn() },
+  multiAgentTasksTotal: { inc: vi.fn() },
+  multiAgentWavesTotal: { inc: vi.fn() },
 };
 
 mock.module("../../src/workflow/metrics", () => metricsMock);
 
-const { recordMultiAgentEvent } = await import(
-  "../../src/workflow/metrics-recorder"
-);
+const { recordMultiAgentEvent } =
+  await import("../../src/workflow/metrics-recorder");
 
 describe("recordMultiAgentEvent", () => {
   beforeEach(() => {
@@ -21,8 +20,8 @@ describe("recordMultiAgentEvent", () => {
   describe("data-subtasks events", () => {
     it("increments tasks total with count from data array", () => {
       recordMultiAgentEvent({
-        kind: "data-subtasks",
         data: [{}, {}, {}],
+        kind: "data-subtasks",
       });
 
       expect(metricsMock.multiAgentTasksTotal.inc).toHaveBeenCalledWith(
@@ -33,8 +32,8 @@ describe("recordMultiAgentEvent", () => {
 
     it("increments by 1 for empty data array", () => {
       recordMultiAgentEvent({
-        kind: "data-subtasks",
         data: [],
+        kind: "data-subtasks",
       });
 
       expect(metricsMock.multiAgentTasksTotal.inc).toHaveBeenCalledWith(
@@ -57,8 +56,8 @@ describe("recordMultiAgentEvent", () => {
   describe("wave-result events", () => {
     it("increments waves total with status from data", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: { status: "completed" },
+        kind: "wave-result",
       });
 
       expect(metricsMock.multiAgentWavesTotal.inc).toHaveBeenCalledWith({
@@ -68,8 +67,8 @@ describe("recordMultiAgentEvent", () => {
 
     it("defaults to completed status when missing", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: {},
+        kind: "wave-result",
       });
 
       expect(metricsMock.multiAgentWavesTotal.inc).toHaveBeenCalledWith({
@@ -79,7 +78,6 @@ describe("recordMultiAgentEvent", () => {
 
     it("records agent outcomes for each agent", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: {
           status: "completed",
           agents: [
@@ -87,22 +85,23 @@ describe("recordMultiAgentEvent", () => {
             { role: "worker", status: "failed", durationSeconds: 2.0 },
           ],
         },
+        kind: "wave-result",
       });
 
       expect(
         metricsMock.multiAgentAgentDurationSeconds.observe
-      ).toHaveBeenCalledWith({ role: "planner", outcome: "ok" }, 5.5);
+      ).toHaveBeenCalledWith({ outcome: "ok", role: "planner" }, 5.5);
       expect(
         metricsMock.multiAgentAgentDurationSeconds.observe
-      ).toHaveBeenCalledWith({ role: "worker", outcome: "error" }, 2.0);
+      ).toHaveBeenCalledWith({ outcome: "error", role: "worker" }, 2);
     });
 
     it("records stuck agent errors", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: {
           agents: [{ role: "worker", status: "stuck", durationSeconds: 10 }],
         },
+        kind: "wave-result",
       });
 
       expect(metricsMock.multiAgentErrorsTotal.inc).toHaveBeenCalledWith({
@@ -112,33 +111,32 @@ describe("recordMultiAgentEvent", () => {
 
     it("handles stuck flag on agent", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: {
           agents: [{ role: "worker", stuck: true, durationSeconds: 10 }],
         },
+        kind: "wave-result",
       });
 
       expect(
         metricsMock.multiAgentAgentDurationSeconds.observe
-      ).toHaveBeenCalledWith({ role: "worker", outcome: "stuck" }, 10);
+      ).toHaveBeenCalledWith({ outcome: "stuck", role: "worker" }, 10);
     });
 
     it("defaults role to worker when missing", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: {
           agents: [{ status: "completed", durationSeconds: 1 }],
         },
+        kind: "wave-result",
       });
 
       expect(
         metricsMock.multiAgentAgentDurationSeconds.observe
-      ).toHaveBeenCalledWith({ role: "worker", outcome: "ok" }, 1);
+      ).toHaveBeenCalledWith({ outcome: "ok", role: "worker" }, 1);
     });
 
     it("skips duration observation for invalid durations", () => {
       recordMultiAgentEvent({
-        kind: "wave-result",
         data: {
           agents: [
             { role: "worker", status: "completed", durationSeconds: -1 },
@@ -150,6 +148,7 @@ describe("recordMultiAgentEvent", () => {
             { role: "worker", status: "completed" },
           ],
         },
+        kind: "wave-result",
       });
 
       expect(
@@ -200,46 +199,46 @@ describe("recordMultiAgentEvent", () => {
 
   describe("agent result events", () => {
     const agentResultKinds = [
-      { kind: "merge-agent-result", errorKind: "merge_failed" },
-      { kind: "review-agent-result", errorKind: "review_failed" },
+      { errorKind: "merge_failed", kind: "merge-agent-result" },
+      { errorKind: "review_failed", kind: "review-agent-result" },
       {
-        kind: "conflict-agent-result",
         errorKind: "merge_conflict_analysis_failed",
+        kind: "conflict-agent-result",
       },
       {
-        kind: "conflict-resolution-result",
         errorKind: "merge_conflict_resolution_failed",
+        kind: "conflict-resolution-result",
       },
-      { kind: "review-exec-result", errorKind: "review_exec_failed" },
+      { errorKind: "review_exec_failed", kind: "review-exec-result" },
     ];
 
     for (const { kind, errorKind } of agentResultKinds) {
       describe(`${kind} events`, () => {
         it("observes duration for successful agent", () => {
           recordMultiAgentEvent({
-            kind,
             data: {
               role: "reviewer",
               status: "completed",
               durationSeconds: 3.5,
             },
+            kind,
           });
 
           expect(
             metricsMock.multiAgentAgentDurationSeconds.observe
-          ).toHaveBeenCalledWith({ role: "reviewer", outcome: "ok" }, 3.5);
+          ).toHaveBeenCalledWith({ outcome: "ok", role: "reviewer" }, 3.5);
           expect(metricsMock.multiAgentErrorsTotal.inc).not.toHaveBeenCalled();
         });
 
         it("records error for failed agent", () => {
           recordMultiAgentEvent({
-            kind,
             data: { role: "reviewer", status: "failed", durationSeconds: 2.0 },
+            kind,
           });
 
           expect(
             metricsMock.multiAgentAgentDurationSeconds.observe
-          ).toHaveBeenCalledWith({ role: "reviewer", outcome: "error" }, 2.0);
+          ).toHaveBeenCalledWith({ outcome: "error", role: "reviewer" }, 2);
           expect(metricsMock.multiAgentErrorsTotal.inc).toHaveBeenCalledWith({
             kind: errorKind,
           });
@@ -247,13 +246,13 @@ describe("recordMultiAgentEvent", () => {
 
         it("records error for stuck agent", () => {
           recordMultiAgentEvent({
-            kind,
             data: { role: "reviewer", status: "stuck", durationSeconds: 5.0 },
+            kind,
           });
 
           expect(
             metricsMock.multiAgentAgentDurationSeconds.observe
-          ).toHaveBeenCalledWith({ role: "reviewer", outcome: "stuck" }, 5.0);
+          ).toHaveBeenCalledWith({ outcome: "stuck", role: "reviewer" }, 5);
           expect(metricsMock.multiAgentErrorsTotal.inc).toHaveBeenCalledWith({
             kind: errorKind,
           });
@@ -261,13 +260,13 @@ describe("recordMultiAgentEvent", () => {
 
         it("defaults role to worker", () => {
           recordMultiAgentEvent({
-            kind,
             data: { status: "completed", durationSeconds: 1.0 },
+            kind,
           });
 
           expect(
             metricsMock.multiAgentAgentDurationSeconds.observe
-          ).toHaveBeenCalledWith({ role: "worker", outcome: "ok" }, 1.0);
+          ).toHaveBeenCalledWith({ outcome: "ok", role: "worker" }, 1);
         });
       });
     }
@@ -296,7 +295,7 @@ describe("recordMultiAgentEvent", () => {
     });
 
     it("handles undefined input", () => {
-      recordMultiAgentEvent(undefined);
+      recordMultiAgentEvent();
 
       expect(metricsMock.multiAgentTasksTotal.inc).not.toHaveBeenCalled();
     });

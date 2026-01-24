@@ -13,6 +13,7 @@
  */
 
 import { mock, vi } from "bun:test";
+
 import { registerMockReset } from "../bun/preload";
 
 // Configure environment to disable Redis connections

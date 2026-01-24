@@ -18,12 +18,15 @@ export type UIMessagePart =
     }
   | { type: "reasoning"; text: string };
 
-export type UIMessage = {
+export interface UIMessage {
   id?: string;
   role: "user" | "assistant" | "system";
   content?: string;
   parts?: UIMessagePart[];
-};
+}
+
+// Back-compat alias for older callers.
+export type Message = UIMessage;
 
 export type StreamChunk =
   | { type: "text"; content: string }
@@ -37,13 +40,13 @@ export type StreamChunk =
   | { type: "error"; content: string }
   | { type: "done" };
 
-export type SSEOptions = {
+export interface SSEOptions {
   baseUrl?: string;
   signal?: AbortSignal;
   onChunk?: (chunk: StreamChunk) => void;
   onError?: (error: Error) => void;
   onDone?: () => void;
-};
+}
 
 // ─── SSE Parser ──────────────────────────────────────────────────────────────
 
@@ -93,7 +96,7 @@ function parseSSEEvent(event: string): { type?: string; data?: string } {
     }
   }
 
-  return { type: eventType, data };
+  return { data, type: eventType };
 }
 
 // ─── Stream Assistant ────────────────────────────────────────────────────────
@@ -116,8 +119,8 @@ export async function* streamAssistant(
   }
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     Accept: "text/event-stream",
+    "Content-Type": "application/json",
   };
 
   if (accessToken) {
@@ -125,20 +128,20 @@ export async function* streamAssistant(
   }
 
   const response = await fetch(url, {
-    method: "POST",
-    headers,
     body: JSON.stringify({ messages }),
+    headers,
+    method: "POST",
     signal,
   });
 
   if (!response.ok) {
     const error = await response.text();
-    yield { type: "error", content: error || `HTTP ${response.status}` };
+    yield { content: error || `HTTP ${response.status}`, type: "error" };
     return;
   }
 
   if (!response.body) {
-    yield { type: "error", content: "No response body" };
+    yield { content: "No response body", type: "error" };
     return;
   }
 
@@ -159,7 +162,7 @@ export async function* streamAssistant(
         data = JSON.parse(parsed.data);
       } catch {
         // Not JSON, treat as raw text
-        yield { type: "text", content: parsed.data };
+        yield { content: parsed.data, type: "text" };
         continue;
       }
 
@@ -183,38 +186,43 @@ function mapSSEToChunk(
   // Handle AI SDK stream format
   switch (eventType) {
     case "text-delta":
-    case "text":
+    case "text": {
       return {
         type: "text",
         content: String(data.text ?? data.textDelta ?? ""),
       };
+    }
 
-    case "tool-call":
+    case "tool-call": {
       return {
         type: "tool-call-start",
         toolCallId: String(data.toolCallId ?? ""),
         toolName: String(data.toolName ?? ""),
       };
+    }
 
-    case "tool-result":
+    case "tool-result": {
       return {
         type: "tool-call-result",
         toolCallId: String(data.toolCallId ?? ""),
         isError: Boolean(data.isError),
         content: String(data.result ?? data.output ?? ""),
       };
+    }
 
-    case "error":
+    case "error": {
       return {
         type: "error",
         content: String(data.message ?? data.error ?? "Unknown error"),
       };
+    }
 
     case "finish":
-    case "done":
+    case "done": {
       return { type: "done" };
+    }
 
-    default:
+    default: {
       // Handle array format from AI SDK
       if (Array.isArray(data)) {
         for (const item of data) {
@@ -237,6 +245,7 @@ function mapSSEToChunk(
         return { type: "text", content: String(data.content) };
       }
       return null;
+    }
   }
 }
 
@@ -247,31 +256,35 @@ export async function sendMessage(
   history: UIMessage[],
   options: SSEOptions = {}
 ): Promise<{ response: string; error?: string }> {
-  const messages: UIMessage[] = [...history, { role: "user", content }];
+  const messages: UIMessage[] = [...history, { content, role: "user" }];
 
   let response = "";
   let error: string | undefined;
 
   for await (const chunk of streamAssistant(messages, options)) {
     switch (chunk.type) {
-      case "text":
+      case "text": {
         response += chunk.content ?? "";
         options.onChunk?.(chunk);
         break;
+      }
 
-      case "error":
+      case "error": {
         error = chunk.content;
         options.onChunk?.(chunk);
         break;
+      }
 
-      case "done":
+      case "done": {
         options.onDone?.();
         break;
+      }
 
-      default:
+      default: {
         options.onChunk?.(chunk);
+      }
     }
   }
 
-  return { response, error };
+  return { error, response };
 }

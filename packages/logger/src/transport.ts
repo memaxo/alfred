@@ -1,9 +1,9 @@
 import { hasStdout, stdoutWrite } from "./env";
 import { safeJsonStringify } from "./stringify";
 
-export type LogTransport = {
+export interface LogTransport {
   write: (line: string) => void;
-};
+}
 
 export function createConsoleTransport(): LogTransport {
   return {
@@ -12,16 +12,16 @@ export function createConsoleTransport(): LogTransport {
         stdoutWrite(`${line}\n`);
         return;
       }
-      // biome-ignore lint/suspicious/noConsole: default browser sink
+      // oxlint-disable noConsole: default browser sink
       console.log(line);
     },
   };
 }
 
-type LokiConfig = {
+interface LokiConfig {
   endpoint: string;
   labels: Record<string, string>;
-};
+}
 
 /**
  * Best-effort Loki transport.
@@ -42,10 +42,10 @@ export function createLokiTransport(cfg: LokiConfig): LogTransport {
         ],
       };
       void fetch(cfg.endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
         body: safeJsonStringify(payload),
+        headers: { "content-type": "application/json" },
         keepalive: true,
+        method: "POST",
       }).catch(() => {});
     },
   };

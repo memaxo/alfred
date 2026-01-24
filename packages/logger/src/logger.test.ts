@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { configure, logger } from "./index";
 
 describe("logger", () => {

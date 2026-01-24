@@ -1,3 +1,5 @@
+import type client from "prom-client";
+
 import {
   voiceAssistantDurationSeconds,
   voiceSessionJitterMillis,
@@ -6,7 +8,6 @@ import {
   voiceSttDurationSeconds,
   voiceTtsDurationSeconds,
 } from "@alfred/voice/metrics";
-import type client from "prom-client";
 
 export type HistogramSummary = {
   count: number;

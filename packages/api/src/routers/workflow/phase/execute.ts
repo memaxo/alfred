@@ -1,8 +1,9 @@
-import * as path from "node:path";
-import { performance } from "node:perf_hooks";
 import { executePhaseInputSchema } from "@alfred/pipeline/schemas";
 import { TRPCError } from "@trpc/server";
+import * as path from "node:path";
+import { performance } from "node:perf_hooks";
 import { z } from "zod";
+
 import { requirePolicy } from "../../../gate";
 import { CompilationObserver } from "../../../services/compilation";
 import { ConciergeObserver } from "../../../services/concierge";
@@ -27,7 +28,7 @@ export const workflowPhaseExecuteProcedure = authedProcedure
   )
   .input(executePhaseInputSchema)
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -74,10 +75,10 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       try {
         const { workflowRepo } = await import("@alfred/db");
         await workflowRepo.updateRun(input.runId, {
+          errorMessage: null,
+          resumedAt: new Date(),
           status: "running",
           suspendedAt: null,
-          resumedAt: new Date(),
-          errorMessage: null,
         });
       } catch {
         // Ignore; execution should still proceed.
@@ -95,39 +96,35 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       runner.addObserver(new CheckpointObserver(storage));
       runner.addObserver(
         new CompilationObserver({
-          runId: input.runId,
           requirement: snapshot.requirement,
-        })
-      );
-      runner.addObserver(
-        new ConciergeObserver({
-          userId: session.user.id,
           runId: input.runId,
         })
       );
       runner.addObserver(
         new ConciergeObserver({
-          userId: session.user.id,
           runId: input.runId,
+          userId: session.user.id,
+        })
+      );
+      runner.addObserver(
+        new ConciergeObserver({
+          runId: input.runId,
+          userId: session.user.id,
         })
       );
 
       if (input.linear?.sessionId && input.authzLinear) {
         runner.addObserver(
           new LinearSyncObserver({
-            syncIntervalMs: 30_000,
-            space: input.linear.space,
-            issueId: input.linear.issueId ?? input.linear.sessionId,
             authz: input.authzLinear,
+            issueId: input.linear.issueId ?? input.linear.sessionId,
+            space: input.linear.space,
+            syncIntervalMs: 30_000,
           })
         );
       }
 
       const pipelineInput = {
-        runId: input.runId,
-        requirement: snapshot.requirement,
-        workspace: input.workspace,
-        userId: input.userId ?? session.user.id,
         authz: input.authz,
         linear: input.linear
           ? {
@@ -138,6 +135,10 @@ export const workflowPhaseExecuteProcedure = authedProcedure
               authz: input.authzLinear ?? "",
             }
           : undefined,
+        requirement: snapshot.requirement,
+        runId: input.runId,
+        userId: input.userId ?? session.user.id,
+        workspace: input.workspace,
       };
 
       // Set partial execution params in snapshot context if provided
@@ -155,7 +156,7 @@ export const workflowPhaseExecuteProcedure = authedProcedure
           contextMap.set("dryRun", input.dryRun);
         }
 
-        updatedSnapshot.contextEntries = Array.from(contextMap.entries());
+        updatedSnapshot.contextEntries = [...contextMap.entries()];
         await storage.save(input.runId, updatedSnapshot);
       }
 
@@ -183,9 +184,8 @@ export const workflowPhaseExecuteProcedure = authedProcedure
 
       if (finalSnapshot && status === "completed") {
         try {
-          const { createContextFromSnapshot } = await import(
-            "@alfred/pipeline/snapshot"
-          );
+          const { createContextFromSnapshot } =
+            await import("@alfred/pipeline/snapshot");
           const ctxDecoded = createContextFromSnapshot(finalSnapshot, {
             emit: () => {},
           });
@@ -203,9 +203,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
             !Array.isArray(value);
 
           if (isRecord(plan)) {
-            const phases = plan.phases;
-            const resources = plan.resources;
-            const evaluationCriteria = plan.evaluationCriteria;
+            const { phases } = plan;
+            const { resources } = plan;
+            const { evaluationCriteria } = plan;
             const intent =
               typeof plan.intent === "string" && plan.intent.length > 0
                 ? plan.intent
@@ -213,18 +213,18 @@ export const workflowPhaseExecuteProcedure = authedProcedure
 
             if (phases && resources && evaluationCriteria) {
               await upsertWorkflowPatternFromCompletion({
-                userId: session.user.id,
-                projectId: initOutput?.projectId ?? null,
+                durationMs: Math.max(
+                  0,
+                  finalSnapshot.lastEventAt - finalSnapshot.startedAt
+                ),
                 intent,
                 planTemplate: {
                   phases,
                   resources,
                   evaluationCriteria,
                 },
-                durationMs: Math.max(
-                  0,
-                  finalSnapshot.lastEventAt - finalSnapshot.startedAt
-                ),
+                projectId: initOutput?.projectId ?? null,
+                userId: session.user.id,
               });
             }
           }
@@ -236,6 +236,12 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       try {
         const { workflowRepo } = await import("@alfred/db");
         await workflowRepo.updateRun(input.runId, {
+          completedAt:
+            status === "completed" || status === "failed" ? new Date() : null,
+          errorMessage:
+            status === "failed"
+              ? (finalSnapshot?.error ?? "pipeline_failed")
+              : null,
           status:
             status === "completed"
               ? "completed"
@@ -243,12 +249,6 @@ export const workflowPhaseExecuteProcedure = authedProcedure
                 ? "suspended"
                 : "failed",
           suspendedAt: status === "suspended" ? new Date() : null,
-          completedAt:
-            status === "completed" || status === "failed" ? new Date() : null,
-          errorMessage:
-            status === "failed"
-              ? (finalSnapshot?.error ?? "pipeline_failed")
-              : null,
         });
       } catch {
         // Best-effort.
@@ -265,9 +265,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       );
 
       return {
+        completed: status === "completed",
         runId: input.runId,
         status,
-        completed: status === "completed",
       };
     } catch (error) {
       // Record error metrics
@@ -288,17 +288,17 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
   )
   .input(
     z.object({
-      runId: z.string().min(1),
-      waveIds: z.array(z.string()).optional(),
-      skipTaskIds: z.array(z.string()).optional(),
-      dryRun: z.boolean().optional(),
       authz: z.string().optional(),
-      linear: linearInputSchema.optional(),
       authzLinear: z.string().optional(),
+      dryRun: z.boolean().optional(),
+      linear: linearInputSchema.optional(),
+      runId: z.string().min(1),
+      skipTaskIds: z.array(z.string()).optional(),
+      waveIds: z.array(z.string()).optional(),
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -338,20 +338,19 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
         });
       }
 
-      const { createContextFromSnapshot } = await import(
-        "@alfred/pipeline/snapshot"
-      );
+      const { createContextFromSnapshot } =
+        await import("@alfred/pipeline/snapshot");
       const ctxDecoded = createContextFromSnapshot(snapshot, {
         emit: () => {},
       });
 
       const scheduleOutput = ctxDecoded.get("scheduleOutput") as
         | {
-            waves: Array<{
+            waves: {
               id: string;
               agents: string[];
               dependsOn: string[];
-            }>;
+            }[];
           }
         | undefined;
 
@@ -405,7 +404,7 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
 
         await storage.save(input.runId, {
           ...snapshot,
-          contextEntries: Array.from(contextMap.entries()),
+          contextEntries: [...contextMap.entries()],
         });
       }
 
@@ -429,18 +428,18 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
       runner.addObserver(new CheckpointObserver(storage));
       runner.addObserver(
         new CompilationObserver({
-          runId: input.runId,
           requirement: snapshot.requirement,
+          runId: input.runId,
         })
       );
 
       if (input.linear?.sessionId && input.authzLinear) {
         runner.addObserver(
           new LinearSyncObserver({
-            syncIntervalMs: 30_000,
-            space: input.linear.space,
-            issueId: input.linear.issueId ?? input.linear.sessionId,
             authz: input.authzLinear,
+            issueId: input.linear.issueId ?? input.linear.sessionId,
+            space: input.linear.space,
+            syncIntervalMs: 30_000,
           })
         );
       }
@@ -448,10 +447,6 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
       const userId = ctxDecoded.get<string>("userId") ?? session.user.id;
 
       const pipelineInput = {
-        runId: input.runId,
-        requirement: snapshot.requirement,
-        workspace,
-        userId,
         authz: input.authz,
         linear: input.linear
           ? {
@@ -462,6 +457,10 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
               authz: input.authzLinear ?? "",
             }
           : undefined,
+        requirement: snapshot.requirement,
+        runId: input.runId,
+        userId,
+        workspace,
       };
 
       for await (const _event of runner.resume(
@@ -484,9 +483,9 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
       );
 
       return {
+        completed: status === "completed",
         runId: input.runId,
         status,
-        completed: status === "completed",
       };
     } catch (error) {
       const durationSec = (performance.now() - startTime) / 1000;

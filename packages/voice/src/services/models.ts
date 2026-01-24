@@ -1,6 +1,6 @@
+import { logger } from "@alfred/logger";
 import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { logger } from "@alfred/logger";
 
 // Simple in-memory cache for available voices (remote)
 let availableVoiceCache: { data: unknown[]; timestamp: number } | null = null;

@@ -24,8 +24,8 @@ The pipeline consists of 8 sequential stages:
 ### Basic Example
 
 ```typescript
-import { PipelineRunner, registerDefaultStages } from '@alfred/pipeline';
-import { ConsoleObserver, MetricsObserver } from '@alfred/pipeline/observers';
+import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
+import { ConsoleObserver, MetricsObserver } from "@alfred/pipeline/observers";
 
 const runner = new PipelineRunner({ maxParallel: 1 });
 registerDefaultStages(runner);
@@ -34,9 +34,9 @@ runner.addObserver(new MetricsObserver());
 
 for await (const event of runner.run({
   runId: crypto.randomUUID(),
-  requirement: 'Create a todo list app',
-  workspace: '/path/to/repo',
-  userId: 'user-123',
+  requirement: "Create a todo list app",
+  workspace: "/path/to/repo",
+  userId: "user-123",
 })) {
   console.log(event);
 }
@@ -45,8 +45,8 @@ for await (const event of runner.run({
 ### With Linear Integration
 
 ```typescript
-import { PipelineRunner, registerDefaultStages } from '@alfred/pipeline';
-import { LinearSyncObserver } from '@alfred/pipeline/observers';
+import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";
+import { LinearSyncObserver } from "@alfred/pipeline/observers";
 
 const runner = new PipelineRunner({
   maxParallel: 1,
@@ -57,12 +57,14 @@ const runner = new PipelineRunner({
 registerDefaultStages(runner);
 
 // Add Linear observer
-runner.addObserver(new LinearSyncObserver({
-  syncIntervalMs: 30_000,
-  space: 'workspace-1',
-  issueId: 'ALF-123',
-  authz: 'your-linear-token',
-}));
+runner.addObserver(
+  new LinearSyncObserver({
+    syncIntervalMs: 30_000,
+    space: "workspace-1",
+    issueId: "ALF-123",
+    authz: "your-linear-token",
+  })
+);
 
 for await (const event of runner.run(input)) {
   // Linear updates happen automatically via observer
@@ -70,19 +72,20 @@ for await (const event of runner.run(input)) {
 ```
 
 Notes:
+
 - `space` is required for Linear operations (do not infer it from issue identifiers).
 - Per-subtask issue creation requires `input.linear.teamId` and happens in the execute stage only.
 
 ### Custom Observer
 
 ```typescript
-import type { PipelineObserver, PipelineEvent } from '@alfred/pipeline';
+import type { PipelineObserver, PipelineEvent } from "@alfred/pipeline";
 
 class SlackNotifier implements PipelineObserver {
   onEvent(event: PipelineEvent): void {
-    if (event.type === 'pipeline:complete') {
+    if (event.type === "pipeline:complete") {
       sendSlackMessage(`✓ Workflow complete: ${event.summary.requirement}`);
-    } else if (event.type === 'pipeline:failed') {
+    } else if (event.type === "pipeline:failed") {
       sendSlackMessage(`✗ Workflow failed: ${event.error}`);
     }
   }
@@ -121,12 +124,12 @@ The pipeline emits typed events that observers can consume:
 
 ```typescript
 const config: PipelineConfig = {
-  maxParallel: 1,           // Sequential by default
-  maxAgentAttempts: 3,      // Retries per agent
-  maxReviewAttempts: 3,     // Review fix attempts
-  maxTransitions: 50_000,   // Safety cap on total emitted events
-  enableLearning: true,     // Enable learning stage
-  enableLinearSync: false,  // Linear integration
+  maxParallel: 1, // Sequential by default
+  maxAgentAttempts: 3, // Retries per agent
+  maxReviewAttempts: 3, // Review fix attempts
+  maxTransitions: 50_000, // Safety cap on total emitted events
+  enableLearning: true, // Enable learning stage
+  enableLinearSync: false, // Linear integration
   linearSyncInterval: 30_000, // Batch interval
 };
 ```
@@ -134,6 +137,7 @@ const config: PipelineConfig = {
 ## Reliability Notes
 
 - **Abort propagation**: `PipelineRunner.run(input, signal)` respects `AbortSignal`. If already aborted, no stages start; if aborted mid-run, the pipeline emits `stage:error` then `pipeline:failed`.\n+- **Timeouts**: Stage execution is guarded by cancellable per-stage timeouts (`phaseTimeouts`).\n+- **MAX_TRANSITIONS**: `maxTransitions` limits total emitted pipeline events (runner lifecycle + `ctx.emit(...)`). Exceeding it fails the run with `pipeline_max_transitions_exceeded`.\n+- **Observer cleanup**: `PipelineObserver.onComplete()` is a finally-style cleanup hook (called on success, failure, and abort).\n+- **Budget events**: the runner may emit `budget:warning` / `budget:exceeded` and clears per-run cost tracking on termination.\n+
+
 ## Testing
 
 ```bash

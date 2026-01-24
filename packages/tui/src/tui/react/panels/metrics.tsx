@@ -7,9 +7,12 @@
 /** @jsxImportSource @opentui/react */
 
 import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
+
 import type { MetricsState } from "../../subscriptions/metrics";
+
 import { colors, progressChars, sparklineChars } from "../../theme";
 import { bold, dim, fg } from "../../typography";
 import { useMetricsStore } from "../hooks/stores";

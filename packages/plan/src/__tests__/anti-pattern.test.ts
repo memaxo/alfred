@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
+
 import { extractAntiPatternFromRun } from "../pattern/anti.js";
 
 // Mock AI and DB

@@ -1,7 +1,8 @@
+import type { LanguageModel } from "ai";
+
+import { logger } from "@alfred/logger";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { logger } from "@alfred/logger";
-import type { LanguageModel } from "ai";
 
 export type Interaction = {
   id: string;

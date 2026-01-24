@@ -16,14 +16,14 @@ mock.module("../src/ai/generate", () => ({
 
 // Mock Runtime Loop to verify calls
 const mockLoop = mock(async () => ({
+  effects: [],
   state: {
     _: "thinking",
     physiology: { energy: 1, boredom: 0, frustration: 0 },
   },
-  effects: [],
 }));
 
-let runAssistantForVoice: typeof import("../src/voice/assistant")["runAssistantForVoice"];
+let runAssistantForVoice: (typeof import("../src/voice/assistant"))["runAssistantForVoice"];
 
 beforeAll(async () => {
   const runtimeAbs = new URL("../../runtime/src/index.ts", import.meta.url)
@@ -48,12 +48,12 @@ describe("Voice -> Cognitive Integration", () => {
     };
 
     mockLoop.mockResolvedValueOnce({
-      state: { _: "thinking" },
       effects: [{ type: "generate_response", input: "Hello cognitive world" }],
+      state: { _: "thinking" },
     });
     mockLoop.mockResolvedValueOnce({
-      state: { _: "reflecting" },
       effects: [],
+      state: { _: "reflecting" },
     });
 
     await runAssistantForVoice(ctx as any, input);

@@ -1,8 +1,8 @@
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
-import type {
-  AutonomyGradient,
-  CognitiveState,
-  Event,
+import {
+  type AutonomyGradient,
+  type CognitiveState,
+  type Event,
 } from "@alfred/cognitive/state";
 import { idle, initialAutonomy, timestamp } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
@@ -10,19 +10,20 @@ import { cognitiveRepo } from "@alfred/db";
 import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { getAccuracyMetrics, getInsights, getMistakes } from "@alfred/learning";
 import { logger } from "@alfred/logger";
-import type { CognitiveEffect } from "@alfred/runtime/cognitive";
+import { type CognitiveEffect } from "@alfred/runtime/cognitive";
 import { z } from "zod";
-import type { Context } from "../context";
+
+import { type Context } from "../context";
 import { requirePolicy } from "../gate";
 import { cognitiveFeedbackSubmissionsTotal } from "../metrics";
 import { authedProcedure, router } from "../trpc";
 
 const feedbackInput = z.object({
-  streamId: z.string().min(1),
-  expected: z.string().min(1),
   actual: z.string().optional().default(""),
-  ts: z.number().int().optional(),
+  expected: z.string().min(1),
+  streamId: z.string().min(1),
   surface: z.enum(["chat", "mindscape", "voice"]).optional(),
+  ts: z.number().int().optional(),
 });
 
 type FeedbackInput = z.infer<typeof feedbackInput>;
@@ -30,19 +31,19 @@ type FeedbackInput = z.infer<typeof feedbackInput>;
 const mapResource = (raw: unknown) => {
   const payload = (raw ?? {}) as Partial<FeedbackInput>;
   return {
-    kind: "cognitive" as const,
-    id: payload.streamId ?? "default",
     attrs: {
       scope: "self",
     },
+    id: payload.streamId ?? "default",
+    kind: "cognitive" as const,
   };
 };
 
 const buildContext = (raw: unknown, ctx: Context) => {
   const payload = (raw ?? {}) as Partial<FeedbackInput>;
   return {
-    streamId: payload.streamId ?? "default",
     requestId: ctx.runtime.requestId,
+    streamId: payload.streamId ?? "default",
     userId: ctx.session?.user.id,
   };
 };
@@ -111,8 +112,8 @@ async function reconstructState(
       }
       const historicalEvent = unwrapped.data as Event;
       const result = applyTransition(state, autonomy, historicalEvent);
-      state = result.state;
-      autonomy = result.autonomy;
+      ({ state } = result);
+      ({ autonomy } = result);
     }
   } else {
     // No snapshot - return initial idle state
@@ -120,7 +121,7 @@ async function reconstructState(
     autonomy = initialAutonomy(Date.now());
   }
 
-  return { state, autonomy };
+  return { autonomy, state };
 }
 
 // Autonomy scope definitions
@@ -154,8 +155,8 @@ function getAutonomyScopeDescription(scope: AutonomyScope): string {
     code: "Code generation and modifications",
     filesystem: "File system read/write operations",
     network: "Network requests and API calls",
-    system: "System commands and shell execution",
     sensitive: "Operations involving sensitive data",
+    system: "System commands and shell execution",
   };
   return descriptions[scope];
 }
@@ -172,23 +173,27 @@ export const cognitiveRouter = router({
       // Extract timestamp based on state type
       const getStateTimestamp = (): number | undefined => {
         switch (state._) {
-          case "idle":
+          case "idle": {
             return state.since;
+          }
           case "capturing":
           case "thinking":
-          case "executing":
+          case "executing": {
             return state.started;
-          case "deciding":
+          }
+          case "deciding": {
             return state.deadline;
-          case "reflecting":
+          }
+          case "reflecting": {
             return;
+          }
         }
       };
 
       return {
-        state,
         autonomy,
         phase: state._,
+        state,
         ts: getStateTimestamp(),
       };
     }),
@@ -209,26 +214,26 @@ export const cognitiveRouter = router({
   feedbackList: authedProcedure
     .input(
       z.object({
-        limit: z.number().int().min(1).max(100).optional().default(50),
         category: z.string().optional(),
+        limit: z.number().int().min(1).max(100).optional().default(50),
         since: z.string().datetime().optional(),
       })
     )
     .query(({ input }) => {
       const mistakes = getMistakes({
-        limit: input.limit,
         category: input.category,
+        limit: input.limit,
         since: input.since ? new Date(input.since) : undefined,
       });
 
       return {
         entries: mistakes.map((m) => ({
-          id: m.id,
           category: m.category,
           cause: m.cause,
-          effect: m.effect,
-          timestamp: m.ts,
           context: m.context,
+          effect: m.effect,
+          id: m.id,
+          timestamp: m.ts,
         })),
         total: mistakes.length,
       };
@@ -242,9 +247,9 @@ export const cognitiveRouter = router({
     const settings = getUserAutonomy(userId);
 
     const scopes = AUTONOMY_SCOPES.map((scope) => ({
-      scope,
-      level: settings.get(scope) ?? 0.5,
       description: getAutonomyScopeDescription(scope),
+      level: settings.get(scope) ?? 0.5,
+      scope,
     }));
 
     return { scopes };
@@ -256,8 +261,8 @@ export const cognitiveRouter = router({
   autonomySet: authedProcedure
     .input(
       z.object({
-        scope: z.enum(AUTONOMY_SCOPES),
         level: z.number().min(0).max(1),
+        scope: z.enum(AUTONOMY_SCOPES),
       })
     )
     .mutation(({ ctx, input }) => {
@@ -266,14 +271,14 @@ export const cognitiveRouter = router({
       settings.set(input.scope, input.level);
 
       logger.info("cognitive_autonomy_updated", {
-        userId,
-        scope: input.scope,
         level: input.level,
+        scope: input.scope,
+        userId,
       });
 
       return {
-        scope: input.scope,
         level: input.level,
+        scope: input.scope,
         updated: true,
       };
     }),
@@ -286,8 +291,8 @@ export const cognitiveRouter = router({
     return {
       metrics: metrics.map((m) => ({
         category: m.category,
-        total: m.total,
         errorRate: m.errorRate,
+        total: m.total,
         trend: m.trend,
       })),
     };
@@ -300,13 +305,13 @@ export const cognitiveRouter = router({
     const insights = getInsights();
     return {
       insights: insights.map((i) => ({
-        id: i.id,
-        type: i.type,
-        title: i.title,
-        description: i.description,
-        confidence: i.confidence,
-        category: i.category,
         actionable: i.actionable,
+        category: i.category,
+        confidence: i.confidence,
+        description: i.description,
+        id: i.id,
+        title: i.title,
+        type: i.type,
       })),
     };
   }),
@@ -325,8 +330,8 @@ export const cognitiveRouter = router({
 
       const event: Event = {
         _: "feedback",
-        expected,
         actual,
+        expected,
         similarity: similarity ?? undefined,
         ts: timestamp(input.ts ?? Date.now()),
       };
@@ -344,8 +349,8 @@ export const cognitiveRouter = router({
       cognitiveFeedbackSubmissionsTotal.labels(surface).inc();
 
       return {
-        state,
         obligations: ctx.policy?.obligations ?? [],
+        state,
       };
     }),
 });
@@ -359,9 +364,8 @@ async function handleCognitiveEffects(
     return;
   }
 
-  const { runAssistantGeneration, runCognitiveLoop } = await import(
-    "@alfred/runtime/cognitive"
-  );
+  const { runAssistantGeneration, runCognitiveLoop } =
+    await import("@alfred/runtime/cognitive");
   const queue: CognitiveEffect[] = [...initialEffects];
 
   while (queue.length > 0) {
@@ -389,9 +393,9 @@ async function handleCognitiveEffects(
           // Plan execution is handled by workflow runtime
           // This effect indicates the cognitive system has approved execution
           logger.info("cognitive_plan_execution_approved", {
-            streamId,
-            planSteps: effect.plan.steps.length,
             planConfidence: effect.plan.confidence,
+            planSteps: effect.plan.steps.length,
+            streamId,
           });
           // Note: Actual plan execution happens through workflow runtime,
           // not directly from cognitive effects. This is just logging.
@@ -401,8 +405,6 @@ async function handleCognitiveEffects(
           // Log reflection outcome for learning
           // In future, this could be sent to LearningEngine
           logger.info("cognitive_reflection_logged", {
-            streamId,
-            outcomeType: effect.outcome._,
             outcome:
               effect.outcome._ === "success"
                 ? "success"
@@ -411,6 +413,8 @@ async function handleCognitiveEffects(
                   : effect.outcome._ === "partial"
                     ? `partial: ${effect.outcome.completed.length} completed, ${effect.outcome.failed.length} failed`
                     : effect.outcome.reason,
+            outcomeType: effect.outcome._,
+            streamId,
           });
           // Note: Full learning integration would convert Outcome to SupervisionEvent
           // and send to LearningEngine.recordOutcome(). For now, just log.
@@ -419,16 +423,16 @@ async function handleCognitiveEffects(
         default: {
           const exhaustive: never = effect;
           logger.warn("cognitive_effect_unknown", {
-            streamId,
             effect: exhaustive,
+            streamId,
           });
         }
       }
     } catch (error) {
       logger.error("cognitive_effect_failed", {
-        streamId,
         effect,
         error: error instanceof Error ? error.message : String(error),
+        streamId,
       });
     }
   }

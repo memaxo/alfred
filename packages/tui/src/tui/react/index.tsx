@@ -8,8 +8,10 @@
 
 import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { createRoot, type Root } from "@opentui/react";
-import { Dashboard, type DashboardCallbacks } from "./dashboard";
+
 import type { TuiStores } from "./hooks/stores";
+
+import { Dashboard, type DashboardCallbacks } from "./dashboard";
 
 export type ReactTuiOptions = {
   stores: TuiStores;

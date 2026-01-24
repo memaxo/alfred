@@ -6,6 +6,7 @@
  */
 
 import type { CliRenderer } from "@opentui/core";
+
 import { createCliRenderer } from "@opentui/core";
 
 // ─── Types ───────────────────────────────────────────────────────────────────

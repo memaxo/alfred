@@ -1,3 +1,6 @@
+import type { TestSession } from "@alfred/test-kit/auth";
+
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   afterEach,
   beforeAll,
@@ -8,8 +11,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { TestSession } from "@alfred/test-kit/auth";
-import { RuntimeContext } from "@alfred/type/runtime-context";
+
 import {
   mockPolicyAudit,
   resetAllMocks,

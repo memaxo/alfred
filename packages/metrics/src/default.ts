@@ -1,4 +1,5 @@
 import client from "prom-client";
+
 import { metricsRegistry } from "./registry";
 
 const startedKey = Symbol.for("alfred.metrics.default.started");

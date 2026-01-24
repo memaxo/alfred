@@ -3,6 +3,9 @@
  * User profiles, preferences, facts, events, autonomy settings, and feedback
  */
 
+// Import embedding dimension from embed package (single source of truth)
+// KaLM-Embedding-Gemma3-12B-2511 with MRL truncation to 1024 dimensions
+import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   boolean,
   integer,
@@ -14,13 +17,9 @@ import {
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
-import { projects } from "./project";
-
 // Index coverage: migrations 0040+ handle preferences and facts performance indexes.
 
-// Import embedding dimension from embed package (single source of truth)
-// KaLM-Embedding-Gemma3-12B-2511 with MRL truncation to 1024 dimensions
-import { EMBEDDING_DIM } from "@alfred/embed";
+import { projects } from "./project";
 
 export const VECTOR_DIM = EMBEDDING_DIM;
 

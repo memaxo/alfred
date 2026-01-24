@@ -7,8 +7,10 @@
 /** @jsxImportSource @opentui/react */
 
 import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useState } from "react";
+
 import { type Command, createStandardCommands } from "../input/commands";
 import { StoresContext, type TuiStores } from "./hooks/stores";
 import { ChatMode, DebugMode, HelpMode, PlanMode } from "./modes";

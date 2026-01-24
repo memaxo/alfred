@@ -1,7 +1,8 @@
+import { logger } from "@alfred/logger";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { logger } from "@alfred/logger";
+
 import { openDirectorySecure } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 

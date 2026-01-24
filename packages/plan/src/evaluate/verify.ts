@@ -1,12 +1,13 @@
 import type { StructuredPlan } from "../generate/types.js";
-import { enforceBudgets } from "./budget.js";
-import { runCheck } from "./checks.js";
-import { applyRubric, defaultRubric } from "./rubric.js";
 import type {
   EvaluationRubric,
   PlanEvaluation,
   VerificationResult,
 } from "./types.js";
+
+import { enforceBudgets } from "./budget.js";
+import { runCheck } from "./checks.js";
+import { applyRubric, defaultRubric } from "./rubric.js";
 
 /**
  * Perform verification-first deterministic evaluation of a plan

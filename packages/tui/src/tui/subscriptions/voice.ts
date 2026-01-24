@@ -4,8 +4,9 @@
  * Subscribes to voice pipeline status updates.
  */
 
-import { getApiClient } from "../api/client";
 import type { SubscriptionManager } from "./manager";
+
+import { getApiClient } from "../api/client";
 import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────

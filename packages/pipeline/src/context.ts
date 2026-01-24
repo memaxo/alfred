@@ -1,5 +1,6 @@
 import type { PipelineEvent } from "./events";
 import type { PipelineConfig, PipelineContext } from "./pipeline";
+
 import {
   assertSerializable,
   fromSerializable,

@@ -14,8 +14,6 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { describe, expect, it } from "bun:test";
-
 import {
   type AutonomyGradient,
   type CognitiveState,
@@ -31,6 +29,7 @@ import {
   thinking,
 } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
+import { describe, expect, it } from "bun:test";
 
 const createInputEvent = (content: string): Event =>
   ({

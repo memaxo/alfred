@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { getRedis } from "@alfred/auth/redis";
+import { randomUUID } from "node:crypto";
 
 export type VoiceSessionSurface =
   | "drive"

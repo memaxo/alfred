@@ -1,6 +1,7 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { requirePolicy } from "../gate";
 import {
   orchestratorGenerateDurationSeconds,
@@ -12,13 +13,13 @@ import { toTRPCError } from "../utils/error";
 const ORCHESTRATOR_MAX_STEPS = 12;
 
 const generateInput = z.object({
-  projectId: z.string().uuid().optional(),
-  thread: z.string().optional(),
-  resource: z.string().optional(),
-  messages: z.array(z.unknown()).min(1),
-  toolChoice: z.enum(["auto", "none", "required"]).optional(),
   maxSteps: z.number().int().min(1).max(ORCHESTRATOR_MAX_STEPS).optional(),
   memory: z.unknown().optional(),
+  messages: z.array(z.unknown()).min(1),
+  projectId: z.string().uuid().optional(),
+  resource: z.string().optional(),
+  thread: z.string().optional(),
+  toolChoice: z.enum(["auto", "none", "required"]).optional(),
 });
 
 function mapResource(raw: unknown) {
@@ -26,11 +27,11 @@ function mapResource(raw: unknown) {
     requirement?: string;
   };
   return {
-    kind: "orchestrator" as const,
-    id: input.thread ?? input.resource ?? "default",
     attrs: {
       scope: input.resource ?? "self",
     },
+    id: input.thread ?? input.resource ?? "default",
+    kind: "orchestrator" as const,
   };
 }
 
@@ -49,15 +50,14 @@ export const orchestratorRouter = router({
       const stopTimer = orchestratorGenerateDurationSeconds.startTimer();
       orchestratorGenerateRequestsTotal.inc({ status: "started" });
       try {
-        const { generateOrchestratorText } = await import(
-          "../services/orchestrator"
-        );
+        const { generateOrchestratorText } =
+          await import("../services/orchestrator");
         const result = await generateOrchestratorText({
-          userId: ctx.session.user.id,
-          projectId: input.projectId,
-          messages: input.messages,
-          toolChoice: input.toolChoice,
           maxSteps: input.maxSteps,
+          messages: input.messages,
+          projectId: input.projectId,
+          toolChoice: input.toolChoice,
+          userId: ctx.session.user.id,
         });
         orchestratorGenerateRequestsTotal.inc({ status: "success" });
         stopTimer({ status: "success" });
@@ -86,11 +86,11 @@ export const orchestratorRouter = router({
   runsList: authedProcedure
     .input(
       z.object({
+        limit: z.number().int().min(1).max(100).default(20),
+        offset: z.number().int().min(0).default(0),
         status: z
           .enum(["running", "suspended", "completed", "failed", "cancelled"])
           .optional(),
-        limit: z.number().int().min(1).max(100).default(20),
-        offset: z.number().int().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -100,14 +100,13 @@ export const orchestratorRouter = router({
           message: "session_required",
         });
       }
-      const { listRunsWithDetails } = await import(
-        "../services/orchestrator-runs"
-      );
+      const { listRunsWithDetails } =
+        await import("../services/orchestrator-runs");
       return await listRunsWithDetails({
-        userId: ctx.session.user.id,
-        status: input.status,
         limit: input.limit,
         offset: input.offset,
+        status: input.status,
+        userId: ctx.session.user.id,
       });
     }),
 
@@ -120,9 +119,8 @@ export const orchestratorRouter = router({
           message: "session_required",
         });
       }
-      const { getRunWithDetails } = await import(
-        "../services/orchestrator-runs"
-      );
+      const { getRunWithDetails } =
+        await import("../services/orchestrator-runs");
       return await getRunWithDetails({
         runId: input.runId,
         userId: ctx.session.user.id,
@@ -175,8 +173,8 @@ export const orchestratorRouter = router({
         });
       }
       await workflowRepo.updateRun(input.runId, {
-        status: "running",
         resumedAt: new Date(),
+        status: "running",
       });
       return { success: true };
     }),
@@ -201,8 +199,8 @@ export const orchestratorRouter = router({
         });
       }
       await workflowRepo.updateRun(input.runId, {
-        status: "cancelled",
         completedAt: new Date(),
+        status: "cancelled",
       });
       return { success: true };
     }),
@@ -210,9 +208,9 @@ export const orchestratorRouter = router({
   logsStream: authedProcedure
     .input(
       z.object({
-        runId: z.string().min(1),
         agentId: z.string().optional(),
         limit: z.number().int().min(1).max(500).default(100),
+        runId: z.string().min(1),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -224,10 +222,10 @@ export const orchestratorRouter = router({
       }
       const { streamRunLogs } = await import("../services/orchestrator-runs");
       return await streamRunLogs({
-        runId: input.runId,
-        userId: ctx.session.user.id,
         agentId: input.agentId,
         limit: input.limit,
+        runId: input.runId,
+        userId: ctx.session.user.id,
       });
     }),
 });

@@ -5,6 +5,7 @@
  */
 
 import { eq, sql } from "drizzle-orm";
+
 import { db } from "../client.js";
 import { planTemplates } from "../schema/template.js";
 

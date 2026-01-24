@@ -5,16 +5,17 @@
  * Runtime is a leaf package - no runtime-specific types should leak to other packages.
  */
 
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { RuntimeContext } from "@alfred/type/runtime-context";
-import type { LanguageModel } from "ai";
+import { type WorkflowEvent } from "@alfred/type/plan";
+import { type RuntimeContext } from "@alfred/type/runtime-context";
+import { type LanguageModel } from "ai";
 import { z } from "zod";
-import type { AiAdapter } from "./adapters/ai";
+
+import { type AiAdapter } from "./adapters/ai";
 
 /**
  * Resume payload for in-flight authorization
  */
-export type ResumePayload = {
+export interface ResumePayload {
   event:
     | "deploy-authz"
     | "linear-authz"
@@ -22,7 +23,7 @@ export type ResumePayload = {
     | "mfa-authz"
     | "human-authz";
   authz: string;
-};
+}
 
 /**
  * Workflow execution phases
@@ -32,18 +33,20 @@ export type WorkflowPhase = "scan" | "plan" | "act" | "report";
 /**
  * Phase configuration
  */
-export type PhaseConfig = {
+export interface PhaseConfig {
   name: WorkflowPhase;
   timeoutMs: number;
-};
+}
 
 /**
  * Runtime input matching current RunPlanInput
  */
-export type RuntimeInput = {
+export interface RuntimeInput {
   requirement: string;
   auto: "read" | "low" | "medium" | "high";
   planId?: string; // New: Optional plan ID for phased execution
+  /** Optional base runId to clone AgentFS DB from (run-to-run sharing). */
+  agentfsBaseRunId?: string;
   workspace?: string;
   repoBase?: string;
   mode?: "sequential" | "parallel";
@@ -67,12 +70,12 @@ export type RuntimeInput = {
     ignore?: string[];
     seeds?: string[];
   };
-};
+}
 
 /**
  * Runtime options for dependency injection
  */
-export type RuntimeOptions = {
+export interface RuntimeOptions {
   /** Input parameters */
   input: RuntimeInput;
 
@@ -111,12 +114,12 @@ export type RuntimeOptions = {
 
   /** Polling interval for supervisor physiology checks (default: 1s) */
   supervisorCheckIntervalMs?: number;
-};
+}
 
 /**
  * Runtime execution state (transient, in-memory only)
  */
-export type RuntimeState = {
+export interface RuntimeState {
   /** Unique run identifier */
   runId: string;
 
@@ -140,12 +143,12 @@ export type RuntimeState = {
 
   /** Final error message if failed */
   finalMessage: string | null;
-};
+}
 
 /**
  * Runtime interface (matches current RunPlanV6)
  */
-export type WorkflowRuntime = {
+export interface WorkflowRuntime {
   /** Unique run identifier */
   runId: string;
 
@@ -160,33 +163,14 @@ export type WorkflowRuntime = {
 
   /** Cancel execution */
   cancel(): void;
-};
+}
 
 /**
  * Runtime input validation schema
  */
 export const runtimeInputSchema = z.object({
-  requirement: z.string().min(1, "Requirement must not be empty"),
+  agentfsBaseRunId: z.string().min(1).optional(),
   auto: z.enum(["read", "low", "medium", "high"]),
-  planId: z.string().uuid().optional(),
-  workspace: z.string().optional(),
-  repoBase: z.string().optional(),
-  mode: z.enum(["sequential", "parallel"]).optional(),
-  interactive: z.boolean().optional(),
-  toolgraph: z
-    .object({
-      maxParallel: z.number().int().min(1).max(32).optional(),
-      backoffMs: z.number().int().min(0).max(10_000).optional(),
-    })
-    .optional(),
-  linear: z
-    .object({
-      issueId: z.string().min(1).optional(),
-      sessionId: z.string().min(1),
-      space: z.string().min(1),
-      authz: z.string().min(1),
-    })
-    .optional(),
   context: z
     .object({
       enable: z.boolean().optional(),
@@ -198,42 +182,62 @@ export const runtimeInputSchema = z.object({
       seeds: z.array(z.string()).optional(),
     })
     .optional(),
+  interactive: z.boolean().optional(),
+  linear: z
+    .object({
+      issueId: z.string().min(1).optional(),
+      sessionId: z.string().min(1),
+      space: z.string().min(1),
+      authz: z.string().min(1),
+    })
+    .optional(),
+  mode: z.enum(["sequential", "parallel"]).optional(),
+  planId: z.string().uuid().optional(),
+  repoBase: z.string().optional(),
+  requirement: z.string().min(1, "Requirement must not be empty"),
+  toolgraph: z
+    .object({
+      maxParallel: z.number().int().min(1).max(32).optional(),
+      backoffMs: z.number().int().min(0).max(10_000).optional(),
+    })
+    .optional(),
+  workspace: z.string().optional(),
 });
 
 /**
  * Runtime options validation schema
  */
 export const runtimeOptionsSchema = z.object({
+  authz: z.string().optional(),
+  history: z.array(z.custom<WorkflowEvent>()).optional(),
   input: runtimeInputSchema,
   model: z.custom<LanguageModel>((val) => val !== null && val !== undefined, {
     message: "Model must be provided",
   }),
-  signal: z.custom<AbortSignal>().optional(),
+  runId: z.string().uuid().optional(),
   runtimeContext: z
     .custom<RuntimeContext<Record<string, unknown>>>()
     .optional(),
+  signal: z.custom<AbortSignal>().optional(),
   stepTimeoutMs: z
     .number()
     .int()
     .min(1000, "Step timeout must be at least 1 second")
     .optional(),
-  workflowTimeoutMs: z
+  supervisorCheckIntervalMs: z
     .number()
     .int()
-    .min(1000, "Workflow timeout must be at least 1 second")
+    .min(10, "Supervisor check interval must be at least 10ms")
     .optional(),
-  runId: z.string().uuid().optional(),
-  history: z.array(z.custom<WorkflowEvent>()).optional(),
-  authz: z.string().optional(),
   supervisorHeartbeatMs: z
     .number()
     .int()
     .min(100, "Supervisor heartbeat must be at least 100ms")
     .optional(),
-  supervisorCheckIntervalMs: z
+  workflowTimeoutMs: z
     .number()
     .int()
-    .min(10, "Supervisor check interval must be at least 10ms")
+    .min(1000, "Workflow timeout must be at least 1 second")
     .optional(),
 });
 

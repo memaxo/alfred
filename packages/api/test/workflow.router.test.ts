@@ -1,3 +1,7 @@
+import type { PipelineEvent } from "@alfred/pipeline";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
+
 import {
   afterEach,
   beforeAll,
@@ -8,9 +12,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { PipelineEvent } from "@alfred/pipeline";
-import type { Obligation, WorkflowEvent } from "@alfred/type";
-import type { UIMessage } from "@alfred/type/stream";
+
 import { resetAgentMocks } from "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { metricsStub } from "./utils/mock-metrics";

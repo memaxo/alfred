@@ -1,10 +1,11 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+
 import type {
   KnowledgeConnectInput,
   KnowledgeCorrectInput,

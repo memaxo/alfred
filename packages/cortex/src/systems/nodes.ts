@@ -4,10 +4,11 @@
  * Renders satellite nodes as circular neurons with SDF-based glow effects.
  */
 
+import type { NodeData, RenderSystem } from "../types";
+
 import { StorageBuffer, UniformBuffer } from "../buffer";
 // Import shader source
 import nodeShaderSource from "../shaders/nodes.wgsl?raw";
-import type { NodeData, RenderSystem } from "../types";
 
 /** Node buffer stride (must match WGSL struct) */
 const NODE_STRIDE = 32; // 2 floats pos + 1 radius + 1 activity + 3 color + 1 type = 8 floats = 32 bytes

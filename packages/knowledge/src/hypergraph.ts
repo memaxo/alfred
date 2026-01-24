@@ -3,8 +3,9 @@
  * Zero-allocation design with content-addressed nodes
  */
 
-import { createHash } from "node:crypto";
 import { EMBEDDING_DIM } from "@alfred/embed";
+import { createHash } from "node:crypto";
+
 import { BTreeIndex } from "./indices/btree.js";
 import { IntervalTree } from "./indices/interval-tree.js";
 import { RTreeND } from "./indices/rtree.js";

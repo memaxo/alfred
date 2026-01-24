@@ -1,7 +1,7 @@
+import { installAuthTokenMock } from "@alfred/test-kit/auth/token";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { accessSync, constants as fsConstants } from "node:fs";
 import path from "node:path";
-import { installAuthTokenMock } from "@alfred/test-kit/auth/token";
 
 installAuthTokenMock();
 

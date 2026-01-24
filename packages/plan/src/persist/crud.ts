@@ -1,5 +1,7 @@
-import { planRepo } from "@alfred/db";
 import type { WorkflowPlan } from "@alfred/db/schema/plan";
+
+import { planRepo } from "@alfred/db";
+
 import type { StructuredPlan } from "../types";
 
 /**

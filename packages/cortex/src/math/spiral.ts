@@ -5,6 +5,7 @@
  */
 
 import type { Vec2 } from "../types";
+
 import { TAU } from "./index";
 
 /**

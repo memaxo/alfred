@@ -4,7 +4,8 @@
     "declaration": true,
     "declarationMap": false,
     "outDir": "dist",
-    "sourceMap": false
+    "sourceMap": false,
+    "strictNullChecks": true
   },
   "exclude": ["dist", "**/*.test.ts"],
   "extends": "../../tsconfig.base.json",

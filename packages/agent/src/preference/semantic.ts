@@ -1,11 +1,12 @@
-import { cosineSimilarity } from "@alfred/embed";
-import { logger } from "@alfred/logger";
-import { embedMany } from "@alfred/rag";
 import type {
   ResponseFormat,
   ResponseTone,
   ResponseVerbosity,
 } from "@alfred/type/preference";
+
+import { cosineSimilarity } from "@alfred/embed";
+import { logger } from "@alfred/logger";
+import { embedMany } from "@alfred/rag";
 
 const SAMPLE_LIMIT = 12;
 

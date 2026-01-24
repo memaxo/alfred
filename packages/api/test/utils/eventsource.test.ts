@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+
 import { MockEventSource, setupEventSourceMock } from "../utils/eventsource";
 
 describe("MockEventSource", () => {

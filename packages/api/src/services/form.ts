@@ -5,10 +5,11 @@
  * into conversations.
  */
 
-import { randomUUID } from "node:crypto";
+import type { UIMessage } from "@alfred/type/stream";
+
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
-import type { UIMessage } from "@alfred/type/stream";
+import { randomUUID } from "node:crypto";
 
 type FormSubmission = {
   userId: string;

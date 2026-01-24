@@ -1,17 +1,19 @@
 import { logger } from "@alfred/logger";
+
 import { createEvent } from "../events";
-import type { PipelineContext, PipelineStage } from "../pipeline";
-import type {
-  AgentOutcome,
-  ATIFTrajectory,
-  ExecuteOutput,
-  LearnOutput,
-  SummarizeOutput,
+import { type PipelineContext, type PipelineStage } from "../pipeline";
+import {
+  type AgentOutcome,
+  type ATIFTrajectory,
+  type ExecuteOutput,
+  type LearnOutput,
+  type SummarizeOutput,
 } from "./types";
 
-export class SummarizeStage
-  implements PipelineStage<LearnOutput, SummarizeOutput>
-{
+export class SummarizeStage implements PipelineStage<
+  LearnOutput,
+  SummarizeOutput
+> {
   readonly name = "summarize" as const;
 
   async execute(
@@ -20,35 +22,34 @@ export class SummarizeStage
   ): Promise<SummarizeOutput> {
     ctx.emit(
       createEvent("stage:progress", {
-        stage: "summarize",
         message: "Generating execution summary",
+        stage: "summarize",
       })
     );
 
     // Import dynamically to avoid circular dependencies
-    const { generateWaveSummary } = await import(
-      "@alfred/runtime/orchestrator/summary"
-    );
+    const { generateWaveSummary } =
+      await import("@alfred/runtime/orchestrator/summary");
 
     // Get outcomes and file changes from context
     const executeOutput = ctx.get<ExecuteOutput>("executeOutput");
     const outcomes: AgentOutcome[] = executeOutput
-      ? Array.from(executeOutput.outcomes.values())
+      ? [...executeOutput.outcomes.values()]
       : [];
 
     const fileChanges = executeOutput
       ? {
-          modified: executeOutput.fileChanges
-            .filter((fc) => fc.action === "modify")
-            .map((fc) => fc.path),
           created: executeOutput.fileChanges
             .filter((fc) => fc.action === "create")
             .map((fc) => fc.path),
           deleted: executeOutput.fileChanges
             .filter((fc) => fc.action === "delete")
             .map((fc) => fc.path),
+          modified: executeOutput.fileChanges
+            .filter((fc) => fc.action === "modify")
+            .map((fc) => fc.path),
         }
-      : { modified: [], created: [], deleted: [] };
+      : { created: [], deleted: [], modified: [] };
 
     // Generate summary using actual function
     const summary = await generateWaveSummary(outcomes, fileChanges);
@@ -70,22 +71,22 @@ export class SummarizeStage
         }
       } catch (error) {
         logger.warn("linear_summary_update_failed", {
-          runId: ctx.runId,
           error: error instanceof Error ? error.message : String(error),
+          runId: ctx.runId,
         });
       }
     }
 
     logger.info("summarize_stage_complete", {
+      linearUpdated,
       runId: ctx.runId,
       summaryLength: summary.length,
-      linearUpdated,
     });
 
     return {
+      linearUpdated,
       summary,
       trajectory,
-      linearUpdated,
     };
   }
 }

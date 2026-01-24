@@ -9,9 +9,13 @@
  * Follows the SnapshotReconstructor<S, E> interface from @alfred/type/reconstruct.
  */
 
-import type { Snapshot, SnapshotReconstructor } from "@alfred/type/reconstruct";
-import type { PipelineEvent } from "./events";
-import type { StageName } from "./pipeline";
+import {
+  type Snapshot,
+  type SnapshotReconstructor,
+} from "@alfred/type/reconstruct";
+
+import { type PipelineEvent } from "./events";
+import { type StageName } from "./pipeline";
 import { STAGE_ORDER } from "./pipeline";
 
 /**
@@ -45,7 +49,7 @@ export type PipelineStatus =
  * - All values JSON-serializable
  * - Timestamps for debugging and TTL
  */
-export type PipelineSnapshot = {
+export interface PipelineSnapshot {
   /** Run identifier */
   runId: string;
   /** Current execution status */
@@ -72,24 +76,24 @@ export type PipelineSnapshot = {
   lastEventId: string | null;
   /** Error message if failed */
   error: string | null;
-};
+}
 
 /**
  * Create initial empty snapshot.
  */
 export function createInitialSnapshot(): PipelineSnapshot {
   return {
-    runId: "",
-    status: "idle",
-    requirement: "",
+    contextEntries: [],
+    error: null,
     lastCompletedStage: null,
     lastCompletedStageIndex: -1,
-    contextEntries: [],
-    stageResults: [],
-    startedAt: 0,
     lastEventAt: 0,
     lastEventId: null,
-    error: null,
+    requirement: "",
+    runId: "",
+    stageResults: [],
+    startedAt: 0,
+    status: "idle",
   };
 }
 
@@ -179,7 +183,7 @@ export function toSerializable(value: unknown): SerializableValue {
   }
 
   if (value instanceof Set) {
-    return { __type: "Set", values: Array.from(value).map(toSerializable) };
+    return { __type: "Set", values: [...value].map(toSerializable) };
   }
 
   if (Array.isArray(value)) {
@@ -264,9 +268,10 @@ function generateEventId(event: PipelineEvent): string {
  * - State can be reconstructed from any event stream
  * - Supports snapshot-first optimization
  */
-export class PipelineReconstructor
-  implements SnapshotReconstructor<PipelineSnapshot, PipelineEvent>
-{
+export class PipelineReconstructor implements SnapshotReconstructor<
+  PipelineSnapshot,
+  PipelineEvent
+> {
   readonly initialState: PipelineSnapshot = createInitialSnapshot();
 
   /**
@@ -283,17 +288,19 @@ export class PipelineReconstructor
     };
 
     switch (event.type) {
-      case "pipeline:start":
+      case "pipeline:start": {
         next.runId = event.runId;
         next.requirement = event.requirement;
         next.status = "running";
         next.startedAt = event.timestamp;
         break;
+      }
 
-      case "stage:enter":
+      case "stage:enter": {
         // Stage entered, status remains running
         next.status = "running";
         break;
+      }
 
       case "stage:exit": {
         // Stage completed successfully
@@ -301,8 +308,8 @@ export class PipelineReconstructor
         next.lastCompletedStage = event.stage;
         next.lastCompletedStageIndex = stageIndex;
         next.stageResults.push({
-          name: event.stage,
           durationMs: event.durationMs,
+          name: event.stage,
           status: "success",
         });
         break;
@@ -311,8 +318,8 @@ export class PipelineReconstructor
       case "stage:error": {
         // Stage failed
         next.stageResults.push({
-          name: event.stage,
           durationMs: 0,
+          name: event.stage,
           status: "failure",
         });
         next.status = "failed";
@@ -320,30 +327,35 @@ export class PipelineReconstructor
         break;
       }
 
-      case "context:set":
+      case "context:set": {
         // Update context entry (replace if exists)
         next.contextEntries = next.contextEntries.filter(
           ([key]) => key !== event.key
         );
         next.contextEntries.push([event.key, event.value]);
         break;
+      }
 
-      case "pipeline:suspend":
+      case "pipeline:suspend": {
         next.status = "suspended";
         break;
+      }
 
-      case "pipeline:resume":
+      case "pipeline:resume": {
         next.status = "running";
         break;
+      }
 
-      case "pipeline:complete":
+      case "pipeline:complete": {
         next.status = "completed";
         break;
+      }
 
-      case "pipeline:failed":
+      case "pipeline:failed": {
         next.status = "failed";
         next.error = event.error;
         break;
+      }
 
       // Agent events don't change snapshot state directly
       // They are tracked via context:set for TrackerContext
@@ -352,36 +364,42 @@ export class PipelineReconstructor
       case "agent:complete":
       case "agent:stuck":
       case "agent:escalated":
-      case "agent:retry":
+      case "agent:retry": {
         // No snapshot state change
         break;
+      }
 
       // Review events
       case "review:check":
       case "review:fix-start":
-      case "review:fix-complete":
+      case "review:fix-complete": {
         // No snapshot state change (tracked via context)
         break;
+      }
 
       // Learning events
-      case "learn:insight":
+      case "learn:insight": {
         // No snapshot state change
         break;
+      }
 
       // Wave events
-      case "wave:aborted":
+      case "wave:aborted": {
         // No snapshot state change (tracked via context)
         break;
+      }
 
       // Context cache events
-      case "context:cache-hit":
+      case "context:cache-hit": {
         // No snapshot state change
         break;
+      }
 
       // Progress events
-      case "stage:progress":
+      case "stage:progress": {
         // No snapshot state change
         break;
+      }
     }
 
     return next;
@@ -461,10 +479,10 @@ export function createSnapshot(
   state: PipelineSnapshot
 ): Snapshot<PipelineSnapshot> {
   return {
-    id: `snapshot:${state.runId}:${state.lastCompletedStageIndex}`,
-    state,
-    lastEventId: state.lastEventId ?? "",
     createdAt: new Date(state.lastEventAt),
+    id: `snapshot:${state.runId}:${state.lastCompletedStageIndex}`,
+    lastEventId: state.lastEventId ?? "",
+    state,
   };
 }
 
@@ -533,14 +551,14 @@ export function extractStageInput<T = unknown>(
 /**
  * Options for creating a PipelineContext from a snapshot.
  */
-export type CreateContextFromSnapshotOptions = {
+export interface CreateContextFromSnapshotOptions {
   /** Function to emit pipeline events */
   emit: (event: PipelineEvent) => void;
   /** Optional abort signal for cancellation */
   signal?: AbortSignal;
   /** Pipeline configuration override */
   config?: Partial<import("./pipeline").PipelineConfig>;
-};
+}
 
 /**
  * Create a minimal PipelineContext from a snapshot for single-stage execution.
@@ -573,15 +591,15 @@ export function createContextFromSnapshot(
   const config = { ...DEFAULT_CONFIG, ...options.config };
 
   return createPipelineContext({
-    runId: snapshot.runId,
-    requirement: snapshot.requirement,
-    workspace,
-    userId,
     config,
-    signal: options.signal,
     emit: options.emit,
-    initialContext: snapshot.contextEntries,
     emitContextEvents: true,
+    initialContext: snapshot.contextEntries,
+    requirement: snapshot.requirement,
+    runId: snapshot.runId,
+    signal: options.signal,
+    userId,
+    workspace,
   });
 }
 

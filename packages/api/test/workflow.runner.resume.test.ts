@@ -1,8 +1,8 @@
-import { describe, expect, it } from "bun:test";
+import { runPlanV6 } from "@alfred/agent/workflow/runner";
+
 // Import mock-metrics first - it provides metrics stubs including runnerStepsTotal/runnerErrorsTotal
 import "./utils/mock-metrics";
-
-import { runPlanV6 } from "@alfred/agent/workflow/runner";
+import { describe, expect, it } from "bun:test";
 
 async function* _takeUntil<T>(
   gen: AsyncGenerator<T>,

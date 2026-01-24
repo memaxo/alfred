@@ -4,9 +4,8 @@ import { voiceDownloadInput } from "./schema";
 
 export const voiceListAvailableModelsProcedure = authedProcedure.query(
   async () => {
-    const { listAvailableModels } = await import(
-      "@alfred/voice/services/models"
-    );
+    const { listAvailableModels } =
+      await import("@alfred/voice/services/models");
     return listAvailableModels();
   }
 );

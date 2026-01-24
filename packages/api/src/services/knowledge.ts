@@ -1,8 +1,9 @@
+import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
+
 import { db } from "@alfred/db";
 import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
 import { touchNodes } from "@alfred/db/repo/graph/write";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
 import { logger } from "@alfred/logger";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 

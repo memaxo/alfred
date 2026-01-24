@@ -4,8 +4,8 @@
  * Measures enrichment latency to ensure it meets the <50ms p95 budget.
  */
 
-import { beforeEach, describe, expect, it } from "bun:test";
 import { enrich } from "@alfred/agent/utils/enrich";
+import { beforeEach, describe, expect, it } from "bun:test";
 
 describe("GenUI Enrichment Latency", () => {
   beforeEach(() => {

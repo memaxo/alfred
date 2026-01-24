@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { ReviewGate } from "../../src/workflow/review-gate";
 
 describe("ReviewGate", () => {

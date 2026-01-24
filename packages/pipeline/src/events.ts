@@ -1,4 +1,5 @@
 import type { AgentEscalationReason } from "@alfred/agent/orchestrator/tool/shared/context";
+
 import type { StageName } from "./pipeline";
 import type { SerializableValue } from "./snapshot";
 

@@ -1,8 +1,10 @@
-import * as crypto from "node:crypto";
 import { logger } from "@alfred/logger";
-import { createEvent } from "../events";
+import * as crypto from "node:crypto";
+
 import type { PipelineContext, PipelineStage } from "../pipeline";
 import type { ContextOutput, InitOutput } from "./types";
+
+import { createEvent } from "../events";
 
 /**
  * Hash a string to create a cache key.

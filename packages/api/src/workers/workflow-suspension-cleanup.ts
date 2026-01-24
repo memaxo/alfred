@@ -1,8 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { unregisterRunHandle } from "@alfred/agent/workflow/session-recovery";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
+import { randomUUID } from "node:crypto";
+
 import { workflowSuspensionCleanupTotal } from "../metrics";
 
 const MAX_AGE_MS = Number(

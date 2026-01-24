@@ -1,5 +1,6 @@
 // packages/db/src/schema/project.ts
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
 import { user } from "./auth";
 
 export const projects = pgTable("projects", {

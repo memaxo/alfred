@@ -1,5 +1,6 @@
-import { setTimeout as sleep } from "node:timers/promises";
 import { logger } from "@alfred/logger";
+import { setTimeout as sleep } from "node:timers/promises";
+
 import type { LinearActivityType } from "./linear";
 
 function getLinearRateLimitMetrics() {

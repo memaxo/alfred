@@ -1,6 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import { getVoicePools, initializeVoicePools } from "@alfred/api/voice/pools";
 import type { STTPool } from "@alfred/voice/process/stt";
+
+import { getVoicePools, initializeVoicePools } from "@alfred/api/voice/pools";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 
 // Increase timeout for model loading
 const TIMEOUT_MS = 300_000;

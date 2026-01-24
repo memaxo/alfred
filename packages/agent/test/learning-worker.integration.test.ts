@@ -1,3 +1,5 @@
+import { memoryNodes } from "@alfred/db/schema/graph";
+import { workflowRuns } from "@alfred/db/schema/workflow";
 import {
   afterAll,
   afterEach,
@@ -8,8 +10,7 @@ import {
   test,
 } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { memoryNodes } from "@alfred/db/schema/graph";
-import { workflowRuns } from "@alfred/db/schema/workflow";
+
 import {
   startLearningWorker,
   stopLearningWorker,

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import type { NodeId } from "../src/hypergraph.js";
+
 import { BTreeIndex } from "../src/indices/btree.js";
 
 const node = (value: string): NodeId => value as NodeId;

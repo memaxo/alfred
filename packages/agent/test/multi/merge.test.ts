@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test";
 import type { AgentOutcome } from "@alfred/agent/orchestrator/multi/merge";
+
 import { buildMergePlan } from "@alfred/agent/orchestrator/multi/merge";
+import { describe, expect, it } from "bun:test";
 
 const makeOutcome = (overrides: Partial<AgentOutcome> = {}): AgentOutcome => ({
   agentId: (overrides.agentId ?? "agent-1") as any,

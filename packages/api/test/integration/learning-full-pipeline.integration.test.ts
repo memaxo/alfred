@@ -43,9 +43,8 @@ let resetAllMocks: typeof import("../utils/router-helpers").resetAllMocks;
 async function resetTables() {
   try {
     const { db } = await import("@alfred/db");
-    const { memoryNodes, memoryEdges } = await import(
-      "@alfred/db/schema/graph"
-    );
+    const { memoryNodes, memoryEdges } =
+      await import("@alfred/db/schema/graph");
     const { workflowRuns } = await import("@alfred/db/schema/workflow");
 
     // Graph tables
@@ -85,6 +84,7 @@ afterEach(() => {
 // Mock the knowledge extraction process to avoid heavy NLU operations
 mock.module("@alfred/knowledge/extractor", () => ({
   extract: () => ({
+    contradictions: [],
     facts: [
       {
         content: "User prefers bullet point responses",
@@ -94,17 +94,16 @@ mock.module("@alfred/knowledge/extractor", () => ({
         relations: [],
       },
     ],
-    contradictions: [],
   }),
   toKnowledge: () => [
     {
-      hash: "pref-bullet-123",
       data: {
         _: "fact",
         content: "User prefers bullet point responses",
         confidence: 0.8,
         source: "workflow",
       },
+      hash: "pref-bullet-123",
     },
   ],
 }));
@@ -140,16 +139,16 @@ describe("Learning Full Pipeline", () => {
         const userId = "learning-extract-user";
 
         await db.insert(workflowRuns).values({
+          completedAt: new Date(),
+          errorMessage: null,
           id: runId,
-          userId,
-          workflowId: "test-workflow",
-          status: "completed",
           inputData: { prompt: "Create a summary in bullet points" },
           stateData: {
             result: ["• First point", "• Second point", "• Third point"],
           },
-          completedAt: new Date(),
-          errorMessage: null,
+          status: "completed",
+          userId,
+          workflowId: "test-workflow",
         });
 
         // Verify the workflow run was inserted
@@ -167,8 +166,8 @@ describe("Learning Full Pipeline", () => {
       "extracts structured knowledge from workflow events",
       async () => {
         const _caller = await createTestCaller({
-          userId: "learning-structured-user",
           scopes: ["workflow.read", "workflow.write"],
+          userId: "learning-structured-user",
         });
 
         // In production, this would use the actual event processing
@@ -183,8 +182,8 @@ describe("Learning Full Pipeline", () => {
       // This would verify that learned preferences are injected
       // into the persona context for subsequent queries
       const _caller = await createTestCaller({
-        userId: "learning-inject-user",
         scopes: ["workflow.read"],
+        userId: "learning-inject-user",
       });
 
       // Mock - in production, this would use real learned data
@@ -207,7 +206,6 @@ describe("Learning Full Pipeline", () => {
         // Insert a test node
         const nodeId = await graphRepo.upsertNodes([
           {
-            resource: "learning-pipeline-test",
             hash: "test-learning-1",
             kind: "fact",
             label: "Test preference fact",
@@ -215,6 +213,7 @@ describe("Learning Full Pipeline", () => {
               content: "User prefers short responses",
               confidence: 0.9,
             },
+            resource: "learning-pipeline-test",
             sanitized: true,
           },
         ]);
@@ -251,8 +250,8 @@ describe("Learning Full Pipeline", () => {
       // In production, this would verify that routers use
       // learned knowledge to personalize responses
       const _caller = await createTestCaller({
-        userId: "learning-output-user",
         scopes: ["workflow.read"],
+        userId: "learning-output-user",
       });
 
       // Mock - verify pattern exists
@@ -263,8 +262,8 @@ describe("Learning Full Pipeline", () => {
       // Verify that new knowledge updates the router context
       // for subsequent queries
       const _caller = await createTestCaller({
-        userId: "learning-context-user",
         scopes: ["workflow.read"],
+        userId: "learning-context-user",
       });
 
       // Mock - verify pattern exists

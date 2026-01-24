@@ -1,8 +1,9 @@
+import type { McpAuth, McpServer } from "@alfred/db/schema/mcp";
+import type { Tool } from "ai";
+
 import { experimental_createMCPClient as createMcpClient } from "@ai-sdk/mcp";
 import { listEnabledMcpServers } from "@alfred/db/repo/mcp";
-import type { McpAuth, McpServer } from "@alfred/db/schema/mcp";
 import { logger } from "@alfred/logger";
-import type { Tool } from "ai";
 
 type ToolMap = Record<string, Tool>;
 

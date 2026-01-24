@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
 import { spawn } from "bun";
+import { describe, expect, it } from "bun:test";
 
 describe("codex live verification (gated)", () => {
   it.skipIf(process.env.RUN_CODEX_LIVE !== "1")(

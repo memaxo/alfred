@@ -1,6 +1,8 @@
+import type { AttentionStatus, AttentionUrgency } from "@alfred/type/focus";
+
 import { attentionRepo, clarificationRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
-import type { AttentionStatus, AttentionUrgency } from "@alfred/type/focus";
+
 import { publishAttention } from "./notify";
 
 type UpsertAttentionArgs = {

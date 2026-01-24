@@ -1,3 +1,4 @@
+import { type Obligation } from "@alfred/type";
 import {
   afterEach,
   beforeEach,
@@ -7,7 +8,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { Obligation } from "@alfred/type";
+
 import { metricsStub } from "./utils/mock-metrics";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
@@ -17,7 +18,7 @@ setupTestEnv();
 // Note: This test uses mock.module() which is process-global.
 // Router uses dynamic imports which may bypass mocks.
 // For full isolation, router should use dependency injection.
-// biome-ignore lint/suspicious/noSkippedTests: Requires router DI refactor
+// oxlint-disable noSkippedTests: Requires router DI refactor
 describe.skip("cognitive router", () => {
   let runCognitiveLoopMock: ReturnType<typeof vi.fn>;
   let runAssistantGenerationMock: ReturnType<typeof vi.fn>;
@@ -33,7 +34,7 @@ describe.skip("cognitive router", () => {
     runAssistantGenerationMock = vi.fn();
     createRuntimeMock = vi.fn();
     evaluateMock = vi.fn();
-    createAuditLogMock = vi.fn().mockResolvedValue(undefined);
+    createAuditLogMock = vi.fn().mockResolvedValue();
     embedManyMock = vi.fn().mockResolvedValue([
       [1, 0, 0],
       [1, 0, 0],
@@ -41,14 +42,14 @@ describe.skip("cognitive router", () => {
     cosineSimilarityMock = vi.fn().mockReturnValue(1);
 
     mock.module("@alfred/runtime", () => ({
-      runCognitiveLoop: runCognitiveLoopMock,
-      runAssistantGeneration: runAssistantGenerationMock,
       createRuntime: createRuntimeMock,
+      runAssistantGeneration: runAssistantGenerationMock,
+      runCognitiveLoop: runCognitiveLoopMock,
     }));
 
     mock.module("@alfred/embed", () => ({
-      embedMany: embedManyMock,
       cosineSimilarity: cosineSimilarityMock,
+      embedMany: embedManyMock,
     }));
 
     mock.module("@alfred/policy", () => ({
@@ -66,6 +67,7 @@ describe.skip("cognitive router", () => {
     });
 
     runCognitiveLoopMock.mockResolvedValue({
+      effects: [],
       state: {
         _: "reflecting",
         outcome: { _: "success", result: null, duration: 0 },
@@ -74,7 +76,6 @@ describe.skip("cognitive router", () => {
         error: 0,
         physiology: { energy: 1, boredom: 0, frustration: 0 },
       },
-      effects: [],
     });
   });
 
@@ -89,9 +90,9 @@ describe.skip("cognitive router", () => {
 
   it("submits feedback events and returns policy obligations", async () => {
     const mfaObligation: Obligation = {
-      type: "mfa",
-      reason: "mfa_required",
       metadata: { code: "mfa_required" },
+      reason: "mfa_required",
+      type: "mfa",
     };
     evaluateMock.mockResolvedValueOnce({
       allow: true,
@@ -100,22 +101,22 @@ describe.skip("cognitive router", () => {
 
     const state = {
       _: "reflecting" as const,
-      outcome: { _: "success" as const, result: null, duration: 0 },
-      expected: "target",
       actual: "target",
       error: 0,
+      expected: "target",
+      outcome: { _: "success" as const, result: null, duration: 0 },
       physiology: { energy: 1, boredom: 0, frustration: 0 },
     };
-    runCognitiveLoopMock.mockResolvedValueOnce({ state, effects: [] });
+    runCognitiveLoopMock.mockResolvedValueOnce({ effects: [], state });
 
     const caller = await createTestCaller({
       scopes: ["cognitive.write"],
     });
 
     const response = await caller.cognitive.feedback({
-      streamId: "verify-stream",
-      expected: "target",
       actual: "target",
+      expected: "target",
+      streamId: "verify-stream",
       surface: "chat",
     });
 
@@ -124,8 +125,8 @@ describe.skip("cognitive router", () => {
     expect(call?.[1]).toBe("verify-stream");
     expect(call?.[2]).toMatchObject({
       _: "feedback",
-      expected: "target",
       actual: "target",
+      expected: "target",
     });
     expect(response.state).toBe(state);
     expect(response.obligations).toEqual([mfaObligation]);
@@ -136,27 +137,27 @@ describe.skip("cognitive router", () => {
 
   it("executes cognitive effects via assistant generation", async () => {
     runCognitiveLoopMock.mockResolvedValueOnce({
+      effects: [{ type: "generate_response", input: "Follow up" }],
       state: {
         _: "thinking",
         about: "Follow up",
         physiology: { energy: 1, boredom: 0, frustration: 0 },
       },
-      effects: [{ type: "generate_response", input: "Follow up" }],
     });
 
     runCognitiveLoopMock.mockResolvedValueOnce({
+      effects: [],
       state: {
         _: "reflecting",
         outcome: { _: "success", result: null, duration: 0 },
         physiology: { energy: 1, boredom: 0, frustration: 0 },
       },
-      effects: [],
     });
 
     runAssistantGenerationMock.mockResolvedValueOnce({
       _: "success",
-      result: { text: "ok" },
       duration: 10,
+      result: { text: "ok" },
     });
 
     const caller = await createTestCaller({
@@ -164,9 +165,9 @@ describe.skip("cognitive router", () => {
     });
 
     await caller.cognitive.feedback({
-      streamId: "effect-stream",
-      expected: "Follow up",
       actual: "Follow up",
+      expected: "Follow up",
+      streamId: "effect-stream",
       surface: "chat",
     });
 
@@ -190,9 +191,9 @@ describe.skip("cognitive router", () => {
 
     await expect(
       caller.cognitive.feedback({
-        streamId: "deny-stream",
-        expected: "foo",
         actual: "bar",
+        expected: "foo",
+        streamId: "deny-stream",
       })
     ).rejects.toThrow(/forbidden/i);
     expect(runCognitiveLoopMock).not.toHaveBeenCalled();
@@ -203,9 +204,9 @@ describe.skip("cognitive router", () => {
 
     await expect(
       unauthed.cognitive.feedback({
-        streamId: "anon-stream",
-        expected: "foo",
         actual: "foo",
+        expected: "foo",
+        streamId: "anon-stream",
       })
     ).rejects.toThrow(/Authentication required/i);
     expect(runCognitiveLoopMock).not.toHaveBeenCalled();

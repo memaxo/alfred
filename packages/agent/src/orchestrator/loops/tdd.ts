@@ -1,8 +1,10 @@
-import * as fs from "node:fs/promises";
 import { logger } from "@alfred/logger";
+import * as fs from "node:fs/promises";
+
 import type { Workspace } from "../../environment/types";
-import { openDirectorySecure } from "../../security/filesystem.js";
 import type { ProjectConfig } from "../../utils/project-detector";
+
+import { openDirectorySecure } from "../../security/filesystem.js";
 import { toolCodex } from "../tool/codex/index";
 import { toolRunner } from "../tool/runner";
 

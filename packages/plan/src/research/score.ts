@@ -3,6 +3,7 @@
  */
 
 import type { LanguageModel } from "ai";
+
 import { z } from "zod";
 
 import { classify } from "../classify/index.js";

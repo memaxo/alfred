@@ -6,6 +6,15 @@
  */
 
 import { randomUUID } from "node:crypto";
+
+import type {
+  AIProvider,
+  VCRCassette,
+  VCRInteraction,
+  VCRMode,
+  VCROptions,
+} from "./types";
+
 import {
   addInteraction,
   createCassette,
@@ -14,13 +23,6 @@ import {
   saveCassette,
 } from "./cassette";
 import { defaultMatcher, hashRequest } from "./hash";
-import type {
-  AIProvider,
-  VCRCassette,
-  VCRInteraction,
-  VCRMode,
-  VCROptions,
-} from "./types";
 
 // AI provider API hosts
 const PROVIDER_HOSTS: Record<string, AIProvider> = {

@@ -4,8 +4,10 @@
  * Tests form component detection and form ID extraction.
  */
 
-import { describe, expect, it } from "bun:test";
 import type { UIComponent } from "@alfred/type/genui";
+
+import { describe, expect, it } from "bun:test";
+
 import { containsFormComponents, extractFormId } from "../detect";
 
 describe("detect", () => {

@@ -1,5 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Subprocess } from "bun";
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import {
   __internals,
   ModelProcess,

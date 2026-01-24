@@ -1,4 +1,5 @@
 import client from "prom-client";
+
 import { metricsRegistry } from "./registry";
 
 export const genuiSchemaGenerationTotal = new client.Counter({

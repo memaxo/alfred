@@ -1,5 +1,6 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+
 import type { ToolExecuteArgs } from "./shared/context.js";
 
 const routerInputSchema = z.object({

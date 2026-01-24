@@ -1,5 +1,6 @@
 import type { Phase, StructuredPlan } from "@alfred/plan";
 import type { WorkflowEvent } from "@alfred/type/plan";
+
 import type { AgentOutcome } from "./agent.js";
 
 export type PhaseResult = {

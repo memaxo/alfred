@@ -1,8 +1,8 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
 import type { MergePlan } from "@alfred/agent/orchestrator/multi/merge";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
+import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import {
   buildReviewPlan,
   formatReviewFailureDetails,
@@ -17,10 +17,13 @@ import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type/plan";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+import type { OrchestratorContext } from "./types";
+
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import { resolveAgentfsContainer, resolveAgentfsContainerCw } from "./agentfs";
-import type { OrchestratorContext } from "./types";
 
 const REVIEW_PLAN_FILE = (workspace: string, runId: string) =>
   plansPath(workspace, runId, "review.md");

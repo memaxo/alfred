@@ -4,9 +4,10 @@
 
 import { performance } from "node:perf_hooks";
 
+import type { Physiology, PhysiologyEvent } from "./types.js";
+
 import { cognitivePhysiologyUpdateDuration } from "../metrics.js";
 import { clamp01 } from "../util/math.js";
-import type { Physiology, PhysiologyEvent } from "./types.js";
 
 export const defaultPhysiology = (): Physiology => ({
   energy: 1.0,

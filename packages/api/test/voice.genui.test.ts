@@ -1,3 +1,4 @@
+import { uiComponentSchema } from "@alfred/type/genui.zod";
 import {
   afterEach,
   beforeEach,
@@ -7,7 +8,6 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { uiComponentSchema } from "@alfred/type/genui.zod";
 
 type EnvSnapshot = Record<string, string | undefined>;
 
@@ -56,7 +56,7 @@ function pickUiParts(raw: unknown): unknown[] {
     return [];
   }
   const r = raw as Record<string, unknown>;
-  const uiMessages = r.uiMessages;
+  const { uiMessages } = r;
   if (!Array.isArray(uiMessages) || uiMessages.length === 0) {
     return [];
   }
@@ -64,7 +64,7 @@ function pickUiParts(raw: unknown): unknown[] {
   if (!first || typeof first !== "object") {
     return [];
   }
-  const parts = (first as Record<string, unknown>).parts;
+  const { parts } = first as Record<string, unknown>;
   if (!Array.isArray(parts)) {
     return [];
   }
@@ -78,8 +78,8 @@ function pickUiParts(raw: unknown): unknown[] {
 
 function makeStructuredPlan() {
   return {
+    evaluationCriteria: [],
     id: "plan-1",
-    title: "Test Plan",
     intent: "Do the thing",
     phases: [
       {
@@ -92,9 +92,9 @@ function makeStructuredPlan() {
         agentType: "codex",
       },
     ],
-    waves: [{ id: "w1", agents: ["t1"], dependsOn: [] }],
     resources: { agentCount: 1, strategy: "sequential", isolation: "agentfs" },
-    evaluationCriteria: [],
+    title: "Test Plan",
+    waves: [{ id: "w1", agents: ["t1"], dependsOn: [] }],
   };
 }
 
@@ -119,55 +119,52 @@ describe("voice workflow GenUI raw output", () => {
   it("handleWorkflowIntent emits data-ui parts with schemas validating uiComponentSchema", async () => {
     // Minimal mocks so we can reach buildVoiceWorkflowRaw without DB/pipeline.
     mock.module("@alfred/db/repo/plan", () => ({
-      updatePlanStatus: vi.fn().mockResolvedValue(undefined),
+      updatePlanStatus: vi.fn().mockResolvedValue(),
     }));
     const plan = makeStructuredPlan();
 
     mock.module("./session-context.js", () => ({
-      setVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
-      getVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
       clearVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
+      getVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
+      setVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
     }));
 
     mock.module("./preferences.js", () => ({
       getVoiceWorkflowPreferences: vi.fn().mockResolvedValue({
-        enabled: true,
-        verbosity: "standard",
         autoApprove: "off",
-        notifications: "voice",
-        updates: "request",
-        timeout: 5,
+        enabled: true,
         learning: false,
+        notifications: "voice",
+        timeout: 5,
+        updates: "request",
+        verbosity: "standard",
       }),
     }));
 
     mock.module("@alfred/plan", () => ({
       parseIntent: vi.fn().mockResolvedValue({
-        type: "intent",
         intent: { description: "Do the thing" },
+        type: "intent",
       }),
     }));
 
     mock.module("@alfred/db/repo/plan", () => ({
-      updatePlanStatus: vi.fn().mockResolvedValue(undefined),
+      updatePlanStatus: vi.fn().mockResolvedValue(),
     }));
 
     // Prevent the real pipeline execution path; we only need a plan result.
     mock.module("@alfred/pipeline", () => ({
       PipelineRunner: class {
-        constructor() {}
         addObserver() {}
         async *runUntilStage() {}
       },
       registerDefaultStages: () => {},
     }));
     mock.module("@alfred/pipeline/observers", () => ({
-      MetricsObserver: class {},
       CheckpointObserver: class {},
+      MetricsObserver: class {},
     }));
     mock.module("@alfred/db/repo/workflow", () => ({
-      createRun: vi.fn().mockResolvedValue(undefined),
-      updateRun: vi.fn().mockResolvedValue(undefined),
       PostgresCheckpointStorage: class {
         async load() {
           return {
@@ -190,6 +187,8 @@ describe("voice workflow GenUI raw output", () => {
           };
         }
       },
+      createRun: vi.fn().mockResolvedValue(undefined),
+      updateRun: vi.fn().mockResolvedValue(undefined),
     }));
     mock.module("@alfred/pipeline/snapshot", () => ({
       createContextFromSnapshot: () => ({
@@ -202,7 +201,7 @@ describe("voice workflow GenUI raw output", () => {
             };
           }
           if (k === "scheduleOutput") {
-            return { waves: [{ id: "w1", agents: [] }] };
+            return { waves: [{ agents: [], id: "w1" }] };
           }
           return;
         },
@@ -210,22 +209,20 @@ describe("voice workflow GenUI raw output", () => {
       fromSerializable: (v: unknown) => v,
     }));
 
-    const { handleWorkflowIntent } = await import(
-      "../src/voice/workflow-handler"
-    );
+    const { handleWorkflowIntent } =
+      await import("../src/voice/workflow-handler");
 
     const out = await handleWorkflowIntent(
       // ctx unused
       {} as never,
-      { userId: "user-1", text: "Do the thing" } as never,
-      undefined
+      { text: "Do the thing", userId: "user-1" } as never
     );
 
     const parts = pickUiParts(out.raw);
     expect(parts.length).toBeGreaterThanOrEqual(1);
 
     for (const part of parts) {
-      const ui = (part as Record<string, unknown>).ui;
+      const { ui } = part as Record<string, unknown>;
       const parsed = uiComponentSchema.safeParse(ui);
       expect(parsed.success).toBe(true);
     }

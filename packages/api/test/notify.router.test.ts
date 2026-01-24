@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import type { NotifyEvent } from "../src/services/notify";
+
 import { toObservable } from "./utils/stream";
 import { createTestCaller } from "./utils/trpc";
 

@@ -4,6 +4,7 @@ import {
   getBookmarks,
 } from "@alfred/db/repo/assistant";
 import { z } from "zod";
+
 import { recordAssistantToolCall } from "../../../src/metrics";
 
 const bookmarkInputSchema = z.object({

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
 import { metricsStub } from "./utils/mock-metrics";
 
 const invalidatePreferenceCacheMock = vi.fn().mockResolvedValue(undefined);

@@ -17,8 +17,10 @@ mock.module("@alfred/db", () => {
 });
 
 import type { Event } from "@alfred/cognitive/state";
+
 import { idle, initialAutonomy } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
+
 import { runCognitiveLoop } from "../src/loops/cognitive";
 
 describe("Cognitive Loop", () => {

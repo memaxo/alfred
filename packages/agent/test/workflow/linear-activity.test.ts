@@ -17,27 +17,26 @@ import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 
 installLoggerMock();
 
-const { LinearActivityService } = await import(
-  "../../src/workflow/linear-activity"
-);
+const { LinearActivityService } =
+  await import("../../src/workflow/linear-activity");
 
 describe("LinearActivityService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     linearMocks.emitLinearActivity.mockResolvedValue({ ok: true });
-    linearMocks.setLinearDelegate.mockResolvedValue(undefined);
-    linearMocks.setLinearStarted.mockResolvedValue(undefined);
-    linearMocks.setLinearCompleted.mockResolvedValue(undefined);
-    linearMocks.setLinearCancelled.mockResolvedValue(undefined);
-    linearMocks.setLinearSessionExternalUrl.mockResolvedValue(undefined);
-    linearMocks.commentOnLinearIssue.mockResolvedValue(undefined);
+    linearMocks.setLinearDelegate.mockResolvedValue();
+    linearMocks.setLinearStarted.mockResolvedValue();
+    linearMocks.setLinearCompleted.mockResolvedValue();
+    linearMocks.setLinearCancelled.mockResolvedValue();
+    linearMocks.setLinearSessionExternalUrl.mockResolvedValue();
+    linearMocks.commentOnLinearIssue.mockResolvedValue();
     linearMocks.extractIssueIdFromSession.mockReturnValue("ISS-123");
   });
 
   describe("constructor", () => {
     it("stores linear config, authz, and runId", () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -49,7 +48,7 @@ describe("LinearActivityService", () => {
   describe("resolveIssueId", () => {
     it("uses issueId when provided", async () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-DIRECT" },
+        { issueId: "ISS-DIRECT", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -125,10 +124,10 @@ describe("LinearActivityService", () => {
       });
 
       expect(linearMocks.emitLinearActivity).toHaveBeenCalledWith("thought", {
-        sessionId: "sess-1",
-        space: "space-1",
         authz: "authz-token",
         body: "Starting workflow: Fix the bug",
+        sessionId: "sess-1",
+        space: "space-1",
       });
     });
 
@@ -147,14 +146,14 @@ describe("LinearActivityService", () => {
       });
 
       expect(linearMocks.setLinearDelegate).toHaveBeenCalledWith({
-        space: "space-1",
-        issueId: "ISS-123",
         authz: "authz-token",
+        issueId: "ISS-123",
+        space: "space-1",
       });
       expect(linearMocks.setLinearStarted).toHaveBeenCalledWith({
-        space: "space-1",
-        issueId: "ISS-123",
         authz: "authz-token",
+        issueId: "ISS-123",
+        space: "space-1",
       });
     });
 
@@ -240,7 +239,7 @@ describe("LinearActivityService", () => {
   describe("completeSuccess", () => {
     it("sets completed state and posts comment", async () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -248,27 +247,27 @@ describe("LinearActivityService", () => {
       await service.completeSuccess({
         finalMessage: "All done!",
         reviewChecks: [
-          { id: "test", type: "test", status: "passed", attempts: 1 },
+          { attempts: 1, id: "test", status: "passed", type: "test" },
         ],
         workflowUrl: "https://app.example.com/workflow/run-123",
       });
 
       expect(linearMocks.setLinearCompleted).toHaveBeenCalledWith({
-        space: "space-1",
-        issueId: "ISS-1",
         authz: "authz-token",
+        issueId: "ISS-1",
+        space: "space-1",
       });
       expect(linearMocks.commentOnLinearIssue).toHaveBeenCalledWith({
-        space: "space-1",
-        issueId: "ISS-1",
         authz: "authz-token",
         body: expect.stringContaining("completed successfully"),
+        issueId: "ISS-1",
+        space: "space-1",
       });
     });
 
     it("includes review checks in comment", async () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -276,14 +275,14 @@ describe("LinearActivityService", () => {
       await service.completeSuccess({
         finalMessage: null,
         reviewChecks: [
-          { id: "lint", type: "lint", status: "passed", attempts: 0 },
-          { id: "test", type: "test", status: "passed", attempts: 2 },
+          { attempts: 0, id: "lint", status: "passed", type: "lint" },
+          { attempts: 2, id: "test", status: "passed", type: "test" },
         ],
         workflowUrl: null,
       });
 
       const commentCall = linearMocks.commentOnLinearIssue.mock.calls[0];
-      const body = commentCall[0].body;
+      const { body } = commentCall[0];
       expect(body).toContain("- lint: passed");
       expect(body).toContain("- test: passed (attempt 2)");
     });
@@ -292,7 +291,7 @@ describe("LinearActivityService", () => {
       linearMocks.setLinearCompleted.mockRejectedValue(new Error("api_error"));
 
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -313,7 +312,7 @@ describe("LinearActivityService", () => {
   describe("completeFailure", () => {
     it("sets cancelled state and posts failure comment", async () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -321,21 +320,21 @@ describe("LinearActivityService", () => {
       await service.completeFailure("workflow_timeout");
 
       expect(linearMocks.setLinearCancelled).toHaveBeenCalledWith({
-        space: "space-1",
-        issueId: "ISS-1",
         authz: "authz-token",
+        issueId: "ISS-1",
+        space: "space-1",
       });
       expect(linearMocks.commentOnLinearIssue).toHaveBeenCalledWith({
-        space: "space-1",
-        issueId: "ISS-1",
         authz: "authz-token",
         body: expect.stringContaining("failed"),
+        issueId: "ISS-1",
+        space: "space-1",
       });
     });
 
     it("is idempotent (only notifies once)", async () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -351,7 +350,7 @@ describe("LinearActivityService", () => {
 
     it("includes reason in failure comment", async () => {
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -366,7 +365,7 @@ describe("LinearActivityService", () => {
       linearMocks.setLinearCancelled.mockRejectedValue(new Error("api_error"));
 
       const service = new LinearActivityService(
-        { sessionId: "sess-1", space: "space-1", issueId: "ISS-1" },
+        { issueId: "ISS-1", sessionId: "sess-1", space: "space-1" },
         "authz-token",
         "run-123"
       );
@@ -392,10 +391,10 @@ describe("LinearActivityService", () => {
       await service.emitError("Something went wrong");
 
       expect(linearMocks.emitLinearActivity).toHaveBeenCalledWith("error", {
-        sessionId: "sess-1",
-        space: "space-1",
         authz: "authz-token",
         body: "Something went wrong",
+        sessionId: "sess-1",
+        space: "space-1",
       });
     });
 

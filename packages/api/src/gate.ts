@@ -1,12 +1,15 @@
+import type { EvaluateInput, PolicyResource } from "@alfred/policy";
+
 import {
   policyDecisionsTotal,
   policyObligationsTotal,
 } from "@alfred/api/metrics";
 import * as policyRepo from "@alfred/db/repo/policy";
-import type { EvaluateInput, PolicyResource } from "@alfred/policy";
 import { evaluate } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
+
 import type { Context } from "./context";
+
 import { PolicyObligationError } from "./errors";
 import { t } from "./trpc";
 import {

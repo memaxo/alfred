@@ -1,6 +1,7 @@
-import type { ContextBundle } from "@alfred/type/plan";
+import { type ContextBundle } from "@alfred/type/plan";
 import { parseSync } from "oxc-parser";
-import type { SubTask } from "../multi/decompose";
+
+import { type SubTask } from "../multi/decompose";
 
 /**
  * Analyze dependency graph from file contents
@@ -9,7 +10,7 @@ import type { SubTask } from "../multi/decompose";
  * Uses oxc-parser for robust AST-based import detection.
  */
 export function analyzeDependencyGraph(
-  files: Array<{ path: string; content: string }>
+  files: { path: string; content: string }[]
 ): Map<string, Set<string>> {
   const graph = new Map<string, Set<string>>();
   const fileMap = new Map<string, string>(); // basename -> fullpath mapping for simplified resolution
@@ -36,7 +37,7 @@ export function analyzeDependencyGraph(
 
     try {
       // Skip non-JS/TS files
-      if (!file.path.match(/\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/)) {
+      if (!/\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/.test(file.path)) {
         continue;
       }
 
@@ -76,7 +77,7 @@ export function analyzeDependencyGraph(
           }
         }
       }
-    } catch (_e) {
+    } catch {
       // Fallback or ignore parse errors
     }
   }
@@ -147,17 +148,17 @@ export function decomposeSemantically(
       } =>
         Boolean(
           f.path &&
-            f.content &&
-            typeof f.startLine === "number" &&
-            typeof f.endLine === "number" &&
-            typeof f.tokens === "number"
+          f.content &&
+          typeof f.startLine === "number" &&
+          typeof f.endLine === "number" &&
+          typeof f.tokens === "number"
         )
     )
     .map((f) => ({
-      path: f.path,
       content: f.content,
-      startLine: f.startLine,
       endLine: f.endLine,
+      path: f.path,
+      startLine: f.startLine,
       tokens: f.tokens,
     }));
 
@@ -178,7 +179,7 @@ export function decomposeSemantically(
     // core/db/types usually higher priority than ui/web
     let priority = 0.5;
     if (name === "db" || name === "type" || name === "core") {
-      priority = 1.0;
+      priority = 1;
     } else if (name === "api" || name === "runtime") {
       priority = 0.9;
     } else if (name === "web" || name === "native") {
@@ -186,18 +187,18 @@ export function decomposeSemantically(
     }
 
     tasks.push({
-      id,
-      title: `Implement ${name} changes`,
-      requirement,
-      deps: [],
-      priority,
       acceptance: [`${name} changes implemented and verified`],
+      deps: [],
       filesHint: Array.from(files)
         .map((f) => {
           const dir = f.substring(0, f.lastIndexOf("/"));
           return dir;
         })
-        .filter((v, i, a) => a.indexOf(v) === i), // Unique dirs
+        .filter((v, i, a) => a.indexOf(v) === i),
+      id,
+      priority,
+      requirement,
+      title: `Implement ${name} changes`, // Unique dirs
     });
   }
 
@@ -223,7 +224,7 @@ export function decomposeSemantically(
     }
   }
 
-  return tasks.sort((a, b) => b.priority - a.priority);
+  return tasks.toSorted((a, b) => b.priority - a.priority);
 }
 
 /**
@@ -233,7 +234,7 @@ export function analyzeImports(_options: {
   workspace?: string;
   requirement: string;
 }): Promise<{
-  detectedPatterns: Array<{ pattern: string; confidence: number }>;
+  detectedPatterns: { pattern: string; confidence: number }[];
 }> {
   // STUB: Initial implementation for P1-4
   // In Phase 4, this will perform deeper AST analysis

@@ -1,9 +1,11 @@
-import * as workflowRepo from "@alfred/db/repo/workflow";
 import type { WorkflowEventType } from "@alfred/db/schema/workflow";
-import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
-import { makeEventId } from "@alfred/type/id";
 import type { UIMessage } from "@alfred/type/stream";
+
+import * as workflowRepo from "@alfred/db/repo/workflow";
+import { logger } from "@alfred/logger";
+import { makeEventId } from "@alfred/type/id";
+
 import { wrapEventEnvelope } from "../utils/envelope";
 import { eventToUiMessages } from "../utils/normalize";
 import { redactEventData } from "../utils/redaction";

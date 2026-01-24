@@ -147,29 +147,29 @@ export * from "./metrics/index";
 import client from "prom-client";
 
 export const assistantToolCallsTotal = new client.Counter({
-  name: "assistant_tool_calls_total",
   help: "Count of assistant tool invocations grouped by tool name.",
   labelNames: ["tool"] as const,
+  name: "assistant_tool_calls_total",
   registers: [metricsRegistry],
 });
 
 export const assistantEscalationsTotal = new client.Counter({
-  name: "assistant_escalations_total",
   help: "Count of assistant escalations grouped by kind.",
   labelNames: ["kind"] as const,
+  name: "assistant_escalations_total",
   registers: [metricsRegistry],
 });
 
 export const assistantGenerateDurationSeconds = new client.Histogram({
-  name: "assistant_generate_duration_seconds",
-  help: "Duration of assistant generation in seconds.",
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
+  help: "Duration of assistant generation in seconds.",
+  name: "assistant_generate_duration_seconds",
   registers: [metricsRegistry],
 });
 
 export const assistantGenerateRequestsTotal = new client.Counter({
-  name: "assistant_generate_requests_total",
   help: "Total number of assistant generation requests.",
+  name: "assistant_generate_requests_total",
   registers: [metricsRegistry],
 });
 
@@ -193,9 +193,8 @@ export function initMetricsHooks(): void {
   void (async () => {
     try {
       const agent = await import("@alfred/agent");
-      const { droidExecRunsTotal, droidExecDurationSeconds } = await import(
-        "@alfred/agent/orchestrator/tool/droid/metrics"
-      );
+      const { droidExecRunsTotal, droidExecDurationSeconds } =
+        await import("@alfred/agent/orchestrator/tool/droid/metrics");
       const {
         codexExecRunsTotal,
         codexExecDurationSeconds,
@@ -248,26 +247,25 @@ export function initMetricsHooks(): void {
 
     // Wire classification metrics to @alfred/knowledge
     try {
-      const { registerClassificationMetrics } = await import(
-        "@alfred/knowledge/lexicon/domains"
-      );
+      const { registerClassificationMetrics } =
+        await import("@alfred/knowledge/lexicon/domains");
       const {
         classificationSourceTotal,
         domainCacheHitsTotal,
         classificationDurationSeconds,
       } = await import("@alfred/knowledge/metrics");
       registerClassificationMetrics({
-        recordSource: (
-          domain: string,
-          source: "learned" | "static" | "seed"
-        ) => {
-          classificationSourceTotal.inc({ domain, source });
-        },
         recordCacheHit: (hit: boolean) => {
           domainCacheHitsTotal.inc({ result: hit ? "hit" : "miss" });
         },
         recordDuration: (method: "sync" | "async", durationMs: number) => {
           classificationDurationSeconds.observe({ method }, durationMs / 1000);
+        },
+        recordSource: (
+          domain: string,
+          source: "learned" | "static" | "seed"
+        ) => {
+          classificationSourceTotal.inc({ domain, source });
         },
       });
     } catch (error) {
@@ -284,8 +282,8 @@ export function initMetricsHooks(): void {
           pdpCacheHitsTotal.inc({ result });
         } catch (error) {
           logger.warn("metrics_cache_hit_failed", {
-            result,
             error: error instanceof Error ? error.message : String(error),
+            result,
           });
         }
       });
@@ -313,6 +311,28 @@ export function initMetricsHooks(): void {
       }
     } catch (error) {
       logger.warn("metrics_embed_hooks_disabled", {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Register history tracking metrics with main registry
+    try {
+      const { getTrackingRegistry } = await import("@alfred/history");
+      const trackingRegistry = getTrackingRegistry();
+      // Merge tracking metrics into main registry
+      const trackingMetrics = await trackingRegistry.getMetricsAsJSON();
+      for (const metric of trackingMetrics) {
+        const existing = metricsRegistry.getSingleMetric(metric.name);
+        if (!existing) {
+          // Re-register the metric from tracking registry to main registry
+          const trackingMetric = trackingRegistry.getSingleMetric(metric.name);
+          if (trackingMetric) {
+            metricsRegistry.registerMetric(trackingMetric);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn("metrics_tracking_hooks_disabled", {
         reason: error instanceof Error ? error.message : String(error),
       });
     }

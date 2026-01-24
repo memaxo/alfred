@@ -5,13 +5,14 @@
  * Supports both simple BFS and semantic DSA-BFS traversal.
  */
 
+import type { NodeRow } from "@alfred/db/repo/graph/types";
+
 import { type DsaBfsOptions, dsaBfs } from "@alfred/db/repo/graph/dsa-bfs";
 import {
   getNeighbors,
   getNode,
   recordAccessBatch,
 } from "@alfred/db/repo/graph/read";
-import type { NodeRow } from "@alfred/db/repo/graph/types";
 import { z } from "zod";
 
 import {

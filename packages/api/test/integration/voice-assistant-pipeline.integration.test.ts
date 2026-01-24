@@ -48,9 +48,8 @@ beforeAll(async () => {
 
   // Load voice fixture
   ({ _createVoiceFixture } = await import("@alfred/test-kit/voice/registry"));
-  ({ installVoiceTestPools } = await import(
-    "@alfred/test-kit/voice/runtime-fixture"
-  ));
+  ({ installVoiceTestPools } =
+    await import("@alfred/test-kit/voice/runtime-fixture"));
 
   // Load test utilities
   ({ createTestCaller } = await import("../utils/trpc"));
@@ -75,13 +74,12 @@ describe("Voice-Assistant Pipeline Integration", () => {
   beforeEach(async () => {
     // Install deterministic voice pools
     voiceFixture = await installVoiceTestPools({
-      transcript: "Hello Alfred, what time is it?",
       chunkText: "synthetic-tts-chunk",
       streamingChunks: 3,
+      transcript: "Hello Alfred, what time is it?",
     });
 
     _caller = await createTestCaller({
-      userId: "voice-pipeline-test-user",
       roles: ["owner"],
       scopes: [
         "voice.read",
@@ -89,6 +87,7 @@ describe("Voice-Assistant Pipeline Integration", () => {
         "assistant.write",
         "assistant.read",
       ],
+      userId: "voice-pipeline-test-user",
     });
   });
 
@@ -554,15 +553,15 @@ describe("Voice Router Integration", () => {
 
   beforeEach(async () => {
     voiceFixture = await installVoiceTestPools({
-      transcript: "Test voice router",
       chunkText: "router-test-chunk",
       streamingChunks: 2,
+      transcript: "Test voice router",
     });
 
     caller = await createTestCaller({
-      userId: "voice-router-test",
       roles: ["owner"],
       scopes: ["voice.read", "voice.write"],
+      userId: "voice-router-test",
     });
   });
 

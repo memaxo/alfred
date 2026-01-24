@@ -7,11 +7,13 @@
 
 /** @jsxImportSource @opentui/react */
 
-import { appRouter } from "@alfred/api/router";
 import type { SubTask, WavePlan } from "@alfred/pipeline/schemas";
 import type { KeyEvent } from "@opentui/core";
+
+import { appRouter } from "@alfred/api/router";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useState } from "react";
+
 import { createCliContext } from "../../../cli/context";
 
 export type PlanModeProps = {

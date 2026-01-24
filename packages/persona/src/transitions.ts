@@ -29,14 +29,18 @@ export function formatGreeting(input: {
 }): string {
   const h = renderHonorific(input.honorific);
   switch (input.timeOfDay) {
-    case "morning":
+    case "morning": {
       return `Good morning, ${h}.`;
-    case "afternoon":
+    }
+    case "afternoon": {
       return `Good afternoon, ${h}.`;
-    case "evening":
+    }
+    case "evening": {
       return `Good evening, ${h}.`;
-    case "night":
+    }
+    case "night": {
       return `Good evening, ${h}.`;
+    }
   }
 }
 
@@ -46,20 +50,26 @@ export function getTransition(
 ): string {
   const h = renderHonorific(honorific);
   switch (kind) {
-    case "greet":
+    case "greet": {
       return `At your service, ${h}.`;
-    case "ack":
+    }
+    case "ack": {
       return `Very good, ${h}.`;
-    case "clarify":
+    }
+    case "clarify": {
       return `One moment, ${h}—I need a detail.`;
-    case "answer":
+    }
+    case "answer": {
       return "";
-    case "tooling":
+    }
+    case "tooling": {
       return `I’ll check that for you, ${h}.`;
-    case "recover":
+    }
+    case "recover": {
       return `Understood, ${h}. Something went wrong; I’ll recover.`;
-    case "close":
+    }
+    case "close": {
       return `Until later, ${h}.`;
+    }
   }
 }
-

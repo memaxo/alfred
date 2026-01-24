@@ -32,7 +32,7 @@ export function validateIntentUserId(
       };
       if (typeof candidate.userId === "string") {
         validateIntentUserId(
-          { userId: candidate.userId, multiIntent: candidate.multiIntent },
+          { multiIntent: candidate.multiIntent, userId: candidate.userId },
           authenticatedUserId
         );
       }
@@ -66,9 +66,8 @@ export async function gatherExternalResearchService(
   userId: string,
   options?: Record<string, unknown>
 ) {
-  const { gatherExternalResearch, workflowIntentSchema } = await import(
-    "@alfred/plan"
-  );
+  const { gatherExternalResearch, workflowIntentSchema } =
+    await import("@alfred/plan");
   const parsedIntent = workflowIntentSchema.parse(intent);
   validateIntentUserId(parsedIntent, userId);
   return await gatherExternalResearch(parsedIntent, options);
@@ -80,9 +79,8 @@ export async function gatherInternalResearchService(
   projectId?: string,
   options?: unknown
 ) {
-  const { gatherInternalResearch, workflowIntentSchema } = await import(
-    "@alfred/plan"
-  );
+  const { gatherInternalResearch, workflowIntentSchema } =
+    await import("@alfred/plan");
   const parsedIntent = workflowIntentSchema.parse(intent);
   validateIntentUserId(parsedIntent, userId);
   return await gatherInternalResearch(
@@ -125,9 +123,9 @@ export async function generatePlanService(
   const parsedResearch = researchResultSchema.parse(research);
   const optionsSchema = z
     .object({
+      agentTypes: z.array(agentTypeSchema).optional(),
       maxPhases: z.number().int().min(1).max(10).optional(),
       preferParallel: z.boolean().optional(),
-      agentTypes: z.array(agentTypeSchema).optional(),
     })
     .optional();
   const parsedOptions = options ? optionsSchema.parse(options) : undefined;

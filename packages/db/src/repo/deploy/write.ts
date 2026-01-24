@@ -1,12 +1,14 @@
 import { eq, sql } from "drizzle-orm";
-import { db } from "../../client";
-import { deployments } from "../../schema/deploy";
-import { findLatestDeployment, getDeploymentById } from "./read";
+
 import type {
   DeploymentInsert,
   DeploymentRecord,
   UpsertDeploymentInput,
 } from "./types";
+
+import { db } from "../../client";
+import { deployments } from "../../schema/deploy";
+import { findLatestDeployment, getDeploymentById } from "./read";
 import { sanitize } from "./utils";
 
 export async function upsertDeployment(

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+
 import { evaluatePlanDeterministic } from "../evaluate/verify.js";
 
 describe("Deterministic Plan Evaluation", () => {

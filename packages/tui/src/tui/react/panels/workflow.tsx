@@ -6,32 +6,42 @@
 
 /** @jsxImportSource @opentui/react */
 
-import type { KeyEvent } from "@opentui/core";
+import { type KeyEvent } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
-import type { Workflow } from "../../subscriptions/workflow";
+
+import { getApiClient } from "../../api/client";
+import { type Workflow } from "../../subscriptions/workflow";
 import { colors, progressChars } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
 import { useWorkflowStore } from "../hooks/stores";
 
-type WorkflowPanelProps = {
+interface WorkflowPanelProps {
   width: number;
   height: number;
   focused: boolean;
   x?: number;
   y?: number;
-};
+}
+
+interface WorkflowEvent {
+  id: string;
+  eventType: string;
+  eventData: unknown;
+  timestamp: string;
+}
 
 const STATUS_CONFIGS: Record<
-  Workflow["status"],
+  Workflow["status"] | "suspended",
   { icon: string; color: string; label: string }
 > = {
+  cancelled: { icon: "○", color: colors.muted, label: "Cancelled" },
+  completed: { icon: "✓", color: colors.success, label: "Completed" },
+  executing: { icon: "●", color: colors.success, label: "Executing" },
+  failed: { icon: "✗", color: colors.error, label: "Failed" },
   pending: { icon: "○", color: colors.muted, label: "Pending" },
   planning: { icon: "◎", color: colors.primary, label: "Planning" },
-  executing: { icon: "●", color: colors.success, label: "Executing" },
-  completed: { icon: "✓", color: colors.success, label: "Completed" },
-  failed: { icon: "✗", color: colors.error, label: "Failed" },
-  cancelled: { icon: "○", color: colors.muted, label: "Cancelled" },
+  suspended: { icon: "⏸", color: colors.warning, label: "Suspended" },
 };
 
 function formatDuration(ms: number): string {
@@ -53,7 +63,7 @@ function renderWorkflow(
   width: number,
   isSelected: boolean
 ): string[] {
-  const config = STATUS_CONFIGS[workflow.status];
+  const config = STATUS_CONFIGS[workflow.status] || STATUS_CONFIGS.pending;
   const lines: string[] = [];
 
   // Header: status icon + name
@@ -78,7 +88,8 @@ function renderWorkflow(
   if (workflow.subtasks && workflow.subtasks.length > 0) {
     lines.push(dim("  Subtasks:"));
     for (const subtask of workflow.subtasks.slice(0, 3)) {
-      const subtaskConfig = STATUS_CONFIGS[subtask.status];
+      const subtaskConfig =
+        STATUS_CONFIGS[subtask.status] || STATUS_CONFIGS.pending;
       const subtaskIcon = fg(subtaskConfig.color)(subtaskConfig.icon);
       const subtaskName = truncate(subtask.name, width - 6);
       lines.push(`    ${subtaskIcon} ${dim(subtaskName)}`);
@@ -107,6 +118,9 @@ export function WorkflowPanel({
   const store = useWorkflowStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  const [selectedEvents, setSelectedEvents] = useState<WorkflowEvent[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -139,9 +153,34 @@ export function WorkflowPanel({
     return unsub;
   }, [store]);
 
+  const loadWorkflowDetail = useCallback(async (runId: string) => {
+    setLoading(true);
+    const client = getApiClient();
+    const result = await client.getWorkflowEvents(runId);
+    if (result.data) {
+      setSelectedEvents(result.data.events);
+      setViewMode("detail");
+    }
+    setLoading(false);
+  }, []);
+
   const handleKeyboard = useCallback(
-    (event: KeyEvent) => {
+    async (event: KeyEvent) => {
       if (!focused || workflows.length === 0) {
+        return;
+      }
+
+      const workflow = workflows[selectedIndex];
+      if (!workflow) {
+        return;
+      }
+
+      // Detail view controls
+      if (viewMode === "detail") {
+        if (event.name === "escape" || event.name === "q") {
+          setViewMode("list");
+          return;
+        }
         return;
       }
 
@@ -153,8 +192,29 @@ export function WorkflowPanel({
         setSelectedIndex((i) => Math.max(i - 1, 0));
         return;
       }
+
+      if (event.name === "enter" || event.name === "d") {
+        loadWorkflowDetail(workflow.id);
+        return;
+      }
+
+      // Actions
+      const client = getApiClient();
+      if (event.name === "p" || event.name === " ") {
+        if (workflow.status === "executing") {
+          await client.suspendWorkflow(workflow.id);
+        } else if (workflow.status === ("suspended" as any)) {
+          await client.resumeWorkflow(workflow.id);
+        }
+        return;
+      }
+
+      if (event.name === "c" || event.name === "x") {
+        await client.cancelWorkflow(workflow.id);
+        return;
+      }
     },
-    [focused, workflows.length]
+    [focused, workflows, selectedIndex, viewMode, loadWorkflowDetail]
   );
 
   useKeyboard(handleKeyboard);
@@ -165,6 +225,46 @@ export function WorkflowPanel({
       setSelectedIndex(Math.max(0, workflows.length - 1));
     }
   }, [workflows.length, selectedIndex]);
+
+  if (viewMode === "detail" && workflows[selectedIndex]) {
+    const wf = workflows[selectedIndex]!;
+    return (
+      <box
+        border
+        height={height}
+        left={x}
+        style={{
+          borderColor: borderColor ?? "#FFFFFF",
+          borderStyle: "single",
+        }}
+        title={`Workflow: ${truncate(wf.name, 20)}`}
+        top={y}
+        width={width}
+      >
+        <scrollbox focused={focused}>
+          <text content={bold(fg(colors.primary)(wf.name))} />
+          <text content={`${dim("Status:")} ${wf.status}`} />
+          <text content="" />
+
+          <text content={bold(dim("Recent Events"))} />
+          {loading && <text content={dim("  Loading events...")} />}
+          {!loading && selectedEvents.length === 0 && (
+            <text content={dim("  No events recorded")} />
+          )}
+          {!loading &&
+            selectedEvents.map((e) => (
+              <text
+                key={e.id}
+                content={`  ${dim(new Date(e.timestamp).toLocaleTimeString())} ${fg(colors.primary)(e.eventType)}`}
+              />
+            ))}
+
+          <text content="" />
+          <text content={dim("  Press [q] or [Esc] to return")} />
+        </scrollbox>
+      </box>
+    );
+  }
 
   const active = workflows.filter(
     (w) => w.status === "planning" || w.status === "executing"
@@ -273,6 +373,19 @@ export function WorkflowPanel({
               <text content={dim("  Use ALFRED to start a workflow")} />
             </>
           )}
+
+        {!viewMode && workflows.length > 0 && (
+          <>
+            <text content="" />
+            <text content={dim("  [↑↓]nav [Enter]details [p]ause [c]ancel")} />
+          </>
+        )}
+        {workflows.length > 0 && viewMode === "list" && (
+          <>
+            <text content="" />
+            <text content={dim("  [↑↓]nav [Enter]details [p]ause [c]ancel")} />
+          </>
+        )}
       </scrollbox>
     </box>
   );

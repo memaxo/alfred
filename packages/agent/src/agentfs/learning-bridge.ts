@@ -11,8 +11,10 @@
  */
 
 import { existsSync } from "node:fs";
-import { agentfsLearningExtractionsTotal } from "./metrics.js";
+
 import type { AgentFSInterface } from "./types.js";
+
+import { agentfsLearningExtractionsTotal } from "./metrics.js";
 import { AlfredAgentFS } from "./wrapper.js";
 
 /**

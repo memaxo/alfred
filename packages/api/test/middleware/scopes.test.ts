@@ -5,8 +5,9 @@
  * These tests validate the middleware through actual tRPC procedure calls.
  */
 
-import { describe, expect, test } from "bun:test";
 import { initTRPC, TRPCError } from "@trpc/server";
+import { describe, expect, test } from "bun:test";
+
 import { requireScopes, SCOPE_REQUIREMENTS } from "../../src/middleware/scopes";
 
 // Create a test tRPC instance

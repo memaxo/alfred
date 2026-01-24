@@ -1,3 +1,5 @@
+import type { PipelineSnapshot } from "@alfred/pipeline";
+
 import {
   beforeAll,
   beforeEach,
@@ -7,8 +9,6 @@ import {
   mock,
   vi,
 } from "bun:test";
-
-import type { PipelineSnapshot } from "@alfred/pipeline";
 
 type Caller = Awaited<
   ReturnType<typeof import("./utils/trpc").createTestCaller>

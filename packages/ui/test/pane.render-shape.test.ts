@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { Chat, HomePane, NotePane, RemindPane } from "../src";
 
 describe("@alfred/ui scaffolding", () => {

@@ -1,5 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
+
 import type { CodexSessionState } from "../../../src/orchestrator/codex-session";
+
 import { assessSessionResumeEligibility } from "../../../src/orchestrator/codex-session";
 
 describe("Codex session validation timeout", () => {

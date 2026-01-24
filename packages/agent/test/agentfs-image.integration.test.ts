@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { dockerRun, isDockerAvailable, isImageAvailable } from "./utils/infra";
 
 const IMAGE = "alfred-agentfs:codex";

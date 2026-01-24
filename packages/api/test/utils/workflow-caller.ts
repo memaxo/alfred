@@ -1,8 +1,8 @@
 import { createTestSession, type TestSession } from "@alfred/test-kit/auth";
-import type { Obligation } from "@alfred/type";
+import { type Obligation } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 
-type WorkflowRuntime = {
+interface WorkflowRuntime {
   requestId: string;
   receivedAt: Date;
   method: string;
@@ -11,19 +11,19 @@ type WorkflowRuntime = {
   forwardedFor: string[];
   userAgent: string | null;
   referer: string | null;
-};
+}
 
-export type WorkflowTestUser = {
+export interface WorkflowTestUser {
   id: string;
   email: string;
   name: string;
   roles: string[];
   scopes: string[];
-};
+}
 
 export const DEFAULT_WORKFLOW_TEST_USER: WorkflowTestUser = {
-  id: "workflow-test-user",
   email: "workflow.test@test.local",
+  id: "workflow-test-user",
   name: "Workflow Test",
   roles: ["owner"],
   scopes: [
@@ -34,11 +34,11 @@ export const DEFAULT_WORKFLOW_TEST_USER: WorkflowTestUser = {
   ],
 };
 
-type WorkflowCallerOptions = {
+interface WorkflowCallerOptions {
   user?: WorkflowTestUser | null;
   runtime?: Partial<WorkflowRuntime>;
   obligations?: Obligation[];
-};
+}
 
 let cachedWorkflowRouter:
   | typeof import("@alfred/api/routers/workflow").workflowRouter
@@ -46,9 +46,8 @@ let cachedWorkflowRouter:
 
 async function getWorkflowRouter() {
   if (!cachedWorkflowRouter) {
-    ({ workflowRouter: cachedWorkflowRouter } = await import(
-      "@alfred/api/routers/workflow"
-    ));
+    ({ workflowRouter: cachedWorkflowRouter } =
+      await import("@alfred/api/routers/workflow"));
   }
   return cachedWorkflowRouter;
 }
@@ -56,14 +55,14 @@ async function getWorkflowRouter() {
 function createRuntime(options?: Partial<WorkflowRuntime>): WorkflowRuntime {
   const requestId = options?.requestId ?? `workflow-test-${Date.now()}`;
   return {
-    requestId,
-    receivedAt: options?.receivedAt ?? new Date(),
-    method: options?.method ?? "POST",
-    url: options?.url ?? "http://localhost/trpc",
-    ip: options?.ip ?? null,
     forwardedFor: options?.forwardedFor ?? [],
-    userAgent: options?.userAgent ?? "bun-test",
+    ip: options?.ip ?? null,
+    method: options?.method ?? "POST",
+    receivedAt: options?.receivedAt ?? new Date(),
     referer: options?.referer ?? null,
+    requestId,
+    url: options?.url ?? "http://localhost/trpc",
+    userAgent: options?.userAgent ?? "bun-test",
   };
 }
 
@@ -92,10 +91,10 @@ export async function createWorkflowCaller(
         });
 
   const context = {
-    session,
+    policy: { obligations: options.obligations ?? [] },
     runtime,
     runtimeContext,
-    policy: { obligations: options.obligations ?? [] },
+    session,
   } satisfies Parameters<typeof router.createCaller>[0];
 
   return router.createCaller(context);

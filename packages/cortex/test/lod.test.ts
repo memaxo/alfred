@@ -6,6 +6,9 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
+
+import type { Rect, Vec2 } from "../src/types";
+
 import {
   computeLOD,
   getFiberSegments,
@@ -14,7 +17,6 @@ import {
   LODManager,
   SpatialIndex,
 } from "../src/lod";
-import type { Rect, Vec2 } from "../src/types";
 
 describe("computeLOD", () => {
   it("returns lowest LOD at very low zoom", () => {

@@ -1,7 +1,7 @@
 import { createGatewayProvider } from "@ai-sdk/gateway";
 import { createOpenAI } from "@ai-sdk/openai";
 import { type Tool, tool } from "ai";
-import type { ZodTypeAny, z } from "zod";
+import { type ZodTypeAny, type z } from "zod";
 
 import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";
@@ -64,14 +64,14 @@ import { toolWeb } from "./orchestrator/tool/web";
  * This `any` usage is justified as a migration bridge - new tools should use
  * the AI SDK Tool type directly.
  */
-type LegacyTool = {
+interface LegacyTool {
   name: string;
   description: string;
   inputSchema: ZodTypeAny;
   outputSchema?: ZodTypeAny;
-  // biome-ignore lint/suspicious/noExplicitAny: Legacy migration bridge - see type comment above
+  // oxlint-disable noExplicitAny: Legacy migration bridge - see type comment above
   execute: (args: any) => any;
-};
+}
 
 // Type for the wrapped tool - preserves schema information through the AI SDK tool() function
 type WrappedTool = Tool<z.infer<ZodTypeAny>, z.infer<ZodTypeAny>>;
@@ -152,7 +152,7 @@ export function getOpenAI() {
 }
 
 export function wrapLegacyToolToAISDK(legacy: LegacyTool): WrappedTool {
-  const outputSchema = legacy.outputSchema;
+  const { outputSchema } = legacy;
 
   const wrapped = tool({
     description: legacy.description,

@@ -1,4 +1,5 @@
 import { afterAll, describe, it } from "bun:test";
+
 import { VoiceRegistry } from "../../src/server/registry";
 import {
   VoiceSocketHandler,
@@ -10,42 +11,42 @@ const DURATION_MS = 5000;
 const CHUNKS_PER_SEC = 50;
 
 const mockHooks: VoiceSocketHooks = {
+  onAssistantResponse: async () => {},
+  onSessionComplete: async () => {},
+  onSessionError: async () => {},
   onSessionStart: async () => "reg-1",
   onSessionStatus: async () => {},
   onTranscriptUpdate: async () => {},
-  onAssistantResponse: async () => {},
-  onSessionError: async () => {},
-  onSessionComplete: async () => {},
   runAssistant: async () => ({ text: "ok" }),
 };
 
 const mockPools = {
-  transcribe: async () => ({ text: "." }),
   synthesize: async () => {},
+  transcribe: async () => ({ text: "." }),
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: Mock pool cast
+// oxlint-disable noExplicitAny: Mock pool cast
 const registry = new VoiceRegistry(mockPools as any, mockPools as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8898;
-// biome-ignore lint/suspicious/noExplicitAny: Bun.serve requires data type
+// oxlint-disable noExplicitAny: Bun.serve requires data type
 const server = Bun.serve<any>({
+  fetch(req, server) {
+    if (server.upgrade(req)) {
+      return;
+    }
+    return new Response("ok");
+  },
   port: PORT,
   websocket: {
     open(ws) {
       ws.data = { userId: "load-user" };
     },
     async message(ws, msg) {
-      // biome-ignore lint/suspicious/noExplicitAny: WebSocket data cast
+      // oxlint-disable noExplicitAny: WebSocket data cast
       await handler.handleMessage(ws as any, msg);
     },
-  },
-  fetch(req, server) {
-    if (server.upgrade(req)) {
-      return;
-    }
-    return new Response("ok");
   },
 });
 
@@ -66,7 +67,7 @@ describe("Load Benchmark", () => {
       for (let i = 0; i < CLIENTS; i++) {
         const ws = new WebSocket(`ws://localhost:${PORT}`);
         await new Promise<void>((resolve) => (ws.onopen = () => resolve()));
-        ws.send(JSON.stringify({ type: "start", sessionId: `load-${i}` }));
+        ws.send(JSON.stringify({ sessionId: `load-${i}`, type: "start" }));
         clients.push(ws);
       }
 
@@ -96,7 +97,7 @@ describe("Load Benchmark", () => {
       // (VOICE_FFMPEG_PATH is intentionally invalid for this test).
     } finally {
       if (oldFfmpegPath === undefined) {
-        // biome-ignore lint/performance/noDelete: test cleanup
+        // oxlint-disable noDelete: test cleanup
         delete process.env.VOICE_FFMPEG_PATH;
       } else {
         process.env.VOICE_FFMPEG_PATH = oldFfmpegPath;

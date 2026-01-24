@@ -1,8 +1,3 @@
-import { getAssistantAgentDefaults } from "@alfred/agent";
-import {
-  unwrapEventEnvelope,
-  wrapEventEnvelope,
-} from "@alfred/agent/utils/envelope";
 import type {
   AutonomyGradient,
   CognitiveState,
@@ -11,6 +6,14 @@ import type {
   Physiology,
   Plan,
 } from "@alfred/cognitive/state";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { ModelMessage } from "ai";
+
+import { getAssistantAgentDefaults } from "@alfred/agent";
+import {
+  unwrapEventEnvelope,
+  wrapEventEnvelope,
+} from "@alfred/agent/utils/envelope";
 import { idle, initialAutonomy, updateAutonomy } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
@@ -18,8 +21,6 @@ import {
   cognitiveEntropyEventsTotal,
   cognitivePhysiologyGauge,
 } from "@alfred/metrics/shared";
-import type { RuntimeContext } from "@alfred/type/runtime-context";
-import type { ModelMessage } from "ai";
 
 // Temporary: Autonomy Logic (to be expanded)
 const createInitialAutonomy = () => initialAutonomy(Date.now());

@@ -1,3 +1,10 @@
+import type {
+  ConversationHistory,
+  FeedbackHistory,
+  ToolCallHistory,
+} from "@alfred/type/preference";
+import type { UIMessage } from "@alfred/type/stream";
+
 import { buildTools } from "@alfred/agent";
 import {
   inferDomainPreferences,
@@ -10,13 +17,8 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { limitUiMessages } from "@alfred/type/history";
-import type {
-  ConversationHistory,
-  FeedbackHistory,
-  ToolCallHistory,
-} from "@alfred/type/preference";
-import type { UIMessage } from "@alfred/type/stream";
 import { validateUIMessages } from "ai";
+
 import { preferenceHistoryPrunedTotal } from "../metrics";
 
 type ToolSet = Record<string, unknown>;

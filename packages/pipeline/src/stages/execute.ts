@@ -1,21 +1,22 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import type { Workspace } from "@alfred/agent/environment/types";
+import { type Workspace } from "@alfred/agent/environment/types";
 import {
   AGENT_ESCALATION_REASONS,
   type AgentEscalationReason,
 } from "@alfred/agent/orchestrator/tool/shared/context";
 import { logger } from "@alfred/logger";
 import { RuntimeMcpServer } from "@alfred/mcp";
-import type { WorkflowEvent } from "@alfred/type";
+import { type WorkflowEvent } from "@alfred/type";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
 import { createEvent } from "../events";
-import type { PipelineContext, PipelineStage } from "../pipeline";
-import type {
-  AgentOutcome,
-  ExecuteOutput,
-  FileChange,
-  PlanOutput,
-  ScheduleOutput,
+import { type PipelineContext, type PipelineStage } from "../pipeline";
+import {
+  type AgentOutcome,
+  type ExecuteOutput,
+  type FileChange,
+  type PlanOutput,
+  type ScheduleOutput,
 } from "./types";
 
 /**
@@ -28,9 +29,10 @@ import type {
  * - Configurable retry logic
  * - Wave abort on failure thresholds
  */
-export class ExecuteStage
-  implements PipelineStage<ScheduleOutput, ExecuteOutput>
-{
+export class ExecuteStage implements PipelineStage<
+  ScheduleOutput,
+  ExecuteOutput
+> {
   readonly name = "execute" as const;
 
   private normalizeId(value: unknown): string | null {
@@ -143,8 +145,8 @@ export class ExecuteStage
 
     const runtimeMcp = new RuntimeMcpServer({
       bindHost: process.env.ORCH_MCP_BIND_HOST?.trim() || "0.0.0.0",
-      port: Number.parseInt(process.env.ORCH_MCP_PORT ?? "0", 10),
       path: "/mcp",
+      port: Number.parseInt(process.env.ORCH_MCP_PORT ?? "0", 10),
     });
     const runtimeMcpUrl = await runtimeMcp.start().then((r) => r.url);
 
@@ -159,8 +161,8 @@ export class ExecuteStage
       wavesToExecute = input.waves.filter((w) => waveIds.includes(w.id));
       ctx.emit(
         createEvent("stage:progress", {
-          stage: "execute",
           message: `Partial execution: ${wavesToExecute.length}/${input.waves.length} waves selected`,
+          stage: "execute",
         })
       );
     }
@@ -173,8 +175,8 @@ export class ExecuteStage
       }));
       ctx.emit(
         createEvent("stage:progress", {
-          stage: "execute",
           message: `Skipping ${skipTaskIds.length} tasks`,
+          stage: "execute",
         })
       );
     }
@@ -183,8 +185,8 @@ export class ExecuteStage
     if (dryRun) {
       ctx.emit(
         createEvent("stage:progress", {
-          stage: "execute",
           message: `[DRY RUN] Would execute ${wavesToExecute.length} waves with ${wavesToExecute.reduce((sum, w) => sum + w.agents.length, 0)} total agents`,
+          stage: "execute",
         })
       );
 
@@ -193,41 +195,40 @@ export class ExecuteStage
         for (const agentId of wave.agents) {
           outcomes.set(agentId, {
             agentId,
-            phaseId: "execute",
-            stuck: false,
-            status: "success",
             durationSeconds: 0,
-            role: "agent",
+            phaseId: "execute",
             result: {
               summary: "[DRY RUN] Agent not spawned",
               artifacts: [],
               changes: [],
               notes: ["Dry run - no actual execution"],
             },
+            role: "agent",
+            status: "success",
+            stuck: false,
           });
         }
       }
 
       return {
-        outcomes,
+        dryRun: true,
         fileChanges: [],
         handoffs: [],
-        dryRun: true,
+        outcomes,
       };
     }
 
     ctx.emit(
       createEvent("stage:progress", {
-        stage: "execute",
         message: `Executing ${wavesToExecute.length} waves with ${input.executionMode} mode`,
+        stage: "execute",
       })
     );
 
     // Import dynamically to avoid circular dependencies
     const { runAgent } = await import("@alfred/runtime/orchestrator/agent");
-    const { buildAgentSpec } = await import(
-      "@alfred/agent/orchestrator/multi/spawn"
-    );
+    const { buildAgentSpec } =
+      await import("@alfred/agent/orchestrator/multi/spawn");
     const { AsyncQueue } = await import("@alfred/runtime/utils/concurrency");
     const {
       createTrackerContext,
@@ -268,12 +269,10 @@ export class ExecuteStage
             : {};
         const linearTaskIssueMap: Record<string, string> = { ...existing };
 
-        const { toolTicket } = await import(
-          "@alfred/agent/orchestrator/tool/ticket"
-        );
-        const { syncDepsToLinear } = await import(
-          "@alfred/agent/orchestrator/multi/linear-sync"
-        );
+        const { toolTicket } =
+          await import("@alfred/agent/orchestrator/tool/ticket");
+        const { syncDepsToLinear } =
+          await import("@alfred/agent/orchestrator/multi/linear-sync");
 
         let createdCount = 0;
 
@@ -284,8 +283,8 @@ export class ExecuteStage
 
           const title = this.buildSubtaskTitle(subtask.title, subtask.id);
           const description = this.buildSubtaskDescription({
-            runId: ctx.runId,
             requirement: ctx.requirement,
+            runId: ctx.runId,
             subtask: {
               id: subtask.id,
               title: subtask.title,
@@ -298,12 +297,12 @@ export class ExecuteStage
           try {
             const created = await toolTicket.execute({
               input: {
-                space,
                 action: "create",
+                authz,
+                description,
+                space,
                 teamId,
                 title,
-                description,
-                authz,
               },
             });
 
@@ -327,29 +326,29 @@ export class ExecuteStage
               try {
                 await toolTicket.execute({
                   input: {
-                    space,
                     action: "add-relation",
+                    authz,
                     issueId: rootIssueId,
                     relatedIssueId: issueId,
                     relationType: "related",
-                    authz,
+                    space,
                   },
                 });
               } catch (error) {
                 logger.warn("linear_subtask_relation_failed", {
-                  runId: ctx.runId,
-                  rootIssueId,
-                  subTaskId: subtask.id,
-                  issueId,
                   error: error instanceof Error ? error.message : String(error),
+                  issueId,
+                  rootIssueId,
+                  runId: ctx.runId,
+                  subTaskId: subtask.id,
                 });
               }
             }
           } catch (error) {
             logger.warn("linear_subtask_issue_create_failed", {
+              error: error instanceof Error ? error.message : String(error),
               runId: ctx.runId,
               subTaskId: subtask.id,
-              error: error instanceof Error ? error.message : String(error),
             });
           }
         }
@@ -357,8 +356,8 @@ export class ExecuteStage
         if (createdCount > 0) {
           ctx.emit(
             createEvent("stage:progress", {
-              stage: "execute",
               message: `Linear: created ${createdCount} subtask issues`,
+              stage: "execute",
             })
           );
         }
@@ -373,26 +372,26 @@ export class ExecuteStage
               typeof syncDepsToLinear
             >[0],
             map as unknown as Parameters<typeof syncDepsToLinear>[1],
-            { space, authz }
+            { authz, space }
           );
         } catch (error) {
           logger.warn("linear_subtask_deps_sync_failed", {
-            runId: ctx.runId,
             error: error instanceof Error ? error.message : String(error),
+            runId: ctx.runId,
           });
         }
       }
     } catch (error) {
       logger.warn("linear_subtask_issue_setup_failed", {
-        runId: ctx.runId,
         error: error instanceof Error ? error.message : String(error),
+        runId: ctx.runId,
       });
     }
 
     // Initialize TrackerContext for stuck detection
     const stuckDetectionOptions = ctx.config.stuckDetection ?? {
-      noProgressMs: 60_000,
       maxTransitions: 200,
+      noProgressMs: 60_000,
       similarityThreshold: 0.92,
     };
     let trackerContext = createTrackerContext(subtasks, stuckDetectionOptions);
@@ -404,10 +403,10 @@ export class ExecuteStage
     }>("trackerState");
     if (savedTrackerState) {
       logger.info("tracker_metadata_found", {
-        runId: ctx.runId,
         agentCount: savedTrackerState.agentCount,
-        waveCount: savedTrackerState.waveCount,
         note: "Full tracker state not restored - will rebuild",
+        runId: ctx.runId,
+        waveCount: savedTrackerState.waveCount,
       });
     }
 
@@ -440,17 +439,17 @@ export class ExecuteStage
         // Check if wave should be aborted
         if (abortedWave) {
           logger.info("wave_skipped_after_abort", {
+            abortedWaveId: abortedWave.waveId,
             runId: ctx.runId,
             waveId: wave.id,
-            abortedWaveId: abortedWave.waveId,
           });
           continue;
         }
 
         ctx.emit(
           createEvent("stage:progress", {
-            stage: "execute",
             message: `Starting wave ${waveIndex + 1}/${wavesToExecute.length}`,
+            stage: "execute",
           })
         );
 
@@ -460,7 +459,7 @@ export class ExecuteStage
         for (const subTaskId of wave.agents) {
           const subtask = subTaskById.get(subTaskId);
           if (!subtask) {
-            logger.warn("subtask_not_found", { subTaskId, runId: ctx.runId });
+            logger.warn("subtask_not_found", { runId: ctx.runId, subTaskId });
             continue;
           }
 
@@ -494,8 +493,12 @@ export class ExecuteStage
                     ctx.emit(
                       createEvent("agent:escalate-request", {
                         agentId: String(payload.agentId ?? agentSpec.agentId),
-                        reason: this.coerceEscalationReason(payload.reason),
                         details: String(payload.details ?? ""),
+                        reason: this.coerceEscalationReason(payload.reason),
+                        severity:
+                          payload.severity === "warning"
+                            ? "warning"
+                            : "blocking",
                         suggestions:
                           Array.isArray(payload.suggestions) &&
                           payload.suggestions.every(
@@ -503,17 +506,13 @@ export class ExecuteStage
                           )
                             ? (payload.suggestions as string[])
                             : undefined,
-                        severity:
-                          payload.severity === "warning"
-                            ? "warning"
-                            : "blocking",
                       })
                     );
 
                     if (payload.severity !== "warning") {
                       ctx.set("pipelineSuspend", {
-                        reason: "agent_escalation",
                         agentId: String(payload.agentId ?? agentSpec.agentId),
+                        reason: "agent_escalation",
                       });
                       parentAbortListener();
                     }
@@ -531,22 +530,22 @@ export class ExecuteStage
               let result: Awaited<ReturnType<typeof runAgent>> | null = null;
               try {
                 result = await runAgent({
-                  spec: agentSpec,
-                  phaseId: "execute",
-                  runId: ctx.runId,
-                  workspace: ctx.workspace,
-                  workspaceRoot: ctx.workspace,
-                  subTaskById,
-                  projectConfig: ctx.get("projectConfig") ?? null,
                   activeWorkspaces,
                   agentFileHints: new Map(),
-                  rootExecPlanPath,
-                  signal: stageAbortController.signal,
                   authz: ctx.get("authz"),
-                  userId: ctx.userId,
-                  trackerContextRef,
+                  phaseId: "execute",
+                  projectConfig: ctx.get("projectConfig") ?? null,
                   queue,
+                  rootExecPlanPath,
+                  runId: ctx.runId,
                   runtimeMcp: { server: runtimeMcp, url: runtimeMcpUrl },
+                  signal: stageAbortController.signal,
+                  spec: agentSpec,
+                  subTaskById,
+                  trackerContextRef,
+                  userId: ctx.userId,
+                  workspace: ctx.workspace,
+                  workspaceRoot: ctx.workspace,
                 });
               } finally {
                 queue.close();
@@ -558,11 +557,11 @@ export class ExecuteStage
 
               // Update tracker context after agent completion
               trackerContext = updateTrackerWithContext(trackerContext, {
-                type: "agent/command",
                 agentId: agentSpec.agentId,
                 command: "complete",
                 status: result.status === "success" ? "completed" : "failed",
                 ts: Date.now(),
+                type: "agent/command",
               });
 
               // Trust runtime's stuck/escalation status (runtime handles real-time detection)
@@ -611,10 +610,10 @@ export class ExecuteStage
                 if (escalationReason) {
                   // Log deprecation warning for file-based escalation
                   logger.warn("deprecated_file_escalation", {
-                    runId: ctx.runId,
                     agentId: agentSpec.agentId,
                     message:
                       "File-based escalation is deprecated. Use the escalate tool instead.",
+                    runId: ctx.runId,
                   });
                   result.escalation = escalationReason;
                   result.status = "escalated";
@@ -646,10 +645,10 @@ export class ExecuteStage
                   })
                 );
                 logger.info("agent_retry", {
-                  runId: ctx.runId,
                   agentId: agentSpec.agentId,
                   attempt,
                   maxAttempts,
+                  runId: ctx.runId,
                   status: result.status,
                 });
                 // Exponential backoff
@@ -676,11 +675,11 @@ export class ExecuteStage
                   })
                 );
                 logger.warn("agent_retry_on_error", {
-                  runId: ctx.runId,
                   agentId: agentSpec.agentId,
                   attempt,
-                  maxAttempts,
                   error: lastError.message,
+                  maxAttempts,
+                  runId: ctx.runId,
                 });
                 await Bun.sleep(backoffMs * attempt);
               }
@@ -691,13 +690,13 @@ export class ExecuteStage
           if (lastResult) {
             const outcome: AgentOutcome = {
               agentId: lastResult.agentId,
-              phaseId: lastResult.phaseId,
-              stuck: lastResult.stuck,
-              status: lastResult.status,
               durationSeconds: lastResult.durationSeconds,
-              role: lastResult.role,
               escalation: lastResult.escalation,
+              phaseId: lastResult.phaseId,
               result: lastResult.result,
+              role: lastResult.role,
+              status: lastResult.status,
+              stuck: lastResult.stuck,
             };
 
             outcomes.set(agentSpec.subTaskId, outcome);
@@ -706,15 +705,15 @@ export class ExecuteStage
               createEvent("agent:complete", {
                 agentId: agentSpec.agentId,
                 outcome: {
+                  durationMs: lastResult.durationSeconds * 1000,
+                  error: lastResult.escalation,
+                  handoff: lastResult.result?.summary,
                   status: lastResult.status as
                     | "success"
                     | "failure"
                     | "escalated"
                     | "timeout"
                     | "stuck",
-                  durationMs: lastResult.durationSeconds * 1000,
-                  handoff: lastResult.result?.summary,
-                  error: lastResult.escalation,
                 },
               })
             );
@@ -738,28 +737,28 @@ export class ExecuteStage
             if (lastResult.result?.changes) {
               for (const change of lastResult.result.changes) {
                 fileChanges.push({
-                  path: change,
                   action: "modify",
+                  path: change,
                 });
               }
             }
 
             logger.info("agent_complete", {
-              runId: ctx.runId,
               agentId: agentSpec.agentId,
-              status: lastResult.status,
               durationSeconds: lastResult.durationSeconds,
+              runId: ctx.runId,
+              status: lastResult.status,
             });
           } else if (lastError) {
             // All retries failed
             const outcome: AgentOutcome = {
               agentId: agentSpec.agentId,
-              phaseId: "execute",
-              stuck: false,
-              status: "failure",
               durationSeconds: 0,
-              role: "agent",
               escalation: lastError.message,
+              phaseId: "execute",
+              role: "agent",
+              status: "failure",
+              stuck: false,
             };
 
             outcomes.set(agentSpec.subTaskId, outcome);
@@ -770,17 +769,17 @@ export class ExecuteStage
               createEvent("agent:complete", {
                 agentId: agentSpec.agentId,
                 outcome: {
-                  status: "failure",
                   durationMs: 0,
                   error: lastError.message,
+                  status: "failure",
                 },
               })
             );
 
             logger.error("agent_failed", {
-              runId: ctx.runId,
               agentId: agentSpec.agentId,
               error: lastError.message,
+              runId: ctx.runId,
             });
           }
         }
@@ -793,21 +792,21 @@ export class ExecuteStage
           waveFailRate > waveFailureThreshold ||
           overallFailRate > overallFailureThreshold
         ) {
-          abortedWave = { waveId: wave.id, reason: "threshold_exceeded" };
+          abortedWave = { reason: "threshold_exceeded", waveId: wave.id };
           ctx.emit(
             createEvent("wave:aborted", {
-              waveId: wave.id,
-              waveFailRate,
               overallFailRate,
+              waveFailRate,
+              waveId: wave.id,
             })
           );
           logger.warn("wave_aborted", {
-            runId: ctx.runId,
-            waveId: wave.id,
-            waveFailRate,
             overallFailRate,
-            waveThreshold: waveFailureThreshold,
             overallThreshold: overallFailureThreshold,
+            runId: ctx.runId,
+            waveFailRate,
+            waveId: wave.id,
+            waveThreshold: waveFailureThreshold,
           });
         }
       }
@@ -819,9 +818,9 @@ export class ExecuteStage
       });
 
       return {
-        outcomes,
         fileChanges,
         handoffs,
+        outcomes,
       };
     } finally {
       ctx.signal.removeEventListener("abort", parentAbortListener);
@@ -829,21 +828,20 @@ export class ExecuteStage
         await runtimeMcp.stop();
       } catch (error) {
         logger.warn("runtime_mcp_server_stop_failed", {
-          runId: ctx.runId,
           error: error instanceof Error ? error.message : String(error),
+          runId: ctx.runId,
         });
       }
 
       // Mirror legacy orchestrator cleanup guarantees.
       try {
-        const { stopAllServers } = await import(
-          "@alfred/agent/orchestrator/tool/shared/server"
-        );
+        const { stopAllServers } =
+          await import("@alfred/agent/orchestrator/tool/shared/server");
         await stopAllServers("workflow_complete");
       } catch (error) {
         logger.warn("executor_server_cleanup_failed", {
-          runId: ctx.runId,
           error: error instanceof Error ? error.message : String(error),
+          runId: ctx.runId,
         });
       }
 
@@ -852,8 +850,8 @@ export class ExecuteStage
           await ws.cleanup();
         } catch (error) {
           logger.warn("workspace_cleanup_failed", {
-            workspaceId: ws.id,
             error: error instanceof Error ? error.message : String(error),
+            workspaceId: ws.id,
           });
         }
       }
@@ -864,15 +862,14 @@ export class ExecuteStage
           .then(() => true)
           .catch(() => false);
         if (isGitWorkspace) {
-          const { worktreeManager } = await import(
-            "@alfred/agent/orchestrator/tool/worktree"
-          );
+          const { worktreeManager } =
+            await import("@alfred/agent/orchestrator/tool/worktree");
           await worktreeManager.cleanup(ctx.workspace, ctx.runId);
         }
       } catch (error) {
         logger.warn("worktree_cleanup_failed", {
-          runId: ctx.runId,
           error: error instanceof Error ? error.message : String(error),
+          runId: ctx.runId,
         });
       }
     }

@@ -9,9 +9,9 @@ const mcpHttpHeaderSchema = z
 
 const mcpServerHttpSchema = z
   .object({
+    headers: z.array(mcpHttpHeaderSchema),
     name: z.string().min(1),
     url: z.string().url(),
-    headers: z.array(mcpHttpHeaderSchema),
   })
   .passthrough();
 
@@ -19,6 +19,29 @@ export const opencodeInputSchema = z.object({
   action: z
     .literal("exec")
     .describe("Operation to perform (OpenCode execution)."),
+  transport: z
+    .enum(["acp", "http"])
+    .default("acp")
+    .describe(
+      "Transport for OpenCode integration: ACP stdio or OpenCode HTTP."
+    ),
+  baseUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "OpenCode HTTP server base URL (external-server mode only; container mode ignores this)."
+    ),
+  username: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("OpenCode HTTP basic auth username (external-server mode only)."),
+  password: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("OpenCode HTTP basic auth password (external-server mode only)."),
   execProfile: z
     .enum(["default", "server"])
     .optional()
@@ -58,7 +81,9 @@ export const opencodeInputSchema = z.object({
     .min(1)
     .max(255)
     .optional()
-    .describe("Optional session identifier (passed through to ACP)."),
+    .describe(
+      "Optional ALFRED session identifier (passed through to ACP, or mapped to a server-side session for HTTP)."
+    ),
   /** Docker container name to run the ACP agent inside (AgentFSWorkspace container) */
   containerName: z
     .string()
@@ -90,10 +115,9 @@ export const opencodeInputSchema = z.object({
     .describe("Optional MCP servers to include in the ACP session."),
 });
 
-export type OpenCodeToolInput = z.infer<typeof opencodeInputSchema>;
+export type OpenCodeToolInput = z.input<typeof opencodeInputSchema>;
 
 export const opencodeOutputSchema = z.object({
-  result: z.string().describe("Final text result from the agent."),
   artifacts: z
     .array(
       z.object({
@@ -103,6 +127,7 @@ export const opencodeOutputSchema = z.object({
     )
     .optional()
     .describe("Optional artifact summaries emitted by the agent."),
+  result: z.string().describe("Final text result from the agent."),
   stopReason: z
     .string()
     .optional()

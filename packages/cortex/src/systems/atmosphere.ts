@@ -5,10 +5,11 @@
  * and ocean-like caustics around the central orb.
  */
 
+import type { RenderSystem } from "../types";
+
 import { UniformBuffer } from "../buffer";
 // Import shader source
 import atmosphereShaderSource from "../shaders/atmosphere.wgsl?raw";
-import type { RenderSystem } from "../types";
 
 /**
  * Atmosphere Render System

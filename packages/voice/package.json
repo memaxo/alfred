@@ -5,34 +5,6 @@
   "sideEffects": [
     "**/metrics.ts"
   ],
-  "scripts": {
-    "dev": "tsgo -b -w",
-    "build": "tsgo -b",
-    "typecheck": "tsgo -b",
-    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
-    "install-deps": "bash scripts/install.sh",
-    "download-models": "uv run python scripts/download.py",
-    "verify": "uv run python scripts/download.py --verify-only",
-    "verify:python": "bun run scripts/verify-python.ts",
-    "repair:python": "bun run scripts/repair-python.ts",
-    "setup": "bash scripts/install.sh && uv run python scripts/download.py",
-    "setup:ci": "uv sync --frozen && uv run python scripts/download.py",
-    "download-supertonic": "bash scripts/supertonic.sh"
-  },
-  "peerDependencies": {
-    "@alfred/type": "workspace:*",
-    "@trpc/client": "^11.6.0"
-  },
-  "dependencies": {
-    "@alfred/db": "workspace:*",
-    "@alfred/logger": "workspace:*",
-    "@alfred/metrics": "workspace:*",
-    "@diffusionstudio/piper-wasm": "^1.0.0",
-    "@discordjs/opus": "^0.10.0",
-    "onnxruntime-node": "^1.23.2",
-    "piper-wasm": "^0.1.4",
-    "prom-client": "^15.1.3"
-  },
   "exports": {
     ".": {
       "types": "./dist/types.d.ts",
@@ -138,5 +110,33 @@
       "types": "./dist/services/tts.d.ts",
       "default": "./src/services/tts.ts"
     }
+  },
+  "scripts": {
+    "dev": "tsgo -b -w",
+    "build": "tsgo -b",
+    "typecheck": "tsgo -b",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
+    "install-deps": "bash scripts/install.sh",
+    "download-models": "uv run python scripts/download.py",
+    "verify": "uv run python scripts/download.py --verify-only",
+    "verify:python": "bun run scripts/verify-python.ts",
+    "repair:python": "bun run scripts/repair-python.ts",
+    "setup": "bash scripts/install.sh && uv run python scripts/download.py",
+    "setup:ci": "uv sync --frozen && uv run python scripts/download.py",
+    "download-supertonic": "bash scripts/supertonic.sh"
+  },
+  "dependencies": {
+    "@alfred/db": "workspace:*",
+    "@alfred/logger": "workspace:*",
+    "@alfred/metrics": "workspace:*",
+    "@diffusionstudio/piper-wasm": "^1.0.0",
+    "@discordjs/opus": "^0.10.0",
+    "onnxruntime-node": "^1.23.2",
+    "piper-wasm": "^0.1.4",
+    "prom-client": "^15.1.3"
+  },
+  "peerDependencies": {
+    "@alfred/type": "workspace:*",
+    "@trpc/client": "^11.6.0"
   }
 }

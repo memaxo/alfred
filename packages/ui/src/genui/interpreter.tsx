@@ -8,7 +8,9 @@
 
 import type { UIComponent, UIInterpreterOptions } from "@alfred/type/genui";
 import type { ReactNode } from "react";
+
 import { createElement, Fragment } from "react";
+
 import { hasComponent, resolveComponent } from "./registry";
 
 const DEFAULT_MAX_DEPTH = 10;

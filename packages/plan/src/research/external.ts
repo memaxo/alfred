@@ -1,22 +1,22 @@
 import { logger } from "@alfred/logger";
-import type { WorkflowIntent } from "../intent/types.js";
+
+import { type WorkflowIntent } from "../intent/types.js";
 import { aggregateResearch } from "./aggregate.js";
 import { applyDateFilter, detectFrameworkVersion } from "./filter.js";
 import { gatherInternalResearch } from "./internal.js";
 import { calculateRelevance, calculateReliability } from "./score.js";
-import type {
-  ResearchOptions,
-  ResearchResult,
-  ResearchSource,
+import {
+  type ResearchOptions,
+  type ResearchResult,
+  type ResearchSource,
 } from "./types.js";
 
 /**
  * Lazy load agent tools to break circular dependency
  */
 async function getAgentTools() {
-  const { gatherWebContext } = await import(
-    "@alfred/agent/orchestrator/flow/context"
-  );
+  const { gatherWebContext } =
+    await import("@alfred/agent/orchestrator/flow/context");
   const { toolWeb } = await import("@alfred/agent/orchestrator/tool/web");
   return { gatherWebContext, toolWeb };
 }
@@ -37,7 +37,7 @@ function transformToResearchSource(
     highlightScores?: number[];
     summary?: string;
     links?: string[];
-    subpages?: Array<{
+    subpages?: {
       url?: string;
       title?: string;
       author?: string;
@@ -46,7 +46,7 @@ function transformToResearchSource(
       highlights?: string[];
       highlightScores?: number[];
       publishedDate?: string;
-    }>;
+    }[];
   },
   intentDescription: string
 ): ResearchSource {
@@ -56,16 +56,16 @@ function transformToResearchSource(
   const content = source.snippet ?? source.reason ?? source.summary ?? "";
 
   const reliability = calculateReliability({
-    url: source.url ?? "",
-    publishedDate,
     content,
+    publishedDate,
+    url: source.url ?? "",
   });
 
   const relevanceScore = calculateRelevance(
     {
-      title: source.title ?? "",
-      summary: source.snippet ?? source.summary ?? "",
       content,
+      summary: source.snippet ?? source.summary ?? "",
+      title: source.title ?? "",
     },
     intentDescription
   );
@@ -76,34 +76,34 @@ function transformToResearchSource(
   const subpages: ResearchSource[] | undefined = source.subpages?.map((sub) =>
     transformToResearchSource(
       {
-        id: sub.url ?? "",
-        url: sub.url,
-        title: sub.title,
         author: sub.author,
+        highlightScores: sub.highlightScores,
+        highlights: sub.highlights,
+        id: sub.url ?? "",
+        publishedDate: sub.publishedDate,
         snippet: sub.snippet,
         summary: sub.summary,
-        highlights: sub.highlights,
-        highlightScores: sub.highlightScores,
-        publishedDate: sub.publishedDate,
+        title: sub.title,
+        url: sub.url,
       },
       intentDescription
     )
   );
 
   return {
-    id: source.id,
-    source: source.url ?? source.id,
-    title: source.title ?? source.url ?? "Untitled Source",
     author: source.author,
-    summary: source.snippet ?? source.summary ?? source.reason ?? "",
-    highlights: source.highlights,
-    highlightScores: source.highlightScores,
-    reliability,
-    relevanceScore,
     date: publishedDate,
     frameworkVersion,
+    highlightScores: source.highlightScores,
+    highlights: source.highlights,
+    id: source.id,
     links: source.links,
+    relevanceScore,
+    reliability,
+    source: source.url ?? source.id,
     subpages: subpages && subpages.length > 0 ? subpages : undefined,
+    summary: source.snippet ?? source.summary ?? source.reason ?? "",
+    title: source.title ?? source.url ?? "Untitled Source",
   };
 }
 
@@ -132,8 +132,8 @@ export async function gatherExternalResearch(
       const researchOutput = await toolWeb.execute({
         input: {
           action: "research",
-          provider: "exa",
           authz: intent.userId,
+          provider: "exa",
           research: {
             instructions: `Research the following requirement for an AI-native workflow: "${intent.description}".
 Gather high-quality documentation, code examples, and best practices.
@@ -187,7 +187,7 @@ Identify specific framework versions and compatibility constraints.`,
 
   // 5. Sort by relevance and reliability, then take top K
   return filteredByDate
-    .sort((a, b) => {
+    .toSorted((a, b) => {
       const scoreA = a.relevanceScore * 0.7 + a.reliability * 0.3;
       const scoreB = b.relevanceScore * 0.7 + b.reliability * 0.3;
       return scoreB - scoreA;
@@ -214,8 +214,8 @@ export async function gatherFullResearch(
 
   // 3. Aggregate into unified result
   return aggregateResearch(external, internal, {
-    maxTokens: 8000,
     deduplicate: true,
+    maxTokens: 8000,
     prioritize: "balanced",
   });
 }

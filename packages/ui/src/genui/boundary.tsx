@@ -8,6 +8,7 @@
 
 import type { UIComponent } from "@alfred/type/genui";
 import type { ErrorInfo, ReactNode } from "react";
+
 import { Component } from "react";
 
 type GenUIErrorBoundaryProps = {

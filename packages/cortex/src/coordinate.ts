@@ -8,8 +8,9 @@
  * - S: Semantic embedding (knowledge graph)
  */
 
-import { lerp } from "./math";
 import type { Camera, Point4D, Vec2 } from "./types";
+
+import { lerp } from "./math";
 
 /**
  * Temporal state for time dimension

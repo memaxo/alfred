@@ -1,3 +1,9 @@
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
 import {
   afterAll,
   afterEach,
@@ -18,12 +24,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-// Use shared test utilities - import BEFORE any other imports
-import {
-  authTokenMocks,
-  installAuthTokenMock,
-  resetAuthTokenMocks,
-} from "@alfred/test-kit/auth/token";
+
 import { __internals as dockerInternals } from "../src/orchestrator/tool/docker";
 import { toolDroid } from "../src/orchestrator/tool/droid";
 import { __internals as gitInternals } from "../src/orchestrator/tool/git";

@@ -29,34 +29,34 @@ mock.module(
     }
 );
 
-import type { ServerWebSocket } from "bun";
-import type { VoiceRegistry } from "./registry";
-import type {
-  VoiceSocketData,
-  VoiceSocketHandler,
-  VoiceSocketHooks,
+import { type ServerWebSocket } from "bun";
+
+import { type VoiceRegistry } from "./registry";
+import {
+  type VoiceSocketData,
+  type VoiceSocketHandler,
+  type VoiceSocketHooks,
 } from "./socket";
 
-const { voiceAssistantDurationSeconds, voiceAssistantTotal } = await import(
-  "../metrics"
-);
+const { voiceAssistantDurationSeconds, voiceAssistantTotal } =
+  await import("../metrics");
 const { VoiceSocketHandler: VoiceSocketHandlerCtor } = await import("./socket");
 
 // Mock dependencies
 const mockSession = {
+  clearTranscript: mock(() => {}),
+  clearUtterance: mock(() => {}),
+  getTranscript: mock(() => "hello world"),
   processAudioChunk: mock(async () => ({
     text: "hello",
     vadConfidence: 0.9,
     endOfUtterance: false,
   })),
-  getTranscript: mock(() => "hello world"),
+  setChunkSize: mock(() => {}),
   streamSynthesis: mock((_text: string, _voice: string, onChunk: any) => {
     onChunk(Buffer.from("test"));
     return Promise.resolve();
   }),
-  clearTranscript: mock(() => {}),
-  clearUtterance: mock(() => {}),
-  setChunkSize: mock(() => {}),
 };
 
 const mockManager = {
@@ -66,12 +66,12 @@ const mockManager = {
 } as unknown as VoiceRegistry;
 
 const mockHooks: VoiceSocketHooks = {
+  onAssistantResponse: mock(async () => {}),
+  onSessionComplete: mock(async () => {}),
+  onSessionError: mock(async () => {}),
   onSessionStart: mock(async () => "reg-1"),
   onSessionStatus: mock(async () => {}),
   onTranscriptUpdate: mock(async () => {}),
-  onAssistantResponse: mock(async () => {}),
-  onSessionError: mock(async () => {}),
-  onSessionComplete: mock(async () => {}),
   runAssistant: mock(async () => ({
     text: "assistant reply",
     durationSeconds: 0.3,
@@ -80,13 +80,13 @@ const mockHooks: VoiceSocketHooks = {
 
 function createMockWs(): ServerWebSocket<VoiceSocketData> {
   return {
+    close: mock(() => {}),
     data: {
       userId: "user-1",
       lastActivity: 0,
     },
     readyState: 1,
     send: mock(() => 0),
-    close: mock(() => {}),
   } as unknown as ServerWebSocket<VoiceSocketData>;
 }
 
@@ -111,8 +111,8 @@ describe("VoiceSocketHandler", () => {
   it("should handle 'start' message", async () => {
     const payload = JSON.stringify({
       _: "start",
-      sessionId: "sess-1",
       language: "en",
+      sessionId: "sess-1",
     });
     await handler.handleMessage(ws, payload);
 
@@ -197,7 +197,7 @@ describe("VoiceSocketHandler", () => {
     // Start session
     await handler.handleMessage(
       ws,
-      JSON.stringify({ _: "start", sessionId: "sess-1", language: "en" })
+      JSON.stringify({ _: "start", language: "en", sessionId: "sess-1" })
     );
 
     // First chunk should request cache clear (fresh session)

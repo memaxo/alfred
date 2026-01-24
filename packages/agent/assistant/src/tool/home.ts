@@ -18,9 +18,11 @@
  * - HOME_TIMEOUT_MS: Request timeout (default: 5000)
  */
 
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+
 import {
   createHomeAssistantClient,
   type HomeAssistantError,
