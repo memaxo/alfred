@@ -1,248 +1,110 @@
-import type {
-  SpeechToSpeechRequest,
-  SpeechToSpeechResponse,
-  TtsRequest,
-} from "@alfred/voice/types";
-import { Platform } from "react-native";
+/**
+ * ALFRED CarPlay Integration
+ *
+ * Voice-first coding agent orchestrator for Apple CarPlay.
+ *
+ * Features:
+ * - Voice control with barge-in support
+ * - Workflow monitoring and control
+ * - Escalation handling and decision queue
+ * - PR review and approval
+ * - ExecPlan approval flow
+ * - Real-time status streaming via NowPlaying
+ * - Offline mode with command queuing
+ *
+ * Usage:
+ * ```tsx
+ * import { carPlayController, carPlaySync, useCarPlayStore } from '@/lib/carplay';
+ *
+ * // Initialize controller
+ * carPlayController.initialize({ ... });
+ *
+ * // Start sync
+ * carPlaySync.start();
+ *
+ * // Access state
+ * const workflows = useCarPlayStore((s) => s.workflows);
+ * ```
+ */
 
-// Lazy import CarPlay to avoid initialization errors if native module isn't available
-type CarPlayModule = {
-  registerOnConnect: (handler: () => void) => void;
-  connected?: boolean;
-  pushTemplate: (template: unknown, animated: boolean) => void;
-  VoiceControlTemplate: unknown;
-  VoiceControlButton: unknown;
-  CarPlayButton: unknown;
-};
+// API Client
+export * as carPlayApi from "./api";
+export type { AudioState } from "./audio";
 
-let CarPlay: CarPlayModule | null = null;
-let CarPlayChecked = false;
+// Audio
+export { carPlayAudio } from "./audio";
+export type { CarPlayMode, CarPlayState } from "./controller";
+// Controller
+export { carPlayController } from "./controller";
+// NowPlaying (workflow status streaming)
+export * from "./nowplaying";
+// Offline mode
+export * from "./offline";
+export type { DashboardCallbacks } from "./scenes/dashboard";
+// Dashboard Scene
+export { createDashboardTemplate, refreshDashboard } from "./scenes/dashboard";
+// State Store
+export {
+  useActiveWorkflow,
+  useCarPlayStore,
+  useConnectionStatus,
+  useDecisionCount,
+  usePlanCount,
+  usePRCount,
+  useWorkflows,
+} from "./store";
+// Sync Manager
+export { carPlaySync, mapPipelineEventToCarPlayEvent } from "./sync";
+// Templates - Basic
+// Templates - Orchestrator
+export {
+  createAgentGridTemplate,
+  createDecisionQueueTemplate,
+  createErrorAlert,
+  createEscalationAlert,
+  createEscalationDetailTemplate,
+  createHistoryTemplate,
+  createMainTemplate,
+  createNotesTemplate,
+  createOfflineTemplate,
+  createPlanApprovalTemplate,
+  createPRDetailTemplate,
+  createPRListTemplate,
+  createRemindersTemplate,
+  createResponseTemplate,
+  createVoiceTemplate,
+  createWorkflowDetailTemplate,
+} from "./templates";
+// Types
+export type {
+  CarPlayEvent,
+  CarPlayEventType,
+  ConnectionStatus,
+  Escalation,
+  EscalationPriority,
+  EscalationReason,
+  ExecPlan,
+  ExecPlanPhase,
+  OfflineCommand,
+  ParsedVoiceCommand,
+  PRCIStatus,
+  PRReviewStatus,
+  PRStatus,
+  PullRequest,
+  ReviewItem,
+  ReviewType,
+  TTSPriority,
+  TTSRequest,
+  VoiceIntent,
+  WorkflowState,
+  WorkflowStatus,
+} from "./types";
 
-function getCarPlayModule(): CarPlayModule | null {
-  if (CarPlayChecked) {
-    return CarPlay;
-  }
-  CarPlayChecked = true;
+// Voice Integration (wires to existing ALFRED voice system)
+export * from "./voice";
 
-  if (Platform.OS !== "ios") {
-    return null;
-  }
-
-  try {
-    // Use dynamic require with string concatenation to prevent Metro from statically analyzing
-    // This prevents the module from initializing during bundling if native bridge isn't available
-    const modulePath = "@g4rb4g3/react-native-carplay";
-    const carplayModule = require(modulePath) as unknown as {
-      default?: CarPlayModule;
-    } & CarPlayModule;
-    CarPlay = carplayModule?.default || carplayModule;
-
-    // Verify the module has expected methods before using
-    if (!CarPlay || typeof CarPlay.registerOnConnect !== "function") {
-      CarPlay = null;
-      return null;
-    }
-
-    return CarPlay;
-  } catch (_error) {
-    // CarPlay module not available, not properly linked, or initialization failed
-    // This is expected if the native module isn't available or bridge isn't initialized
-    CarPlay = null;
-    return null;
-  }
-}
-
-const POLL_INTERVAL_MS = 100;
-const VOICE_TIMEOUT_MS = 10_000;
-const STREAM_POLL_INTERVAL_MS = 250;
-const STREAM_COMPLETION_TIMEOUT_MS = 30_000;
-
-type StreamBridge = {
-  supported: boolean;
-  status: string;
-  transcript: string;
-  assistantText: string;
-  vadConfidence: number | null;
-  autoStopReason: string | null;
-  start: () => Promise<void>;
-  stop: () => Promise<void>;
-};
-
-type VoiceBridge = {
-  start: () => Promise<void>;
-  stopAndTranscribe: () => Promise<{ text: string } | null>;
-  speak: (opts: TtsRequest) => Promise<void>;
-  speechToSpeech?: (
-    overrides?: Partial<Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">>
-  ) => Promise<SpeechToSpeechResponse | null>;
-  state: {
-    capture: string;
-  };
-  stream?: StreamBridge;
-};
-
-const noop = () => {
-  // No-op function for default callback
-};
-
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
-
-async function waitForStreamReply(voice: VoiceBridge): Promise<string | null> {
-  if (!voice.stream?.supported) {
-    return null;
-  }
-  const start = Date.now();
-  let latestReply = voice.stream.assistantText ?? "";
-  while (Date.now() - start < STREAM_COMPLETION_TIMEOUT_MS) {
-    if (voice.stream.assistantText) {
-      latestReply = voice.stream.assistantText;
-    }
-    if (
-      (voice.stream.status === "idle" || voice.stream.status === "playing") &&
-      (voice.stream.autoStopReason || latestReply)
-    ) {
-      break;
-    }
-    await delay(STREAM_POLL_INTERVAL_MS);
-  }
-  if (voice.stream.status === "recording") {
-    try {
-      await voice.stream.stop();
-    } catch {
-      // ignore stop failures; auto-stop or timeout will exit
-    }
-  }
-  return latestReply || null;
-}
-
-async function handleVoiceButtonPress(
-  voice: VoiceBridge,
-  onReply: (text: string) => void
-) {
-  try {
-    if (voice.stream?.supported) {
-      try {
-        await voice.stream.start();
-        const reply = await waitForStreamReply(voice);
-        if (reply) {
-          onReply(reply);
-        }
-        return;
-      } catch (_streamError) {
-        // ignore
-      }
-    }
-    await voice.start();
-    // Wait for user to speak (monitor capture state or use a timeout)
-    // Poll the capture state until it indicates speech is detected or timeout
-    await new Promise<void>((resolve) => {
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      const checkInterval = setInterval(() => {
-        if (
-          voice.state.capture === "recording" ||
-          voice.state.capture === "complete"
-        ) {
-          clearInterval(checkInterval);
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          resolve();
-        }
-      }, POLL_INTERVAL_MS);
-      // Timeout after configured duration
-      timeoutId = setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve();
-      }, VOICE_TIMEOUT_MS);
-    });
-    if (voice.speechToSpeech) {
-      const response = await voice.speechToSpeech({
-        thread: "carplay-drive",
-        resource: "carplay-drive",
-        ttsVoice: "alloy",
-        ttsFormat: "mp3",
-      });
-      if (response?.assistant?.text) {
-        onReply(response.assistant.text);
-      }
-      return;
-    }
-    const result = await voice.stopAndTranscribe();
-    if (result?.text) {
-      onReply(result.text);
-      await voice.speak({ text: result.text, format: "mp3" });
-    }
-  } catch (_error) {
-    // ignore
-  }
-}
-
+// Legacy compatibility export
 export function setupCarPlay(
-  voice: VoiceBridge,
-  onReply: (text: string) => void = noop
-): void {
-  if (Platform.OS !== "ios") {
-    return;
-  }
-
-  try {
-    // Lazy load CarPlay if not already loaded
-    const carplayModule = getCarPlayModule();
-    if (!carplayModule) {
-      return;
-    }
-
-    const carplay = carplayModule as {
-      registerOnConnect?: (handler: () => void) => void;
-      VoiceControlTemplate?: unknown;
-      VoiceControlButton?: unknown;
-      CarPlayButton?: unknown;
-      pushTemplate?: (template: unknown, animated: boolean) => void;
-      connected?: boolean;
-    };
-    if (!carplay || typeof carplay.registerOnConnect !== "function") {
-      return;
-    }
-
-    const buildTemplate = () => {
-      if (typeof carplay.VoiceControlTemplate !== "function") {
-        return null;
-      }
-      const VoiceControlTemplate = carplay.VoiceControlTemplate;
-      const VoiceControlButton =
-        carplay.VoiceControlButton ?? carplay.CarPlayButton;
-      if (typeof VoiceControlButton !== "function") {
-        return null;
-      }
-
-      type CarplayCtor = new (args: Record<string, unknown>) => unknown;
-      const listenButton = new (VoiceControlButton as CarplayCtor)({
-        id: "alfred-voice",
-        onPress: async () => {
-          await handleVoiceButtonPress(voice, onReply);
-        },
-      });
-
-      return new (VoiceControlTemplate as CarplayCtor)({
-        title: "Alfred Drive",
-        subtitle: "Tap steering control or say “Hey Alfred”",
-        buttons: [listenButton],
-      });
-    };
-
-    const handleConnect = () => {
-      const template = buildTemplate();
-      if (template && typeof carplay.pushTemplate === "function") {
-        carplay.pushTemplate(template, true);
-      }
-    };
-
-    carplay.registerOnConnect(handleConnect);
-    if (carplay.connected) {
-      handleConnect();
-    }
-  } catch (_error) {}
-}
+  _voice: unknown,
+  _onResponse?: (text: string) => void
+): void {}

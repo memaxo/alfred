@@ -14,3 +14,12 @@
 [submodule "vendor/factory"]
 	path = vendor/factory
 	url = https://github.com/factory-ai/factory
+[submodule "vendor/react-native-carplay"]
+	path = vendor/react-native-carplay
+	url = https://github.com/g4rb4g3/react-native-carplay.git
+[submodule "vendor/vllm-mlx"]
+	path = vendor/vllm-mlx
+	url = https://github.com/waybarrios/vllm-mlx
+[submodule "vendor/oxc"]
+	path = vendor/oxc
+	url = https://github.com/oxc-project/oxc
