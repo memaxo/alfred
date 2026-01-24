@@ -21,10 +21,10 @@
     "**/metrics.ts"
   ],
   "scripts": {
-    "build": "tsc -b --emitDeclarationOnly",
+    "build": "tsgo -b --emitDeclarationOnly",
     "test": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_FILE_TIMEOUT_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
     "test:postgres": "RUN_DB_TESTS=1 ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=2 ALFRED_TEST_FILE_TIMEOUT_MS=60000 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts --preload ./test/utils/sandbox.ts --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
-    "typecheck": "tsc -b"
+    "typecheck": "tsgo -b"
   },
   "devDependencies": {},
   "peerDependencies": {

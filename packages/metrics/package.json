@@ -45,11 +45,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
+    "build": "tsgo -b",
+    "dev": "tsgo -b -w",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit",
-    "typecheck": "tsc -b"
+    "check-types": "tsgo --noEmit",
+    "typecheck": "tsgo -b"
   },
   "dependencies": {
     "@alfred/type": "workspace:*",

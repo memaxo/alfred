@@ -173,11 +173,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "check-types": "tsc --noEmit",
-    "dev": "tsc -b -w",
+    "build": "tsgo -b",
+    "check-types": "tsgo --noEmit",
+    "dev": "tsgo -b -w",
     "lint": "biome check .",
-    "typecheck": "tsc -b"
+    "typecheck": "tsgo -b"
   },
   "dependencies": {
     "ai": "catalog:",

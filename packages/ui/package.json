@@ -21,8 +21,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -b --emitDeclarationOnly",
-    "typecheck": "tsc -b",
+    "build": "tsgo -b --emitDeclarationOnly",
+    "typecheck": "tsgo -b",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "peerDependencies": {

@@ -33,7 +33,7 @@
   },
   "scripts": {
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ./src/bun/preload.ts",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsgo -b --pretty false"
   },
   "dependencies": {
     "@alfred/agent": "workspace:*",

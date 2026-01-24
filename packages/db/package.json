@@ -94,7 +94,7 @@
     }
   },
   "scripts": {
-    "build": "tsdown && tsc -b --emitDeclarationOnly",
+    "build": "tsdown && tsgo -b --emitDeclarationOnly",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "bun scripts/migrate.ts",
@@ -105,7 +105,7 @@
     "db:down": "bun scripts/compose.ts down",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
     "test:postgres": "RUN_DB_TESTS=1 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
-    "typecheck": "tsc -b --emitDeclarationOnly --pretty false"
+    "typecheck": "tsgo -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {
     "@alfred/embed": "workspace:*",

@@ -1,6 +1,6 @@
 # Testing Standards
 
-1. **Runner and Coverage.** Use `bun test` for all packages. Maintain coverage for repos, routers, and schedulers. Use `tsc -b` for type checks in CI.
+1. **Runner and Coverage.** Use `bun test` for all packages. Maintain coverage for repos, routers, and schedulers. Use `tsgo -b` for type checks in CI.
 
 2. **Fast by default (unit-only).** Local dev flows like `test:fast` and pre-push hooks must run **unit** tests only by default. Integration/E2E/perf suites must be explicit opt-in (via scripts or env flags).
 

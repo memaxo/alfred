@@ -21,14 +21,17 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
-    "typecheck": "tsc -b --pretty false",
+    "build": "tsgo -b",
+    "dev": "tsgo -b -w",
+    "typecheck": "tsgo -b --pretty false",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {
     "@opentui/core": "^0.1.23",
     "@opentui/react": "^0.1.63",
+    "ai": "catalog:",
+    "@ai-sdk/openai": "^2.0.49",
+    "@ai-sdk/openai-compatible": "^2.0.18",
     "trpc-cli": "^0.12.1",
     "omelette": "^0.4.17",
     "@inquirer/prompts": "^7.5.0",

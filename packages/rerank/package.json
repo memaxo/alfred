@@ -9,7 +9,7 @@
     "./resolve": "./src/resolve.ts"
   },
   "scripts": {
-    "typecheck": "tsc -b"
+    "typecheck": "tsgo -b"
   },
   "dependencies": {
     "@alfred/logger": "workspace:*",

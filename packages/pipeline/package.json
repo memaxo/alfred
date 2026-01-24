@@ -15,7 +15,7 @@
     "./snapshot": "./src/snapshot.ts"
   },
   "scripts": {
-    "typecheck": "tsc -b",
+    "typecheck": "tsgo -b",
     "test": "bun test --preload ../../packages/test-kit/src/bun/preload.ts --preload ./test/preload.ts",
     "test:integration": "bun test --timeout 120000 --preload ../../packages/test-kit/src/bun/preload.ts --preload ./test/preload.ts test/integration"
   },

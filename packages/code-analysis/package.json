@@ -1,0 +1,22 @@
+{
+  "name": "@alfred/code-analysis",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Code diff parsing and bug detection for ALFRED Reviews",
+  "exports": {
+    ".": "./src/index.ts",
+    "./diff": "./src/diff.ts",
+    "./detect": "./src/detect.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "parse-diff": "^0.11.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.3"
+  }
+}

@@ -6,9 +6,9 @@
     "**/metrics.ts"
   ],
   "scripts": {
-    "dev": "tsc -b -w",
-    "build": "tsc -b",
-    "typecheck": "tsc -b",
+    "dev": "tsgo -b -w",
+    "build": "tsgo -b",
+    "typecheck": "tsgo -b",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
     "install-deps": "bash scripts/install.sh",
     "download-models": "uv run python scripts/download.py",

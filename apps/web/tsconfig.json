@@ -15,7 +15,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@alfred/api/*": ["../../packages/api/src/*"],
@@ -30,7 +29,8 @@
       "@alfred/runtime/*": ["../../packages/runtime/src/*"],
       "@alfred/type/*": ["../../packages/type/src/*"],
       "@alfred/ui/*": ["../../packages/ui/src/*"],
-      "@alfred/voice/*": ["../../packages/voice/src/*"]
+      "@alfred/voice/*": ["../../packages/voice/src/*"],
+      "*": ["./*"]
     },
     "types": ["vite/client"],
     "jsx": "react-jsx",

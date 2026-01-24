@@ -1,0 +1,20 @@
+{
+  "name": "@alfred/codeprint",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@alfred/rerank": "workspace:*",
+    "oxc-parser": "^0.110.0"
+  },
+  "devDependencies": {
+    "@alfred/logger": "workspace:*",
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "typecheck": "tsgo -b",
+    "test": "bun test"
+  }
+}

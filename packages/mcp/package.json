@@ -15,9 +15,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
-    "typecheck": "tsc -b --pretty false",
+    "build": "tsgo -b",
+    "dev": "tsgo -b -w",
+    "typecheck": "tsgo -b --pretty false",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {

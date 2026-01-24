@@ -2,11 +2,11 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
       "@alfred/voice/*": ["../packages/voice/src/*"],
-      "@alfred/metrics/*": ["../packages/metrics/src/*"]
+      "@alfred/metrics/*": ["../packages/metrics/src/*"],
+      "*": ["./*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts", "agentfs-sdk.d.ts"]

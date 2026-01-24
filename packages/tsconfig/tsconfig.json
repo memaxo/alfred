@@ -18,7 +18,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "typeRoots": ["./types", "../../node_modules/@types"],
-    "baseUrl": ".",
     "paths": {
       "@alfred/api/*": ["../api/src/*"],
       "@alfred/auth/*": ["../auth/src/*"],
@@ -37,7 +36,8 @@
       "@alfred/knowledge/*": ["../knowledge/src/*"],
       "@alfred/learning/*": ["../learning/src/*"],
       "@alfred/metrics/*": ["../metrics/src/*"],
-      "@alfred/runtime/*": ["../runtime/src/*"]
+      "@alfred/runtime/*": ["../runtime/src/*"],
+      "*": ["./*"]
     }
   }
 }

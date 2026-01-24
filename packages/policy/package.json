@@ -10,10 +10,10 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
+    "build": "tsgo -b",
+    "dev": "tsgo -b -w",
     "lint": "biome check .",
-    "typecheck": "tsc -b"
+    "typecheck": "tsgo -b"
   },
   "dependencies": {
     "@alfred/type": "workspace:*",

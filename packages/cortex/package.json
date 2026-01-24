@@ -38,11 +38,11 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
+    "build": "tsgo -b",
+    "dev": "tsgo -b -w",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit",
-    "typecheck": "tsc -b",
+    "check-types": "tsgo --noEmit",
+    "typecheck": "tsgo -b",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
   },
   "dependencies": {

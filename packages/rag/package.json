@@ -10,11 +10,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -b --emitDeclarationOnly",
-    "dev": "tsc -b --watch",
+    "build": "tsgo -b --emitDeclarationOnly",
+    "dev": "tsgo -b --watch",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit",
-    "typecheck": "tsc -b --emitDeclarationOnly --pretty false"
+    "check-types": "tsgo --noEmit",
+    "typecheck": "tsgo -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {
     "@alfred/db": "workspace:*",

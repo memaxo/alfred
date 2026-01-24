@@ -9,7 +9,7 @@
     "./escalation": "./src/escalation.ts"
   },
   "scripts": {
-    "typecheck": "tsc -b"
+    "typecheck": "tsgo -b"
   },
   "dependencies": {
     "@alfred/logger": "workspace:*",

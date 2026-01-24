@@ -141,7 +141,7 @@ Tools: `sense`, `think`, `act`, `learn`.
 4. **Env ownership.** Each runnable package loads its own `.env`. Do not rely on sibling loaders or cross-package side effects.
 5. **Background guards.** Schedulers and workers must be gated behind env flags (e.g. `SCHED_REMIND=1`) to prevent duplicate execution in multi-instance deployments. This is operational, not a feature flag—document multi-instance caveats alongside the flag. Core functionality (persistence, normalization, redaction) should never be gated.
 6. **Operational endpoints.** Expose `/api/metrics` with Prometheus registry wiring (`packages/api/src/metrics.ts`) and increment `health_checks_total` in both `/healthz` and `/healthz/deps`. Add new metrics through the central registry only.
-7. **Type graph.** Treat the monorepo as a composite TypeScript project. New packages join the root `tsconfig` references and ship a `typecheck` script (`tsc -b`) that CI can invoke via Turbo.
+7. **Type graph.** Treat the monorepo as a composite TypeScript project. New packages join the root `tsconfig` references and ship a `typecheck` script (`tsgo -b`) that CI can invoke via Turbo.
 8. **API route handler reuse.** When API route handlers share >80% of code, extract shared logic into a reusable handler function. Pass only the varying parts (tool builders, error prefixes) as parameters. This reduces duplication and maintenance burden while maintaining type safety.
 9. **Single-user context.** ALFRED is a personal assistant for a single user. Design decisions reflect this: no rate limiting, obvious defaults, minimal ceremony, direct user benefit. Hardcode sensible defaults (timeouts, retries, limits). No feature flags for core functionality. Skip multi-tenancy abstractions.
 10. **Domain Service Extraction.** When a router or tool file exceeds 300 lines, extract business logic into a dedicated domain service (e.g., `packages/<domain>/src/services/`). Keep routers thin: they should only handle request validation, permission checks, and service delegation.
@@ -158,7 +158,7 @@ Tools: `sense`, `think`, `act`, `learn`.
 
 # Testing Standards
 
-1. **Runner and Coverage.** Use `bun test` for all packages. Maintain coverage for repos, routers, and schedulers. Use `tsc -b` for type checks in CI.
+1. **Runner and Coverage.** Use `bun test` for all packages. Maintain coverage for repos, routers, and schedulers. Use `tsgo -b` for type checks in CI.
 
 2. **Fast by default (unit-only).** Local dev flows like `test:fast` and pre-push hooks must run **unit** tests only by default. Integration/E2E/perf suites must be explicit opt-in (via scripts or env flags).
 
@@ -1015,6 +1015,50 @@ When TypeScript needs ML capabilities (embeddings, perplexity, speech), use a Py
 2. `@alfred/pipeline` stays DB-free; persist completion/compilation via an API-layer observer in `packages/api`.
 3. Store durable work compilation under `workflow_runs.stateData.compilation` as a versioned object.
 4. Emit a small completion preview (`summaryText`) in `pipeline:complete` for immediate UI presentation; fetch full compilation via API for detailed views.
+
+
+
+<!-- Source: .ruler/60-trpc-router-testing.md -->
+
+# tRPC Router Testing Patterns
+
+1. **Use createTestCaller utility.** Import `createTestCaller` and `createUnauthedCaller` from `test/utils/trpc.ts` for authenticated and unauthenticated callers.
+
+2. **Valid UUIDs required.** When testing endpoints with UUID parameters, use valid v4 UUIDs (version 4 in position 13, variant 8/9/a/b in position 17). Invalid: `11111111-1111-1111-1111-111111111111`. Valid: `11111111-1111-4111-8111-111111111111`.
+
+3. **Mock at package boundary.** Use `mock.module("@alfred/db", () => ({ repo: { fn: vi.fn() } }))` to mock repository functions, not internal imports.
+
+4. **Test auth consistently.** Every endpoint needs at minimum: (a) success case with authenticated user, (b) UNAUTHORIZED for unauthenticated caller.
+
+5. **Test authorization.** For user-scoped resources, test FORBIDDEN when accessing another user's data by mocking a different `userId` in the returned data.
+
+6. **Mock setup pattern.** Define mocks at module level, reset in `beforeEach` with `vi.clearAllMocks()`, reset in `afterEach` with `vi.resetAllMocks()`.
+
+7. **Factory helpers for test data.** Create `createMockX(overrides)` functions that return valid default objects, allowing tests to override specific fields.
+
+8. **Test error cases explicitly.** Test NOT_FOUND for missing resources, BAD_REQUEST for invalid state (e.g., already submitted), and validation errors for malformed input.
+
+9. **Mock chaining for sequences.** Use `.mockResolvedValueOnce()` chain for tests that call the same mock multiple times with different expected results.
+
+10. **Verify mock calls.** Use `expect(mockFn).toHaveBeenCalledWith(...)` to verify correct parameters were passed to repository functions.
+
+11. **Router test file naming.** Use `<domain>.router.test.ts` pattern (e.g., `review.router.test.ts`, `note.router.test.ts`).
+
+12. **Group tests by endpoint.** Use nested `describe` blocks: outer block for router name, inner blocks for each endpoint (`queue`, `submit`, `create`, etc.).
+
+
+
+<!-- Source: .ruler/61-typescript-native.md -->
+
+# TypeScript Native Compiler (tsgo)
+
+1. **Use tsgo.** Prefer `tsgo` over `tsc` for type checking. It is significantly faster and tracks the native TypeScript compiler preview.
+2. **baseUrl forbidden.** Do not use `baseUrl` in `tsconfig.json`. It is deprecated and removed in the native compiler.
+3. **Explicit paths.** Use explicit `paths` mappings for all module resolution.
+4. **Relative paths.** All values in `paths` must be relative paths (starting with `./` or `../`). Non-relative paths are forbidden.
+5. **Wildcard mapping.** When using `paths`, ensure a wildcard mapping `"*": ["./*"]` exists if root resolution is needed.
+6. **Composite projects.** Maintain the composite project structure using `references` in `tsconfig.json`.
+7. **Typecheck command.** The canonical typecheck command is `tsgo -b`.
 
 
 

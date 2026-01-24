@@ -13,8 +13,8 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -b --emitDeclarationOnly",
-    "typecheck": "tsc -b"
+    "build": "tsgo -b --emitDeclarationOnly",
+    "typecheck": "tsgo -b"
   },
   "devDependencies": {},
   "peerDependencies": {

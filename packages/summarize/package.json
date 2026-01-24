@@ -15,11 +15,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
+    "build": "tsgo -b",
+    "dev": "tsgo -b -w",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit",
-    "typecheck": "tsc -b --pretty false",
+    "check-types": "tsgo --noEmit",
+    "typecheck": "tsgo -b --pretty false",
     "python:install": "uv sync",
     "python:check": "uv run python -c \"from python.compressor import LongCodeZip; print('OK')\""
   },
