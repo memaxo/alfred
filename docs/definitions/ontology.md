@@ -20,7 +20,7 @@ The ontology makes ALFRED's capabilities navigable and extensible.
 | **knowledge**   | Query, extract, connect information  | `rag_query`, `knowledge_query`, `knowledge_extract`    |
 | **action**      | Perform operations with side effects | `docker_exec`, `git_commit`, `note_create`             |
 | **reflection**  | Observe and reason about state       | `cognitive_state`, `learning_pattern`, `memory_recall` |
-| **integration** | Interface with external systems      | MCP tools, `web_search`, `ticket_create`               |
+| **integration** | Interface with external systems      | MCP tools, `web_search`, `ticket_create`, `home`       |
 | **system**      | Manage runtime and sessions          | `runtime_status`, `session_create`, `router`           |
 
 Categories answer "what kind of thing is this?" They help agents decide where to look for capabilities.
@@ -35,6 +35,7 @@ Categories answer "what kind of thing is this?" They help agents decide where to
 | **book**       | Library items              | Reading list management      |
 | **knowledge**  | Facts, relations, insights | Accumulated understanding    |
 | **preference** | Settings, configurations   | User customization           |
+| **home**       | Smart devices, entities    | Home automation control      |
 
 Domains answer "what does this relate to?" They group entities by semantic meaning.
 

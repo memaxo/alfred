@@ -13,3 +13,5 @@ Importing a package must be fast, side-effect free, and allow short-lived script
 5. **Test imports.** Add tests that `import()` key entrypoints and assert they exit quickly (time-bounded) and do not leak handles.
 6. **CLI stdin cleanup.** Any CLI code that may resume `process.stdin` (completion libraries, interactive prompts) must call `process.stdin.pause()` in a `finally` or teardown hook so `bun test` processes can exit.
 7. **Explicit subpath exports.** When a package is consumed via deep imports (e.g. `@pkg/auth/token`), add explicit `exports` entries for those exact paths; do not rely on wildcard exports being resolved consistently in all toolchains.
+
+8. **Lazy init heavy validators.** Compile schema validators (Ajv/Zod) on first use and cache them; never at module import time.

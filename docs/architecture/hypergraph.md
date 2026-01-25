@@ -3,9 +3,10 @@
 ## System Anatomy
 
 - **packages/knowledge/** – Pure in-memory hypergraph with dirty tracking, interval-tree temporal index, optional embeddings, and AC-3/MRV query execution. Exposes `persistHypergraph`, `loadHypergraph`, and reasoning-chain helpers.
-- **packages/agent/assistant/src/graphstore.ts** – Bridge that serializes hypergraph entries into `KnowledgeEntry[]`, writes them through `@alfred/db/repo/graph`, and hydrates fresh graphs on demand.
+- **packages/agent/assistant/src/hypergraph-bridge.ts** – Bridge that persists `@alfred/knowledge` hypergraph entries to DB (via `persistKnowledge`) and hydrates fresh graphs on demand.
 - **packages/runtime/** – Runtime engines that read from and now also write to the hypergraph/graph substrate. `LearningEngine` consumes canonical `KnowledgeUpdate[]` from `@alfred/learning/self_supervision` and applies them to a per-run `Hypergraph` via `RuntimeKnowledgeBridge`, flushing to `memory_nodes`/`memory_edges` with `persistHypergraphToDb("runtime:<runId>")`.
 - **packages/rag/** – RAG ingestion and retrieval. When `RAG_ENRICH_GRAPH=1`, `ingest()` calls `extract`/`toKnowledge` on stored chunks and persists the resulting `KnowledgeEntry[]` to the graph via `@alfred/db/repo/graph.upsertNodes/upsertEdges` under `resource = "rag:<source>"`.
+- **packages/graph/** – Query facade that stitches DB-backed graph reads (`@alfred/db/repo/graph`) with in-memory hypergraph queries (`@alfred/knowledge/query`) and RAG fallback into a single `runQuery()` surface returning `UnifiedNode[]`/`UnifiedEdge[]`.
 - **packages/db/** – `memory_nodes` / `memory_edges` schema plus repo helpers (`getNeighbors`, `getSubgraph`, `findPath`, `getReasoningChain`) shared by tRPC routers, smoke scripts, and workflow capture flows.
 - **packages/api/** – Graph + workflow routers fetch from the repo layer, so capture → persist → reload is validated via tRPC (see `graph.integration.test.ts`, `workflow.capture.integration.test.ts`, `workflow.reasoning.integration.test.ts`).
 

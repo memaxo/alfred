@@ -343,11 +343,11 @@ cd packages/embed && bun run install-deps && bun run download-model
 echo "USE_LOCAL_MODELS=true" >> .env
 ```
 
-| Model | Purpose | Size |
-|-------|---------|------|
-| Faster-Whisper | Speech-to-text | 3GB |
-| Piper/Maya1 | Text-to-speech | 3GB |
-| KaLM-Embedding-Gemma3-12B | Embeddings | 12GB |
+| Model                     | Purpose        | Size |
+| ------------------------- | -------------- | ---- |
+| Faster-Whisper            | Speech-to-text | 3GB  |
+| Piper/Maya1               | Text-to-speech | 3GB  |
+| KaLM-Embedding-Gemma3-12B | Embeddings     | 12GB |
 
 <br>
 
@@ -398,10 +398,10 @@ bun run check         # Lint and format (Biome)
 
 ## Roadmap
 
-| Phase | Focus |
-|-------|-------|
-| **Active** | AI-Native Workflow System, Generative UI |
-| **Next** | Preference-Driven Adaptation, Suspend/Resume |
+| Phase      | Focus                                          |
+| ---------- | ---------------------------------------------- |
+| **Active** | AI-Native Workflow System, Generative UI       |
+| **Next**   | Preference-Driven Adaptation, Suspend/Resume   |
 | **Future** | Neural Face, Home Assistant, Desktop Evolution |
 
 <br>

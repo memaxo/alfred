@@ -212,32 +212,15 @@ runCognitiveLoop(ctx, streamId, event)
 1. User Request
    └→ API Router (packages/api/src/routers/workflow.ts)
        └→ Create durable run in DB
-       └→ WorkflowRuntime.execute()
-           ├→ CoreRuntime.buildContext()
-           │   ├→ Load preferences (packages/db)
-           │   ├→ Query knowledge graph (packages/knowledge)
-           │   ├→ Get cognitive state (packages/cognitive)
-           │   └→ Fetch learnings (packages/learning)
-           │
-           ├→ AI SDK streamText()
-           │   ├→ System prompt with context
-           │   ├→ Tool registry (packages/agent)
-           │   └→ Stream events
-           │
-           ├→ For each event:
-           │   ├→ Normalize to WorkflowEvent
-           │   ├→ Update knowledge graph
-           │   ├→ Transition cognitive state
-           │   ├→ Persist to DB
-           │   └→ Emit to client
-           │
-           └→ On completion:
-               └→ CoreRuntime.recordOutcome()
-                   ├→ Record to learning system
-                   └→ Update knowledge patterns
+       └→ PipelineRunner.run()
+           ├→ init → context → plan → schedule
+           ├→ execute (delegates to runtime orchestrator + agents)
+           ├→ review → learn → summarize
+           ├→ Emits PipelineEvents (streamed to clients)
+           └→ Checkpoints persisted after stage boundaries (resume support)
 
-2. Client receives stream of WorkflowEvents
-   └→ UI renders in real-time
+2. Client receives stream of PipelineEvents
+   └→ UI renders in real-time (Desktop / TUI)
 ```
 
 ### Context Building Flow
@@ -276,29 +259,13 @@ The runtime layer is responsible for:
 - **Updating** them during and after execution
 - **Composing** their outputs into coherent context
 
-### Runtime Events and Provenance
+### Pipeline Events and Persistence
 
-During workflow execution, the runtime emits a small, well-defined set of `WorkflowEvent` shapes that downstream layers use for persistence, replay, and visualization:
+During workflow execution, the workflow router streams `PipelineEvent` and persists durable run state:
 
-- **`reasoning` events** – carry explicit model thoughts (`text` / `reasoning`) that the API layer converts into reasoning traces. These traces are persisted via `persistReasoning` and later reconstructed into reasoning chains for `workflow.reasoning`.
-- **`runtime-context` events** – emitted once per run after context building. The payload includes:
-  - `ragDocumentIds` – the set of RAG document IDs that contributed chunks to the execution context.
-  - `totalTokens` – approximate token count for code + RAG context.
-  - `bundleFileCount` / `bundlePreview` – light metadata about which files were included in the context bundle.
-
-The workflow router listens to these events when `USE_WORKFLOW_RUNTIME=true`:
-
-- It accumulates `reasoning` events into an in-memory array of `{ text, timestamp }` traces for the run.
-- It reads `ragDocumentIds` from the first `runtime-context` event.
-- On stream completion, it calls a provenance helper that:
-  - Invokes `persistReasoning(resource, traces, { executionId, auto, ragDocumentIds })`.
-  - Invokes `linkRagProvenanceToReasoning({ runtimeResource: resource, executionId })` to create `explains` edges between RAG documents and reasoning nodes.
-
-Mindscape and graph APIs consume the resulting graph:
-
-- RAG documents appear as `rag_document` nodes under `resource="user"`.
-- Runtime reasoning appears as `reasoning` nodes under per-workspace resources.
-- Provenance edges appear as `kind="explains"` edges from `rag_document` → `reasoning`, rendered in Mindscape as green, dashed edges and traversable via `graph.runQuery` or the `graph.explainedBy` helper.
+- **Events**: persisted to `workflow_events` (skipping high-volume chatter like `stage:progress`).
+- **Checkpoints**: persisted after each stage boundary (resume via `workflow.resumePipeline`).
+- **Completion artifacts**: stored via API observers (e.g. compilation receipts) instead of embedding persistence inside pipeline core.
 
 ### RuntimeContext Keys
 

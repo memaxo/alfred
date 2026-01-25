@@ -21,6 +21,7 @@
    - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`) for heavy `mock.module()` usage
    - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock)
    - avoid relying on "reset" semantics for module mocks across files
+   - export stubs for every symbol imported by the code under test (missing exports can crash at module eval)
 
 7. **Centralized mock reset registry.** Test-kit modules auto-register reset functions via `registerMockReset()`:
    - preload's `afterEach` automatically calls all registered reset functions

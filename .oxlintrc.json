@@ -5,6 +5,10 @@
     "./node_modules/ultracite/config/oxlint/next/.oxlintrc.json",
     "./node_modules/ultracite/config/oxlint/remix/.oxlintrc.json"
   ],
+  "env": {
+    "browser": true,
+    "node": true
+  },
   "globals": {
     "Bun": "readonly",
     "describe": "readonly",
@@ -20,9 +24,66 @@
     "AudioWorkletProcessor": "readonly",
     "registerProcessor": "readonly"
   },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "vendor/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/.turbo/**",
+    "**/.expo/**",
+    "**/dev-dist/**",
+    "**/.zed/**",
+    "**/.vscode/**",
+    "**/.wrangler/**",
+    "**/.alchemy/**",
+    "**/.svelte-kit/**",
+    "**/.nuxt/**",
+    "test-results/**",
+    ".agent/**",
+    ".agentfs/**"
+  ],
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn",
+    "perf": "warn",
+    "style": "warn",
+    "pedantic": "warn",
+    "restriction": "warn",
+    "nursery": "warn"
+  },
   "rules": {
+    "jest/require-hook": "off",
+    "no-void": "warn",
+    "no-promise-executor-return": "warn",
+    "import/first": "warn",
+    "promise/avoid-new": "warn",
+    "node/global-require": "warn",
     "no-explicit-any": "warn",
-    "no-unused-vars": "warn"
+    "react-perf/jsx-no-new-function-as-prop": "warn",
+    "import/no-named-as-default": "warn",
+    "no-empty-function": "warn",
+    "no-inline-comments": "warn",
+    "unicorn/prefer-dom-node-dataset": "warn",
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "complexity": "off",
+    "arrow-body-style": "off",
+    "func-style": "off",
+    "import/consistent-type-specifier-style": "off",
+    "jsdoc/check-tag-names": "off",
+    "max-statements": "off",
+    "sort-keys": "off",
+    "oxc/no-barrel-file": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-new-array": "off",
+    "unicorn/no-useless-fallback-in-spread": "off"
   },
   "overrides": [
     {
@@ -35,8 +96,24 @@
         "**/*.config.ts",
         "**/*.config.js"
       ],
+      "env": {
+        "browser": true,
+        "node": true
+      },
       "rules": {
-        "no-non-null-assertion": "off"
+        "consistent-type-imports": "off",
+        "import/first": "off",
+        "jest/no-conditional-in-test": "off",
+        "jest/prefer-hooks-in-order": "off",
+        "no-explicit-any": "off",
+        "no-empty-function": "off",
+        "no-inline-comments": "off",
+        "no-non-null-assertion": "off",
+        "promise/prefer-await-to-callbacks": "off",
+        "promise/prefer-await-to-then": "off",
+        "require-await": "off",
+        "jest/prefer-spy-on": "off",
+        "react-perf/jsx-no-new-function-as-prop": "off"
       }
     }
   ],

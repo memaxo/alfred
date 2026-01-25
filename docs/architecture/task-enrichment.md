@@ -104,6 +104,14 @@ await createRetryResolution(agent, {
   - `timeout` → `timeout`
   - `escalated` → `escalated`
 
+## Production readiness
+
+- **Schema compatibility.** Persisted enrichment payloads include `schemaVersion`/`createdAt`; reads validate and ignore incompatible data.
+- **PII/secret safety.** Persisted text and params are redacted and truncated using `redactSecrets()`/`redactObject()` plus `enrichCaps`.
+- **Non-blocking + bounded.** Enrichment persistence/query paths are gated behind `ALFRED_ENRICHMENT=1` and wrapped in short timeouts.
+- **Retention.** DB history cleanup is scheduled behind `SCHED_ENRICH_CLEANUP=1` with `ALFRED_ENRICHMENT_DB_RETENTION_DAYS` (default 30).
+- **Similarity hardening.** Embedding search validates dimensions/finite values, clamps limits/similarity, and filters low-similarity matches.
+
 ## Testing
 
 - DB integration (pgvector): `RUN_DB_TESTS=1 bun test packages/db/test/codex-learning.integration.test.ts`

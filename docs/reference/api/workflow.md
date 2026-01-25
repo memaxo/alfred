@@ -13,8 +13,10 @@ All workflow endpoints are under the `workflow` tRPC router:
 
 ```typescript
 trpc.workflow.start();
-trpc.workflow.stream();
-trpc.workflow.resume();
+trpc.workflow.streamPipeline();
+trpc.workflow.resumePipeline();
+trpc.workflow.phase.plan();
+trpc.workflow.phase.execute();
 trpc.workflow.get();
 trpc.workflow.events();
 trpc.workflow.reasoning();
@@ -25,7 +27,9 @@ trpc.workflow.listRuns();
 
 ### `workflow.start`
 
-Creates a new workflow run and returns run metadata.
+Creates a new **pipeline-backed** workflow run row and returns run metadata.
+
+To actually execute and stream events, use `workflow.streamPipeline` (for new runs) or `workflow.resumePipeline` (to continue from a checkpoint).
 
 **Type:** `mutation`
 
@@ -73,9 +77,9 @@ const result = await trpc.workflow.start.mutate({
 });
 ```
 
-### `workflow.stream`
+### `workflow.streamPipeline`
 
-Subscribes to real-time workflow events via tRPC subscription.
+Subscribes to real-time **pipeline** events via tRPC subscription.
 
 **Type:** `subscription`
 
@@ -90,7 +94,7 @@ Subscribes to real-time workflow events via tRPC subscription.
 **Example:**
 
 ```typescript
-trpc.workflow.stream.useSubscription(
+trpc.workflow.streamPipeline.useSubscription(
   {
     requirement: "Deploy to staging",
     auto: "medium",
@@ -111,7 +115,9 @@ trpc.workflow.stream.useSubscription(
 
 ### `workflow.resume`
 
-Resumes a suspended workflow with authorization event.
+### `workflow.resumePipeline`
+
+Resumes a suspended **pipeline** workflow run (from the latest checkpoint) and streams events via subscription.
 
 **Type:** `mutation`
 
@@ -358,7 +364,7 @@ Workflow completed.
 
 ```typescript
 // Client listens for obligation events
-trpc.workflow.stream.useSubscription(input, {
+trpc.workflow.streamPipeline.useSubscription(input, {
   onData: (event) => {
     if (event.type === "obligation") {
       // Show biometric challenge
@@ -405,7 +411,7 @@ try {
 ### Stream Error Handling
 
 ```typescript
-trpc.workflow.stream.useSubscription(input, {
+trpc.workflow.streamPipeline.useSubscription(input, {
   onError: (error) => {
     // Error emitted to stream
     // Stream may continue or terminate

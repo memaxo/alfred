@@ -2,6 +2,16 @@
 
 The `@alfred/pipeline` package provides the authoritative code path for all ALFRED workflow execution. It consolidates context gathering, planning, agent spawning, quality review, and learning into a unified, observable runtime.
 
+## Pipeline vs Runtime (Decision Tree)
+
+- **Use Pipeline** when you need a **multi-stage workflow** with clear phase boundaries, resumability, observer hooks (Linear sync, metrics, persistence), and deterministic safeguards (timeouts, MAX_TRANSITIONS).
+- **Use Runtime** when you need **lower-level execution primitives** (agent execution, domain engines, streaming adapters) that are orchestrated by a higher-level system (Pipeline or API).
+
+**Rule of thumb**:
+
+- **APIs that “run work” for a user** should start a Pipeline run.
+- **Engines that “compute/transform” for a stage** live in Runtime/domain packages and should be called by Pipeline stages.
+
 ## Architecture
 
 The pipeline consists of 8 sequential stages:

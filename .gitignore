@@ -3,6 +3,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Vendored sources
+vendor/
+
 # Build outputs
 dist
 build

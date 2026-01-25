@@ -35,6 +35,7 @@ Use `ALFRED_TEST_SCOPE=unit|integration|e2e|perf|all`.
 `mock.module()` is process-global. Preferred strategies:
 
 - **Per-file process isolation** for mock-heavy suites: `ALFRED_TEST_ISOLATE_FILES=1`
+- Ensure mock factories export **all** symbols imported by the code under test.
 - Avoid async `mock.module()` factories (no `await import(...)` inside) to prevent module-eval deadlocks.
 - Avoid leaking module singletons across tests; for singleton state, import a fresh copy via a cache-busting query (e.g. `...?t=<uuid>`).
 
