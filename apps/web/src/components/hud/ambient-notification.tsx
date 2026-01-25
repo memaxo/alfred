@@ -29,7 +29,7 @@ export type NotificationType =
   | "critical"
   | "message";
 
-export type AmbientNotificationProps = {
+export interface AmbientNotificationProps {
   id: string;
   type: NotificationType;
   title: string;
@@ -49,7 +49,7 @@ export type AmbientNotificationProps = {
   onDismiss?: (id: string) => void;
   /** Additional className */
   className?: string;
-};
+}
 
 const TYPE_CONFIG: Record<
   NotificationType,

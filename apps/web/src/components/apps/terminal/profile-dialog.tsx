@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type ProfileDialogProps = {
+interface ProfileDialogProps {
   profile?: TerminalProfile;
   onSave: (profile: Omit<TerminalProfile, "id">) => void;
   onClose: () => void;
   className?: string;
-};
+}
 
 type ProfileType = "local" | "ssh" | "docker";
 

@@ -22,19 +22,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type SemanticSearchProps = {
+interface SemanticSearchProps {
   className?: string;
   onResultSelect?: (file: string, line: number) => void;
-};
+}
 
-type SearchResult = {
+interface SearchResult {
   id: string;
   file: string;
   line: number;
   content: string;
   score: number;
   context: string;
-};
+}
 
 export function SemanticSearch({
   className,
@@ -138,9 +138,9 @@ export function SemanticSearch({
                         "font-mono text-xs",
                         result.score > 0.9
                           ? "text-green-400"
-                          : result.score > 0.85
+                          : (result.score > 0.85
                             ? "text-yellow-400"
-                            : "text-biolum-dim"
+                            : "text-biolum-dim")
                       )}
                     >
                       {(result.score * 100).toFixed(0)}%

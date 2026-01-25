@@ -10,14 +10,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 
-type Point = {
+interface Point {
   id: string;
   x: number;
   y: number;
   label: string;
   cluster: number;
   relevance: number;
-};
+}
 
 const clusterColors = ["#22d3ee", "#a78bfa", "#34d399", "#fbbf24"];
 
@@ -109,7 +109,7 @@ export function EmbeddingVisualizer() {
       return [];
     }
     const types = new Set(data.nodes.map((n) => n.type));
-    return Array.from(types);
+    return [...types];
   }, [data]);
 
   return (

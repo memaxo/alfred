@@ -9,7 +9,7 @@
  * Interface Segregation: Small, focused interfaces
  * Dependency Inversion: Depend on abstractions (Page, TestInfo)
  */
-import { type Page, type TestInfo } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 /**
  * Severity levels for captured errors
  */
@@ -17,7 +17,7 @@ export type ErrorSeverity = "critical" | "error" | "warning" | "info";
 /**
  * Captured error entry
  */
-export type CapturedError = {
+export interface CapturedError {
   type: "console" | "page" | "network" | "server";
   severity: ErrorSeverity;
   message: string;
@@ -25,11 +25,11 @@ export type CapturedError = {
   url?: string;
   stack?: string;
   statusCode?: number;
-};
+}
 /**
  * Error monitor configuration
  */
-export type ErrorMonitorConfig = {
+export interface ErrorMonitorConfig {
   /** Fail immediately on critical errors */
   failFast?: boolean;
   /** Severity levels that cause test failure */
@@ -37,10 +37,10 @@ export type ErrorMonitorConfig = {
   /** Patterns to ignore (e.g., known warnings) */
   ignorePatterns?: RegExp[];
   /** Console message types to capture */
-  captureConsoleTypes?: Array<"error" | "warning" | "log" | "info">;
+  captureConsoleTypes?: ("error" | "warning" | "log" | "info")[];
   /** Network status codes to treat as errors */
   errorStatusCodes?: number[];
-};
+}
 /**
  * Error Monitor - captures and analyzes runtime errors
  *
@@ -101,13 +101,13 @@ export declare function createErrorMonitor(
 /**
  * Minimal interface for screenshot capture
  */
-export type ScreenshotCapture = {
+export interface ScreenshotCapture {
   capture(name: string, options?: CaptureOptions): Promise<string>;
-};
+}
 /**
  * Options for screenshot capture
  */
-export type CaptureOptions = {
+export interface CaptureOptions {
   /** Specific element to capture */
   selector?: string;
   /** Full page screenshot */
@@ -125,11 +125,11 @@ export type CaptureOptions = {
     width: number;
     height: number;
   };
-};
+}
 /**
  * Screenshot metadata for analysis
  */
-export type ScreenshotMetadata = {
+export interface ScreenshotMetadata {
   name: string;
   path: string;
   timestamp: string;
@@ -139,7 +139,7 @@ export type ScreenshotMetadata = {
   };
   url: string;
   phase: TestPhase;
-};
+}
 /**
  * Test lifecycle phases for organized screenshots
  */
@@ -269,9 +269,9 @@ export declare function createScreenshotManager(
  * });
  * ```
  */
-export type ScreenshotFixture = {
+export interface ScreenshotFixture {
   screenshots: ScreenshotManager;
-};
+}
 export declare function withScreenshots<
   _T extends {
     page: Page;
@@ -305,10 +305,10 @@ export declare function withScreenshots<
  * });
  * ```
  */
-export type TestHarnessFixture = {
+export interface TestHarnessFixture {
   screenshots: ScreenshotManager;
   errors: ErrorMonitor;
-};
+}
 export declare function withTestHarness<
   _T extends {
     page: Page;

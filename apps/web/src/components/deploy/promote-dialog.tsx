@@ -4,26 +4,26 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export type PromoteDialogPayload = {
+export interface PromoteDialogPayload {
   upstream: string;
   host?: string;
-};
+}
 
-export type PromoteDialogProps = {
+export interface PromoteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   app: string;
   defaultHost?: string;
   onSubmit: (payload: PromoteDialogPayload) => Promise<void> | void;
   isSubmitting?: boolean;
-};
+}
 
 function ensurePortalRoot() {
-  let root = document.getElementById("alfred-dialog-root");
+  let root = document.querySelector("#alfred-dialog-root");
   if (!root) {
     root = document.createElement("div");
     root.setAttribute("id", "alfred-dialog-root");
-    document.body.appendChild(root);
+    document.body.append(root);
   }
   return root;
 }

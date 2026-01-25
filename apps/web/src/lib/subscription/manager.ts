@@ -14,12 +14,12 @@ import type {
 type EventHandler<T = unknown> = (event: T) => void;
 type StatusHandler = (status: SubscriptionState["status"]) => void;
 
-type StreamSubscription = {
+interface StreamSubscription {
   handler: EventHandler;
   onStatus?: StatusHandler;
   cursor: string | null;
   status: SubscriptionState["status"];
-};
+}
 
 const RECONNECT_DELAYS = [1000, 2000, 5000, 10_000, 30_000];
 const HEARTBEAT_INTERVAL = 30_000;
@@ -55,7 +55,7 @@ class SubscriptionManager {
     try {
       this.ws = new WebSocket(this.getWebSocketUrl());
       this.setupWebSocket();
-    } catch (_error) {
+    } catch {
       this.scheduleReconnect();
     }
   }
@@ -81,7 +81,7 @@ class SubscriptionManager {
       try {
         const message = JSON.parse(event.data) as ServerMessage;
         this.handleMessage(message);
-      } catch (_error) {}
+      } catch {}
     };
 
     this.ws.onclose = () => {

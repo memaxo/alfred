@@ -6,13 +6,13 @@
 
 import { cn } from "@/lib/utils";
 
-type ModelMetrics = {
+interface ModelMetrics {
   name: string;
   accuracy: number;
   latency: number;
   tokensPerSec: number;
   memoryUsage: number;
-};
+}
 
 const mockModels: ModelMetrics[] = [
   {

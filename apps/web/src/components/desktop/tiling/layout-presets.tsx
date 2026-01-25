@@ -15,12 +15,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 
-const LAYOUTS: Array<{
+const LAYOUTS: {
   id: TilingLayout;
   label: string;
   icon: React.ReactNode;
   description: string;
-}> = [
+}[] = [
   {
     id: "float",
     label: "Float",
@@ -59,9 +59,9 @@ const LAYOUTS: Array<{
   },
 ];
 
-type LayoutPresetsProps = {
+interface LayoutPresetsProps {
   className?: string;
-};
+}
 
 export function LayoutPresets({ className }: LayoutPresetsProps) {
   const { config, setLayout, autoTile } = useDesktopStore(

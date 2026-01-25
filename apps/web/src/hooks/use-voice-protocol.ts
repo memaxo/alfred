@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getVoiceStreamUrl } from "@/utils/voice-stream";
 
-export type VoiceProtocolState = {
+export interface VoiceProtocolState {
   status:
     | "idle"
     | "connecting"
@@ -32,7 +32,7 @@ export type VoiceProtocolState = {
   assistantRaw: VoiceAssistantRaw | null;
   uiMessages: UIMessage[];
   workflow: { runId: string; planId?: string } | null;
-};
+}
 
 export function useVoiceProtocol(
   sessionIdRef: React.MutableRefObject<string>,
@@ -91,7 +91,7 @@ export function useVoiceProtocol(
       }));
     },
     onAssistantMessage: (event) => {
-      const raw = event.raw;
+      const { raw } = event;
       const parsed =
         raw === undefined
           ? { ok: false as const, error: "missing" }
@@ -160,13 +160,13 @@ export function useVoiceProtocol(
           inputMimeType: config.inputMimeType,
         });
         return client;
-      } catch (err) {
+      } catch (error) {
         setState((prev) => ({
           ...prev,
           status: "error",
-          error: err instanceof Error ? err.message : "connection_failed",
+          error: error instanceof Error ? error.message : "connection_failed",
         }));
-        throw err;
+        throw error;
       }
     },
     [getClient, sessionIdRef]
@@ -176,7 +176,7 @@ export function useVoiceProtocol(
     async (reason: "manual" | "silence" | "timeout" = "manual") => {
       try {
         await clientRef.current?.stop(reason);
-      } catch (_err) {
+      } catch {
         // ignore stop errors
       }
     },

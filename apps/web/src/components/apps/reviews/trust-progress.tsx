@@ -18,7 +18,7 @@ interface TrustProgressBarProps {
 
 export function TrustProgressBar({ className }: TrustProgressBarProps) {
   const { data, isLoading } = trpc.review.trustProgress.useQuery(undefined, {
-    refetchInterval: 30000,
+    refetchInterval: 30_000,
   });
 
   if (isLoading || !data) {
@@ -81,7 +81,7 @@ function TrustRow({ pattern }: { pattern: TrustPattern }) {
   // Format action type for display
   const displayName = pattern.actionType
     .replace(/^(tool|memory|message|workflow|code):/, "")
-    .replace(/_/g, " ");
+    .replaceAll("_", " ");
 
   return (
     <div className="space-y-1.5">

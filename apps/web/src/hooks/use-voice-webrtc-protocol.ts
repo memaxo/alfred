@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 
-export type VoiceWebrtcState = {
+export interface VoiceWebrtcState {
   status:
     | "idle"
     | "connecting"
@@ -26,7 +26,7 @@ export type VoiceWebrtcState = {
   assistantRaw: VoiceAssistantRaw | null;
   uiMessages: UIMessage[];
   workflow: { runId: string; planId?: string } | null;
-};
+}
 
 function canUseWebrtc() {
   return (
@@ -84,9 +84,10 @@ export function useVoiceWebrtcProtocol(
   const handleServerEvent = useCallback(
     (event: VoiceStreamServerEvent) => {
       switch (event._) {
-        case "ready":
+        case "ready": {
           return;
-        case "session_started":
+        }
+        case "session_started": {
           sessionIdRef.current = event.sessionId;
           setState((prev) => ({
             ...prev,
@@ -101,28 +102,33 @@ export function useVoiceWebrtcProtocol(
             workflow: null,
           }));
           return;
-        case "partial_transcript":
+        }
+        case "partial_transcript": {
           setState((prev) => ({ ...prev, transcript: event.text }));
           return;
-        case "final_transcript":
+        }
+        case "final_transcript": {
           setState((prev) => ({ ...prev, transcript: event.text }));
           return;
-        case "vad_state":
+        }
+        case "vad_state": {
           setState((prev) => ({
             ...prev,
             vadConfidence: event.vadConfidence ?? null,
           }));
           return;
-        case "auto_stop":
+        }
+        case "auto_stop": {
           setState((prev) => ({
             ...prev,
             autoStopReason: event.reason,
             status: "processing",
           }));
           return;
-        case "assistant_message":
+        }
+        case "assistant_message": {
           {
-            const raw = event.raw;
+            const { raw } = event;
             const parsed =
               raw === undefined
                 ? { ok: false as const, error: "missing" }
@@ -148,28 +154,34 @@ export function useVoiceWebrtcProtocol(
             }));
           }
           return;
-        case "tts_complete":
+        }
+        case "tts_complete": {
           setState((prev) => ({ ...prev, status: "idle" }));
           return;
-        case "interrupt":
+        }
+        case "interrupt": {
           handlers.onInterrupt();
           stopPlayback();
           setState((prev) => ({ ...prev, status: "recording" }));
           return;
-        case "status":
+        }
+        case "status": {
           setState((prev) => ({ ...prev, status: event.state }));
           return;
-        case "error":
+        }
+        case "error": {
           setState((prev) => ({
             ...prev,
             status: "error",
             error: event.message,
           }));
           return;
+        }
         // Server-side WebRTC currently does audio over RTP, not `tts_chunk`.
         case "tts_chunk":
-        case "pong":
+        case "pong": {
           return;
+        }
       }
     },
     [handlers, sessionIdRef, stopPlayback]
@@ -261,7 +273,7 @@ export function useVoiceWebrtcProtocol(
       };
 
       pc.onicecandidate = (ev) => {
-        const candidate = ev.candidate;
+        const { candidate } = ev;
         if (!candidate) {
           return;
         }

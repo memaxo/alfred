@@ -41,13 +41,13 @@ import { cn } from "@/lib/utils";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Note = {
+interface Note {
   id: string;
   title: string;
   content: string;
   tags: string[];
   updatedAt: number;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

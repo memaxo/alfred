@@ -111,7 +111,7 @@ export const LiveMicrophoneWaveform = ({
           await audioContextRef.current.decodeAudioData(arrayBuffer);
         audioBufferRef.current = audioBuffer;
       }
-    } catch (_error) {}
+    } catch {}
   }, []);
 
   useEffect(() => {

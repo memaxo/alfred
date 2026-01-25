@@ -43,7 +43,7 @@ const mockLocalStorage = {
   get length() {
     return mockStorage.size;
   },
-  key: (index: number) => Array.from(mockStorage.keys())[index] ?? null,
+  key: (index: number) => [...mockStorage.keys()][index] ?? null,
 };
 
 // @ts-expect-error - mocking global

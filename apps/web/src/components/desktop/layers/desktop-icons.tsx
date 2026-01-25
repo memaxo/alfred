@@ -28,9 +28,9 @@ const ICON_SIZE = 80;
 const GRID_GAP = 8;
 const GRID_PADDING = 16;
 
-type DesktopIconsProps = {
+interface DesktopIconsProps {
   style?: CSSProperties;
-};
+}
 
 export function DesktopIcons({ style }: DesktopIconsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,14 +170,14 @@ export function DesktopIcons({ style }: DesktopIconsProps) {
   );
 }
 
-type DesktopIconButtonProps = {
+interface DesktopIconButtonProps {
   icon: DesktopIcon;
   isSelected: boolean;
   isDragging: boolean;
   onClick: (iconId: string, e: React.MouseEvent) => void;
   onDoubleClick: (type: WindowType) => void;
   onDragStart: (iconId: string, e: React.MouseEvent) => void;
-};
+}
 
 function DesktopIconButton({
   icon,

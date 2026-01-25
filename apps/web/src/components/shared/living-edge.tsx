@@ -27,7 +27,7 @@ export function LivingEdge({
 
   let stroke = style.stroke ?? "rgba(255, 255, 255, 0.2)";
   let strokeWidth = style.strokeWidth ?? 1;
-  let strokeDasharray = style.strokeDasharray;
+  let { strokeDasharray } = style;
 
   if (kind === "explains") {
     strokeDasharray = "4 2";

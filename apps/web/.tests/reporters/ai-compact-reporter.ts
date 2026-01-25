@@ -19,16 +19,16 @@ import {
   safeRegisterHistogram,
 } from "@alfred/metrics/registry";
 
-type FailureSummary = {
+interface FailureSummary {
   test: string;
   file: string;
   error: string;
   screenshot?: string;
   trace?: string;
   duration: number;
-};
+}
 
-type AISummary = {
+interface AISummary {
   status: "passed" | "failed" | "timedOut" | "interrupted";
   total: number;
   passed: number;
@@ -36,7 +36,7 @@ type AISummary = {
   skipped: number;
   duration: number;
   failures: FailureSummary[];
-};
+}
 
 // Metrics integration
 const e2eTestsTotal = safeRegisterCounter({

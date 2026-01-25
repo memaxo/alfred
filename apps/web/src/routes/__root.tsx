@@ -26,15 +26,15 @@ import appCss from "../index.css?url";
 const DEVTOOLS_ENABLED =
   import.meta.env.DEV && import.meta.env.VITE_DEVTOOLS === "1";
 
-export type RouterAppContext = {
+export interface RouterAppContext {
   queryClient: QueryClient;
-};
+}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        charSet: "utf-8",
+        charSet: "utf8",
       },
       {
         name: "viewport",
@@ -77,7 +77,7 @@ function RootDocument() {
       };
     };
     const onRejection = (event: PromiseRejectionEvent) => {
-      const reason = event.reason;
+      const { reason } = event;
       g.__ALFRED_LAST_ERROR__ = {
         type: "rejection",
         message: reason instanceof Error ? reason.message : String(reason),

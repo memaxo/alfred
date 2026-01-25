@@ -5,7 +5,7 @@ import path from "node:path";
 import { isUuid, openAgentfsDb } from "../../../server/agentfs";
 
 function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
-  const normalized = args.dbPath.replace(/\\/g, "/");
+  const normalized = args.dbPath.replaceAll("\\", "/");
   if (!normalized.startsWith(".agentfs/")) {
     return false;
   }
@@ -22,7 +22,7 @@ function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
 }
 
 function safeRunId(runId: string): string {
-  return runId.replace(/[^a-zA-Z0-9-]/g, "-");
+  return runId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
 }
 
 async function getSessionFromRequest(request: Request) {
@@ -134,7 +134,7 @@ export const Route = createFileRoute("/api/agentfs/handoff")({
         let baseDir: string | null = null;
         try {
           const opened = await openAgentfsDb({ runId, dbPath });
-          baseDir = opened.baseDir;
+          ({ baseDir } = opened);
           await opened.fsdb.close();
         } catch {
           baseDir = null;
@@ -156,7 +156,7 @@ export const Route = createFileRoute("/api/agentfs/handoff")({
           });
         }
 
-        const normalized = dbPath.replace(/\\/g, "/");
+        const normalized = dbPath.replaceAll("\\", "/");
         const relRunDir = path.posix.dirname(normalized);
         const absRunDir = path.resolve(process.cwd(), relRunDir);
 

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 
-type FocusAppProps = {
+interface FocusAppProps {
   className?: string;
   window?: WindowComponentProps["window"];
   onClose?: WindowComponentProps["onClose"];
@@ -24,7 +24,7 @@ type FocusAppProps = {
   onDragEnd?: WindowComponentProps["onDragEnd"];
   onMaximize?: WindowComponentProps["onMaximize"];
   onRestore?: WindowComponentProps["onRestore"];
-};
+}
 
 export function FocusApp({
   className,

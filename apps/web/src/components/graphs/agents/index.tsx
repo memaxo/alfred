@@ -117,9 +117,9 @@ const initialEdges: Edge<DependencyEdgeData>[] = [
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-type SpawnTreeProps = {
+interface SpawnTreeProps {
   onAgentSelect?: (agentId: string | null) => void;
-};
+}
 
 export function SpawnTree({ onAgentSelect }: SpawnTreeProps) {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);

@@ -7,10 +7,10 @@
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type ResourceChartProps = {
+interface ResourceChartProps {
   containerId: string;
   className?: string;
-};
+}
 
 export function ResourceChart({ containerId, className }: ResourceChartProps) {
   const { data } = trpc.deploy.containersStats.useQuery(

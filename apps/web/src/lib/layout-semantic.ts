@@ -1,8 +1,11 @@
 import type { Edge, Node } from "@xyflow/react";
 
-type NodeData = { type?: string; [key: string]: unknown };
+interface NodeData {
+  type?: string;
+  [key: string]: unknown;
+}
 
-export type SemanticLayoutOptions = {
+export interface SemanticLayoutOptions {
   anchorId?: string;
   focusId?: string | null;
   iterations?: number;
@@ -12,7 +15,7 @@ export type SemanticLayoutOptions = {
   respectPinned?: boolean;
   zoneRadius?: number;
   zoneStrength?: number;
-};
+}
 
 const DEFAULTS: Required<SemanticLayoutOptions> = {
   anchorId: "singularity",
@@ -26,7 +29,10 @@ const DEFAULTS: Required<SemanticLayoutOptions> = {
   zoneStrength: 0.02,
 };
 
-type Vector = { x: number; y: number };
+interface Vector {
+  x: number;
+  y: number;
+}
 
 // Define semantic zones (directions) for different node types
 const ZONE_ANGLES: Record<string, number> = {
@@ -121,13 +127,13 @@ export function layoutSemantic<T extends NodeData>(
         const distanceSq = Math.max(dx * dx + dy * dy, 100); // Avoid div by zero
 
         // Focused mode: Push unrelated nodes further away
-        let repulsion = config.repulsion;
+        let { repulsion } = config;
         if (config.focusId) {
           // If neither is focused or connected to focus, push harder
           const aRel = a.id === config.focusId || connectedNodes.has(a.id);
           const bRel = b.id === config.focusId || connectedNodes.has(b.id);
           if (!(aRel || bRel)) {
-            repulsion *= 2.0;
+            repulsion *= 2;
           }
         }
 

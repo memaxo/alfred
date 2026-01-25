@@ -42,13 +42,13 @@ import { ErrorBoundary } from "./error-boundary";
 import { Load } from "./load";
 import { Queue } from "./queue";
 
-export type ChatContainerProps = {
+export interface ChatContainerProps {
   agent?: "assistant" | "orchestrator";
   thread?: string;
   resource?: string;
   initialMessages?: AssistantUIMessage[];
   initialConversationId?: string | null;
-};
+}
 
 export function ChatContainer({
   agent,
@@ -331,9 +331,9 @@ export function ChatContainer({
                 perf
                 placeholder={
                   currentAgent === "assistant"
-                    ? focused.label
+                    ? (focused.label
                       ? `Ask about ${focused.label}...`
-                      : "Ask Alfred how to help…"
+                      : "Ask Alfred how to help…")
                     : "Switch to the assistant agent to chat."
                 }
                 virtualized
@@ -383,7 +383,7 @@ const getStreamId = (message: AssistantUIMessage): string | undefined => {
       ? ((message as { metadata?: Record<string, unknown> }).metadata ?? null)
       : null;
   if (metadata && typeof metadata === "object") {
-    const streamId = (metadata as Record<string, unknown>).streamId;
+    const { streamId } = metadata as Record<string, unknown>;
     if (typeof streamId === "string" && streamId.length > 0) {
       return streamId;
     }

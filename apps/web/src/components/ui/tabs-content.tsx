@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 
 import { TabsContext } from "./tabs-context";
 
-export type TabsContentProps = {
+export interface TabsContentProps {
   value: string;
   children: React.ReactNode;
   className?: string;
-};
+}
 
 export const TabsContent = ({
   value,

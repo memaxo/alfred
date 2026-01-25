@@ -8,9 +8,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-export type TourStepProps = {
+export interface TourStepProps {
   onComplete: () => void;
-};
+}
 
 export function TourStep({ onComplete }: TourStepProps) {
   return (

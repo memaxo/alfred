@@ -24,9 +24,9 @@ import { cn } from "@/lib/utils";
 
 import { Shimmer } from "./shimmer";
 
-type PlanContextValue = {
+interface PlanContextValue {
   isStreaming: boolean;
-};
+}
 
 const PlanContext = createContext<PlanContextValue | null>(null);
 

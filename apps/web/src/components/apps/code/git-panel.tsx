@@ -8,12 +8,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type GitPanelProps = {
+interface GitPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onFileSelect?: (path: string) => void;
   className?: string;
-};
+}
 
 export function GitPanel({
   isOpen,
@@ -146,7 +146,7 @@ function GitStatusSection({
   onFileSelect,
 }: {
   title: string;
-  files: Array<{ path: string; status: string }>;
+  files: { path: string; status: string }[];
   onFileSelect?: (path: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);

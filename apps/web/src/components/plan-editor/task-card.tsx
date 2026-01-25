@@ -6,12 +6,12 @@
 
 import type { SubTask } from "@alfred/pipeline/schemas";
 
-export type TaskCardProps = {
+export interface TaskCardProps {
   task: SubTask;
   onEdit?: (updates: Partial<SubTask>) => void;
   onRemove?: () => void;
   selected?: boolean;
-};
+}
 
 export function TaskCard({
   task,

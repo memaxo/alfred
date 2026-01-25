@@ -18,13 +18,13 @@ import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { useMessageEdit } from "@/hooks/use-message-edit";
 import { cn } from "@/lib/utils";
 
-type MessageListProps = {
+interface MessageListProps {
   messages: AssistantUIMessage[];
   onEdit: (id: string, text: string) => void;
   onRegenerate: () => void;
   status: "idle" | "streaming" | "error";
   className?: string;
-};
+}
 
 export function MessageList({
   messages,

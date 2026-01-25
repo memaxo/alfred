@@ -15,20 +15,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppForm, useSubmitInvalidFocus } from "@/form";
 
-export type CognitiveFeedbackDraft = {
+export interface CognitiveFeedbackDraft {
   streamId: string;
   expected: string;
   actual?: string;
   intent: "positive" | "negative";
   surface: "chat" | "mindscape" | "voice";
-};
+}
 
-type FormValues = {
+interface FormValues {
   expected: string;
   actual: string;
-};
+}
 
-export type CognitiveFeedbackDialogProps = {
+export interface CognitiveFeedbackDialogProps {
   draft: CognitiveFeedbackDraft | null;
   status: CognitiveFeedbackStatus;
   error?: Error | null;
@@ -36,7 +36,7 @@ export type CognitiveFeedbackDialogProps = {
   onSubmit: (
     values: FormValues & { surface?: CognitiveFeedbackDraft["surface"] }
   ) => Promise<void> | void;
-};
+}
 
 export function CognitiveFeedbackDialog({
   draft,

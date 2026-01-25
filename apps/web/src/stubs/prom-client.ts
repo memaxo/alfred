@@ -1,12 +1,12 @@
 type Labels = Record<string, string | number>;
 
-type MetricConfig = {
+interface MetricConfig {
   name: string;
   help: string;
   labelNames?: string[];
   buckets?: number[];
   registers?: Registry[];
-};
+}
 
 export class Registry {
   private readonly metricsByName = new Map<string, unknown>();
@@ -52,7 +52,7 @@ export class Counter<T extends string = string> {
   constructor(config: MetricConfig) {
     registerSelf(this, config);
   }
-  labels(..._values: Array<string | number>): this {
+  labels(..._values: (string | number)[]): this {
     return this;
   }
   inc(_labels?: Labels, _value?: number): void {}
@@ -65,7 +65,7 @@ export class Gauge<T extends string = string> {
   constructor(config: MetricConfig) {
     registerSelf(this, config);
   }
-  labels(..._values: Array<string | number>): this {
+  labels(..._values: (string | number)[]): this {
     return this;
   }
   set(_labelsOrValue: Labels | number, _value?: number): void {}
@@ -80,7 +80,7 @@ export class Histogram<T extends string = string> {
   constructor(config: MetricConfig) {
     registerSelf(this, config);
   }
-  labels(..._values: Array<string | number>): this {
+  labels(..._values: (string | number)[]): this {
     return this;
   }
   observe(_labelsOrValue: Labels | number, _value?: number): void {}
@@ -96,7 +96,7 @@ export class Summary<T extends string = string> {
   constructor(config: MetricConfig) {
     registerSelf(this, config);
   }
-  labels(..._values: Array<string | number>): this {
+  labels(..._values: (string | number)[]): this {
     return this;
   }
   observe(_labelsOrValue: Labels | number, _value?: number): void {}

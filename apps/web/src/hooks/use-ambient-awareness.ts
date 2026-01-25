@@ -29,7 +29,7 @@ export type SystemStatus = "nominal" | "degraded" | "critical" | "unknown";
 /**
  * Ambient awareness state
  */
-export type AmbientState = {
+export interface AmbientState {
   // Temporal awareness
   time: {
     current: Date;
@@ -59,26 +59,26 @@ export type AmbientState = {
   context: {
     currentTask?: string;
     pendingItems: number;
-    upcomingDeadlines: Array<{ name: string; due: Date }>;
+    upcomingDeadlines: { name: string; due: Date }[];
   };
-};
+}
 
 /**
  * Proactive trigger definition
  */
-export type ProactiveTrigger = {
+export interface ProactiveTrigger {
   id: string;
   condition: (state: AmbientState) => boolean;
   priority: "low" | "medium" | "high" | "critical";
   message: (state: AmbientState) => { title: string; body?: string };
   cooldownMs: number;
   type: "info" | "warning" | "success" | "critical";
-};
+}
 
 /**
  * Ambient awareness configuration
  */
-export type AmbientConfig = {
+export interface AmbientConfig {
   /** Enable ambient awareness loop (time/user activity tracking). */
   enabled?: boolean;
   /** Update interval in ms */
@@ -91,7 +91,7 @@ export type AmbientConfig = {
   proactiveEnabled?: boolean;
   /** Custom triggers */
   customTriggers?: ProactiveTrigger[];
-};
+}
 
 /**
  * Determine time of day from hour

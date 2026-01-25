@@ -20,10 +20,10 @@ import {
 } from "@/config/desktop-actions";
 import { useDesktopStore } from "@/store/desktop";
 
-type DesktopCommandPaletteProps = {
+interface DesktopCommandPaletteProps {
   onVisualize?: (windowId: string) => void;
   onAsk?: (windowId: string, label?: string) => void;
-};
+}
 
 export function DesktopCommandPalette({
   onVisualize,
@@ -76,30 +76,37 @@ export function DesktopCommandPalette({
       }
 
       switch (actionId) {
-        case "focus":
+        case "focus": {
           focusWindow(focusedWindowId);
           break;
-        case "delete":
+        }
+        case "delete": {
           removeWindow(focusedWindowId);
           break;
-        case "pin":
+        }
+        case "pin": {
           if (focusedWindowType) {
             pinType(focusedWindowType);
           }
           break;
-        case "visualize":
+        }
+        case "visualize": {
           onVisualize?.(focusedWindowId);
           break;
-        case "ask":
+        }
+        case "ask": {
           onAsk?.(focusedWindowId, focusedWindow.data?.label);
           break;
-        case "duplicate":
+        }
+        case "duplicate": {
           if (focusedWindowType) {
             spawnWindow(focusedWindowType, focusedWindow.data?.resourceRef);
           }
           break;
-        default:
+        }
+        default: {
           break;
+        }
       }
     },
     [

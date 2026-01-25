@@ -32,7 +32,7 @@ export type MindscapeNodeType =
   | "window"
   | "agent";
 
-export type MindscapeNodeData = {
+export interface MindscapeNodeData extends Record<string, unknown> {
   label: string;
   type: MindscapeNodeType;
   description?: string;
@@ -46,18 +46,18 @@ export type MindscapeNodeData = {
   confidence?: number;
   archived?: boolean;
   hgHash?: string;
-};
+}
 
-export type MindscapeEdgeData = {
+export interface MindscapeEdgeData extends Record<string, unknown> {
   label?: string;
   type: "relation" | "reference" | "spawn" | "dependency";
   weight?: number;
-};
+}
 
 export type MindscapeNode = Node<MindscapeNodeData>;
 export type MindscapeEdge = Edge<MindscapeEdgeData>;
 
-export type MindscapeStore = {
+export interface MindscapeStore {
   // State
   nodes: MindscapeNode[];
   edges: MindscapeEdge[];
@@ -102,7 +102,7 @@ export type MindscapeStore = {
     position?: { x: number; y: number }
   ) => void;
   openInDesktop: (nodeId: string) => string | null;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INITIAL STATE

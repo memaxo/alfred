@@ -48,7 +48,7 @@ function getWindowTier(type: WindowType): WindowTier {
   return "tertiary";
 }
 
-export type WindowFrameProps = {
+export interface WindowFrameProps {
   id: string;
   title: string;
   children: ReactNode;
@@ -63,7 +63,7 @@ export type WindowFrameProps = {
   closable?: boolean;
   handles?: { source?: boolean; target?: boolean };
   modes?: ViewMode[];
-};
+}
 
 export function WindowFrame({
   id,

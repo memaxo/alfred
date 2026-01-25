@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type Pattern = {
+interface Pattern {
   id: string;
   name: string;
   description: string;
@@ -18,7 +18,7 @@ type Pattern = {
   steps: number;
   uses: number;
   starred: boolean;
-};
+}
 
 const mockPatterns: Pattern[] = [
   {

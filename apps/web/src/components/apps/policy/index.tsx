@@ -25,7 +25,7 @@ import { DecisionLog } from "./decision-log";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PolicyDecision = {
+export interface PolicyDecision {
   id: string;
   timestamp: Date;
   action: string;
@@ -33,15 +33,15 @@ export type PolicyDecision = {
   decision: "allowed" | "denied" | "escalated";
   reason: string;
   autonomyLevel: number;
-};
+}
 
-export type AutonomyScope = {
+export interface AutonomyScope {
   id: string;
   name: string;
   description: string;
   level: number;
   maxLevel: number;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

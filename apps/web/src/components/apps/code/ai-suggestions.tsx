@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type AISuggestionsProps = {
+interface AISuggestionsProps {
   onDismiss: () => void;
   onAccept: (code: string) => void;
   path: string;
@@ -20,13 +20,13 @@ type AISuggestionsProps = {
   cursorColumn: number;
   language: string;
   className?: string;
-};
+}
 
-type Suggestion = {
+interface Suggestion {
   id: string;
   code: string;
   description: string;
-};
+}
 
 export function AISuggestions({
   onDismiss,

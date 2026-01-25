@@ -71,9 +71,9 @@ function DriveModeRoute() {
           return;
         }
         setAudioSrc(`data:${audio.mimeType};base64,${audio.audioBase64}`);
-      } catch (err) {
+      } catch (error) {
         const message =
-          err instanceof Error ? err.message : "voice_pipeline_failed";
+          error instanceof Error ? error.message : "voice_pipeline_failed";
         setErrorMessage(message);
         toast.error(message);
       }
@@ -107,9 +107,9 @@ function DriveModeRoute() {
     setAudioSrc(null);
     setErrorMessage(null);
     clearTranscript();
-    startRecording().catch((err) => {
+    startRecording().catch((error) => {
       const message =
-        err instanceof Error ? err.message : "voice_capture_failed";
+        error instanceof Error ? error.message : "voice_capture_failed";
       setErrorMessage(message);
       toast.error(message);
     });

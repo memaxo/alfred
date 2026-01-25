@@ -7,13 +7,13 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-export type TranscriptWord = {
+export interface TranscriptWord {
   id: string;
   text: string;
   start: number;
   end: number;
   confidence?: number;
-};
+}
 
 export type TranscriptSegment =
   | {
@@ -32,15 +32,15 @@ export type TranscriptSegment =
       segmentIndex?: number;
     };
 
-export type SegmentComposer = {
+export interface SegmentComposer {
   segments: TranscriptSegment[];
   addWord: (word: TranscriptWord, speaker: string) => void;
   finalize: () => TranscriptSegment[];
-};
+}
 
 export type TranscriptViewerStatus = "idle" | "playing" | "paused" | "loading";
 
-export type UseTranscriptViewerResult = {
+export interface UseTranscriptViewerResult {
   segments: TranscriptSegment[];
   currentTime: number;
   duration: number;
@@ -60,14 +60,14 @@ export type UseTranscriptViewerResult = {
   seekToTime: (time: number) => void;
   startScrubbing: () => void;
   endScrubbing: () => void;
-};
+}
 
-export type UseTranscriptViewerOptions = {
+export interface UseTranscriptViewerOptions {
   audioSrc?: string;
   initialSegments?: TranscriptSegment[];
   onTimeUpdate?: (time: number) => void;
   onSegmentChange?: (index: number) => void;
-};
+}
 
 export function useTranscriptViewer(
   options: UseTranscriptViewerOptions = {}

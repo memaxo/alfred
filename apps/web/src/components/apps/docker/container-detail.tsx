@@ -27,13 +27,13 @@ import { trpc } from "@/utils/trpc";
 
 import type { Container } from "./index";
 
-type ContainerDetailProps = {
+interface ContainerDetailProps {
   containerId: string;
   container?: Container;
-  networks?: Array<{ name: string }>;
+  networks?: { name: string }[];
   onRemoved?: () => void;
   className?: string;
-};
+}
 
 export function ContainerDetail({
   containerId,

@@ -62,7 +62,7 @@ type RunStatus = "running" | "suspended" | "completed" | "failed" | "cancelled";
 
 type AgentStatus = "pending" | "spawning" | "running" | "completed" | "failed";
 
-type Agent = {
+interface Agent {
   id: string;
   name: string;
   type: "codex" | "droid" | "claude" | "roo";
@@ -71,24 +71,24 @@ type Agent = {
   wave: number;
   parentId?: string;
   output?: string;
-};
+}
 
-type Wave = {
+interface Wave {
   id: number;
   status: "pending" | "running" | "completed";
   agents: string[];
   startTime?: string;
   endTime?: string;
-};
+}
 
-type LogEntry = {
+interface LogEntry {
   id: string;
   timestamp: string;
   type: "info" | "warning" | "error" | "success";
   agentId: string | null;
   message: string;
   metadata: Record<string, unknown> | null;
-};
+}
 
 type ViewMode = "list" | "detail";
 
@@ -303,8 +303,8 @@ export function AgentsWindow({ id, data, selected }: NodeProps) {
 // RUNS LIST VIEW
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RunsListProps = {
-  runs: Array<{
+interface RunsListProps {
+  runs: {
     id: string;
     workflowId: string | null;
     requirement: string | null;
@@ -312,12 +312,12 @@ type RunsListProps = {
     created: string;
     agentCount: number;
     progress: number;
-  }>;
+  }[];
   isLoading: boolean;
   onSelectRun: (runId: string) => void;
   statusFilter: "all" | RunStatus;
   onStatusFilterChange: (filter: "all" | RunStatus) => void;
-};
+}
 
 const statusVariants: Record<
   string,
@@ -435,7 +435,7 @@ function RunsList({
 // RUN DETAIL VIEW
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RunDetailProps = {
+interface RunDetailProps {
   run:
     | {
         id: string;
@@ -456,7 +456,7 @@ type RunDetailProps = {
   onPause: () => void;
   onResume: () => void;
   onCancel: () => void;
-};
+}
 
 function RunDetail({
   run,
@@ -703,16 +703,21 @@ function AgentCard({
 
 function AgentStatusIndicator({ status }: { status: AgentStatus }) {
   switch (status) {
-    case "completed":
+    case "completed": {
       return <CheckCircle className="h-3.5 w-3.5 text-green-400" />;
-    case "failed":
+    }
+    case "failed": {
       return <XCircle className="h-3.5 w-3.5 text-red-400" />;
-    case "running":
+    }
+    case "running": {
       return <Loader2 className="h-3.5 w-3.5 animate-spin text-biolum" />;
-    case "spawning":
+    }
+    case "spawning": {
       return <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-400" />;
-    default:
+    }
+    default: {
       return <div className="h-3.5 w-3.5 rounded-full bg-white/20" />;
+    }
   }
 }
 

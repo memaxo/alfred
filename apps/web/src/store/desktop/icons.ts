@@ -7,14 +7,14 @@
 
 import type { WindowType } from "./types.new";
 
-export type DesktopIcon = {
+export interface DesktopIcon {
   id: string;
   type: WindowType;
   position: { row: number; col: number };
   customLabel?: string;
-};
+}
 
-export type DesktopIconSlice = {
+export interface DesktopIconSlice {
   desktopIcons: DesktopIcon[];
   selectedIconIds: string[];
   draggingIconId: string | null;
@@ -35,7 +35,7 @@ export type DesktopIconSlice = {
   selectAllIcons: () => void;
   clearIconSelection: () => void;
   setDraggingIcon: (iconId: string | null) => void;
-};
+}
 
 const DEFAULT_ICONS: DesktopIcon[] = [
   { id: "icon-chat", type: "chat", position: { row: 0, col: 0 } },

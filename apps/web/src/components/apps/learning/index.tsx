@@ -23,7 +23,7 @@ import { MistakeLedger } from "./mistake-ledger";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type LearningEntry = {
+export interface LearningEntry {
   id: string;
   timestamp: Date;
   category: "reasoning" | "coding" | "planning" | "communication";
@@ -31,7 +31,7 @@ export type LearningEntry = {
   correction: string;
   severity: "low" | "medium" | "high";
   resolved: boolean;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

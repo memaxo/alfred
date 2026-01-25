@@ -21,7 +21,7 @@ import {
 /**
  * AI Test Fixture with integrated capabilities
  */
-export type AITestFixture = {
+export interface AITestFixture {
   /** Screenshot manager for visual captures */
   screenshots: ScreenshotManager;
   /** Error monitor for runtime error detection */
@@ -36,7 +36,7 @@ export type AITestFixture = {
   ) => Promise<T>;
   /** Assert with automatic screenshot capture on failure */
   safeAssert: <T>(name: string, assertion: () => Promise<T>) => Promise<T>;
-};
+}
 
 /**
  * AI-optimized test harness with integrated monitoring

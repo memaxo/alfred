@@ -37,24 +37,29 @@ const PROVIDERS = [
 type ModelRole = (typeof MODEL_ROLES)[number];
 type Provider = (typeof PROVIDERS)[number];
 
-type ModelConfig = {
+interface ModelConfig {
   role: ModelRole;
   provider: Provider;
   modelId: string;
-};
+}
 
 function getRoleDescription(role: ModelRole): string {
   switch (role) {
-    case "chat":
+    case "chat": {
       return "Used for conversational interactions and general assistance";
-    case "orchestrator":
+    }
+    case "orchestrator": {
       return "Used for workflow orchestration and multi-agent coordination";
-    case "planner":
+    }
+    case "planner": {
       return "Used for task decomposition and execution planning";
-    case "background":
+    }
+    case "background": {
       return "Used for background processing and pattern extraction";
-    case "voice":
+    }
+    case "voice": {
       return "Used for voice interactions and speech-to-speech responses";
+    }
   }
 }
 

@@ -17,12 +17,12 @@ export type KnowledgeEntityType =
   | "fact"
   | "relation";
 
-export type KnowledgeEntityData = {
+export interface KnowledgeEntityData extends Record<string, unknown> {
   label: string;
   type: KnowledgeEntityType;
   description?: string;
   confidence?: number;
-};
+}
 
 const typeIcons: Record<KnowledgeEntityType, typeof Brain> = {
   person: User,

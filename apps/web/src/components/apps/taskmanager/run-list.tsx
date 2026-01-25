@@ -74,13 +74,13 @@ type RunStatus =
   | "cancelled"
   | "pending";
 
-type Run = {
+interface Run {
   id: string;
   status: RunStatus;
   requirement?: string | null;
   created: string | null;
   projectId?: string | null;
-};
+}
 
 function RunRow({ run }: { run: Run }) {
   const statusConfig = {

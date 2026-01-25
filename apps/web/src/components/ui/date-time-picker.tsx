@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Input } from "./input";
 
-export type DateTimePickerProps = {
+export interface DateTimePickerProps {
   value?: Date;
   onChange?: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   showTime?: boolean;
-};
+}
 
 export function DateTimePicker({
   value,

@@ -14,11 +14,11 @@ import { trpc } from "@/utils/trpc";
 
 import type { Workspace } from "./index";
 
-type WorkspaceListProps = {
+interface WorkspaceListProps {
   selectedId: string | null;
   onSelect: (workspace: Workspace) => void;
   className?: string;
-};
+}
 
 export function WorkspaceList({
   selectedId,
@@ -100,9 +100,9 @@ function WorkspaceItem({
   const StatusIcon =
     workspace.status === "active"
       ? Clock
-      : workspace.status === "completed"
+      : (workspace.status === "completed"
         ? CheckCircle
-        : XCircle;
+        : XCircle);
   const statusColors: Record<string, string> = {
     active: "text-blue-400",
     completed: "text-green-400",

@@ -34,13 +34,13 @@ const riskColors = {
   high: "text-red-400",
 };
 
-type Preference = {
+interface Preference {
   id: string;
   key: string;
   value: unknown;
   confidence: number;
   source: string;
-};
+}
 
 export function PolicySection() {
   const utils = trpc.useUtils();

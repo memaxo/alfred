@@ -2,11 +2,11 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type TableRowProps = {
+export interface TableRowProps {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
-};
+}
 
 export const TableRow = ({
   children,

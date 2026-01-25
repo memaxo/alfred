@@ -25,11 +25,11 @@ import { useTerminalProfiles } from "@/store/terminal";
 import { DockerSelector } from "./docker-selector";
 import { ProfileDialog } from "./profile-dialog";
 
-type ProfileSelectorProps = {
+interface ProfileSelectorProps {
   onSelect: (profile: TerminalProfile) => void;
   onClose: () => void;
   className?: string;
-};
+}
 
 const typeIcons = {
   local: Terminal,

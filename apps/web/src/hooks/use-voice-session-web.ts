@@ -180,9 +180,11 @@ export function useVoiceSessionWeb() {
             maxUtteranceMs: options?.maxUtteranceMs,
           });
           return;
-        } catch (err) {
+        } catch (error) {
           // Fall back to WS streaming if WebRTC setup fails (or server feature is off).
-          setError(err instanceof Error ? err.message : "voice_webrtc_failed");
+          setError(
+            error instanceof Error ? error.message : "voice_webrtc_failed"
+          );
         }
       }
       if (!protocol.supported) {
@@ -342,9 +344,9 @@ export function useVoiceSessionWeb() {
       supported: webrtc.supported || protocol.supported,
       transport: webrtc.state.sessionId
         ? ("webrtc" as const)
-        : protocol.state.sessionId
+        : (protocol.state.sessionId
           ? ("ws" as const)
-          : null,
+          : null),
       status: webrtc.state.sessionId
         ? webrtc.state.status
         : protocol.state.status,

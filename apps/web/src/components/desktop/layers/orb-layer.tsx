@@ -22,9 +22,9 @@ import { useOrbStore } from "@/store/orb";
 
 import { LayerErrorBoundary } from "../error-boundary";
 
-type OrbLayerProps = {
+interface OrbLayerProps {
   style?: React.CSSProperties;
-};
+}
 
 export function OrbLayer({ style }: OrbLayerProps) {
   const { stream } = useVoiceSessionWeb();

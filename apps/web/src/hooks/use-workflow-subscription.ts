@@ -7,14 +7,14 @@ import type { WindowData } from "@/store/desktop/types.new";
 
 import { trpc } from "@/utils/trpc";
 
-export type WorkflowEscalation = {
+export interface WorkflowEscalation {
   agentId: string;
   reason: string;
   details: string;
   suggestions?: string[];
   severity: "warning" | "blocking";
   timestamp: number;
-};
+}
 
 export type WorkflowRunStatus =
   | "idle"
@@ -24,21 +24,21 @@ export type WorkflowRunStatus =
   | "error"
   | "suspended";
 
-export type WorkflowStep = {
+export interface WorkflowStep {
   id: string;
   name: string;
   status: "pending" | "running" | "completed" | "failed";
   duration?: number;
   startTime?: number;
-};
+}
 
-type UseWorkflowSubscriptionOptions = {
+interface UseWorkflowSubscriptionOptions {
   kind?: "start" | "resume";
   onWindowUpdate?: (update: Partial<WindowData>) => void;
   onError?: (error: Error) => void;
-};
+}
 
-export type UseWorkflowSubscriptionReturn = {
+export interface UseWorkflowSubscriptionReturn {
   status: WorkflowRunStatus;
   error: Error | null;
   steps: WorkflowStep[];
@@ -47,7 +47,7 @@ export type UseWorkflowSubscriptionReturn = {
   run: (input: unknown) => void;
   stop: () => void;
   clear: () => void;
-};
+}
 
 /**
  * Hook to subscribe to workflow execution events via tRPC.

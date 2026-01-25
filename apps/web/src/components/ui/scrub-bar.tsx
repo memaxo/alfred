@@ -22,14 +22,14 @@ function formatTimestamp(value: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-type ScrubBarContextValue = {
+interface ScrubBarContextValue {
   duration: number;
   value: number;
   progress: number;
   onScrub?: (time: number) => void;
   onScrubStart?: () => void;
   onScrubEnd?: () => void;
-};
+}
 
 const ScrubBarContext = createContext<ScrubBarContextValue | null>(null);
 

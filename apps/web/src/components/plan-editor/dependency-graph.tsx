@@ -6,9 +6,9 @@
 
 import type { SubTask } from "@alfred/pipeline/schemas";
 
-export type DependencyGraphProps = {
+export interface DependencyGraphProps {
   subtasks: SubTask[];
-};
+}
 
 export function DependencyGraph({ subtasks }: DependencyGraphProps) {
   // Build dependency map

@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-type SearchServer = {
+interface SearchServer {
   GET: (request: Request) => Response | Promise<Response>;
-};
+}
 
 let server: SearchServer | null = null;
 

@@ -7,11 +7,11 @@
 
 import { cn } from "@/lib/utils";
 
-type CiteProps = {
+interface CiteProps {
   source: string;
   text: string;
   className?: string;
-};
+}
 
 export function Cite({ source, text, className }: CiteProps) {
   return (

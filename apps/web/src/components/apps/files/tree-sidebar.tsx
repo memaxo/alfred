@@ -10,17 +10,17 @@ import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type TreeSidebarProps = {
+interface TreeSidebarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   className?: string;
-};
+}
 
-type TreeNode = {
+interface TreeNode {
   name: string;
   path: string;
   children?: TreeNode[];
-};
+}
 
 // Mock tree structure
 const mockTree: TreeNode[] = [

@@ -24,26 +24,26 @@ const coerceDate = (value: unknown): Date | null => {
   return null;
 };
 
-type ContextState = {
+interface ContextState {
   content: string | null;
   nodeType: string | null;
   label: string | null;
   isLoading: boolean;
   isError: boolean;
-  ragDocuments: Array<{
+  ragDocuments: {
     label: string;
     summary: string;
     source: "vector" | "graph";
-  }>;
-};
+  }[];
+}
 
-type ContextSnapshot = {
+interface ContextSnapshot {
   status: "cache" | "live";
   summary?: string;
   timestamp: Date;
   phase?: "cache" | "scan" | "web" | "bundle";
   source?: "handoff" | "cache" | "scan";
-};
+}
 
 type FocusedContext = ContextState & {
   contextSnapshot: ContextSnapshot | null;
@@ -121,9 +121,9 @@ export function useFocusedContext(): FocusedContext {
     if ("messages" in data && Array.isArray(data.messages)) {
       // Extract text from last 3 messages using AI SDK v6 parts structure
       const recent = (
-        data.messages as Array<{
-          parts?: Array<{ type: string; text?: string }>;
-        }>
+        data.messages as {
+          parts?: { type: string; text?: string }[];
+        }[]
       )
         .slice(-3)
         .map((m) => {
@@ -274,11 +274,11 @@ export function useFocusedContext(): FocusedContext {
     }
 
     let combinedContent = localContext.content || "";
-    const ragDocuments: Array<{
+    const ragDocuments: {
       label: string;
       summary: string;
       source: "vector" | "graph";
-    }> = [];
+    }[] = [];
     const MAX_RAG_CONTEXT_CHARS = contextBudget;
 
     if (ragQuery.data?.nodes && ragQuery.data.nodes.length > 0) {

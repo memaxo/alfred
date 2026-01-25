@@ -14,10 +14,10 @@ import {
 
 import { cn } from "@/lib/utils";
 
-export type FactEdgeData = {
+export interface FactEdgeData extends Record<string, unknown> {
   predicate: string;
   confidence: number;
-};
+}
 
 type FactEdgeProps = EdgeProps<Edge<FactEdgeData>>;
 

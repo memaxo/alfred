@@ -15,13 +15,13 @@ import { devtools, persist } from "zustand/middleware";
 
 export type VoiceMode = "push-to-talk" | "voice-activity" | "continuous";
 
-export type AudioDevice = {
+export interface AudioDevice {
   deviceId: string;
   label: string;
   kind: "audioinput" | "audiooutput";
-};
+}
 
-export type VoiceStore = {
+export interface VoiceStore {
   // Session state
   sessionId: string | null;
   isActive: boolean;
@@ -83,7 +83,7 @@ export type VoiceStore = {
   setSttModel: (model: string) => void;
   setTtsVoice: (voice: string) => void;
   setVadSensitivity: (sensitivity: number) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STORE

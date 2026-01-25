@@ -79,13 +79,13 @@ function mapSchemaToFormFields(schema: UIComponent): Record<string, unknown> {
   return defaults;
 }
 
-type FormWrapperProps = {
+interface FormWrapperProps {
   schema: UIComponent;
   formId: string;
   conversationId: string;
   toolCallId?: string;
   formData?: unknown;
-};
+}
 
 /**
  * Wrapper component that integrates GenUI form schemas with TanStack Form.

@@ -20,19 +20,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type FileTreeProps = {
+interface FileTreeProps {
   onSelect: (path: string) => void;
   selectedPath?: string;
   className?: string;
   rootPath?: string;
-};
+}
 
-type TreeNode = {
+interface TreeNode {
   name: string;
   path: string;
   type: "file" | "folder";
   children?: TreeNode[];
-};
+}
 
 function getFileIcon(name: string) {
   if (name.endsWith(".tsx") || name.endsWith(".ts")) {
@@ -120,9 +120,9 @@ function TreeItem({
   };
 
   const Icon = isFolder
-    ? isExpanded
+    ? (isExpanded
       ? FolderOpen
-      : Folder
+      : Folder)
     : getFileIcon(node.name);
 
   return (

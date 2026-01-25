@@ -4,13 +4,13 @@ import { cn } from "@/lib/utils";
 
 import { TabsContext } from "./tabs-context";
 
-export type TabsTriggerProps = {
+export interface TabsTriggerProps {
   value: string;
   children: React.ReactNode;
   disabled?: boolean;
   className?: string;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
-};
+}
 
 export const TabsTrigger = ({
   value,

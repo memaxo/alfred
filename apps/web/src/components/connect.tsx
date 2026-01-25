@@ -15,11 +15,11 @@ export type ChatStatus =
   | "degraded"
   | "offline";
 
-type ConnectProps = {
+interface ConnectProps {
   status: ChatStatus | string;
   agent?: "assistant" | "orchestrator";
   className?: string;
-};
+}
 
 export function Connect({ status, agent, className }: ConnectProps) {
   const statusConfig = {

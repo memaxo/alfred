@@ -3,7 +3,7 @@ import { Pencil, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type MessageActionsProps = {
+export interface MessageActionsProps {
   role: "user" | "assistant" | "system" | "data";
   onEdit?: () => void;
   onRegenerate?: () => void;
@@ -11,7 +11,7 @@ export type MessageActionsProps = {
   onNegative?: () => void;
   disabled?: boolean;
   className?: string;
-};
+}
 
 export function MessageActions({
   role,

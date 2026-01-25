@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 export type AgentState = null | "thinking" | "listening" | "talking";
 
-type OrbProps = {
+interface OrbProps {
   colors?: [string, string];
   colorsRef?: React.RefObject<[string, string]>;
   resizeDebounce?: number;
@@ -20,7 +20,7 @@ type OrbProps = {
   getInputVolume?: () => number;
   getOutputVolume?: () => number;
   className?: string;
-};
+}
 
 export function Orb({
   colors = ["#CADCFC", "#A0B9D1"],
@@ -103,7 +103,7 @@ function Scene({
     // Deterministic noise based on seed so visuals are stable in tests.
     const size = 128;
     const data = new Uint8Array(size * size * 4);
-    const rand = splitmix32(seed ?? 0x6f_72_62); // "orb" seed
+    const rand = splitmix32(seed ?? 0x6F_72_62); // "orb" seed
     for (let i = 0; i < data.length; i += 4) {
       const v = Math.floor(rand() * 256);
       data[i] = v;
@@ -169,7 +169,7 @@ function Scene({
         return;
       }
       const isDark = document.documentElement.classList.contains("dark");
-      const uInverted = circleRef.current.material.uniforms.uInverted;
+      const { uInverted } = circleRef.current.material.uniforms;
       if (uInverted) {
         uInverted.value = isDark ? 1 : 0;
       }
@@ -307,11 +307,11 @@ function Scene({
 function splitmix32(a: number) {
   return () => {
     a |= 0;
-    a = (a + 0x9e_37_79_b9) | 0;
+    a = (a + 0x9E_37_79_B9) | 0;
     let t = a ^ (a >>> 16);
-    t = Math.imul(t, 0x21_f0_aa_ad);
+    t = Math.imul(t, 0x21_F0_AA_AD);
     t ^= t >>> 15;
-    t = Math.imul(t, 0x73_5a_2d_97);
+    t = Math.imul(t, 0x73_5A_2D_97);
     return ((t ^= t >>> 15) >>> 0) / 4_294_967_296;
   };
 }

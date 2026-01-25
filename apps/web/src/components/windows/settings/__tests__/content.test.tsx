@@ -156,7 +156,7 @@ describe("SettingsContent", () => {
       });
 
       const sectionTitles = container.querySelectorAll("h3");
-      const autonomyTitle = Array.from(sectionTitles).find((h) =>
+      const autonomyTitle = [...sectionTitles].find((h) =>
         h.textContent?.includes("Autonomy")
       );
       expect(autonomyTitle).toBeTruthy();
@@ -251,7 +251,7 @@ describe("SettingsContent", () => {
       });
 
       const prefKeys = container.querySelectorAll("li .font-medium");
-      const keyTexts = Array.from(prefKeys).map((el) => el.textContent);
+      const keyTexts = [...prefKeys].map((el) => el.textContent);
       expect(keyTexts).toContain("theme");
       expect(keyTexts).toContain("notifications");
       expect(keyTexts).toContain("customKey");
@@ -281,7 +281,7 @@ describe("SettingsContent", () => {
       });
 
       const prefItems = container.querySelectorAll("li");
-      const deleteButtons = Array.from(prefItems).map((li) =>
+      const deleteButtons = [...prefItems].map((li) =>
         li.querySelector("button")
       );
       expect(deleteButtons.filter(Boolean).length).toBe(3);
@@ -352,7 +352,7 @@ describe("SettingsContent", () => {
       });
 
       const prefItems = container.querySelectorAll("li");
-      const boolRow = Array.from(prefItems).find((li) =>
+      const boolRow = [...prefItems].find((li) =>
         li.textContent?.includes("notifications")
       );
       expect(boolRow?.textContent).toContain("true");

@@ -7,12 +7,12 @@
 
 import { cn } from "@/lib/utils";
 
-type CodeProps = {
+interface CodeProps {
   code: string;
   language?: string;
   showLineNumbers?: boolean;
   className?: string;
-};
+}
 
 export function Code({
   code,

@@ -422,7 +422,7 @@ export const LiveWaveform = ({
         (() => {
           const style = getComputedStyle(canvas);
           // Try to get the computed color value directly
-          const color = style.color;
+          const { color } = style;
           return color || "#000";
         })();
 
@@ -540,9 +540,9 @@ export const LiveWaveform = ({
       aria-label={
         active
           ? "Live audio waveform"
-          : processing
+          : (processing
             ? "Processing audio"
-            : "Audio waveform idle"
+            : "Audio waveform idle")
       }
       className={cn("relative h-full w-full", className)}
       ref={containerRef}

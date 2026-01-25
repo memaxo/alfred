@@ -22,7 +22,7 @@ describe("CompactKnowledgeGraph", () => {
           id: "1",
           label: "ALFRED",
           type: "concept",
-          relevance: 1.0,
+          relevance: 1,
         },
         {
           id: "2",
@@ -55,7 +55,7 @@ describe("CompactKnowledgeGraph", () => {
           id: "1",
           label: "Node 1",
           type: "concept",
-          relevance: 1.0,
+          relevance: 1,
         },
       ],
       edges: [

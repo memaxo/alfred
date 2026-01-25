@@ -21,7 +21,7 @@ const mockPerformanceStats = {
     ragEmpty: 20,
   },
   assistant: { requestsTotal: 50, generateLatency: { p50: 1.5 } },
-  tools: { droidRunsTotal: 10, droidDuration: { p50: 3.0 } },
+  tools: { droidRunsTotal: 10, droidDuration: { p50: 3 } },
   system: { healthChecksTotal: 1000 },
 };
 

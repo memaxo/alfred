@@ -16,20 +16,20 @@ import { authClient } from "@/lib/auth-client";
 import { getTestMode } from "@/lib/env/isomorphic";
 import { trpc } from "@/utils/trpc";
 
-type ObligationDialogState = {
+interface ObligationDialogState {
   runId?: string | null;
   obligations: Obligation[];
   resumeEvents: ObligationResumeEvent[];
-};
+}
 
-export type ObligationChallengeDialogProps = {
+export interface ObligationChallengeDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
   target?: "workflow" | "droid";
   mode?: "auto" | "external";
   state: ObligationDialogState | null;
-};
+}
 
 const resumePreference: ObligationResumeEvent[] = [
   "bio-authz",

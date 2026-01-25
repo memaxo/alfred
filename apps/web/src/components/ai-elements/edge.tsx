@@ -61,20 +61,25 @@ const getHandleCoordsByPosition = (
   // The handle position that gets calculated has the origin top-left, so depending which side we are using, we add a little offset
   // when the handlePosition is Position.Right for example, we need to add an offset as big as the handle itself in order to get the correct position
   switch (handlePosition) {
-    case Position.Left:
+    case Position.Left: {
       offsetX = 0;
       break;
-    case Position.Right:
+    }
+    case Position.Right: {
       offsetX = handle.width;
       break;
-    case Position.Top:
+    }
+    case Position.Top: {
       offsetY = 0;
       break;
-    case Position.Bottom:
+    }
+    case Position.Bottom: {
       offsetY = handle.height;
       break;
-    default:
+    }
+    default: {
       throw new Error(`Invalid handle position: ${handlePosition}`);
+    }
   }
 
   const x = node.internals.positionAbsolute.x + handle.x + offsetX;

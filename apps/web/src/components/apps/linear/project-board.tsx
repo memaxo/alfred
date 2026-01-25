@@ -7,10 +7,10 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type ProjectBoardProps = {
+interface ProjectBoardProps {
   onSelectIssue: (id: string) => void;
   className?: string;
-};
+}
 
 // Mock issues by status
 const mockColumns = {

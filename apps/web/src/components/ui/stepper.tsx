@@ -5,14 +5,14 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
 
-export type Step = {
+export interface Step {
   id: string;
   title: string;
   description?: string;
   content: React.ReactNode;
-};
+}
 
-export type StepperProps = {
+export interface StepperProps {
   steps: Step[];
   currentStep: number;
   onStepChange?: (stepIndex: number) => void;
@@ -22,7 +22,7 @@ export type StepperProps = {
   isLoading?: boolean;
   className?: string;
   size?: "sm" | "md" | "lg";
-};
+}
 
 export function Stepper({
   steps,
@@ -99,9 +99,9 @@ export function Stepper({
                       pillSize[size],
                       isActive
                         ? "border-biolum bg-biolum/10 text-biolum"
-                        : isCompleted
+                        : (isCompleted
                           ? "border-biolum bg-biolum text-background"
-                          : "border-white/20 bg-void-surface/50 text-biolum-dim"
+                          : "border-white/20 bg-void-surface/50 text-biolum-dim")
                     )}
                   >
                     {isCompleted ? (
@@ -184,12 +184,12 @@ export function Wizard({ children, ...stepperProps }: WizardProps) {
   return <Stepper {...stepperProps} steps={steps} />;
 }
 
-export type WizardStepProps = {
+export interface WizardStepProps {
   id: string;
   title: string;
   description?: string;
   children: React.ReactNode;
-};
+}
 
 export function WizardStep({ children }: WizardStepProps) {
   return <>{children}</>;

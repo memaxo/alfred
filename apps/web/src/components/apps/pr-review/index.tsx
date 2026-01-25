@@ -32,12 +32,12 @@ import { PRList } from "./pr-list";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type PRReviewAppProps = {
+interface PRReviewAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
-export type PR = {
+export interface PR {
   id: string;
   number: number;
   title: string;
@@ -55,7 +55,7 @@ export type PR = {
   ciStatus: "pending" | "success" | "failure" | "running";
   createdAt: string;
   updatedAt: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

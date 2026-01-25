@@ -40,7 +40,7 @@ function DeviceVerification() {
           throw error;
         }
         setStatus("success");
-      } catch (_err) {
+      } catch {
         setStatus("error");
       }
     },
@@ -83,7 +83,7 @@ function DeviceVerification() {
                       onChange={(e) => {
                         let val = e.target.value
                           .toUpperCase()
-                          .replace(/[^A-Z0-9]/g, "");
+                          .replaceAll(/[^A-Z0-9]/g, "");
                         if (val.length > 4) {
                           val = `${val.slice(0, 4)}-${val.slice(4, 8)}`;
                         }

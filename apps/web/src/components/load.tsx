@@ -7,10 +7,10 @@
 
 import { cn } from "@/lib/utils";
 
-type LoadProps = {
+interface LoadProps {
   message?: string;
   className?: string;
-};
+}
 
 export function Load({ message = "Loading...", className }: LoadProps) {
   return (

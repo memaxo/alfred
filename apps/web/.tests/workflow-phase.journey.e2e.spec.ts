@@ -34,7 +34,7 @@ test.describe("Workflow phase journey (plan → edit → approve → execute)", 
         const w = globalThis as unknown as {
           __DESKTOP_STORE__?: {
             getState: () => {
-              windows: Array<{ id: string; type: string; createdAt?: number }>;
+              windows: { id: string; type: string; createdAt?: number }[];
               focusedWindowId: string | null;
             };
           };
@@ -117,7 +117,7 @@ test.describe("Workflow phase journey (plan → edit → approve → execute)", 
     // Execution panel should show progress then completion (dry run in VITE_TEST_MODE).
     await safeAssert("execution-running-or-completed", async () => {
       await expect(
-        workflow.locator("text=/Running\\.\\.\\.|Completed/").first()
+        workflow.locator(String.raw`text=/Running\.\.\.|Completed/`).first()
       ).toBeVisible({
         timeout: 60_000,
       });

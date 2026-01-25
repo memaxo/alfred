@@ -8,9 +8,9 @@ import { createContext, useContext } from "react";
 
 import { cn } from "@/lib/utils";
 
-type DialogEnv = {
+interface DialogEnv {
   inline: boolean;
-};
+}
 
 const DialogEnvContext = createContext<DialogEnv>({ inline: false });
 

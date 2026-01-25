@@ -11,18 +11,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type NetworkTabProps = {
+interface NetworkTabProps {
   className?: string;
-};
+}
 
-type Connection = {
+interface Connection {
   id: string;
   localAddress: string;
   remoteAddress: string;
   protocol: "tcp" | "udp";
   state: "established" | "listening" | "time_wait";
   process: string;
-};
+}
 
 export function NetworkTab({ className }: NetworkTabProps) {
   const { data, isLoading, error, refetch } =

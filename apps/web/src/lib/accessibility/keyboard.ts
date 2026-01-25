@@ -10,7 +10,7 @@
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type KeyboardShortcut = {
+export interface KeyboardShortcut {
   key: string;
   ctrl?: boolean;
   alt?: boolean;
@@ -18,13 +18,13 @@ export type KeyboardShortcut = {
   meta?: boolean;
   action: () => void;
   description: string;
-};
+}
 
-export type ArrowNavigationOptions = {
+export interface ArrowNavigationOptions {
   orientation?: "horizontal" | "vertical" | "both";
   loop?: boolean;
   onNavigate?: (index: number) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KEYBOARD SHORTCUT MANAGER
@@ -93,7 +93,7 @@ export function createArrowNavigation(
   let currentIndex = 0;
 
   const navigate = (direction: "next" | "prev") => {
-    const length = elements.length;
+    const { length } = elements;
     if (length === 0) {
       return;
     }
@@ -170,9 +170,7 @@ export function createArrowNavigation(
  * Implement roving tabindex pattern
  */
 export function createRovingTabindex(container: HTMLElement, selector: string) {
-  const elements = Array.from(
-    container.querySelectorAll<HTMLElement>(selector)
-  );
+  const elements = [...container.querySelectorAll<HTMLElement>(selector)];
   let activeIndex = 0;
 
   // Initialize: set tabindex=-1 on all but first

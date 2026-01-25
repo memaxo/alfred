@@ -1,4 +1,4 @@
-export type FileTab = {
+export interface FileTab {
   id: string;
   path: string;
   name: string;
@@ -7,23 +7,23 @@ export type FileTab = {
   isDirty: boolean;
   isLoading?: boolean;
   originalContent?: string;
-};
+}
 
-export type EditorSettings = {
+export interface EditorSettings {
   fontSize: number;
   wordWrap: "on" | "off" | "wordWrapColumn" | "bounded";
   minimap: boolean;
   tabSize: number;
   lineNumbers: "on" | "off" | "relative";
-};
+}
 
 export type SplitDirection = "horizontal" | "vertical" | null;
 
-export type EditorPane = {
+export interface EditorPane {
   id: string;
   activeTabId: string | null;
   tabs: FileTab[];
-};
+}
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   fontSize: 14,

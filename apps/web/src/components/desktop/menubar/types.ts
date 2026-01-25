@@ -7,14 +7,14 @@
 
 import type { WindowType } from "@/store/desktop/types.new";
 
-export type AppMenuAction = {
+export interface AppMenuAction {
   id: string;
   label: string;
   shortcut?: string;
   disabled?: boolean;
   separator?: boolean;
   onClick?: () => void;
-};
+}
 
 export type AppMenuCategory = "File" | "Edit" | "View" | "Window" | "Help";
 

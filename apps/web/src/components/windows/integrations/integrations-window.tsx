@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { BiolumBadge } from "@/components/tremor";
+import { BiolumBadge, type BiolumBadgeVariant } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
 import {
   SmallCard,
@@ -53,6 +53,18 @@ export function IntegrationsWindow({ id, data, selected }: NodeProps) {
   const isLinearConnected = linearStatus?.connected ?? false;
   const isLinearExpired = linearStatus?.connected && linearStatus?.isExpired;
 
+  let linearBadgeVariant: BiolumBadgeVariant = "default";
+  let linearBadgeText = "Not Connected";
+  if (isLinearConnected) {
+    if (isLinearExpired) {
+      linearBadgeVariant = "warning";
+      linearBadgeText = "Expired";
+    } else {
+      linearBadgeVariant = "success";
+      linearBadgeText = "Connected";
+    }
+  }
+
   if (lod === "tiny") {
     return <TinyDot color="bg-cyan-500" shadow="shadow-cyan-500/50" />;
   }
@@ -87,20 +99,8 @@ export function IntegrationsWindow({ id, data, selected }: NodeProps) {
                 Project management & issue tracking
               </p>
             </div>
-            <BiolumBadge
-              variant={
-                isLinearConnected
-                  ? isLinearExpired
-                    ? "warning"
-                    : "success"
-                  : "default"
-              }
-            >
-              {isLinearConnected
-                ? isLinearExpired
-                  ? "Expired"
-                  : "Connected"
-                : "Not Connected"}
+            <BiolumBadge variant={linearBadgeVariant}>
+              {linearBadgeText}
             </BiolumBadge>
           </div>
           {linearStatus?.connected &&

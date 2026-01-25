@@ -40,8 +40,8 @@ describe("EditMessage", () => {
       />
     );
 
-    const saveButton = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Save")
+    const saveButton = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Save")
     );
 
     saveButton?.click();
@@ -58,8 +58,8 @@ describe("EditMessage", () => {
       />
     );
 
-    const cancelButton = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Cancel")
+    const cancelButton = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Cancel")
     );
 
     cancelButton?.click();

@@ -8,12 +8,12 @@ export type DesktopActivationEventType =
   | "workflow-step"
   | "context-cache";
 
-export type DesktopActivationEvent = {
+export interface DesktopActivationEvent {
   type: DesktopActivationEventType;
   sourceId?: string;
   targetId?: string;
   data?: unknown;
-};
+}
 
 // Global event bus for non-React contexts
 const desktopEventBus = new EventTarget();

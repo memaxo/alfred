@@ -65,7 +65,7 @@ mock.module("@alfred/agent/mcp", () => ({
 mock.module("@alfred/db/repo/conversation", () => ({
   createConversation: vi.fn().mockResolvedValue({ id: "conv-1" }),
   createMessage: vi.fn().mockResolvedValue(null),
-  deleteMessagesAfter: vi.fn().mockResolvedValue(undefined),
+  deleteMessagesAfter: vi.fn().mockResolvedValue(),
 }));
 
 mock.module("@alfred/history", () => ({
@@ -121,11 +121,11 @@ function namedError(name: string): Error {
   return err;
 }
 
-type Case = {
+interface Case {
   label: string;
   error: unknown;
   expect: { status: number; error: string };
-};
+}
 
 const cases: Case[] = [
   {

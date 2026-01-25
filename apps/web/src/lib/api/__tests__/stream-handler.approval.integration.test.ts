@@ -62,7 +62,7 @@ mock.module("@alfred/logger", () => ({
 mock.module("@alfred/db/repo/conversation", () => ({
   createConversation: vi.fn().mockResolvedValue({ id: "conv-1" }),
   createMessage: vi.fn().mockResolvedValue(null),
-  deleteMessagesAfter: vi.fn().mockResolvedValue(undefined),
+  deleteMessagesAfter: vi.fn().mockResolvedValue(),
 }));
 
 mock.module("@alfred/agent/preference/prompt", () => ({

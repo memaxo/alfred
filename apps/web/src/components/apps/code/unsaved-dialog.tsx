@@ -10,13 +10,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type UnsavedDialogProps = {
+interface UnsavedDialogProps {
   isOpen: boolean;
   fileName: string;
   onSave: () => void;
   onDiscard: () => void;
   onCancel: () => void;
-};
+}
 
 export function UnsavedDialog({
   isOpen,

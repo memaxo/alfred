@@ -74,12 +74,12 @@ const TabsContent = ({
     </div>
   ) : null;
 
-type ContextPanelProps = {
+interface ContextPanelProps {
   messages: AssistantUIMessage[];
   onClose: () => void;
   className?: string;
   searchQuery?: string;
-};
+}
 
 const typeIcons = {
   document: FileText,
@@ -101,10 +101,12 @@ export function ContextPanel({
     if (searchQuery) {
       return searchQuery;
     }
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    const lastUserMsg = [...messages]
+      .toReversed()
+      .find((m: AssistantUIMessage) => m.role === "user");
     if (lastUserMsg && Array.isArray(lastUserMsg.parts)) {
       const textPart = lastUserMsg.parts.find(
-        (p) => typeof p === "object" && "text" in p
+        (p: unknown) => typeof p === "object" && p !== null && "text" in p
       );
       if (textPart && typeof textPart === "object" && "text" in textPart) {
         return (textPart as { text: string }).text;

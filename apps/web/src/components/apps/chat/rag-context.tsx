@@ -24,11 +24,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type RagContextProps = {
+interface RagContextProps {
   className?: string;
   messageId?: string;
   queryText?: string;
-};
+}
 
 export function RagContext({
   className,
@@ -115,9 +115,9 @@ export function RagContext({
                             "font-mono text-xs",
                             chunk.score > 0.9
                               ? "text-green-400"
-                              : chunk.score > 0.8
+                              : (chunk.score > 0.8
                                 ? "text-yellow-400"
-                                : "text-biolum-dim"
+                                : "text-biolum-dim")
                           )}
                         >
                           {(chunk.score * 100).toFixed(0)}%

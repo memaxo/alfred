@@ -77,11 +77,11 @@ function normalizeUiMessages(input: unknown[]): NormalizedMessagesResult {
     // Common client shape: { role, parts?, content?, id? }
     if (typeof raw === "object" && raw !== null) {
       const msg = raw as Record<string, unknown>;
-      const role = msg.role;
+      const { role } = msg;
       const id = typeof msg.id === "string" ? msg.id : generateId();
 
       // Allow { role, content: string } as fallback.
-      const content = msg.content;
+      const { content } = msg;
       if (typeof role === "string" && typeof content === "string") {
         const normalizedRole = normalizeUiRole(role);
         if (!normalizedRole) {
@@ -139,10 +139,10 @@ type AgentDefaults = Pick<
   "model" | "tools" | "stopWhen" | "prepareStep"
 >;
 type GetDefaultsFn = () => AgentDefaults;
-type ContextAnalysisResult = {
+interface ContextAnalysisResult {
   system?: string;
   activation?: Record<string, unknown>;
-};
+}
 type AnalyzeContextFn = (
   messages: UIMessage[]
 ) => Promise<ContextAnalysisResult>;
@@ -220,7 +220,7 @@ export async function handleStreamRequest(
       );
     }
 
-    const messages = normalized.messages;
+    const { messages } = normalized;
     const persistedMessageIds = new Set<string>();
 
     const session = await auth.api.getSession({ headers: request.headers });
@@ -256,7 +256,7 @@ export async function handleStreamRequest(
         }
       );
     }
-    connectionId = connectionResult.connectionId;
+    ({ connectionId } = connectionResult);
     // Update connection count metric (global count)
     const globalConnectionCount = getConnectionCount();
     sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
@@ -327,19 +327,19 @@ export async function handleStreamRequest(
         const analysis = await analyzeContext(messages);
         contextSystem = analysis.system;
         activationData = analysis.activation;
-      } catch (e) {
+      } catch (error) {
         logger.warn("api_stream_context_analysis_failed", {
           prefix: errorPrefix,
           userId: userId ?? undefined,
-          error: String(e),
+          error: String(error),
         });
       }
     }
 
     const defaults = getDefaults();
     const tools = defaults.tools ?? {};
-    const stopWhen = defaults.stopWhen;
-    const prepareStep = defaults.prepareStep;
+    const { stopWhen } = defaults;
+    const { prepareStep } = defaults;
     let mergedTools = tools;
 
     if (userId) {
@@ -417,7 +417,7 @@ export async function handleStreamRequest(
     stopHistoryTimer();
 
     const preparedUiMessages = historyContext.uiMessages;
-    const modelMessages = historyContext.modelMessages;
+    const { modelMessages } = historyContext;
     const dropped = historyContext.droppedMessages;
 
     historyContextTokensTotal.inc(
@@ -667,12 +667,12 @@ export async function handleStreamRequest(
   }
 }
 
-type PersistPayload = {
+interface PersistPayload {
   userId: string;
   conversationId: string;
   messages: UIMessage[];
   existingMessageIds: Set<string>;
-};
+}
 
 async function persistMessages({
   userId,

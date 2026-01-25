@@ -35,14 +35,14 @@ import { ShaderPreview } from "./shader-preview";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type CortexPreset = {
+export interface CortexPreset {
   id: string;
   name: string;
   description: string;
   category: "orb" | "wallpaper" | "graph";
   parameters: Record<string, number>;
   shader?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

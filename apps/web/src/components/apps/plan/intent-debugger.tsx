@@ -10,14 +10,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type IntentTrace = {
+interface IntentTrace {
   id: string;
   input: string;
   parsedIntent: string;
   confidence: number;
   steps: string[];
   warnings: string[];
-};
+}
 
 const mockTrace: IntentTrace = {
   id: "1",

@@ -35,23 +35,23 @@ interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
 }
 
-type SpeechRecognitionResultList = {
+interface SpeechRecognitionResultList {
   readonly length: number;
   item(index: number): SpeechRecognitionResult;
   [index: number]: SpeechRecognitionResult;
-};
+}
 
-type SpeechRecognitionResult = {
+interface SpeechRecognitionResult {
   readonly length: number;
   item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;
   isFinal: boolean;
-};
+}
 
-type SpeechRecognitionAlternative = {
+interface SpeechRecognitionAlternative {
   transcript: string;
   confidence: number;
-};
+}
 
 interface SpeechRecognitionErrorEvent extends Event {
   error: string;
@@ -60,12 +60,8 @@ interface SpeechRecognitionErrorEvent extends Event {
 declare global {
   // oxlint-disable useConsistentTypeDefinitions: Global augmentation requires interface for declaration merging
   interface Window {
-    SpeechRecognition?: {
-      new (): SpeechRecognition;
-    };
-    webkitSpeechRecognition?: {
-      new (): SpeechRecognition;
-    };
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
   }
 }
 

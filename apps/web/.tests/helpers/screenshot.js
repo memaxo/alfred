@@ -72,7 +72,7 @@ export class ErrorMonitor {
     });
     // Page errors (uncaught exceptions)
     this.page.on("pageerror", (error) => {
-      const message = error.message;
+      const { message } = error;
       if (this.shouldIgnore(message)) {
         return;
       }
@@ -220,12 +220,15 @@ export class ErrorMonitor {
   }
   consoleSeverity(type) {
     switch (type) {
-      case "error":
+      case "error": {
         return "error";
-      case "warning":
+      }
+      case "warning": {
         return "warning";
-      default:
+      }
+      default: {
         return "info";
+      }
     }
   }
   isFatalSeverity(severity) {
@@ -256,8 +259,8 @@ export class ScreenshotStrategy {
     await this.page.waitForLoadState("networkidle").catch(() => {});
   }
   buildPath(name) {
-    const sanitized = name.replace(/[^a-z0-9-_]/gi, "_");
-    const testName = this.testInfo.title.replace(/[^a-z0-9-_]/gi, "_");
+    const sanitized = name.replaceAll(/[^a-z0-9-_]/gi, "_");
+    const testName = this.testInfo.title.replaceAll(/[^a-z0-9-_]/gi, "_");
     return `${testName}__${sanitized}`;
   }
 }

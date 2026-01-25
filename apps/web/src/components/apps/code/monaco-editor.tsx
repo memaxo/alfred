@@ -15,7 +15,7 @@ import type { EditorSettings } from "./types";
 
 import { DEFAULT_EDITOR_SETTINGS } from "./types";
 
-type MonacoEditorProps = {
+interface MonacoEditorProps {
   content: string;
   language: string;
   path: string;
@@ -23,7 +23,7 @@ type MonacoEditorProps = {
   settings?: EditorSettings;
   onCursorChange?: (line: number, column: number) => void;
   className?: string;
-};
+}
 
 export function MonacoEditor({
   content,

@@ -30,8 +30,9 @@ export function getTestMode(): Promise<boolean> {
     }
   }
   if (typeof import.meta !== "undefined") {
-    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
-      .env;
+    const { env } = import.meta as ImportMeta & {
+      env?: Record<string, string>;
+    };
     return Promise.resolve(
       env?.VITE_TEST_MODE === "true" || env?.MINDSCAPE_TEST === "1"
     );

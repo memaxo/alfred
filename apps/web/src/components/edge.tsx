@@ -7,12 +7,12 @@
 
 import { cn } from "@/lib/utils";
 
-type EdgeProps = {
+interface EdgeProps {
   from: string;
   to: string;
   label?: string;
   className?: string;
-};
+}
 
 export function Edge({ label, className }: EdgeProps) {
   return (

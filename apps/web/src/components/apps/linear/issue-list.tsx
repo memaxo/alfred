@@ -12,13 +12,13 @@ import { trpc } from "@/utils/trpc";
 
 import { useLinear } from "./context";
 
-type IssueListProps = {
+interface IssueListProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   className?: string;
-};
+}
 
-type LinearIssue = {
+interface LinearIssue {
   id: string;
   identifier: string;
   title: string;
@@ -28,7 +28,7 @@ type LinearIssue = {
   labels: { id: string; name: string; color: string }[];
   createdAt: string;
   updatedAt: string;
-};
+}
 
 function mapStateName(
   name: string | undefined
@@ -88,9 +88,9 @@ export function IssueList({ selectedId, onSelect, className }: IssueListProps) {
   const issues = data?.issues ?? [];
 
   const errorMsg = error
-    ? error.message === "linear_not_connected"
+    ? (error.message === "linear_not_connected"
       ? "Linear not connected. Connect via Settings."
-      : error.message
+      : error.message)
     : null;
 
   return (

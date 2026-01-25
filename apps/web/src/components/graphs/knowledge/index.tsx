@@ -99,9 +99,9 @@ const initialEdges: Edge<FactEdgeData>[] = [
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-type KnowledgeGraphCanvasProps = {
+interface KnowledgeGraphCanvasProps {
   onNodeSelect?: (nodeId: string | null) => void;
-};
+}
 
 export function KnowledgeGraphCanvas({
   onNodeSelect,

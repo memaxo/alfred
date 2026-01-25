@@ -15,13 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export type PaneLayoutProps = {
+export interface PaneLayoutProps {
   title: string;
   description?: string;
   createForm: ReactNode;
   paneComponent: ReactNode;
   className?: string;
-};
+}
 
 export function PaneLayout({
   title,

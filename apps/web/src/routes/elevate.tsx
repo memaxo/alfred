@@ -43,10 +43,10 @@ function ElevatePage() {
       }
 
       setStatus("success");
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       setStatus("error");
       const message =
-        err instanceof Error ? err.message : "Passkey verification failed";
+        error instanceof Error ? error.message : "Passkey verification failed";
       setError(message);
     }
   };

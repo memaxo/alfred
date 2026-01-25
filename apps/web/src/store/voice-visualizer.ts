@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type VoiceVisualizerState = {
+export interface VoiceVisualizerState {
   analyser: AnalyserNode | null;
   vadLevel: number;
   streamStatus:
@@ -13,7 +13,7 @@ export type VoiceVisualizerState = {
   setAnalyser: (analyser: AnalyserNode | null) => void;
   setVadLevel: (level: number) => void;
   setStreamStatus: (status: VoiceVisualizerState["streamStatus"]) => void;
-};
+}
 
 export const useVoiceVisualizerStore = create<VoiceVisualizerState>((set) => ({
   analyser: null,

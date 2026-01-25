@@ -4,14 +4,14 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
 
-export type MarkdownEditorProps = {
+export interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   readOnly?: boolean;
   showToolbar?: boolean;
-};
+}
 
 export const MarkdownEditor = ({
   value,
@@ -37,14 +37,14 @@ export const MarkdownEditor = ({
 
       const start = textarea.current.selectionStart;
       const end = textarea.current.selectionEnd;
-      const selectedText = value.substring(start, end);
+      const selectedText = value.slice(start, end);
 
       const newValue =
-        value.substring(0, start) +
+        value.slice(0, start) +
         prefix +
         selectedText +
         suffix +
-        value.substring(end);
+        value.slice(end);
 
       onChange(newValue);
 

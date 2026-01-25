@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { useBudgetStatus } from "@/hooks/use-budget-status";
 import { cn } from "@/lib/utils";
 
-type HistoryBudgetProps = {
+interface HistoryBudgetProps {
   className?: string;
   messages?: readonly UIMessage[];
   conversationId?: string | null;
   onClearHistory?: () => void;
-};
+}
 
 const SEGMENT_COLORS: Record<BudgetSegment, string> = {
   system: "bg-blue-500",

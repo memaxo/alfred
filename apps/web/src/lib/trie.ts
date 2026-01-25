@@ -1,9 +1,9 @@
-type TrieNode<T> = {
+interface TrieNode<T> {
   children: Map<string, TrieNode<T>>;
   value?: T;
   isEndOfWord: boolean;
   usageCount: number; // To track popularity
-};
+}
 
 export class PrefixTrie<T> {
   private readonly root: TrieNode<T>;
@@ -80,7 +80,7 @@ export class PrefixTrie<T> {
       };
     }
 
-    const queue: Array<{ node: TrieNode<T>; path: string }> = [
+    const queue: { node: TrieNode<T>; path: string }[] = [
       { node: current, path: "" },
     ];
     const maxDepth = 20; // Limit search space
@@ -106,7 +106,7 @@ export class PrefixTrie<T> {
         }
       }
 
-      const sortedKeys = Array.from(curr.children.keys()).sort();
+      const sortedKeys = [...curr.children.keys()].sort();
       for (const key of sortedKeys) {
         if (path.length < maxDepth) {
           const child = curr.children.get(key);

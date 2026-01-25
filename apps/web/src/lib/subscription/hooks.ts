@@ -8,16 +8,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { subscriptionManager } from "./manager";
 
-type UseSubscriptionOptions = {
+interface UseSubscriptionOptions {
   cursor?: string;
   enabled?: boolean;
-};
+}
 
-type UseSubscriptionResult<T> = {
+interface UseSubscriptionResult<T> {
   status: SubscriptionState["status"];
   cursor: string | null;
   lastEvent: SubscriptionEvent<T> | null;
-};
+}
 
 /**
  * Subscribe to a real-time stream with cursor-based resume.

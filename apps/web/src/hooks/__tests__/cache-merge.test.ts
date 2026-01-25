@@ -11,7 +11,7 @@ describe("isMergeableRecord", () => {
 
   it("rejects non-mergeable values", () => {
     expect(isMergeableRecord(null)).toBe(false);
-    expect(isMergeableRecord(undefined)).toBe(false);
+    expect(isMergeableRecord()).toBe(false);
     expect(isMergeableRecord("string")).toBe(false);
     expect(isMergeableRecord(123)).toBe(false);
     expect(isMergeableRecord(true)).toBe(false);

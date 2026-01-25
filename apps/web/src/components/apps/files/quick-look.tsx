@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 
 import type { FileItem } from "./index";
 
-type QuickLookProps = {
+interface QuickLookProps {
   file: FileItem;
   onClose: () => void;
-};
+}
 
 // Mock file content
 const mockContent = `/**

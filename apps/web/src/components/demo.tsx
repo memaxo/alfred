@@ -77,16 +77,18 @@ const SILENT_WAV =
 
 export function ComponentDemo({ name }: { name: ComponentName }) {
   switch (name) {
-    case "connect":
+    case "connect": {
       return <Connect agent="assistant" status="streaming" />;
-    case "ctx":
+    }
+    case "ctx": {
       return (
         <Ctx
           memory={{ resource: "thread:demo", thread: "demo" }}
           runtimeContext={{ mode: "demo", status: "ok", sample: true }}
         />
       );
-    case "actions":
+    }
+    case "actions": {
       return (
         <Actions
           actions={[
@@ -106,7 +108,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "think":
+    }
+    case "think": {
       return (
         <Think
           reasoning={[
@@ -115,9 +118,11 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "load":
+    }
+    case "load": {
       return <Load message="Streaming…" />;
-    case "plan":
+    }
+    case "plan": {
       return (
         <Plan
           plan={{
@@ -133,7 +138,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           }}
         />
       );
-    case "tool":
+    }
+    case "tool": {
       return (
         <Tool defaultOpen={true}>
           <ToolHeader
@@ -147,7 +153,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           </ToolContent>
         </Tool>
       );
-    case "task":
+    }
+    case "task": {
       return (
         <Task
           id="task-1"
@@ -156,7 +163,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           title="Refactor status map"
         />
       );
-    case "queue":
+    }
+    case "queue": {
       return (
         <Queue
           items={[
@@ -166,11 +174,14 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "confirm":
+    }
+    case "confirm": {
       return <ConfirmDemo />;
-    case "cite":
+    }
+    case "cite": {
       return <Cite source="https://ai-sdk.dev" text="AI SDK Elements" />;
-    case "branch":
+    }
+    case "branch": {
       return (
         <Branch
           branches={[
@@ -184,7 +195,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "thought":
+    }
+    case "thought": {
       return (
         <Thought
           thoughts={[
@@ -198,7 +210,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "code":
+    }
+    case "code": {
       return (
         <Code
           code={`export function hello() {\n  return "world";\n}\n`}
@@ -206,13 +219,17 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           showLineNumbers
         />
       );
-    case "controls":
+    }
+    case "controls": {
       return <ControlsDemo />;
-    case "audio":
+    }
+    case "audio": {
       return <AudioPlayer src={SILENT_WAV} />;
-    case "viz":
+    }
+    case "viz": {
       return <Viz data={[0.05, 0.2, 0.4, 0.7, 0.3, 0.15, 0.6, 0.25]} />;
-    case "chat":
+    }
+    case "chat": {
       return (
         <div className="h-64 overflow-hidden rounded-xl border border-white/10 bg-white/5">
           <Conversation>
@@ -228,19 +245,26 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           </Conversation>
         </div>
       );
-    case "chatbar":
+    }
+    case "chatbar": {
       return <ChatbarDemo />;
-    case "voice":
+    }
+    case "voice": {
       return <VoiceDemo />;
-    case "orb":
+    }
+    case "orb": {
       return <Orb status="thinking" />;
-    case "wave":
+    }
+    case "wave": {
       return <LiveWaveform processing />;
-    case "response":
+    }
+    case "response": {
       return <Response>**Streamdown** renders _markdown_.</Response>;
-    case "mic":
+    }
+    case "mic": {
       return <MicDemo />;
-    case "msg":
+    }
+    case "msg": {
       return (
         <div className="rounded-xl border border-white/10 bg-white/5 p-4">
           <Message from="assistant">
@@ -248,17 +272,21 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           </Message>
         </div>
       );
-    case "voiceBtn":
+    }
+    case "voiceBtn": {
       return <VoiceBtnDemo />;
-    case "preview":
+    }
+    case "preview": {
       return (
         <Preview status="active" title="ALFRED Web" url="https://example.com" />
       );
-    case "node":
+    }
+    case "node": {
       return (
         <Node id="n1" label="Extract facts" status="running" type="task" />
       );
-    case "artifact":
+    }
+    case "artifact": {
       return (
         <Artifact
           kind="file"
@@ -267,13 +295,15 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           size={2560}
         />
       );
-    case "panel":
+    }
+    case "panel": {
       return (
         <Panel title="Panel">
           <p className="text-sm">Panels group related UI.</p>
         </Panel>
       );
-    case "toolbar":
+    }
+    case "toolbar": {
       return (
         <Toolbar
           actions={[
@@ -282,7 +312,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "canvas":
+    }
+    case "canvas": {
       return (
         <Canvas>
           <div className="flex gap-6">
@@ -292,11 +323,14 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           </div>
         </Canvas>
       );
-    case "edge":
+    }
+    case "edge": {
       return <Edge from="A" label="relates_to" to="B" />;
-    case "loading":
+    }
+    case "loading": {
       return <Loading message="Processing…" />;
-    case "list":
+    }
+    case "list": {
       return (
         <List
           items={[
@@ -315,9 +349,11 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "number":
+    }
+    case "number": {
       return <SlidingNumber value={12_345} />;
-    case "chart":
+    }
+    case "chart": {
       return (
         <Chart
           data={[
@@ -326,7 +362,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           ]}
         />
       );
-    case "matrix":
+    }
+    case "matrix": {
       return (
         <Matrix
           cols={12}
@@ -335,7 +372,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           rows={8}
         />
       );
-    case "grid":
+    }
+    case "grid": {
       return (
         <Grid cols={3}>
           <div className="rounded-lg border border-white/10 bg-white/5 p-4">
@@ -349,7 +387,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           </div>
         </Grid>
       );
-    case "dock":
+    }
+    case "dock": {
       return (
         <Dock>
           <div className="h-8 w-8 rounded-full bg-white/10" />
@@ -357,7 +396,8 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           <div className="h-8 w-8 rounded-full bg-white/10" />
         </Dock>
       );
-    case "term":
+    }
+    case "term": {
       return (
         <Term
           lines={[
@@ -368,26 +408,37 @@ export function ComponentDemo({ name }: { name: ComponentName }) {
           maxHeight={160}
         />
       );
-    case "text":
+    }
+    case "text": {
       return <Input placeholder="Text field" readOnly value="hello" />;
-    case "select":
+    }
+    case "select": {
       return <SelectDemo />;
-    case "date":
+    }
+    case "date": {
       return <DateDemo />;
-    case "daterange":
+    }
+    case "daterange": {
       return <DateRangeDemo />;
-    case "checkbox":
+    }
+    case "checkbox": {
       return <CheckboxDemo />;
-    case "choice":
+    }
+    case "choice": {
       return <ChoiceDemo />;
-    case "autocomplete":
+    }
+    case "autocomplete": {
       return <AutocompleteDemo />;
-    case "dropdown":
+    }
+    case "dropdown": {
       return <DropdownDemo />;
-    case "profile":
+    }
+    case "profile": {
       return <Profile />;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 

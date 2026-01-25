@@ -106,7 +106,7 @@ describe("Desktop Activation Events Integration", () => {
       });
 
       // Edge should be active
-      const activeEdges = useDesktopStore.getState().activeEdges;
+      const { activeEdges } = useDesktopStore.getState();
       expect(activeEdges.has("edge-chat-note")).toBe(true);
     });
 
@@ -162,7 +162,7 @@ describe("Desktop Activation Events Integration", () => {
         });
       });
 
-      const activeEdges = useDesktopStore.getState().activeEdges;
+      const { activeEdges } = useDesktopStore.getState();
       expect(activeEdges.has("edge-1")).toBe(true);
       expect(activeEdges.has("edge-2")).toBe(true);
     });
@@ -203,7 +203,7 @@ describe("Desktop Activation Events Integration", () => {
         });
       });
 
-      const activeEdges = useDesktopStore.getState().activeEdges;
+      const { activeEdges } = useDesktopStore.getState();
       expect(activeEdges.has("edge-1")).toBe(true);
       expect(activeEdges.has("edge-2")).toBe(true);
     });

@@ -8,11 +8,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type PanelProps = {
+interface PanelProps {
   title: string;
   children: React.ReactNode;
   className?: string;
-};
+}
 
 export function Panel({ title, children, className }: PanelProps) {
   return (

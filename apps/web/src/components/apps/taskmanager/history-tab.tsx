@@ -18,11 +18,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type HistoryTabProps = {
+interface HistoryTabProps {
   className?: string;
-};
+}
 
-type HistoryItem = {
+interface HistoryItem {
   id: string;
   type: "agent" | "workflow";
   name: string;
@@ -30,7 +30,7 @@ type HistoryItem = {
   startTime: string;
   duration: number;
   tokenUsage?: number;
-};
+}
 
 export function HistoryTab({ className }: HistoryTabProps) {
   const { data, isLoading, error, refetch } = trpc.admin.taskHistory.useQuery(
@@ -103,9 +103,9 @@ function HistoryRow({ item }: { item: HistoryItem }) {
   const StatusIcon =
     item.status === "success"
       ? CheckCircle
-      : item.status === "failure"
+      : (item.status === "failure"
         ? XCircle
-        : Clock;
+        : Clock);
   const statusColors = {
     success: "text-green-400",
     failure: "text-red-400",

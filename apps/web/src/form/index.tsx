@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
 
-function joinIds(ids: Array<string | undefined>) {
+function joinIds(ids: (string | undefined)[]) {
   const filtered = ids.filter((id) => id && id.trim().length > 0);
   return filtered.length > 0 ? filtered.join(" ") : undefined;
 }

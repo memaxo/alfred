@@ -16,14 +16,14 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type ConfirmProps = {
+interface ConfirmProps {
   title: string;
   description: string;
   onConfirm: () => void;
   onCancel: () => void;
   requireBio?: boolean;
   className?: string;
-};
+}
 
 export function Confirm({
   title,

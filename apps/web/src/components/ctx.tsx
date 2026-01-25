@@ -8,14 +8,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type CtxProps = {
+interface CtxProps {
   runtimeContext?: Record<string, unknown>;
   memory?: {
     resource: string;
     thread: string;
   };
   className?: string;
-};
+}
 
 export function Ctx({ runtimeContext, memory, className }: CtxProps) {
   return (

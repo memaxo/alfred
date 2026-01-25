@@ -21,13 +21,13 @@ import { trpc } from "@/utils/trpc";
 
 type WorkingSetKind = "project" | "conversation" | "note" | "reminder" | "task";
 
-type Item = {
+interface Item {
   kind: WorkingSetKind;
   id: string;
   label?: string;
-};
+}
 
-type WorkingSetAppProps = {
+interface WorkingSetAppProps {
   className?: string;
   window?: WindowComponentProps["window"];
   onClose?: WindowComponentProps["onClose"];
@@ -41,7 +41,7 @@ type WorkingSetAppProps = {
   onResizeStart?: WindowComponentProps["onResizeStart"];
   onResizeEnd?: WindowComponentProps["onResizeEnd"];
   onDataChange?: WindowComponentProps["onDataChange"];
-};
+}
 
 export function WorkingSetApp({
   className,
@@ -264,7 +264,7 @@ export function WorkingSetApp({
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               Loading working set...
             </div>
-          ) : items.length === 0 ? (
+          ) : (items.length === 0 ? (
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               No pinned items
             </div>
@@ -313,7 +313,7 @@ export function WorkingSetApp({
                 </div>
               );
             })
-          )}
+          ))}
         </div>
       </ScrollArea>
     </div>

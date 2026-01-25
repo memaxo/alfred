@@ -22,7 +22,7 @@ import type { EdgeData } from "@/store/desktop/types.new";
 // MINDSCAPE NODE DATA — Entity information for Mindscape nodes
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type MindscapeNodeData = {
+export interface MindscapeNodeData extends Record<string, unknown> {
   entityId: string;
   entityType: string;
   label: string;
@@ -30,7 +30,7 @@ export type MindscapeNodeData = {
   archived?: boolean;
   description?: string;
   hgHash?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MINDSCAPE TYPES — ReactFlow-specific types
@@ -44,7 +44,7 @@ export type MindscapeViewport = Viewport; // { x, y, zoom }
 // MINDSCAPE SLICE — ReactFlow state management
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type MindscapeSlice = {
+export interface MindscapeSlice {
   // State (ReactFlow types)
   nodes: MindscapeNode[];
   edges: MindscapeEdge[];
@@ -88,7 +88,7 @@ export type MindscapeSlice = {
   highlightedEdgeIds: Set<string>;
   setHighlightedEdges: (edgeIds: string[]) => void;
   triggerEdgeActivity: (edgeId: string, durationMs?: number) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MINDSCAPE STATE — Full store type

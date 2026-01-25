@@ -10,10 +10,10 @@ import { useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
-type LoadingProps = {
+interface LoadingProps {
   message?: string;
   className?: string;
-};
+}
 
 export function Loading({
   message = "Processing...",

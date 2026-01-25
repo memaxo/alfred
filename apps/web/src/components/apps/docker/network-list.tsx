@@ -5,21 +5,21 @@ import { Network } from "lucide-react";
 import { VirtualList } from "@/components/ui/virtual-list";
 import { cn } from "@/lib/utils";
 
-export type DockerNetwork = {
+export interface DockerNetwork {
   id: string;
   name: string;
   driver: string;
   scope: string;
-};
+}
 
-type NetworkListProps = {
+interface NetworkListProps {
   networks: DockerNetwork[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   className?: string;
   isLoading?: boolean;
   error?: string;
-};
+}
 
 export function NetworkList({
   networks,

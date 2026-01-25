@@ -18,19 +18,19 @@ import { cn } from "@/lib/utils";
 
 type AgentType = "assistant" | "codex" | "droid" | "roo" | "claude";
 
-type AgentSelectorProps = {
+interface AgentSelectorProps {
   value: AgentType;
   onChange: (agent: AgentType) => void;
   className?: string;
-};
+}
 
-const agents: Array<{
+const agents: {
   id: AgentType;
   name: string;
   description: string;
   icon: typeof Bot;
   color: string;
-}> = [
+}[] = [
   {
     id: "assistant",
     name: "Assistant",

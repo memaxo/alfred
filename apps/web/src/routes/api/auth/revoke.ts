@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/auth/revoke")({
         let isDbConnectionError: ((error: unknown) => boolean) | null = null;
         try {
           const helpers = await getDbHelpers();
-          isDbConnectionError = helpers.isDbConnectionError;
+          ({ isDbConnectionError } = helpers);
           const { db, oauthAccessToken, eq } = helpers;
 
           // RFC 7009: The authorization server responds with HTTP status 200

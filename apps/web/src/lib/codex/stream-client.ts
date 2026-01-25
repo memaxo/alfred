@@ -19,7 +19,7 @@ export type CodexStreamEvent =
   | {
       type: "complete";
       result: string;
-      artifacts?: Array<{ path: string; kind: string }>;
+      artifacts?: { path: string; kind: string }[];
     }
   | { type: "error"; message: string; code: string; correlationId: string };
 
@@ -31,11 +31,11 @@ type RawCodexStreamEvent =
   | {
       type: "complete";
       result: string;
-      artifacts?: Array<{ path: string; kind: string }>;
+      artifacts?: { path: string; kind: string }[];
     }
   | { type: "error"; message: string; code: string; correlationId: string };
 
-export type CodexRunInput = {
+export interface CodexRunInput {
   prompt: string;
   auto: "read" | "low" | "medium" | "high";
   authz?: string;
@@ -53,9 +53,9 @@ export type CodexRunInput = {
   };
   env?: Record<string, string>;
   timeoutSec?: number;
-};
+}
 
-export type CodexStreamOptions = {
+export interface CodexStreamOptions {
   input: CodexRunInput;
   client: ReturnType<typeof createTRPCProxyClient<AppRouter>>;
   onEvent?: (event: CodexStreamEvent) => void;
@@ -64,13 +64,13 @@ export type CodexStreamOptions = {
   onError?: (error: Error) => void;
   onComplete?: (result: {
     result: string;
-    artifacts?: Array<{ path: string; kind: string }>;
+    artifacts?: { path: string; kind: string }[];
   }) => void;
-};
+}
 
-type CodexStreamTestHarness = {
+interface CodexStreamTestHarness {
   subscribe: (options: CodexStreamOptions) => { unsubscribe: () => void };
-};
+}
 
 function getTestHarness(): CodexStreamTestHarness | null {
   if (typeof globalThis === "undefined") {

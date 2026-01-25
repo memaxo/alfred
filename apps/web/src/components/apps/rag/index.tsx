@@ -24,13 +24,13 @@ import { SimilarityExplorer } from "./similarity-explorer";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Chunk = {
+export interface Chunk {
   id: string;
   documentId: string;
   content: string;
   metadata: Record<string, string>;
   embedding?: number[];
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

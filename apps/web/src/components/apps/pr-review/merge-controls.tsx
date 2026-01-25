@@ -12,10 +12,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type MergeControlsProps = {
+interface MergeControlsProps {
   prId: string;
   className?: string;
-};
+}
 
 export function MergeControls({ prId: _prId, className }: MergeControlsProps) {
   const prNumber = useMemo(() => Number.parseInt(_prId, 10), [_prId]);

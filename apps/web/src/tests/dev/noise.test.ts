@@ -35,7 +35,7 @@ describe("dev-noise", () => {
       const append = (chunk: string) => {
         out += chunk;
         if (out.length > 250_000) {
-          out = out.slice(out.length - 250_000);
+          out = out.slice(-250_000);
         }
       };
 

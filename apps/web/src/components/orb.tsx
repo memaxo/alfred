@@ -7,10 +7,10 @@
 
 import { cn } from "@/lib/utils";
 
-type OrbProps = {
+interface OrbProps {
   status: "idle" | "thinking" | "speaking" | "listening";
   className?: string;
-};
+}
 
 export function Orb({ status, className }: OrbProps) {
   const statusConfig = {

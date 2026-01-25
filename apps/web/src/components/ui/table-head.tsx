@@ -2,10 +2,10 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type TableHeadProps = {
+export interface TableHeadProps {
   children: React.ReactNode;
   className?: string;
-};
+}
 
 export const TableHead = ({
   children,

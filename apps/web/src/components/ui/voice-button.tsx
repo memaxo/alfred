@@ -136,7 +136,7 @@ export const VoiceButton = ({
 
   return (
     <Button
-      aria-label={"Voice Button"}
+      aria-label="Voice Button"
       className={cn(
         "gap-2 transition-all duration-200",
         size === "icon" && "relative",
@@ -164,9 +164,9 @@ export const VoiceButton = ({
             : "h-5 w-24 rounded-sm border",
           isRecording
             ? "bg-primary/10 dark:bg-primary/5"
-            : size === "icon"
+            : (size === "icon"
               ? "border-0 bg-muted/50"
-              : "border-border bg-muted/50",
+              : "border-border bg-muted/50"),
           waveformClassName
         )}
       >

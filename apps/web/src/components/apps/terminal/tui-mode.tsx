@@ -14,18 +14,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type TuiModeProps = {
+interface TuiModeProps {
   className?: string;
   onModeChange?: (mode: "standard" | "tui") => void;
-};
+}
 
-type TuiWidget = {
+interface TuiWidget {
   id: string;
   name: string;
   description: string;
   icon: typeof Terminal;
   enabled: boolean;
-};
+}
 
 const mockWidgets: TuiWidget[] = [
   {

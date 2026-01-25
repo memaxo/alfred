@@ -1,4 +1,4 @@
-export type WebAgentfsDb = {
+export interface WebAgentfsDb {
   kv: {
     get<T = unknown>(key: string): Promise<T | undefined>;
   };
@@ -10,10 +10,10 @@ export type WebAgentfsDb = {
     ): Promise<string | Uint8Array | Buffer>;
   };
   close(): Promise<void>;
-};
+}
 
 function safeRunId(runId: string): string {
-  return runId.replace(/[^a-zA-Z0-9-]/g, "-");
+  return runId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
 }
 
 export async function openAgentfsDb(args: {

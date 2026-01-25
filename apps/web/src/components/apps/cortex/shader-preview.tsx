@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 
 import type { CortexPreset } from "./index";
 
-type ShaderPreviewProps = {
+interface ShaderPreviewProps {
   preset: CortexPreset | null;
   className?: string;
-};
+}
 
 export function ShaderPreview({ preset, className }: ShaderPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,7 +38,7 @@ export function ShaderPreview({ preset, className }: ShaderPreviewProps) {
       // Mock shader visualization
       const { width, height } = canvas;
       const imageData = ctx.createImageData(width, height);
-      const data = imageData.data;
+      const { data } = imageData;
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {

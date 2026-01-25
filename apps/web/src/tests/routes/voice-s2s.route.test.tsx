@@ -60,7 +60,7 @@ describe("VoiceS2SRouteView", () => {
   });
 
   it("starts recording when idle", async () => {
-    const start = vi.fn().mockResolvedValue(undefined);
+    const start = vi.fn().mockResolvedValue();
     const clear = vi.fn();
 
     useVoiceSessionWebMock.mockReturnValue({

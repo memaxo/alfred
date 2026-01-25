@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 type HistoryTier = "anchor" | "high" | "medium" | "low";
 
 const createConversationMock = vi.fn().mockResolvedValue({ id: "conv-1" });
-const createMessageMock = vi.fn().mockResolvedValue(undefined);
+const createMessageMock = vi.fn().mockResolvedValue();
 mock.module("@alfred/db/repo/conversation", () => ({
   createConversation: createConversationMock,
   createMessage: createMessageMock,

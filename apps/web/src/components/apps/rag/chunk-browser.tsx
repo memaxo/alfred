@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type RagChunk = {
+interface RagChunk {
   id: string;
   source: string;
   content: string;
@@ -20,7 +20,7 @@ type RagChunk = {
     section?: string;
     lastUpdated?: string;
   };
-};
+}
 
 export function ChunkBrowser() {
   const [search, setSearch] = useState("");
@@ -61,7 +61,7 @@ export function ChunkBrowser() {
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-6 w-6 animate-spin text-biolum" />
             </div>
-          ) : chunks.length === 0 ? (
+          ) : (chunks.length === 0 ? (
             <div className="p-4 text-center text-biolum-dim text-sm">
               No chunks found. Try a different search query.
             </div>
@@ -93,7 +93,7 @@ export function ChunkBrowser() {
                 </button>
               ))}
             </div>
-          )}
+          ))}
         </ScrollArea>
       </div>
 

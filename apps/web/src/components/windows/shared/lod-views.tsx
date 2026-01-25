@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-type TinyDotProps = {
+interface TinyDotProps {
   color: string;
   shadow?: string;
-};
+}
 
 export function TinyDot({ color, shadow }: TinyDotProps) {
   return (
@@ -19,13 +19,13 @@ export function TinyDot({ color, shadow }: TinyDotProps) {
   );
 }
 
-type SmallCardProps = {
+interface SmallCardProps {
   icon: ReactNode;
   label: string;
   textColor?: string;
   borderColor?: string;
   hoverColor?: string;
-};
+}
 
 export function SmallCard({
   icon,

@@ -94,14 +94,18 @@ export function MindscapeCanvas() {
           maskColor="rgba(0, 0, 0, 0.8)"
           nodeColor={(node) => {
             switch (node.data?.type) {
-              case "concept":
+              case "concept": {
                 return "#22d3ee";
-              case "entity":
+              }
+              case "entity": {
                 return "#a78bfa";
-              case "window":
+              }
+              case "window": {
                 return "#fbbf24";
-              default:
+              }
+              default: {
                 return "#64748b";
+              }
             }
           }}
         />

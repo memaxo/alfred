@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 export type NotificationType = "info" | "success" | "warning" | "error";
 
-export type Notification = {
+export interface Notification {
   id: string;
   type: NotificationType;
   title: string;
@@ -27,16 +27,16 @@ export type Notification = {
   read: boolean;
   group?: string;
   actions?: { label: string; onClick: () => void }[];
-};
+}
 
-type NotificationCenterProps = {
+interface NotificationCenterProps {
   notifications: Notification[];
   onDismiss: (id: string) => void;
   onDismissAll: () => void;
   onMarkRead: (id: string) => void;
   onMarkAllRead: () => void;
   className?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS
@@ -160,11 +160,11 @@ export function NotificationCenter({
 // NOTIFICATION ITEM
 // ─────────────────────────────────────────────────────────────────────────────
 
-type NotificationItemProps = {
+interface NotificationItemProps {
   notification: Notification;
   onDismiss: () => void;
   onMarkRead: () => void;
-};
+}
 
 function NotificationItem({
   notification,

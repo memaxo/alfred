@@ -21,24 +21,24 @@ import { trpc } from "@/utils/trpc";
 
 export type PlanStatus = "idle" | "planning" | "ready" | "error";
 
-export type PlanStep = {
+export interface PlanStep {
   id: string;
   name: string;
   status: "pending" | "running" | "completed" | "failed";
   duration?: number;
   startTime?: number;
-};
+}
 
 // --- useWorkflowPlan Hook ---
 
-type UseWorkflowPlanOptions = {
+interface UseWorkflowPlanOptions {
   requirement: string;
   workspace?: string;
   onPlanReady?: (plan: PlanPhaseOutput) => void;
   onError?: (error: Error) => void;
-};
+}
 
-export type UseWorkflowPlanReturn = {
+export interface UseWorkflowPlanReturn {
   plan: PlanPhaseOutput | null;
   status: PlanStatus;
   error: Error | null;
@@ -46,7 +46,7 @@ export type UseWorkflowPlanReturn = {
   start: () => void;
   stop: () => void;
   clear: () => void;
-};
+}
 
 /**
  * Hook to generate a plan without executing it.
@@ -371,8 +371,8 @@ export function useWorkflowPlan(
       setPlan(data);
       setStatus("ready");
       onPlanReady?.(data);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       const retryable =
         msg.includes("snapshot_not_found") ||
         msg.includes("plan_not_ready") ||
@@ -407,19 +407,19 @@ export function useWorkflowPlan(
 
 // --- usePhaseStatus Hook ---
 
-type UsePhaseStatusOptions = {
+interface UsePhaseStatusOptions {
   pollingInterval?: number;
   enabled?: boolean;
-};
+}
 
-export type UsePhaseStatusReturn = {
+export interface UsePhaseStatusReturn {
   status: PhaseStatus | null;
   canResume: boolean;
   nextStage: string | null;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
-};
+}
 
 /**
  * Hook to poll phase status for a run.
@@ -452,19 +452,19 @@ export function usePhaseStatus(
 
 // --- useWorkflowExecute Hook ---
 
-export type ExecuteProgress = {
+export interface ExecuteProgress {
   stage: string;
   message?: string;
   timestamp: number;
-};
+}
 
-export type UseWorkflowExecuteReturn = {
+export interface UseWorkflowExecuteReturn {
   execute: (input: ExecutePhaseInput) => Promise<void>;
   isExecuting: boolean;
   progress: ExecuteProgress[];
   error: Error | null;
   clear: () => void;
-};
+}
 
 /**
  * Hook to execute a prepared plan.

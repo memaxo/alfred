@@ -32,12 +32,12 @@ import { TimeSlider } from "./time-slider";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type KnowledgeAppProps = {
+interface KnowledgeAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
-export type Entity = {
+export interface Entity {
   id: string;
   name: string;
   type: "concept" | "person" | "project" | "file" | "event";
@@ -45,9 +45,9 @@ export type Entity = {
   relations: Relation[];
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-export type Fact = {
+export interface Fact {
   id: string;
   subject: string;
   predicate: string;
@@ -55,15 +55,15 @@ export type Fact = {
   confidence: number;
   source: string;
   timestamp: Date;
-};
+}
 
-export type Relation = {
+export interface Relation {
   id: string;
   sourceId: string;
   targetId: string;
   type: string;
   strength: number;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

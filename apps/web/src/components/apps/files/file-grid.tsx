@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 
 import type { FileItem } from "./index";
 
-type FileGridProps = {
+interface FileGridProps {
   currentPath: string;
   viewMode: "grid" | "list";
   selectedFile: FileItem | null;
@@ -37,7 +37,7 @@ type FileGridProps = {
   onDelete?: (file: FileItem) => void;
   onRename?: (file: FileItem) => void;
   className?: string;
-};
+}
 
 // Mock files
 const mockFiles: FileItem[] = [

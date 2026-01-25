@@ -9,9 +9,9 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useVoiceStore } from "@/store/voice";
 
-type WaveformProps = {
+interface WaveformProps {
   className?: string;
-};
+}
 
 export function Waveform({ className }: WaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

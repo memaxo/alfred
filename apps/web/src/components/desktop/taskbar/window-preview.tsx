@@ -11,9 +11,9 @@ import {
 } from "@/components/desktop/windows/registry";
 import { useDesktopStore } from "@/store/desktop";
 
-type WindowPreviewProps = {
+interface WindowPreviewProps {
   window: WindowInstance;
-};
+}
 
 export function WindowPreview({ window }: WindowPreviewProps) {
   const { focusWindow, restoreWindow } = useDesktopStore(

@@ -30,11 +30,11 @@ type PreferenceDeleteInput =
 
 export type SettingsMode = "full" | "compact";
 
-export type SettingsContentProps = {
+export interface SettingsContentProps {
   mode?: SettingsMode;
   onNavigate?: (path: string) => void;
   className?: string;
-};
+}
 
 const listInput = { limit: 100, offset: 0 } as const;
 

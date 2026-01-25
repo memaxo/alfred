@@ -16,26 +16,26 @@ import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { formatRelativeTime } from "@/lib/time";
 import { trpc } from "@/utils/trpc";
 
-type MindscapeWorkflowDrawerProps = {
+interface MindscapeWorkflowDrawerProps {
   runId: string | null;
   open?: boolean;
   onClose: () => void;
   onNavigateFull?: (runId: string) => void;
   onNavigateToMindscape?: (documentId: string) => void;
-};
+}
 
-type DrawerErrorBoundaryProps = {
+interface DrawerErrorBoundaryProps {
   children: React.ReactNode;
   fallback: (props: {
     error: Error | null;
     reset: () => void;
   }) => React.ReactNode;
   resetKeys?: unknown[];
-};
+}
 
-type DrawerErrorBoundaryState = {
+interface DrawerErrorBoundaryState {
   error: Error | null;
-};
+}
 
 // oxlint-disable useReactFunctionComponents: Error boundaries must be class components per React API
 class DrawerErrorBoundary extends React.Component<
@@ -295,7 +295,7 @@ function WorkflowDrawerBody({
             <Loader2 className="h-4 w-4 animate-spin" />
             <p className="text-sm">Loading workflow…</p>
           </div>
-        ) : runQuery.isError || !runQuery.data ? (
+        ) : (runQuery.isError || !runQuery.data ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-biolum">
             <p className="font-semibold">Unable to load workflow run.</p>
             <p className="text-biolum-dim text-sm">
@@ -350,7 +350,7 @@ function WorkflowDrawerBody({
             reasoningLoading={reasoningQuery.isLoading}
             workflow={runQuery.data}
           />
-        )}
+        ))}
       </div>
       <CognitiveFeedbackDialog
         draft={feedbackDraft}

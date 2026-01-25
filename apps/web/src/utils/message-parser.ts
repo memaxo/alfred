@@ -16,47 +16,47 @@ import {
 
 type AgentMessage = AssistantUIMessage | OrchestratorUIMessage;
 
-export type ParsedPlan = {
+export interface ParsedPlan {
   requirement: string;
-  tasks: Array<{
+  tasks: {
     id: string;
     title: string;
     status: "pending" | "running" | "completed" | "error";
     subtasks?: unknown[];
-  }>;
-};
+  }[];
+}
 
-export type ParsedTask = {
+export interface ParsedTask {
   id: string;
   title: string;
   status: "pending" | "running" | "completed" | "error";
   progress?: number;
-};
+}
 
-export type ParsedTool = {
+export interface ParsedTool {
   name: string;
   args: Record<string, unknown>;
   result?: unknown;
   status: "pending" | "running" | "completed" | "error";
-};
+}
 
-export type ParsedCode = {
+export interface ParsedCode {
   code: string;
   language?: string;
-};
+}
 
-export type ParsedCite = {
+export interface ParsedCite {
   source: string;
   text: string;
-};
+}
 
-export type ParsedThink = Array<{
+export type ParsedThink = {
   id: string;
   thought: string;
   confidence?: number;
-}>;
+}[];
 
-export type ParsedMessage = {
+export interface ParsedMessage {
   id: string;
   role: AgentMessage["role"];
   plans: ParsedPlan[];
@@ -65,7 +65,7 @@ export type ParsedMessage = {
   codes: ParsedCode[];
   cites: ParsedCite[];
   thinks: ParsedThink[];
-};
+}
 
 function isPlanData(data: unknown): data is ParsedPlan {
   if (!data || typeof data !== "object") {
@@ -182,7 +182,7 @@ export function parseStructuredMessage(message: AgentMessage): ParsedMessage {
       // Type guard is runtime-correct, but we cast due to ALFRED's custom tool-result
       // part type not existing in the AI SDK's UIMessage typings.
       const toolResultPart = part as unknown as ToolResultPart;
-      const output = toolResultPart.output;
+      const { output } = toolResultPart;
       if (output && typeof output === "object") {
         const obj = output as Record<string, unknown>;
 

@@ -12,10 +12,10 @@ import { trpc } from "@/utils/trpc";
 
 import type { Workspace } from "./index";
 
-type CallTimelineProps = {
+interface CallTimelineProps {
   workspace: Workspace;
   className?: string;
-};
+}
 
 const typeIcons = {
   read: File,

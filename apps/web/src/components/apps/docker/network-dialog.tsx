@@ -14,11 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/utils/trpc";
 
-export type NetworkCreateDialogProps = {
+export interface NetworkCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
-};
+}
 
 export function NetworkCreateDialog({
   open,

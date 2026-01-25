@@ -11,13 +11,13 @@ import {
 
 import { cn } from "@/lib/utils";
 
-export type TextShimmerProps = {
+export interface TextShimmerProps {
   children: string;
   as?: ElementType;
   className?: string;
   duration?: number;
   spread?: number;
-};
+}
 
 const ShimmerComponent = ({
   children,

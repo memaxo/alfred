@@ -7,10 +7,10 @@
 
 import { cn } from "@/lib/utils";
 
-type VizProps = {
+interface VizProps {
   data: number[];
   className?: string;
-};
+}
 
 export function Viz({ data, className }: VizProps) {
   return (

@@ -122,16 +122,21 @@ function DesktopRoute() {
   // Map stream status to Orb agent state
   const getAgentState = () => {
     switch (stream.status) {
-      case "recording":
+      case "recording": {
         return "listening";
-      case "processing":
+      }
+      case "processing": {
         return "thinking";
-      case "playing":
+      }
+      case "playing": {
         return "talking";
-      case "connecting":
+      }
+      case "connecting": {
         return "thinking";
-      default:
-        return "listening"; // Pulse in idle/listening state for "Presence"
+      }
+      default: {
+        return "listening";
+      } // Pulse in idle/listening state for "Presence"
     }
   };
 
@@ -183,7 +188,7 @@ function DesktopRoute() {
                 animate={{ opacity: 1 }}
                 className="absolute bottom-12 select-none font-mono text-[oklch(0.4_0_0)] text-sm uppercase tracking-widest"
                 initial={{ opacity: 0 }}
-                transition={{ delay: 2.0, duration: 1.5 }}
+                transition={{ delay: 2, duration: 1.5 }}
               >
                 Signal in the Void
               </motion.div>

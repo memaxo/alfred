@@ -55,23 +55,23 @@ const MAX_LOG_ENTRIES = 200;
 
 type AutoLevel = "read" | "low" | "medium" | "high";
 
-const autoLevels: Array<{
+const autoLevels: {
   label: string;
   value: AutoLevel;
   description: string;
-}> = [
+}[] = [
   { label: "Read", value: "read", description: "Read-only, no modifications" },
   { label: "Low", value: "low", description: "Ask before changes" },
   { label: "Medium", value: "medium", description: "Autonomous code changes" },
   { label: "High", value: "high", description: "Full autonomy" },
 ];
 
-type LogEntry = {
+interface LogEntry {
   id: string;
   channel: "stdout" | "stderr" | "system";
   text: string;
   at: string;
-};
+}
 
 type RunStatus = "idle" | "running" | "completed" | "failed";
 
@@ -162,7 +162,7 @@ export function CodexWindow({ id, data, selected }: NodeProps) {
   const updateOrAddItem = useCallback((item: ThreadItem) => {
     setItems((prev) => {
       const idx = prev.findIndex((i) => i.id === item.id);
-      if (idx >= 0) {
+      if (idx !== -1) {
         const next = [...prev];
         next[idx] = item;
         return next;
@@ -313,8 +313,8 @@ export function CodexWindow({ id, data, selected }: NodeProps) {
         },
       });
       subscriptionRef.current = subscription;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
       setLastError(msg);
       setStatus("failed");
       appendLog({
@@ -613,9 +613,9 @@ export function CodexWindow({ id, data, selected }: NodeProps) {
                           className={
                             entry.channel === "stderr"
                               ? "text-red-400"
-                              : entry.channel === "system"
+                              : (entry.channel === "system"
                                 ? "text-biolum-dim"
-                                : "text-zinc-300"
+                                : "text-zinc-300")
                           }
                           key={entry.id}
                         >

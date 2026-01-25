@@ -11,11 +11,11 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type AudioProps = {
+interface AudioProps {
   src: string;
   autoPlay?: boolean;
   className?: string;
-};
+}
 
 export function AudioPlayer({ src, autoPlay = false, className }: AudioProps) {
   const [isPlaying, setIsPlaying] = useState(false);

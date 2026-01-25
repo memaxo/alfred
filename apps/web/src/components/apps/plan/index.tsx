@@ -23,22 +23,22 @@ import { PlanCanvas } from "./plan-canvas";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PlanStep = {
+export interface PlanStep {
   id: string;
   name: string;
   type: "task" | "subtask" | "checkpoint" | "decision";
   status: "pending" | "running" | "completed" | "failed";
   dependencies: string[];
   estimate?: string;
-};
+}
 
-export type ExecPlan = {
+export interface ExecPlan {
   id: string;
   name: string;
   purpose: string;
   steps: PlanStep[];
   createdAt: Date;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

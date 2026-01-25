@@ -23,7 +23,7 @@ export function NotificationsSection() {
   const [agentCompletions, setAgentCompletions] = useState(true);
   const [workflowEvents, setWorkflowEvents] = useState(true);
   const [systemAlerts, setSystemAlerts] = useState(true);
-  const [snoozeUntil, setSnoozeUntil] = useState<Date | undefined>(undefined);
+  const [snoozeUntil, setSnoozeUntil] = useState<Date | undefined>();
   const [vacation, setVacation] = useState<DateRangeValue>({});
 
   useEffect(() => {

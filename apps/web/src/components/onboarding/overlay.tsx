@@ -15,7 +15,7 @@ import { TourStep } from "./tour-step";
 import { VoiceStep } from "./voice-step";
 import { WelcomeStep } from "./welcome-step";
 
-type Step = {
+interface Step {
   id: "welcome" | "voice" | "preferences" | "integrations" | "tour";
   title: string;
   render: (ctx: {
@@ -24,7 +24,7 @@ type Step = {
     onNext: () => void;
     onSkip: () => void;
   }) => ReactElement;
-};
+}
 
 const STEPS: Step[] = [
   { id: "welcome", title: "Welcome", render: () => <WelcomeStep /> },

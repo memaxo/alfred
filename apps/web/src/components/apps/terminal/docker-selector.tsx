@@ -6,27 +6,27 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type DockerContainer = {
+interface DockerContainer {
   id: string;
   name: string;
   image: string;
   status: string;
   state: "running" | "paused" | "exited" | "created";
-};
+}
 
-type ApiContainer = {
+interface ApiContainer {
   id?: string;
   name?: string;
   image?: string;
   status?: string;
   state: "running" | "paused" | "exited" | "created";
-};
+}
 
-type DockerSelectorProps = {
+interface DockerSelectorProps {
   onSelect: (container: DockerContainer) => void;
   onClose: () => void;
   className?: string;
-};
+}
 
 export function DockerSelector({
   onSelect,
@@ -89,7 +89,7 @@ export function DockerSelector({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
             </div>
-          ) : runningContainers.length === 0 ? (
+          ) : (runningContainers.length === 0 ? (
             <div className="py-8 text-center text-biolum-dim text-sm">
               <Container className="mx-auto mb-2 h-8 w-8 opacity-30" />
               <p>No running containers found</p>
@@ -124,7 +124,7 @@ export function DockerSelector({
                 </button>
               ))}
             </div>
-          )}
+          ))}
         </div>
 
         <div className="border-white/5 border-t p-2">

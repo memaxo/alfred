@@ -2,12 +2,12 @@ import type { StreamEvent } from "@alfred/type/stream";
 
 type ResolveFn = (value: StreamEvent) => void;
 
-export type MockStreamController = {
+export interface MockStreamController {
   emit(event: StreamEvent): void;
   error(error: Error): void;
   close(): void;
   next(kind?: StreamEvent["_"], timeoutMs?: number): Promise<StreamEvent>;
-};
+}
 
 export function createMockStream(
   seed: StreamEvent[] = []
@@ -58,7 +58,7 @@ export function createMockStream(
       }
       const match = (event: StreamEvent) => (kind ? event._ === kind : true);
       const existingIndex = queue.findIndex(match);
-      if (existingIndex >= 0) {
+      if (existingIndex !== -1) {
         const [event] = queue.splice(existingIndex, 1);
         if (!event) {
           throw new Error("stream_queue_error");
@@ -68,7 +68,7 @@ export function createMockStream(
       return new Promise<StreamEvent>((resolve, reject) => {
         const timer = setTimeout(() => {
           const index = listeners.indexOf(resolveListener);
-          if (index >= 0) {
+          if (index !== -1) {
             listeners.splice(index, 1);
           }
           reject(new Error(`stream_timeout_${kind ?? "any"}`));

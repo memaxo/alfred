@@ -25,15 +25,15 @@ const AUTH_TOKEN = "Bearer voice-e2e-mock";
 const SESSION_TIMEOUT_MS = 5000;
 const DEBUG_VOICE = process.env.DEBUG_VOICE_E2E === "1";
 
-type ServerStats = {
+interface ServerStats {
   started: number;
   completed: number;
   cleaned: number;
   errors: number;
   ttsChunks: number;
-};
+}
 
-type ConnectionState = {
+interface ConnectionState {
   userId: string;
   connectionId: string;
   sessionId: string | null;
@@ -46,7 +46,7 @@ type ConnectionState = {
   voiceSession: VoiceSession | null;
   sequence: number;
   closed: boolean;
-};
+}
 
 class MockVoiceStreamingServer {
   private readonly server = createServer();
@@ -114,7 +114,7 @@ class MockVoiceStreamingServer {
   }
 
   getActiveSessions(): number {
-    return Array.from(this.connections.values()).filter(
+    return [...this.connections.values()].filter(
       (state) => Boolean(state.sessionId) && !state.closed
     ).length;
   }
@@ -214,25 +214,30 @@ class MockVoiceStreamingServer {
 
     const type = typeof payload._ === "string" ? payload._ : null;
     switch (type) {
-      case "start":
+      case "start": {
         await this.handleStart(ws, payload);
         break;
-      case "stop":
+      }
+      case "stop": {
         await this.handleStop(ws, String(payload.reason ?? "manual"));
         break;
-      case "telemetry_report":
+      }
+      case "telemetry_report": {
         break;
-      case null:
+      }
+      case null: {
         this.emitError(ws, "missing_event_type", true);
         break;
-      default:
+      }
+      default: {
         this.emitError(ws, `unknown_event:${type}`, false);
+      }
     }
   }
 
   private handleStart(ws: WebSocket, payload: Record<string, unknown>) {
     const state = this.connections.get(ws);
-    const registry = this.registry;
+    const { registry } = this;
     if (!(state && registry)) {
       return;
     }
@@ -354,7 +359,7 @@ class MockVoiceStreamingServer {
       state.inactivityTimer = null;
     }
     // sessionId is guaranteed to exist after the check above
-    const sessionId = state.sessionId;
+    const { sessionId } = state;
     state.assistantText = `Responding to: ${
       state.lastTranscript ?? "no transcript"
     }`;
@@ -462,7 +467,7 @@ class MockVoiceStreamingServer {
   }
 }
 
-type VoiceEventLog = {
+interface VoiceEventLog {
   sessionId: string | null;
   partialTranscripts: string[];
   finalTranscripts: string[];
@@ -471,7 +476,7 @@ type VoiceEventLog = {
   statuses: string[];
   errors: string[];
   ttsComplete: boolean;
-};
+}
 
 function createVoiceEventLog(): VoiceEventLog {
   return {

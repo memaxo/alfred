@@ -138,7 +138,7 @@ describe("TerminalApp", () => {
     await findByText("New Terminal");
 
     const closeButtons = document.querySelectorAll("button");
-    const closeButton = Array.from(closeButtons).find(
+    const closeButton = [...closeButtons].find(
       (btn) => btn.querySelector("svg") && btn.className.includes("h-6")
     );
 

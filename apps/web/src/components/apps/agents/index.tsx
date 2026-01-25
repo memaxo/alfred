@@ -33,11 +33,11 @@ import { WaveTimeline } from "./wave-timeline";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type AgentsAppProps = {
+interface AgentsAppProps {
   windowId?: string;
   className?: string;
   runId?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

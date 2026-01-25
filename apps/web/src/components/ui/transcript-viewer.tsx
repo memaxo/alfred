@@ -49,10 +49,10 @@ function useTranscriptViewerContext() {
   return context;
 }
 
-type TranscriptViewerProviderProps = {
+interface TranscriptViewerProviderProps {
   value: TranscriptViewerContextValue;
   children: ReactNode;
-};
+}
 
 function TranscriptViewerProvider({
   value,
@@ -252,9 +252,9 @@ function TranscriptViewerWords({
         const status: TranscriptViewerWordStatus =
           currentWordId && word.id === currentWordId
             ? "current"
-            : word.end <= currentTime
+            : (word.end <= currentTime
               ? "spoken"
-              : "unspoken";
+              : "unspoken");
         entries.push({ kind: "word", word, status });
       }
     }
@@ -458,7 +458,7 @@ function alignmentToSegments(
   }
 
   const raw = alignment as unknown as Record<string, unknown>;
-  const characters = raw.characters;
+  const { characters } = raw;
   const starts = raw.character_start_times_seconds;
   const ends = raw.character_end_times_seconds;
 

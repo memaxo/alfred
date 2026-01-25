@@ -13,18 +13,18 @@ import { trpc } from "@/utils/trpc";
 
 import type { Workspace } from "./index";
 
-type CheckpointBrowserProps = {
+interface CheckpointBrowserProps {
   workspace: Workspace;
   onSelectWorkspace: (workspace: Workspace) => void;
   className?: string;
-};
+}
 
-type Checkpoint = {
+interface Checkpoint {
   id: string;
   name: string;
   createdAt: string;
   data?: unknown;
-};
+}
 
 export function CheckpointBrowser({
   workspace,

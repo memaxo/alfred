@@ -10,8 +10,9 @@ function isTestRuntime() {
     return true;
   }
   if (typeof import.meta !== "undefined") {
-    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
-      .env;
+    const { env } = import.meta as ImportMeta & {
+      env?: Record<string, string>;
+    };
     if (env?.VITE_TEST_MODE === "true") {
       return true;
     }
@@ -24,7 +25,7 @@ function extractObligations(error: unknown): Obligation[] | null {
     const data = error.data as Record<string, unknown> | undefined;
     if (data?.code === "PRECONDITION_FAILED") {
       const cause = (data.cause as Record<string, unknown>) ?? {};
-      const obligations = cause.obligations;
+      const { obligations } = cause;
       if (Array.isArray(obligations) && obligations.length > 0) {
         return obligations as Obligation[];
       }

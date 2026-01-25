@@ -8,11 +8,11 @@ import { Calendar } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type TimeSliderProps = {
+interface TimeSliderProps {
   value: [Date, Date];
   onChange: (range: [Date, Date]) => void;
   className?: string;
-};
+}
 
 export function TimeSlider({
   value,

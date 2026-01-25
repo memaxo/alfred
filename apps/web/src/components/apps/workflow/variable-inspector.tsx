@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type VariableInspectorProps = {
+interface VariableInspectorProps {
   onClose: () => void;
   className?: string;
-};
+}
 
 // Mock variables
 const mockVariables = [

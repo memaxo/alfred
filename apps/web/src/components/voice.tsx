@@ -8,17 +8,17 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Voice = {
+interface Voice {
   id: string;
   name: string;
-};
+}
 
-type VoiceProps = {
+interface VoiceProps {
   voices: Voice[];
   selected: string;
   onSelect: (voiceId: string) => void;
   className?: string;
-};
+}
 
 export function Voice({ voices, selected, onSelect, className }: VoiceProps) {
   return (

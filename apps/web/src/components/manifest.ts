@@ -153,7 +153,7 @@ export const componentStatus: Record<
   profile: "integrated",
 };
 
-export type ComponentUse = {
+export interface ComponentUse {
   /**
    * File path relative to `apps/web/`.
    *
@@ -167,7 +167,7 @@ export type ComponentUse = {
    * so drift is caught mechanically.
    */
   match: string;
-};
+}
 
 /**
  * Contract gate for `componentStatus[name] === "integrated"`.

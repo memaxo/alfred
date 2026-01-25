@@ -88,7 +88,7 @@ describe("Codex stream client event normalization", () => {
   });
 
   describe("all thread item types via protocol", () => {
-    const itemTypes: Array<{ name: string; item: ThreadItem }> = [
+    const itemTypes: { name: string; item: ThreadItem }[] = [
       { name: "reasoning", item: mockThreadItems.reasoning },
       { name: "agent_message", item: mockThreadItems.agentMessage },
       { name: "command_execution", item: mockThreadItems.commandCompleted },

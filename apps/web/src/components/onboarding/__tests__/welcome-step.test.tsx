@@ -44,7 +44,7 @@ describe("WelcomeStep", () => {
     const { container } = render(<WelcomeStep />);
 
     const iconContainers = container.querySelectorAll(
-      ".rounded-full.bg-biolum\\/20"
+      String.raw`.rounded-full.bg-biolum\/20`
     );
     expect(iconContainers.length).toBe(3);
   });

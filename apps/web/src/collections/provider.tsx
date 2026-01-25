@@ -18,11 +18,11 @@ type NoteCollectionType = ReturnType<typeof createNoteCollection>;
 type ReminderCollectionType = ReturnType<typeof createReminderCollection>;
 type TodoCollectionType = ReturnType<typeof createTodoCollection>;
 
-type CollectionsContextValue = {
+interface CollectionsContextValue {
   notes: NoteCollectionType;
   reminders: ReminderCollectionType;
   todos: TodoCollectionType;
-};
+}
 
 const CollectionsContext = createContext<CollectionsContextValue | null>(null);
 

@@ -11,11 +11,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type EntityPanelProps = {
+interface EntityPanelProps {
   entityId: string;
   onClose: () => void;
   className?: string;
-};
+}
 
 export function EntityPanel({
   entityId,

@@ -44,7 +44,7 @@ function VisualSettings() {
     try {
       await save();
       toast.success("Visual settings saved");
-    } catch (_err) {
+    } catch {
       toast.error("Failed to save settings");
     }
   }, [save]);

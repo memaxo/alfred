@@ -37,12 +37,12 @@ import { type DockerVolume, VolumeList } from "./volume-list";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type DockerAppProps = {
+interface DockerAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
-export type Container = {
+export interface Container {
   id: string;
   name: string;
   image: string;
@@ -54,7 +54,7 @@ export type Container = {
   memoryLimit: number;
   isAgentWorkspace: boolean;
   workspaceId?: string;
-};
+}
 
 type Mode = "containers" | "networks" | "volumes";
 
@@ -269,7 +269,7 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
               <EmptyDetail label="Select a container" />
             )}
           </>
-        ) : mode === "networks" ? (
+        ) : (mode === "networks" ? (
           <>
             <NetworkList
               className="w-72 flex-shrink-0 border-white/5 border-r"
@@ -305,7 +305,7 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
               }
             />
           </>
-        )}
+        ))}
       </div>
 
       <ContainerCreateDialog

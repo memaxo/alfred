@@ -6,18 +6,18 @@
 
 import { cn } from "@/lib/utils";
 
-type Wave = {
+interface Wave {
   id: number;
   status: "pending" | "running" | "completed";
   agents: string[];
   startTime?: string;
   endTime?: string;
-};
+}
 
-type WaveTimelineProps = {
+interface WaveTimelineProps {
   waves: Wave[];
   className?: string;
-};
+}
 
 export function WaveTimeline({ waves, className }: WaveTimelineProps) {
   return (

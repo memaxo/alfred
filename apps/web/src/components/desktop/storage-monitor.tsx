@@ -9,11 +9,11 @@ import { useEffect, useState } from "react";
 
 import { getLayoutStorageSize } from "@/lib/desktop/performance";
 
-type StorageInfo = {
+interface StorageInfo {
   kb: number;
   percentUsed: number;
   withinBudget: boolean;
-};
+}
 
 /**
  * Monitor localStorage size for desktop layout.

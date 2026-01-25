@@ -42,25 +42,25 @@ const MAX_LOG_ENTRIES = 400;
 type AutoLevel = "read" | "low" | "medium" | "high";
 type OutFormat = "text" | "json" | "debug";
 
-const autoLevels: Array<{ label: string; value: AutoLevel }> = [
+const autoLevels: { label: string; value: AutoLevel }[] = [
   { label: "Read", value: "read" },
   { label: "Low", value: "low" },
   { label: "Medium", value: "medium" },
   { label: "High", value: "high" },
 ];
 
-const outFormats: Array<{ label: string; value: OutFormat }> = [
+const outFormats: { label: string; value: OutFormat }[] = [
   { label: "Text", value: "text" },
   { label: "JSON", value: "json" },
   { label: "Debug", value: "debug" },
 ];
 
-type LogEntry = {
+interface LogEntry {
   id: string;
   channel: "stdout" | "stderr" | "system";
   text: string;
   at: string;
-};
+}
 
 type RunStatus = "idle" | "running" | "suspended" | "completed" | "failed";
 
@@ -300,8 +300,8 @@ export function DroidWindow({ id, data, selected }: NodeProps) {
         },
       });
       subscriptionRef.current = subscription;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
       setLastError(msg);
       setStatus("failed");
       appendLog({

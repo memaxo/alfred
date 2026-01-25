@@ -6,15 +6,15 @@ import {
   type WindowType,
 } from "@/store/desktop";
 
-export type DesktopSearchParams = {
+export interface DesktopSearchParams {
   windowId?: string;
   spawn?: WindowType;
   resourceType?: ResourceType;
   resourceId?: string;
   ragDoc?: string;
-};
+}
 
-const VALID_WINDOW_TYPES: WindowType[] = [
+const VALID_WINDOW_TYPES = new Set<WindowType>([
   "chat",
   "terminal",
   "droid",
@@ -46,9 +46,9 @@ const VALID_WINDOW_TYPES: WindowType[] = [
   "notes",
   "reminders",
   "todos",
-];
+]);
 
-const VALID_RESOURCE_TYPES: ResourceType[] = [
+const VALID_RESOURCE_TYPES = new Set<ResourceType>([
   "note",
   "reminder",
   "thread",
@@ -57,14 +57,14 @@ const VALID_RESOURCE_TYPES: ResourceType[] = [
   "integration",
   "knowledge",
   "concept",
-];
+]);
 
 function isValidWindowType(type: string): type is WindowType {
-  return VALID_WINDOW_TYPES.includes(type as WindowType);
+  return VALID_WINDOW_TYPES.has(type as WindowType);
 }
 
 function isValidResourceType(type: string): type is ResourceType {
-  return VALID_RESOURCE_TYPES.includes(type as ResourceType);
+  return VALID_RESOURCE_TYPES.has(type as ResourceType);
 }
 
 export function useDesktopDeeplinks(params: DesktopSearchParams) {

@@ -52,7 +52,7 @@ function VoiceS2SRouteView() {
       return;
     }
 
-    const analyser = stream.analyser;
+    const { analyser } = stream;
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     let animationId: number;
@@ -99,9 +99,9 @@ function VoiceS2SRouteView() {
     stream.status === "connecting";
   const streamingButtonLabel = stream.isActive
     ? "Stop streaming"
-    : stream.status === "processing"
+    : (stream.status === "processing"
       ? "Finishing…"
-      : "Start streaming";
+      : "Start streaming");
   const vadPercent =
     typeof stream.vadConfidence === "number"
       ? Math.min(1, Math.max(0, stream.vadConfidence)) * 100
@@ -115,9 +115,9 @@ function VoiceS2SRouteView() {
         : "Standby";
   const handsFreeHelper = stream.autoStopReason
     ? `Auto-stop: ${stream.autoStopReason}`
-    : stream.status === "recording"
+    : (stream.status === "recording"
       ? "Listening (auto-stop armed)"
-      : "Press start to go hands-free.";
+      : "Press start to go hands-free.");
 
   const handleToggle = useCallback(async () => {
     if (isRecording) {
@@ -127,9 +127,9 @@ function VoiceS2SRouteView() {
           | undefined;
         setAssistantText(result?.assistant?.text ?? "");
         toast.success("Response ready");
-      } catch (err) {
+      } catch (error) {
         const message =
-          err instanceof Error ? err.message : "voice_session_failed";
+          error instanceof Error ? error.message : "voice_session_failed";
         toast.error(message);
       }
       return;
@@ -138,9 +138,9 @@ function VoiceS2SRouteView() {
     setAssistantText("");
     try {
       await start();
-    } catch (err) {
+    } catch (error) {
       const message =
-        err instanceof Error ? err.message : "voice_session_failed";
+        error instanceof Error ? error.message : "voice_session_failed";
       toast.error(message);
     }
   }, [clear, isRecording, speechToSpeech, start]);
@@ -158,9 +158,9 @@ function VoiceS2SRouteView() {
         await stream.start();
         toast.success("Streaming started");
       }
-    } catch (err) {
+    } catch (error) {
       const message =
-        err instanceof Error ? err.message : "voice_stream_failed";
+        error instanceof Error ? error.message : "voice_stream_failed";
       toast.error(message);
     }
   }, [stream]);
@@ -417,9 +417,9 @@ function VoiceS2SRouteView() {
         <p className="mt-1 text-base text-foreground">
           {stream.sessionId
             ? `Streaming ID: ${stream.sessionId}`
-            : session
+            : (session
               ? `Session ID: ${session.id}`
-              : "Session pending"}
+              : "Session pending")}
         </p>
         {session ? (
           <p className="mt-1">

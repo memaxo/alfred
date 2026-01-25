@@ -24,7 +24,7 @@ import { QueryEditor } from "./query-editor";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Metric = {
+export interface Metric {
   name: string;
   help: string;
   type: "counter" | "gauge" | "histogram" | "summary";
@@ -33,14 +33,14 @@ export type Metric = {
     labels: Record<string, string>;
   }[];
   aggregator: string;
-};
+}
 
-export type MetricQuery = {
+export interface MetricQuery {
   id: string;
   query: string;
   name: string;
   interval: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

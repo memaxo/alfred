@@ -12,11 +12,11 @@
 
 export type LiveRegionPoliteness = "polite" | "assertive" | "off";
 
-export type LiveRegionOptions = {
+export interface LiveRegionOptions {
   politeness?: LiveRegionPoliteness;
   atomic?: boolean;
   relevant?: "additions" | "removals" | "text" | "all";
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LIVE REGION ANNOUNCER
@@ -47,7 +47,7 @@ function getAnnouncer(): HTMLDivElement {
     white-space: nowrap;
     border: 0;
   `;
-  document.body.appendChild(announcer);
+  document.body.append(announcer);
 
   return announcer;
 }

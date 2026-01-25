@@ -188,7 +188,7 @@ function extractEventType(body: unknown): string {
       return candidate;
     }
 
-    const action = (body as { action?: unknown }).action;
+    const { action } = body as { action?: unknown };
     if (typeof action === "string" && action.length > 0) {
       return action;
     }
@@ -225,11 +225,11 @@ function extractAuthz(payload: unknown): string | null {
       return current.trim();
     }
     if (current && typeof current === "object") {
-      const token = (current as { token?: unknown }).token;
+      const { token } = current as { token?: unknown };
       if (typeof token === "string" && token.trim().length > 0) {
         return token.trim();
       }
-      const value = (current as { value?: unknown }).value;
+      const { value } = current as { value?: unknown };
       if (typeof value === "string" && value.trim().length > 0) {
         return value.trim();
       }
@@ -280,6 +280,67 @@ async function handleLinearWebhookEvent(args: {
                 },
                 authzLinear: authz ?? undefined,
               });
+              const runId =
+                startResult && typeof startResult.runId === "string"
+                  ? startResult.runId
+                  : issueId;
+
+              // Start execution via the pipeline stream (fire-and-forget).
+              void (async () => {
+                try {
+                  const stream = await caller.workflow.streamPipeline({
+                    requirement,
+                    auto: "low",
+                    linear: {
+                      space: workspace,
+                      sessionId: issueId,
+                    },
+                    authzLinear: authz ?? undefined,
+                    runId,
+                  });
+
+                  const sub = (
+                    stream as unknown as {
+                      subscribe: (handlers: {
+                        next: (event: unknown) => void;
+                        error: (err: unknown) => void;
+                        complete: () => void;
+                      }) => { unsubscribe: () => void } | (() => void);
+                    }
+                  ).subscribe({
+                    next: () => {},
+                    error: (err) => {
+                      h.logger.warn("linear_webhook_workflow_stream_error", {
+                        error: err instanceof Error ? err.message : String(err),
+                        issueId,
+                        runId,
+                        workspace,
+                      });
+                    },
+                    complete: () => {},
+                  });
+
+                  const unsubscribe =
+                    typeof sub === "function" ? sub : sub.unsubscribe;
+
+                  const timer = setTimeout(
+                    () => {
+                      unsubscribe();
+                    },
+                    30 * 60 * 1000
+                  );
+                  timer.unref?.();
+                } catch (error) {
+                  h.logger.warn("linear_webhook_workflow_stream_start_failed", {
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                    issueId,
+                    runId,
+                    workspace,
+                  });
+                }
+              })();
+
               h.metrics.linearWebhookWorkflowStartsTotal.inc();
               h.logger.info("linear_webhook_workflow_started", {
                 issueId,
@@ -291,10 +352,7 @@ async function handleLinearWebhookEvent(args: {
                   space: workspace,
                   issueId,
                   authz,
-                  body: buildWebhookStartComment(
-                    startResult?.runId ?? issueId,
-                    workflowUrlFor(startResult?.runId ?? null)
-                  ),
+                  body: buildWebhookStartComment(runId, workflowUrlFor(runId)),
                   logger: h.logger,
                 });
               }
@@ -434,7 +492,7 @@ export const Route = createFileRoute("/api/linear/webhook")({
         let secret: string;
         try {
           secret = getWebhookSecret();
-        } catch (_error) {
+        } catch {
           h.metrics.webhookErrorsTotal.labels("secret").inc();
           return new Response("missing_secret", { status: 500 });
         }

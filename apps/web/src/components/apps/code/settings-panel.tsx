@@ -7,13 +7,13 @@ import { cn } from "@/lib/utils";
 
 import type { EditorSettings } from "./types";
 
-type SettingsPanelProps = {
+interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   settings: EditorSettings;
   onUpdateSettings: (updates: Partial<EditorSettings>) => void;
   className?: string;
-};
+}
 
 export function SettingsPanel({
   isOpen,

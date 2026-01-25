@@ -22,9 +22,9 @@ import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
 
 // Initialize GenUI component registry (async, non-blocking)
-initGenUIRegistry().catch((err) => {
+initGenUIRegistry().catch((error) => {
   if (import.meta.env.DEV && typeof window !== "undefined") {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = error instanceof Error ? error.message : String(error);
     toast.error("GenUI registry initialization failed", {
       description: message,
     });

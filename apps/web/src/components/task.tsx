@@ -7,13 +7,13 @@
 
 import { cn } from "@/lib/utils";
 
-type TaskProps = {
+interface TaskProps {
   id: string;
   title: string;
   status: "pending" | "running" | "completed" | "error";
   progress?: number;
   className?: string;
-};
+}
 
 export function Task({ title, status, progress, className }: TaskProps) {
   const a11yLabel = `Task: ${title}${progress !== undefined ? `, ${progress}% complete` : ""}. Status: ${status}.`;

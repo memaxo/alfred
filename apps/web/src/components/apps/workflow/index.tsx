@@ -32,26 +32,26 @@ import { VariableInspector } from "./variable-inspector";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type WorkflowAppProps = {
+interface WorkflowAppProps {
   windowId?: string;
   className?: string;
   workflowId?: string;
-};
+}
 
-export type WorkflowNode = {
+export interface WorkflowNode {
   id: string;
   type: "trigger" | "action" | "condition" | "loop";
   name: string;
   config: Record<string, unknown>;
   position: { x: number; y: number };
-};
+}
 
-export type WorkflowEdge = {
+export interface WorkflowEdge {
   id: string;
   source: string;
   target: string;
   label?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

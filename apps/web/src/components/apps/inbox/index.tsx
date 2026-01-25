@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type InboxAppProps = {
+interface InboxAppProps {
   className?: string;
   window?: WindowComponentProps["window"];
   onClose?: WindowComponentProps["onClose"];
@@ -25,7 +25,7 @@ type InboxAppProps = {
   onResizeStart?: WindowComponentProps["onResizeStart"];
   onResizeEnd?: WindowComponentProps["onResizeEnd"];
   onDataChange?: WindowComponentProps["onDataChange"];
-};
+}
 
 function formatKind(kind: string) {
   if (kind === "voice") {
@@ -91,9 +91,9 @@ export function InboxApp({
       toast.success(
         result.kind === "note"
           ? "Converted to note"
-          : result.kind === "reminder"
+          : (result.kind === "reminder"
             ? "Converted to reminder"
-            : "Converted"
+            : "Converted")
       );
       await utils.inbox.list.invalidate();
     },

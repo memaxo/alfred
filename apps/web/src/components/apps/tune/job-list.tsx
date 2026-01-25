@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
 
 import type { TuneJob } from "./index";
 
-type JobListProps = {
+interface JobListProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
-};
+}
 
 const mockJobs: TuneJob[] = [
   {
@@ -33,7 +33,7 @@ const mockJobs: TuneJob[] = [
     model: "mistral-7b",
     dataset: "reasoning-chain-10k",
     status: "completed",
-    progress: 1.0,
+    progress: 1,
     metrics: { loss: 0.31, accuracy: 0.92 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
     completedAt: new Date(Date.now() - 1000 * 60 * 60 * 20),

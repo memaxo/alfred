@@ -44,10 +44,10 @@ import { Textarea } from "@/components/ui/textarea";
 type Phase = ZodInfer<typeof phaseSchema>;
 type StructuredPlan = ZodInfer<typeof structuredPlanSchema>;
 
-type WorkflowCanvasProps = {
+interface WorkflowCanvasProps {
   plan: StructuredPlan;
   onPlanChange?: (plan: StructuredPlan) => void;
-};
+}
 
 const AGENT_ICONS = {
   codex: <Terminal className="h-3 w-3" />,
@@ -177,7 +177,7 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
           const updatedPhases = plan.phases.map((phase) => {
             if (phase.id === params.target && params.source) {
               const deps = new Set([...phase.dependsOn, params.source]);
-              return { ...phase, dependsOn: Array.from(deps) };
+              return { ...phase, dependsOn: [...deps] };
             }
             return phase;
           });

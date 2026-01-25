@@ -10,9 +10,9 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type SearchBarProps = {
+interface SearchBarProps {
   className?: string;
-};
+}
 
 export function SearchBar({ className }: SearchBarProps) {
   const [query, setQuery] = useState("");

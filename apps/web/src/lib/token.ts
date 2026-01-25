@@ -29,12 +29,12 @@ function assertScopes(scopes: string[]) {
 type RouterInputs = inferRouterInputs<TRPCAppRouter>;
 type AutoLevel = "read" | "low" | "medium" | "high";
 
-type ToolTokenOptions = {
+interface ToolTokenOptions {
   forceElevated?: boolean;
   ttlSec?: number;
-};
+}
 
-type TokenRouter = {
+interface TokenRouter {
   issue: {
     mutate: (
       input: RouterInputs["token"]["issue"]
@@ -45,7 +45,7 @@ type TokenRouter = {
       input: RouterInputs["token"]["elevate"]
     ) => Promise<{ token: string }>;
   };
-};
+}
 
 function isTokenRouter(value: unknown): value is TokenRouter {
   if (!value || typeof value !== "object") {
@@ -53,8 +53,8 @@ function isTokenRouter(value: unknown): value is TokenRouter {
   }
 
   const record = value as Record<string, unknown>;
-  const issue = record.issue;
-  const elevate = record.elevate;
+  const { issue } = record;
+  const { elevate } = record;
 
   const issueMutate =
     typeof issue === "object" && issue !== null
@@ -102,7 +102,8 @@ export async function getToolToken(
       }
     } catch (error) {
       throw new Error(
-        error instanceof Error ? error.message : "passkey_failed"
+        error instanceof Error ? error.message : "passkey_failed",
+        { cause: error }
       );
     }
     const payload: RouterInputs["token"]["elevate"] = ttlSec

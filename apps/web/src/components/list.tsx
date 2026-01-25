@@ -7,15 +7,15 @@
 
 import { cn } from "@/lib/utils";
 
-type ListItem = {
+interface ListItem {
   id: string;
   content: React.ReactNode;
-};
+}
 
-type ListProps = {
+interface ListProps {
   items: ListItem[];
   className?: string;
-};
+}
 
 export function List({ items, className }: ListProps) {
   return (

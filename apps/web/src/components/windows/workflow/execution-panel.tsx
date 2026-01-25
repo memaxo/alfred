@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type ExecutionPanelProps = {
+interface ExecutionPanelProps {
   isRunning: boolean;
   onClose: () => void;
   onStop?: () => void;
@@ -23,7 +23,7 @@ type ExecutionPanelProps = {
   error: Error | null;
   escalation?: WorkflowEscalation | null;
   className?: string;
-};
+}
 
 export function ExecutionPanel({
   isRunning,

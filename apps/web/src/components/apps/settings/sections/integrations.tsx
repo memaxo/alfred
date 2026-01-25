@@ -27,18 +27,24 @@ function tailscaleHint(integration: {
     return "Tailscale installed but not running (start `tailscaled`).";
   }
   switch (integration.error) {
-    case "tailscale_not_found":
+    case "tailscale_not_found": {
       return "Tailscale CLI not found in PATH.";
-    case "tailscale_version_timeout":
+    }
+    case "tailscale_version_timeout": {
       return "Tailscale check timed out.";
-    case "tailscale_status_timeout":
+    }
+    case "tailscale_status_timeout": {
       return "Tailscale status timed out.";
-    case "tailscale_status_parse_failed":
+    }
+    case "tailscale_status_parse_failed": {
       return "Tailscale status output was not valid JSON.";
-    case "tailscale_status_failed":
+    }
+    case "tailscale_status_failed": {
       return "Tailscale status command failed.";
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -99,9 +105,9 @@ export function IntegrationsSection() {
                         ? "Installed"
                         : "Not installed"}
                       {typeof integration.details.running === "boolean"
-                        ? integration.details.running
+                        ? (integration.details.running
                           ? " · running"
-                          : " · not running"
+                          : " · not running")
                         : null}
                       {integration.details.tailnet
                         ? ` · ${integration.details.tailnet}`

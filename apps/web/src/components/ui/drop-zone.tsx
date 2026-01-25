@@ -6,13 +6,13 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
 
-export type FileWithMeta = {
+export interface FileWithMeta {
   file: File;
   id: string;
   preview?: string;
-};
+}
 
-export type DropZoneProps = {
+export interface DropZoneProps {
   onDrop: (files: File[]) => void;
   onRemove?: (fileId: string) => void;
   acceptedFiles?: string[];
@@ -22,7 +22,7 @@ export type DropZoneProps = {
   value?: FileWithMeta[];
   className?: string;
   disabled?: boolean;
-};
+}
 
 export function DropZone({
   onDrop,
@@ -65,7 +65,7 @@ export function DropZone({
         return;
       }
 
-      const droppedFiles = Array.from(e.dataTransfer.files);
+      const droppedFiles = [...e.dataTransfer.files];
       handleFiles(droppedFiles);
     },
     [disabled, maxFiles, maxSize]
@@ -73,7 +73,7 @@ export function DropZone({
 
   const handleFileSelect = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(e.target.files ?? []);
+      const selectedFiles = [...(e.target.files ?? [])];
       handleFiles(selectedFiles);
       if (inputRef.current) {
         inputRef.current.value = "";

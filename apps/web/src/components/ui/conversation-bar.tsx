@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-export type ConversationBarProps = {
+export interface ConversationBarProps {
   /**
    * ElevenLabs Agent ID to connect to
    */
@@ -59,7 +59,7 @@ export type ConversationBarProps = {
    * Callback when user sends a message
    */
   onSendMessage?: (message: string) => void;
-};
+}
 
 export const ConversationBar = ({
   agentId,
@@ -170,7 +170,7 @@ export const ConversationBar = ({
 
   const handleTextChange = React.useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value;
+      const { value } = e.target;
       setTextInput(value);
 
       if (value.trim() && isConnected) {

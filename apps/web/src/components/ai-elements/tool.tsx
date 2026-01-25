@@ -44,12 +44,12 @@ export const Tool = ({ className, ...props }: ToolProps) => (
   />
 );
 
-export type ToolHeaderProps = {
+export interface ToolHeaderProps {
   title?: string;
   type: "tool-call" | "tool-result";
   state: ToolState;
   className?: string;
-};
+}
 
 const getStatusBadge = (status: ToolState) => {
   const labels: Record<ToolState, string> = {
@@ -146,11 +146,11 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
   </div>
 );
 
-export type ToolActionsProps = {
+export interface ToolActionsProps {
   state: ToolState;
   onApprove?: () => void;
   onDeny?: () => void;
-};
+}
 
 export const ToolActions = ({ state, onApprove, onDeny }: ToolActionsProps) => {
   if (state !== "approval-requested") {

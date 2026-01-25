@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type DiffViewerProps = {
+interface DiffViewerProps {
   isOpen: boolean;
   onClose: () => void;
   original: string;
@@ -15,7 +15,7 @@ type DiffViewerProps = {
   fileName: string;
   language: string;
   className?: string;
-};
+}
 
 export function DiffViewer({
   isOpen,

@@ -16,7 +16,7 @@ interface RiskAssessmentPanelProps {
 
 export function RiskAssessmentPanel({ className }: RiskAssessmentPanelProps) {
   const { data, isLoading } = trpc.review.riskSummary.useQuery(undefined, {
-    refetchInterval: 10000,
+    refetchInterval: 10_000,
   });
 
   if (isLoading || !data) {

@@ -8,11 +8,11 @@ import { Mic, Volume2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type VoiceIndicatorProps = {
+interface VoiceIndicatorProps {
   isActive: boolean;
   status: "idle" | "streaming" | "error";
   className?: string;
-};
+}
 
 export function VoiceIndicator({
   isActive,
@@ -49,12 +49,12 @@ export function VoiceIndicator({
             ))}
           </div>
         </>
-      ) : status === "streaming" ? (
+      ) : (status === "streaming" ? (
         <>
           <Volume2 className="h-3 w-3 animate-pulse text-biolum" />
           <span className="text-biolum text-xs">Speaking</span>
         </>
-      ) : null}
+      ) : null)}
     </div>
   );
 }

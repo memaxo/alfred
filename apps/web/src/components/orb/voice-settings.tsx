@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useVoiceStore } from "@/store/voice";
 
-type VoiceSettingsProps = {
+interface VoiceSettingsProps {
   className?: string;
-};
+}
 
 export function VoiceSettings({ className }: VoiceSettingsProps) {
   const mode = useVoiceStore((s) => s.mode);

@@ -22,18 +22,18 @@ export const RAG_DOC_CACHE_TTL_MS = resolvePositiveNumber(
   5 * 60 * 1000
 );
 
-export type CachedRagDocEntry = {
+export interface CachedRagDocEntry {
   data: WindowData & { type: "knowledge" };
   cachedAt: number;
-};
+}
 
-export type RagDocCacheStats = {
+export interface RagDocCacheStats {
   hits: number;
   misses: number;
   evictions: number;
-};
+}
 
-export type CacheSlice = {
+export interface CacheSlice {
   ragDocCache: Record<string, CachedRagDocEntry>;
   ragDocCacheStats: RagDocCacheStats;
 
@@ -41,7 +41,7 @@ export type CacheSlice = {
   evictRagDoc: (dbId: string) => void;
   recordRagDocCacheHit: () => void;
   recordRagDocCacheMiss: () => void;
-};
+}
 
 export const createCacheSlice: StateCreator<
   DesktopState,

@@ -45,12 +45,12 @@ test.describe("Mindscape Stress Test", () => {
             );
           }
 
-          const nodes: Array<{
+          const nodes: {
             id: string;
             type: string;
             position: { x: number; y: number };
             data: { label: string };
-          }> = [];
+          }[] = [];
           for (let i = 0; i < 1000; i++) {
             nodes.push({
               id: `star-${i}`,

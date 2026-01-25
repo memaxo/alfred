@@ -10,17 +10,17 @@ type RawCodexStreamEvent =
   | {
       type: "complete";
       result: string;
-      artifacts?: Array<{ path: string; kind: string }>;
+      artifacts?: { path: string; kind: string }[];
     }
   | { type: "error"; message: string; code: string; correlationId: string };
 
-type Subscription = {
+interface Subscription {
   options: CodexStreamOptions;
   onData: (event: RawCodexStreamEvent) => void;
   onError: (err: unknown) => void;
   onComplete: () => void;
   unsubscribed: boolean;
-};
+}
 
 export function createCodexStreamTestHarness() {
   const subscriptions: Subscription[] = [];

@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 
 import type { ResizeDirection } from "./types";
 
-type ResizeHandlesProps = {
+interface ResizeHandlesProps {
   onResizeStart: (direction: ResizeDirection, e: React.MouseEvent) => void;
-};
+}
 
-const handles: Array<{
+const handles: {
   direction: ResizeDirection;
   className: string;
   cursor: string;
-}> = [
+}[] = [
   // Edges
   {
     direction: "n",

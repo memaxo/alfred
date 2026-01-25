@@ -9,11 +9,11 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { type OrbState, useOrbStore } from "@/store/orb";
 
-type OrbCoreProps = {
+interface OrbCoreProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   onClick?: () => void;
-};
+}
 
 const sizes = {
   sm: "h-8 w-8",
@@ -132,9 +132,9 @@ export function OrbCore({ size = "md", className, onClick }: OrbCoreProps) {
       {/* Canvas for custom rendering */}
       <canvas
         className="absolute inset-0 h-full w-full"
-        height={size === "lg" ? 80 : size === "md" ? 48 : 32}
+        height={size === "lg" ? 80 : (size === "md" ? 48 : 32)}
         ref={canvasRef}
-        width={size === "lg" ? 80 : size === "md" ? 48 : 32}
+        width={size === "lg" ? 80 : (size === "md" ? 48 : 32)}
       />
 
       {/* Fallback gradient */}

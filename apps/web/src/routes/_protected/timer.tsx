@@ -33,23 +33,23 @@ export const Route = createFileRoute("/_protected/timer")({
   errorComponent: RouteError,
 });
 
-type TimerItem = {
+interface TimerItem {
   id: string;
   label: string | null;
   duration: number;
   startedAt: Date | null;
   completed: boolean;
   cancelled: boolean;
-};
+}
 
-type TimerCardData = {
+interface TimerCardData {
   id: string;
   label: string;
   remainingLabel: string;
   remainingSeconds: number;
   percent: number;
   isExpired: boolean;
-};
+}
 
 function formatRemaining(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));

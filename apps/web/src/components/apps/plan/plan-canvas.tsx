@@ -10,9 +10,9 @@ import { cn } from "@/lib/utils";
 
 import type { PlanStep } from "./index";
 
-type PlanCanvasProps = {
+interface PlanCanvasProps {
   planId: string | null;
-};
+}
 
 const mockSteps: PlanStep[] = [
   {

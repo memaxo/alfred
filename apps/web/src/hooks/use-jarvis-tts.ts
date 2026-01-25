@@ -2,17 +2,17 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { trpc } from "@/utils/trpc";
 
-type JarvisSpeakOptions = {
+interface JarvisSpeakOptions {
   preface?: "auto" | "greeting" | "ack" | "none";
   voice?: string;
   format?: "mp3" | "opus" | "wav";
-};
+}
 
-type JarvisTtsConfig = {
+interface JarvisTtsConfig {
   enabled?: boolean;
   defaultVoice?: string;
   defaultFormat?: "mp3" | "opus" | "wav";
-};
+}
 
 const ACKS = [
   "Understood, Sir.",

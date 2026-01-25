@@ -23,11 +23,11 @@ import type { ResizeDirection } from "./types";
 import { detectZoneFromPosition } from "../tiling/utils";
 import { ResizeHandles } from "./resize-handles";
 
-type WindowChromeProps = {
+interface WindowChromeProps {
   windowId: string;
   isFocused: boolean;
   children?: ReactNode;
-};
+}
 
 export function WindowChrome({
   windowId,
@@ -167,7 +167,6 @@ export function WindowChrome({
       window,
       windowId,
       moveWindow,
-      detectZoneFromPosition,
       showTilePreview,
       hideTilePreview,
       tileWindow,
@@ -202,7 +201,7 @@ export function WindowChrome({
         const newBounds = { ...currentBounds };
 
         switch (direction) {
-          case "n":
+          case "n": {
             newBounds.y = currentBounds.y + deltaY;
             newBounds.height = currentBounds.height - deltaY;
             newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
@@ -213,7 +212,8 @@ export function WindowChrome({
               Math.min(newBounds.y, minY + maxY - newBounds.height)
             );
             break;
-          case "s":
+          }
+          case "s": {
             newBounds.height = currentBounds.height + deltaY;
             newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
             newBounds.height = Math.min(
@@ -221,7 +221,8 @@ export function WindowChrome({
               minY + maxY - currentBounds.y
             );
             break;
-          case "e":
+          }
+          case "e": {
             newBounds.width = currentBounds.width + deltaX;
             newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
             newBounds.width = Math.min(
@@ -229,7 +230,8 @@ export function WindowChrome({
               minX + maxX - currentBounds.x
             );
             break;
-          case "w":
+          }
+          case "w": {
             newBounds.x = currentBounds.x + deltaX;
             newBounds.width = currentBounds.width - deltaX;
             newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
@@ -240,7 +242,8 @@ export function WindowChrome({
               Math.min(newBounds.x, minX + maxX - newBounds.width)
             );
             break;
-          case "ne":
+          }
+          case "ne": {
             newBounds.y = currentBounds.y + deltaY;
             newBounds.height = currentBounds.height - deltaY;
             newBounds.width = currentBounds.width + deltaX;
@@ -257,7 +260,8 @@ export function WindowChrome({
               minX + maxX - currentBounds.x
             );
             break;
-          case "nw":
+          }
+          case "nw": {
             newBounds.x = currentBounds.x + deltaX;
             newBounds.y = currentBounds.y + deltaY;
             newBounds.width = currentBounds.width - deltaX;
@@ -277,7 +281,8 @@ export function WindowChrome({
               Math.min(newBounds.y, minY + maxY - newBounds.height)
             );
             break;
-          case "se":
+          }
+          case "se": {
             newBounds.width = currentBounds.width + deltaX;
             newBounds.height = currentBounds.height + deltaY;
             newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
@@ -291,7 +296,8 @@ export function WindowChrome({
               minY + maxY - currentBounds.y
             );
             break;
-          case "sw":
+          }
+          case "sw": {
             newBounds.x = currentBounds.x + deltaX;
             newBounds.width = currentBounds.width - deltaX;
             newBounds.height = currentBounds.height + deltaY;
@@ -308,6 +314,7 @@ export function WindowChrome({
               minY + maxY - currentBounds.y
             );
             break;
+          }
         }
 
         setBounds(windowId, newBounds);

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
-type ScrambleTextProps = {
+interface ScrambleTextProps {
   text: string;
   className?: string;
   speed?: number;
-};
+}
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
 
@@ -21,8 +21,7 @@ export function ScrambleText({
       const revealedCount = Math.floor(iteration);
 
       setDisplay(
-        text
-          .split("")
+        [...text]
           .map((_, index) => {
             if (index < revealedCount) {
               return text[index];

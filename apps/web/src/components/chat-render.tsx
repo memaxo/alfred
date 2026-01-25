@@ -52,12 +52,12 @@ import { Think } from "./think";
 import { Thought } from "./thought";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "./tool";
 
-type TaskData = {
+interface TaskData {
   id: string;
   title: string;
   status: "pending" | "running" | "completed" | "error";
   progress?: number;
-};
+}
 
 function isPlanData(data: unknown): data is {
   requirement: string;
@@ -67,7 +67,7 @@ function isPlanData(data: unknown): data is {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const validStatuses = ["pending", "running", "completed", "error"];
+  const validStatuses = new Set(["pending", "running", "completed", "error"]);
   return (
     typeof obj.requirement === "string" &&
     Array.isArray(obj.tasks) &&
@@ -78,9 +78,7 @@ function isPlanData(data: unknown): data is {
         typeof (task as Record<string, unknown>).id === "string" &&
         typeof (task as Record<string, unknown>).title === "string" &&
         typeof (task as Record<string, unknown>).status === "string" &&
-        validStatuses.includes(
-          (task as Record<string, unknown>).status as string
-        )
+        validStatuses.has((task as Record<string, unknown>).status as string)
     )
   );
 }
@@ -121,11 +119,11 @@ function isCiteData(data: unknown): data is {
   return typeof obj.source === "string" && typeof obj.text === "string";
 }
 
-function isThinkData(data: unknown): data is Array<{
+function isThinkData(data: unknown): data is {
   id: string;
   thought: string;
   confidence?: number;
-}> {
+}[] {
   return (
     Array.isArray(data) &&
     data.every(
@@ -139,18 +137,18 @@ function isThinkData(data: unknown): data is Array<{
 }
 
 function isBranchData(data: unknown): data is {
-  branches: Array<{
+  branches: {
     id: string;
     label: string;
     reasoning: string;
     selected?: boolean;
-  }>;
+  }[];
 } {
   if (!data || typeof data !== "object") {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const branches = obj.branches;
+  const { branches } = obj;
   return (
     Array.isArray(branches) &&
     branches.every(
@@ -165,18 +163,18 @@ function isBranchData(data: unknown): data is {
 }
 
 function isThoughtData(data: unknown): data is {
-  thoughts: Array<{
+  thoughts: {
     id: string;
     step: number;
     thought: string;
     evidence?: string[];
-  }>;
+  }[];
 } {
   if (!data || typeof data !== "object") {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const thoughts = obj.thoughts;
+  const { thoughts } = obj;
   return (
     Array.isArray(thoughts) &&
     thoughts.every(
@@ -191,17 +189,17 @@ function isThoughtData(data: unknown): data is {
 }
 
 function isQueueData(data: unknown): data is {
-  items: Array<{
+  items: {
     id: string;
     title: string;
     priority: "low" | "medium" | "high";
-  }>;
+  }[];
 } {
   if (!data || typeof data !== "object") {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const items = obj.items;
+  const { items } = obj;
   return (
     Array.isArray(items) &&
     items.every(
@@ -224,7 +222,7 @@ function isPreviewData(data: unknown): data is {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const status = obj.status;
+  const { status } = obj;
   return (
     typeof obj.url === "string" &&
     typeof obj.title === "string" &&
@@ -242,7 +240,7 @@ function isArtifactData(data: unknown): data is {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const kind = obj.kind;
+  const { kind } = obj;
   return (
     typeof obj.name === "string" &&
     typeof obj.path === "string" &&
@@ -273,8 +271,8 @@ function isNodeData(data: unknown): data is {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const type = obj.type;
-  const status = obj.status;
+  const { type } = obj;
+  const { status } = obj;
   return (
     typeof obj.id === "string" &&
     typeof obj.label === "string" &&
@@ -303,20 +301,20 @@ function isEdgeData(data: unknown): data is {
 }
 
 function isCanvasData(data: unknown): data is {
-  nodes: Array<{
+  nodes: {
     id: string;
     label: string;
     type: "task" | "decision" | "action";
     status: "pending" | "running" | "completed" | "error";
-  }>;
-  edges?: Array<{ from: string; to: string; label?: string }>;
+  }[];
+  edges?: { from: string; to: string; label?: string }[];
 } {
   if (!data || typeof data !== "object") {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  const nodes = obj.nodes;
-  const edges = obj.edges;
+  const { nodes } = obj;
+  const { edges } = obj;
   if (!Array.isArray(nodes) || nodes.length === 0) {
     return false;
   }
@@ -336,13 +334,13 @@ type PartRenderer = (
   conversationId?: string | null
 ) => ReactNode | null;
 
-type PartHandlers = {
+interface PartHandlers {
   onAddToolApprovalResponse?: (args: {
     id: string;
     approved: boolean;
     reason?: string;
   }) => void;
-};
+}
 
 /**
  * Render dynamic GenUI components from data-ui parts.
@@ -659,14 +657,14 @@ function renderToolInvocation(
       ? invocation.approval.id
       : null;
 
-  const input = invocation.input;
-  const output = invocation.output;
+  const { input } = invocation;
+  const { output } = invocation;
   const errorText =
     state === "output-denied"
       ? "Denied"
-      : typeof invocation.errorText === "string"
+      : (typeof invocation.errorText === "string"
         ? invocation.errorText
-        : undefined;
+        : undefined);
 
   return (
     <Tool defaultOpen={state !== "output-available"}>
@@ -696,9 +694,9 @@ function renderToolInvocation(
         ) : null}
         {state === "output-available" && output !== undefined ? (
           <ToolOutput errorText={undefined} output={output} />
-        ) : state === "output-error" || state === "output-denied" ? (
+        ) : (state === "output-error" || state === "output-denied" ? (
           <ToolOutput errorText={errorText} output={output} />
-        ) : null}
+        ) : null)}
       </ToolContent>
     </Tool>
   );

@@ -21,16 +21,16 @@ import {
 
 type BunServer = ReturnType<typeof Bun.serve>;
 
-type InternalServer = {
+interface InternalServer {
   instance: BunServer;
   dbClient: Awaited<ReturnType<typeof createTestDb>>;
   currentSession: TestSession;
   api: TestServer;
-};
+}
 
 let internalServer: InternalServer | null = null;
 
-export type TestServer = {
+export interface TestServer {
   url: string;
   port: number;
   db: NodePgDatabase;
@@ -38,11 +38,11 @@ export type TestServer = {
   setSession(next: TestSession): void;
   reset(): Promise<void>;
   stop(): Promise<void>;
-};
+}
 
-type CreateServerOptions = {
+interface CreateServerOptions {
   session?: TestSession;
-};
+}
 
 function buildContext(req: Request, session: TestSession | null): Context {
   const url = new URL(req.url);
@@ -89,7 +89,7 @@ function resolveSession(
 async function safeReset(db: NodePgDatabase) {
   try {
     await truncateTables(db);
-  } catch (_error) {}
+  } catch {}
 }
 
 async function ensureInternalServer(

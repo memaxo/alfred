@@ -10,12 +10,12 @@ import { Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type VoiceBtnProps = {
+interface VoiceBtnProps {
   isRecording: boolean;
   onToggle: () => void;
   size?: "sm" | "md" | "lg";
   className?: string;
-};
+}
 
 export function VoiceBtn({
   isRecording,

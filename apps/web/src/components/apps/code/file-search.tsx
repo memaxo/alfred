@@ -6,14 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type FileSearchProps = {
+interface FileSearchProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (path: string) => void;
-  files: Array<{ path: string; name: string }>;
+  files: { path: string; name: string }[];
   isLoading?: boolean;
   className?: string;
-};
+}
 
 export function FileSearch({
   isOpen,

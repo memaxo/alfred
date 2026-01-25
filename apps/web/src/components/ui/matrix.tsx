@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 export type Frame = number[][];
 type MatrixMode = "default" | "vu";
 
-type CellPosition = {
+interface CellPosition {
   x: number;
   y: number;
-};
+}
 
 export interface MatrixProps extends React.HTMLAttributes<HTMLDivElement> {
   rows: number;
@@ -61,7 +61,7 @@ function useAnimation(
 ): { frameIndex: number; isPlaying: boolean } {
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(options.autoplay);
-  const frameIdRef = useRef<number | undefined>(undefined);
+  const frameIdRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const accumulatorRef = useRef<number>(0);
 
@@ -105,7 +105,7 @@ function useAnimation(
     frameIdRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (frameIdRef.current) {
+      if (frameIdRef.current !== null) {
         cancelAnimationFrame(frameIdRef.current);
       }
     };

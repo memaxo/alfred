@@ -9,7 +9,7 @@ import { Database, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type Dataset = {
+interface Dataset {
   id: string;
   name: string;
   description: string;
@@ -17,7 +17,7 @@ type Dataset = {
   size: string;
   format: "jsonl" | "parquet" | "csv";
   createdAt: Date;
-};
+}
 
 const mockDatasets: Dataset[] = [
   {

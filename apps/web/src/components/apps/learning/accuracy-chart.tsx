@@ -9,9 +9,9 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type AccuracyChartProps = {
+interface AccuracyChartProps {
   timeRange: "day" | "week" | "month";
-};
+}
 
 const categoryColors: Record<string, string> = {
   reasoning: "bg-purple-400",

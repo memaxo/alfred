@@ -36,21 +36,21 @@ const MAX_HISTORY_POINTS = 20;
 
 type TremorColor = "emerald" | "blue" | "amber" | "red";
 
-type HistoryPoint = {
+interface HistoryPoint {
   time: string;
   graphQueries: number;
   assistantRequests: number;
   droidRuns: number;
   graphLatency: number;
   assistantLatency: number;
-};
+}
 
-type LatencySummary = {
+interface LatencySummary {
   p50?: number | null;
   p95?: number | null;
   average?: number | null;
   count?: number | null;
-};
+}
 
 export const Route = createFileRoute("/_protected/admin/metrics")({
   component: MetricsDashboardRoute,
@@ -305,12 +305,12 @@ export function MetricsDashboardView() {
                 title="Graph Context"
               />
               <LatencyCard
-                budget={2.0}
+                budget={2}
                 summary={stats.assistant.generateLatency}
                 title="Assistant Gen"
               />
               <LatencyCard
-                budget={5.0}
+                budget={5}
                 summary={stats.tools.droidDuration}
                 title="Droid Exec"
               />

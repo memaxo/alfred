@@ -8,19 +8,19 @@ import type { TRPCAppRouter } from "@/utils/trpc";
 
 import type { TodoResource } from "./schemas";
 
-type TodoInput = {
+interface TodoInput {
   text: string;
-};
+}
 
-type TodoToggleInput = {
+interface TodoToggleInput {
   id: number | string;
   completed: boolean;
-};
+}
 
 function parseServerTodoId(id: number | string): string | null {
   if (typeof id === "number") {
     if (!Number.isFinite(id)) {
-      throw new Error("Invalid todo id: non-finite number");
+      throw new TypeError("Invalid todo id: non-finite number");
     }
     return String(id);
   }

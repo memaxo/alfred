@@ -13,7 +13,7 @@ import type {
 
 import { useCallback, useMemo, useState } from "react";
 
-export type PlanEditorState = {
+export interface PlanEditorState {
   plan: PlanPhaseOutput;
   modified: boolean;
   undoStack: PlanPhaseOutput[];
@@ -23,9 +23,9 @@ export type PlanEditorState = {
     errors: string[];
     warnings: string[];
   };
-};
+}
 
-export type PlanEditorActions = {
+export interface PlanEditorActions {
   reorderTask: (taskId: string, newIndex: number) => void;
   updateTask: (taskId: string, updates: Partial<SubTask>) => void;
   removeTask: (taskId: string) => void;
@@ -36,14 +36,14 @@ export type PlanEditorActions = {
   redo: () => void;
   reset: () => void;
   save: () => Promise<void>;
-};
+}
 
-export type UsePlanEditorReturn = {
+export interface UsePlanEditorReturn {
   state: PlanEditorState;
   actions: PlanEditorActions;
   canUndo: boolean;
   canRedo: boolean;
-};
+}
 
 /**
  * Hook for editing workflow plans with undo/redo and validation.

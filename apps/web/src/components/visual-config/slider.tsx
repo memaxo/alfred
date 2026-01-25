@@ -10,7 +10,7 @@ import { useCallback, useId } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type VisualSliderProps = {
+export interface VisualSliderProps {
   /** Label for the slider */
   label: string;
   /** Current value */
@@ -33,7 +33,7 @@ export type VisualSliderProps = {
   description?: string;
   /** Additional class name */
   className?: string;
-};
+}
 
 export function VisualSlider({
   label,

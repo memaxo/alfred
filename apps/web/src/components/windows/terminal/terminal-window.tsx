@@ -100,7 +100,7 @@ export function TerminalWindow({ id, selected }: NodeProps) {
           onError: (err) => {
             toast.error(`Failed to create terminal session: ${err.message}`);
             term.write(
-              "\r\n\x1b[31mFailed to create terminal session.\x1b[0m\r\n"
+              "\r\n\u001B[31mFailed to create terminal session.\u001B[0m\r\n"
             );
           },
         }

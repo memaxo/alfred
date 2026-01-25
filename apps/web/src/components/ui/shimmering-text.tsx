@@ -5,7 +5,7 @@ import { useMemo, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-type ShimmeringTextProps = {
+interface ShimmeringTextProps {
   /** Text to display with shimmer effect */
   text: string;
   /** Animation duration in seconds */
@@ -30,7 +30,7 @@ type ShimmeringTextProps = {
   color?: string;
   /** Shimmer gradient color */
   shimmerColor?: string;
-};
+}
 
 export function ShimmeringText({
   text,

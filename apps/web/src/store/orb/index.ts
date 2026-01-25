@@ -16,12 +16,12 @@ import { devtools, persist } from "zustand/middleware";
 export type OrbMode = "docked" | "floating" | "expanded" | "hidden";
 export type OrbState = "idle" | "listening" | "thinking" | "talking" | "active";
 
-export type OrbPosition = {
+export interface OrbPosition {
   x: number;
   y: number;
-};
+}
 
-export type OrbStore = {
+export interface OrbStore {
   // Presence state
   mode: OrbMode;
   state: OrbState;
@@ -62,7 +62,7 @@ export type OrbStore = {
   showVoiceOverlay: () => void;
   hideVoiceOverlay: () => void;
   setVoiceWaveform: (waveform: number[]) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATE PRESETS
@@ -74,9 +74,9 @@ const statePresets: Record<
 > = {
   idle: { intensity: 0.3, pulseRate: 0.5, colorShift: 0 },
   listening: { intensity: 0.7, pulseRate: 1.2, colorShift: 0.2 },
-  thinking: { intensity: 0.8, pulseRate: 2.0, colorShift: 0.5 },
+  thinking: { intensity: 0.8, pulseRate: 2, colorShift: 0.5 },
   talking: { intensity: 0.9, pulseRate: 1.5, colorShift: 0.3 },
-  active: { intensity: 1.0, pulseRate: 2.5, colorShift: 0.8 },
+  active: { intensity: 1, pulseRate: 2.5, colorShift: 0.8 },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

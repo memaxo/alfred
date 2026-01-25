@@ -14,10 +14,11 @@ import {
 
 import { cn } from "@/lib/utils";
 
-export type FlowEdgeData = {
+export interface FlowEdgeData {
+  [key: string]: unknown;
   label?: string;
   condition?: string;
-};
+}
 
 type FlowEdgeProps = EdgeProps<Edge<FlowEdgeData>>;
 
@@ -59,9 +60,9 @@ export function FlowEdge({
               "nodrag nopan pointer-events-auto absolute rounded px-2 py-0.5 font-medium text-xs",
               edgeData.label === "Yes"
                 ? "bg-green-500/20 text-green-400"
-                : edgeData.label === "No"
+                : (edgeData.label === "No"
                   ? "bg-red-500/20 text-red-400"
-                  : "bg-void-surface/90 text-biolum-dim"
+                  : "bg-void-surface/90 text-biolum-dim")
             )}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,

@@ -18,16 +18,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-type Props = {
+interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: unknown) => void;
-};
+}
 
-type State = {
+interface State {
   hasError: boolean;
   error: Error | null;
-};
+}
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {

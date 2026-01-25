@@ -2,12 +2,12 @@ import { useCallback, useMemo, useState } from "react";
 
 export type FeedbackSurface = "chat" | "mindscape" | "voice";
 
-export type CognitiveFeedbackInput = {
+export interface CognitiveFeedbackInput {
   streamId: string;
   expected: string;
   actual: string;
   surface?: FeedbackSurface;
-};
+}
 
 export type CognitiveFeedbackStatus = "idle" | "pending" | "success" | "error";
 
@@ -58,9 +58,9 @@ export function useCognitiveFeedback() {
 
       setStatus("success");
       return data;
-    } catch (cause) {
+    } catch (error) {
       const err =
-        cause instanceof Error ? cause : new Error("feedback_request_failed");
+        error instanceof Error ? error : new Error("feedback_request_failed");
       setStatus("error");
       setError(err);
       throw err;

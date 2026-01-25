@@ -44,20 +44,20 @@ import { TreeSidebar } from "./tree-sidebar";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type FilesAppProps = {
+interface FilesAppProps {
   windowId?: string;
   className?: string;
   initialPath?: string;
-};
+}
 
-export type FileItem = {
+export interface FileItem {
   name: string;
   path: string;
   type: "file" | "folder";
   size?: number;
   modifiedAt: Date;
   extension?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

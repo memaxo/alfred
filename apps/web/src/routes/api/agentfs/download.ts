@@ -4,7 +4,7 @@ import path from "node:path";
 import { isUuid, openAgentfsDb } from "../../../server/agentfs";
 
 function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
-  const normalized = args.dbPath.replace(/\\/g, "/");
+  const normalized = args.dbPath.replaceAll("\\", "/");
   if (!normalized.startsWith(".agentfs/")) {
     return false;
   }
@@ -21,7 +21,7 @@ function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
 }
 
 function validateAgentfsFilePath(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, "/");
+  const normalized = filePath.replaceAll("\\", "/");
   if (!normalized.startsWith("/")) {
     throw new Error("agentfs_file_path_invalid");
   }
@@ -41,7 +41,7 @@ function safeFilename(filePath: string): string {
   if (!base || base === "/" || base === "." || base === "..") {
     return "download";
   }
-  return base.replace(/[\r\n"]/g, "_");
+  return base.replaceAll(/[\r\n"]/g, "_");
 }
 
 function classifyAgentfsFilePath(filePath: string): "normal" | "sensitive" {
@@ -227,9 +227,9 @@ export const Route = createFileRoute("/api/agentfs/download")({
           const buf =
             typeof raw === "string"
               ? Buffer.from(raw, "utf8")
-              : Buffer.isBuffer(raw)
+              : (Buffer.isBuffer(raw)
                 ? raw
-                : Buffer.from(raw);
+                : Buffer.from(raw));
 
           const body = new Blob([Uint8Array.from(buf)]);
 

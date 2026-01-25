@@ -73,10 +73,10 @@ export type ResourceType =
   | "knowledge"
   | "concept";
 
-export type ResourceRef = {
+export interface ResourceRef {
   type: ResourceType;
   id: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VIEW MODES
@@ -88,12 +88,12 @@ export type ViewMode = "compact" | "full" | "maximized";
 // WINDOW GEOMETRY — Traditional window positioning (replaces ReactFlow Node)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Bounds = {
+export interface Bounds {
   x: number; // Left position (px)
   y: number; // Top position (px)
   width: number; // Width (px)
   height: number; // Height (px)
-};
+}
 
 export type WindowState =
   | "normal" // Default floating/tiled state
@@ -129,7 +129,7 @@ export type WindowData = {
 // WINDOW INSTANCE — Traditional window model (replaces Node<WindowData>)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type WindowInstance = {
+export interface WindowInstance {
   id: string;
   type: WindowType;
   data: WindowData;
@@ -157,13 +157,13 @@ export type WindowInstance = {
   // Metadata
   createdAt: number;
   lastFocusedAt: number;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WINDOW GROUPS — Tabbed container for related windows
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type WindowGroup = {
+export interface WindowGroup {
   id: string;
   windowIds: string[];
   activeWindowId: string;
@@ -172,7 +172,7 @@ export type WindowGroup = {
   zIndex: number;
   isFocused: boolean;
   createdAt: number;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EDGE TYPES — Semantic relationships (shared with Mindscape)
@@ -188,27 +188,27 @@ export type EdgeKind =
   | "member_of"
   | "part_of";
 
-export type EdgeMetadata = {
+export interface EdgeMetadata {
   source: "user" | "assistant" | "import" | "inference";
   confidence?: number;
   createdAt: string;
   updatedAt?: string;
   scope?: string;
-};
+}
 
-export type EdgeData = {
+export interface EdgeData {
   kind: EdgeKind;
   metadata?: EdgeMetadata;
   fromResourceId?: string;
   toResourceId?: string;
   scope?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WINDOW SLICE — Traditional window management (no ReactFlow callbacks)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type WindowSlice = {
+export interface WindowSlice {
   windows: WindowInstance[];
   zIndexCounter: number;
 
@@ -250,13 +250,13 @@ export type WindowSlice = {
   setWindows: (
     windows: WindowInstance[] | ((prev: WindowInstance[]) => WindowInstance[])
   ) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GROUP SLICE — Window groups/tabs management
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type GroupSlice = {
+export interface GroupSlice {
   groups: WindowGroup[];
 
   // Group CRUD
@@ -272,7 +272,7 @@ export type GroupSlice = {
 
   // Group focus
   focusGroup: (groupId: string) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TILING TYPES — Wayland-inspired tiling window manager
@@ -289,21 +289,21 @@ export type TilingLayout =
 
 export type TilingGap = number; // Gap between tiled windows (px)
 
-export type TilingConfig = {
+export interface TilingConfig {
   layout: TilingLayout;
   gap: TilingGap;
   mainRatio: number; // For main-side layout (0.5-0.8)
   respectMinSize: boolean; // Prevent tiles smaller than minSize
-};
+}
 
-export type TilingZoneState = {
+export interface TilingZoneState {
   id: TileZone;
   bounds: Bounds;
   occupied: boolean;
   windowId?: string;
-};
+}
 
-export type TilingSlice = {
+export interface TilingSlice {
   config: TilingConfig;
   zones: TilingZoneState[];
   activeTilePreview: TileZone | null;
@@ -325,7 +325,7 @@ export type TilingSlice = {
 
   // Auto-tile
   autoTile: () => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VIEWPORT TYPES — Desktop mode management (adapted from ReactFlow viewport)
@@ -335,14 +335,14 @@ export type DesktopMode =
   | "desktop" // Traditional tiled desktop
   | "mindscape"; // ReactFlow infinite canvas
 
-export type DesktopArea = {
+export interface DesktopArea {
   x: number; // Left edge of usable area (after menu bar)
   y: number; // Top edge of usable area
   width: number; // Usable width (excludes taskbar if vertical)
   height: number; // Usable height (excludes taskbar)
-};
+}
 
-export type ViewportSlice = {
+export interface ViewportSlice {
   mode: DesktopMode;
   desktopArea: DesktopArea;
   focusedWindowId: string | null;
@@ -360,13 +360,13 @@ export type ViewportSlice = {
   // Legacy compatibility
   isSpaceMode: boolean;
   setSpaceMode: (isSpaceMode: boolean) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TASKBAR SLICE — Renamed from DockSlice
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TaskbarSlice = {
+export interface TaskbarSlice {
   pinnedApps: WindowType[];
 
   pinApp: (type: WindowType) => void;
@@ -381,7 +381,7 @@ export type TaskbarSlice = {
   dockPins: WindowType[];
   pinType: (type: WindowType) => void;
   unpinType: (type: WindowType) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESKTOP STATE — Composed state (no ReactFlow dependency)

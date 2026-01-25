@@ -62,11 +62,11 @@ import { SettingsPanel } from "./settings-panel";
 import { getLanguageFromPath } from "./types";
 import { UnsavedDialog } from "./unsaved-dialog";
 
-type CodeAppProps = {
+interface CodeAppProps {
   windowId?: string;
   className?: string;
   initialPath?: string;
-};
+}
 
 const ROOT_PATH = process.cwd?.() ?? "/Users/jackmazac/Development/alfred";
 
@@ -120,15 +120,15 @@ export function CodeApp({
     { staleTime: 60_000 }
   );
 
-  type TreeNode = {
+  interface TreeNode {
     name: string;
     path: string;
     type: "file" | "folder";
     children?: TreeNode[];
-  };
+  }
 
   const flatFiles = useMemo(() => {
-    const files: Array<{ path: string; name: string }> = [];
+    const files: { path: string; name: string }[] = [];
     const flatten = (nodes: TreeNode[] | undefined) => {
       if (!nodes) {
         return;

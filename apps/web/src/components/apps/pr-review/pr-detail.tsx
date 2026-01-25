@@ -8,10 +8,10 @@ import { Calendar, GitBranch, MessageSquare, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type PRDetailProps = {
+interface PRDetailProps {
   prId: string;
   className?: string;
-};
+}
 
 export function PRDetail({ prId: _prId, className }: PRDetailProps) {
   // Mock PR data - will fetch from backend

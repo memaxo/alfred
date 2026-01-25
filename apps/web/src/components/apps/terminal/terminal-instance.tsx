@@ -16,20 +16,20 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type TerminalProfile = {
+interface TerminalProfile {
   id: string;
   name: string;
   type: "local" | "ssh" | "docker";
   shell?: string;
   host?: string;
   container?: string;
-};
+}
 
-type TerminalInstanceProps = {
+interface TerminalInstanceProps {
   tabId: string;
   profile: TerminalProfile;
   className?: string;
-};
+}
 
 export function TerminalInstance({
   tabId,
@@ -142,7 +142,7 @@ export function TerminalInstance({
           onError: (err) => {
             toast.error(`Failed to create terminal session: ${err.message}`);
             term.write(
-              "\r\n\x1b[31mFailed to create terminal session.\x1b[0m\r\n"
+              "\r\n\u001B[31mFailed to create terminal session.\u001B[0m\r\n"
             );
           },
         }

@@ -6,11 +6,11 @@ import { useAssistantStream } from "@/hooks/use-assistant-stream";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { useDesktopStore } from "@/store/desktop";
 
-type UseChatLogicProps = {
+interface UseChatLogicProps {
   initialAgent?: "assistant" | "orchestrator";
   initialMessages?: AssistantUIMessage[];
   initialConversationId?: string | null;
-};
+}
 
 import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { useFocusedContext } from "@/hooks/use-focused-context";
@@ -108,7 +108,7 @@ export function useChatLogic({
               });
             });
           }
-        } catch (_e) {
+        } catch {
           // ignore
         }
       }

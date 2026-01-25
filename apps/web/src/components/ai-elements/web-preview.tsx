@@ -20,12 +20,12 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-export type WebPreviewContextValue = {
+export interface WebPreviewContextValue {
   url: string;
   setUrl: (url: string) => void;
   consoleOpen: boolean;
   setConsoleOpen: (open: boolean) => void;
-};
+}
 
 const WebPreviewContext = createContext<WebPreviewContextValue | null>(null);
 
@@ -194,11 +194,11 @@ export const WebPreviewBody = ({
 };
 
 export type WebPreviewConsoleProps = ComponentProps<"div"> & {
-  logs?: Array<{
+  logs?: {
     level: "log" | "warn" | "error";
     message: string;
     timestamp: Date;
-  }>;
+  }[];
 };
 
 export const WebPreviewConsole = ({

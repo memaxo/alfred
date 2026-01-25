@@ -3,14 +3,14 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type RatingProps = {
+export interface RatingProps {
   value: number;
   onChange?: (value: number) => void;
   max?: number;
   size?: "sm" | "md" | "lg";
   readonly?: boolean;
   className?: string;
-};
+}
 
 export function Rating({
   value,

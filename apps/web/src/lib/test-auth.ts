@@ -3,31 +3,31 @@ const TEST_SESSION_STORAGE_KEY = "alfred:test-session";
 const DEFAULT_SCOPES = ["assistant.write", "assistant.stream"] as const;
 const DEFAULT_ROLES = ["owner"] as const;
 
-export type TestSessionUser = {
+export interface TestSessionUser {
   id: string;
   email: string;
   name: string;
   roles: string[];
   scopes: string[];
-};
+}
 
-export type TestSession = {
+export interface TestSession {
   user: TestSessionUser;
   session: {
     id: string;
   };
-};
+}
 
-export type TestPasskey = {
+export interface TestPasskey {
   id: string;
   name: string;
   deviceType?: string;
   createdAt?: string;
-};
+}
 
-type SessionCarrier = {
+interface SessionCarrier {
   data: TestSession;
-};
+}
 
 declare global {
   // eslint-disable-next-line no-var
@@ -72,12 +72,12 @@ function base64Encode(value: string) {
   if (typeof btoa === "function") {
     return btoa(value);
   }
-  type BufferLike = {
+  interface BufferLike {
     from: (
       value: string,
       encoding: string
     ) => { toString: (encoding: string) => string };
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (B) {
     return B.from(value, "utf8").toString("base64") as string;
@@ -89,12 +89,12 @@ function base64Decode(value: string) {
   if (typeof atob === "function") {
     return atob(value);
   }
-  type BufferLike = {
+  interface BufferLike {
     from: (
       value: string,
       encoding: string
     ) => { toString: (encoding: string) => string };
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (B) {
     return B.from(value, "base64").toString("utf8") as string;
@@ -118,8 +118,9 @@ function getEnv(key: string): string | undefined {
   }
   // Client-side: check import.meta.env
   if (typeof import.meta !== "undefined") {
-    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
-      .env;
+    const { env } = import.meta as ImportMeta & {
+      env?: Record<string, string>;
+    };
     if (env && key in env) {
       return env[key];
     }
@@ -154,7 +155,7 @@ function isTestModeEnabled(): boolean {
       if (window.sessionStorage.getItem(TEST_SESSION_STORAGE_KEY)) {
         return true;
       }
-    } catch (_error) {
+    } catch {
       // ignore storage failures
     }
     if (globalThis.__TEST_SESSION__?.data) {
@@ -180,7 +181,7 @@ export function setTestSession(session: TestSession) {
         TEST_SESSION_STORAGE_KEY,
         serializeTestSession(session)
       );
-    } catch (_error) {
+    } catch {
       // ignore storage failures
     }
   }
@@ -223,7 +224,7 @@ export function clearTestSession() {
   if (hasWindow()) {
     try {
       window.sessionStorage.removeItem(TEST_SESSION_STORAGE_KEY);
-    } catch (_error) {
+    } catch {
       // ignore storage failures
     }
   }
@@ -241,7 +242,7 @@ export function deserializeTestSession(
   }
   try {
     return JSON.parse(base64Decode(value)) as TestSession;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
@@ -283,7 +284,7 @@ function resolveUrl(target: RequestInfo | URL): URL | null {
         return new URL(target);
       }
       return new URL(target, "http://localhost");
-    } catch (_error) {
+    } catch {
       return null;
     }
   }
@@ -293,7 +294,7 @@ function resolveUrl(target: RequestInfo | URL): URL | null {
   if (target instanceof Request) {
     try {
       return new URL(target.url);
-    } catch (_error) {
+    } catch {
       return null;
     }
   }

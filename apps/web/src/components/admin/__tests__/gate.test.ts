@@ -24,6 +24,6 @@ describe("isBiometricError", () => {
     expect(isBiometricError({ data: { code: "NOT_FOUND" } })).toBe(false);
     expect(isBiometricError({ message: "something went wrong" })).toBe(false);
     expect(isBiometricError(null)).toBe(false);
-    expect(isBiometricError(undefined)).toBe(false);
+    expect(isBiometricError()).toBe(false);
   });
 });

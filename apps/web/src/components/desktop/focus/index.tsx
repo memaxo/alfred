@@ -16,21 +16,21 @@ import { cn } from "@/lib/utils";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type FocusModeSettings = {
+export interface FocusModeSettings {
   hideNotifications: boolean;
   hideDock: boolean;
   dimBackground: boolean;
   playAmbientSound: boolean;
   duration: number | null; // minutes, null for indefinite
-};
+}
 
-type FocusModeProps = {
+interface FocusModeProps {
   isActive: boolean;
   settings: FocusModeSettings;
   onSettingsChange: (settings: Partial<FocusModeSettings>) => void;
   onEnd: () => void;
   className?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -159,11 +159,11 @@ export function FocusMode({
 // FOCUS MODE TRIGGER
 // ─────────────────────────────────────────────────────────────────────────────
 
-type FocusModeTriggerProps = {
+interface FocusModeTriggerProps {
   isActive: boolean;
   onToggle: () => void;
   className?: string;
-};
+}
 
 export function FocusModeTrigger({
   isActive,

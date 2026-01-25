@@ -2,12 +2,12 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type TableCellProps = {
+export interface TableCellProps {
   children: React.ReactNode;
   className?: string;
   colSpan?: number;
   rowSpan?: number;
-};
+}
 
 export const TableCell = ({
   children,

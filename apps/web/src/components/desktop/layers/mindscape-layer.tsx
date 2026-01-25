@@ -27,10 +27,10 @@ const MindscapeCanvas = lazy(() =>
     }))
 );
 
-type MindscapeLayerProps = {
+interface MindscapeLayerProps {
   style?: CSSProperties;
   onWorkflowNavigate?: (runId: string) => void; // Reserved for Phase 6
-};
+}
 
 function MindscapeCanvasPlaceholder() {
   return (

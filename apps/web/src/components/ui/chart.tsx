@@ -14,18 +14,18 @@ import {
 
 import { cn } from "@/lib/utils";
 
-export type ChartPoint = {
+export interface ChartPoint {
   name: string;
   value: number;
-};
+}
 
-export type ChartProps = {
+export interface ChartProps {
   title?: string;
   data: ChartPoint[];
   height?: number;
   className?: string;
   empty?: ReactNode;
-};
+}
 
 export function Chart({
   title,

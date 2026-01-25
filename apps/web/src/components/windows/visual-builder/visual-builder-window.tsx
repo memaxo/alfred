@@ -50,21 +50,21 @@ const nodeTypes = {
   dependency: DependencyNode,
 };
 
-type PhaseData = {
+interface PhaseData {
   title: string;
   status: string;
   description: string;
-};
+}
 
-type StepData = {
+interface StepData {
   title: string;
   agent: string;
   description: string;
-};
+}
 
-type DependencyData = {
+interface DependencyData {
   label: string;
-};
+}
 
 // Phase node component
 function PhaseNode({ data }: { data: PhaseData }) {

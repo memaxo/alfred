@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-type VoicePickerProps = {
+interface VoicePickerProps {
   voices: ElevenLabs.Voice[];
   value?: string;
   onValueChange?: (value: string) => void;
@@ -34,7 +34,7 @@ type VoicePickerProps = {
   className?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-};
+}
 
 function VoicePicker({
   voices,
@@ -102,11 +102,11 @@ function VoicePicker({
   );
 }
 
-type VoicePickerItemProps = {
+interface VoicePickerItemProps {
   voice: ElevenLabs.Voice;
   isSelected: boolean;
   onSelect: () => void;
-};
+}
 
 function VoicePickerItem({
   voice,

@@ -25,10 +25,10 @@ import {
   useOptionalPromptInputController,
 } from "./context";
 
-export type PromptInputMessage = {
+export interface PromptInputMessage {
   text: string;
   files: FileUIPart[];
-};
+}
 
 export type PromptInputProps = Omit<
   HTMLAttributes<HTMLFormElement>,
@@ -107,7 +107,7 @@ export const PromptInput = ({
 
   const addLocal = useCallback(
     (fileList: File[] | FileList) => {
-      const incoming = Array.from(fileList);
+      const incoming = [...fileList];
       const accepted = incoming.filter((f) => matchesAccept(f));
       if (incoming.length && accepted.length === 0) {
         onError?.({
@@ -351,7 +351,7 @@ export const PromptInput = ({
               controller.textInput.clear();
             }
           }
-        } catch (_error) {
+        } catch {
           // Don't clear on error - user may want to retry
         }
       })

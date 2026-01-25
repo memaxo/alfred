@@ -134,7 +134,9 @@ export function ReviewDependencyGraph({
     return { nodes, edges, blockedCount };
   }, [review]);
 
-  if (!reviewId) return null;
+  if (!reviewId) {
+    return null;
+  }
 
   return (
     <Dialog open={!!reviewId} onOpenChange={() => onClose()}>
@@ -250,27 +252,35 @@ export function ReviewDependencyGraph({
 
 function NodeIcon({ status }: { status: DependencyNode["status"] }) {
   switch (status) {
-    case "completed":
+    case "completed": {
       return <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />;
-    case "blocked":
+    }
+    case "blocked": {
       return <Clock className="w-5 h-5 text-destructive shrink-0" />;
-    case "pending":
+    }
+    case "pending": {
       return <Circle className="w-5 h-5 text-yellow-500 shrink-0" />;
+    }
   }
 }
 
 function getSummary(reviewType: string, subjectData: unknown): string {
   const data = subjectData as Record<string, unknown>;
   switch (reviewType) {
-    case "tool_execution":
+    case "tool_execution": {
       return `Tool: ${data.toolName ?? "unknown"}`;
-    case "memory":
+    }
+    case "memory": {
       return `Memory: ${(data.fact as string)?.slice(0, 30) ?? "..."}`;
-    case "code":
+    }
+    case "code": {
       return `PR #${data.prNumber ?? "?"}: ${data.prTitle ?? "Code review"}`;
-    case "workflow":
+    }
+    case "workflow": {
       return `Workflow: ${data.decision ?? "decision"}`;
-    default:
+    }
+    default: {
       return "Review";
+    }
   }
 }

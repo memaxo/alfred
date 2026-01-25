@@ -36,7 +36,7 @@ test.describe("Mindscape Activation Visualization", () => {
     try {
       await activeEdge.first().waitFor({ state: "visible", timeout: 2000 });
       console.log("Activation visualization verified: Active edge detected.");
-    } catch (_e) {
+    } catch {
       console.log(
         "Activation visualization check: No active edge found (might need real graph nodes)."
       );

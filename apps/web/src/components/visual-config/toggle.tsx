@@ -10,7 +10,7 @@ import { useCallback, useId } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type VisualToggleProps = {
+export interface VisualToggleProps {
   /** Label for the toggle */
   label: string;
   /** Current state */
@@ -23,7 +23,7 @@ export type VisualToggleProps = {
   description?: string;
   /** Additional class name */
   className?: string;
-};
+}
 
 export function VisualToggle({
   label,

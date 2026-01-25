@@ -26,7 +26,7 @@ import { TrainingProgress } from "./training-progress";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TuneJob = {
+export interface TuneJob {
   id: string;
   name: string;
   model: string;
@@ -36,7 +36,7 @@ export type TuneJob = {
   metrics: { loss: number; accuracy: number };
   createdAt: Date;
   completedAt?: Date;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

@@ -4,7 +4,7 @@ import { Load } from "./load";
 import { Orb } from "./orb";
 import { VoiceBtn } from "./voice-btn";
 
-type DriveModeProps = {
+interface DriveModeProps {
   transcript: string;
   reply: string;
   error?: string | null;
@@ -13,7 +13,7 @@ type DriveModeProps = {
   onToggle: () => void;
   onComplete: () => void;
   className?: string;
-};
+}
 
 function getAgentState(
   status: string

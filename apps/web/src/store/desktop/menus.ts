@@ -12,13 +12,13 @@ import type {
 
 import type { WindowType } from "./types.new";
 
-export type MenuSlice = {
+export interface MenuSlice {
   menuRegistry: MenuRegistry;
 
   registerMenus: (type: WindowType, menus: AppMenus) => void;
   unregisterMenus: (type: WindowType) => void;
   getMenusForWindow: (type: WindowType | undefined) => AppMenus | undefined;
-};
+}
 
 type SetState = (
   partial:

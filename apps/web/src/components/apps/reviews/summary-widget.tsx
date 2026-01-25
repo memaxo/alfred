@@ -4,13 +4,13 @@ import { AlertTriangle, CheckCircle, Clock, Shield } from "lucide-react";
 
 import { trpc } from "@/utils/trpc";
 
-type StatCardProps = {
+interface StatCardProps {
   label: string;
   value: number | string;
   icon: React.ComponentType<{ className?: string }>;
   variant?: "default" | "warning" | "success" | "danger";
   href?: string;
-};
+}
 
 function StatCard({
   label,
@@ -48,7 +48,7 @@ export function ReviewSummaryWidget() {
   const { data, isLoading, error } = trpc.review.dashboardSummary.useQuery(
     undefined,
     {
-      refetchInterval: 30000,
+      refetchInterval: 30_000,
     }
   );
 

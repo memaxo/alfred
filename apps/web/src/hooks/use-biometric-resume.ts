@@ -4,15 +4,15 @@ import { useCallback, useState } from "react";
 
 export type ResumeTarget = "workflow" | "droid";
 
-export type UseObligationResumeArgs = {
+export interface UseObligationResumeArgs {
   target: ResumeTarget;
-};
+}
 
-type PendingState = {
+interface PendingState {
   runId: string | null;
   obligations: Obligation[];
   resumeEvents: ObligationResumeEvent[];
-};
+}
 
 const DEFAULT_RESUME_EVENT: ObligationResumeEvent = "human-authz";
 

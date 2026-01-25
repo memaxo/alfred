@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-export type UseAudioRecorderOptions = {
+export interface UseAudioRecorderOptions {
   active: boolean;
   fftSize?: number;
   smoothingTimeConstant?: number;
   enableAudioPlayback?: boolean;
   onError?: (error: Error) => void;
-};
+}
 
 export function useAudioRecorder({
   active,

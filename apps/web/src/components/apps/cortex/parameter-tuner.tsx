@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 
 import type { CortexPreset } from "./index";
 
-type ParameterTunerProps = {
+interface ParameterTunerProps {
   preset: CortexPreset | null;
-};
+}
 
 const defaultParameters = [
   {

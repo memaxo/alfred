@@ -57,7 +57,7 @@ function OnboardingRoute() {
 
       toast.success("Welcome to ALFRED!");
       navigate({ to: "/" });
-    } catch (_error) {
+    } catch {
       toast.error("Failed to complete onboarding. Please try again.");
     }
   }, [autonomy, navigate, setPreference]);

@@ -22,7 +22,7 @@ export type GraphEdgeBase<T extends Record<string, unknown>> = Edge<T>;
 // MINDSCAPE — Infinite canvas for knowledge exploration
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type MindscapeNodeData = {
+export interface MindscapeNodeData extends Record<string, unknown> {
   entityId: string;
   entityType: string;
   label: string;
@@ -30,7 +30,7 @@ export type MindscapeNodeData = {
   archived?: boolean;
   description?: string;
   hgHash?: string;
-};
+}
 
 export type MindscapeNode = Node<MindscapeNodeData>;
 export type MindscapeEdge = Edge<EdgeData>;
@@ -47,14 +47,14 @@ export type KnowledgeEntityType =
   | "fact"
   | "relation";
 
-export type KnowledgeNodeData = {
+export interface KnowledgeNodeData extends Record<string, unknown> {
   entityId: string;
   entityType: KnowledgeEntityType;
   label: string;
   confidence: number;
   facts?: string[];
   createdAt: string;
-};
+}
 
 export type KnowledgeGraphNode = GraphNodeBase<KnowledgeNodeData>;
 export type KnowledgeGraphEdge = GraphEdgeBase<EdgeData>;
@@ -72,16 +72,16 @@ export type WorkflowNodeType =
 
 export type WorkflowNodeStatus = "pending" | "running" | "completed" | "failed";
 
-export type WorkflowNodeData = {
+export interface WorkflowNodeData extends Record<string, unknown> {
   nodeType: WorkflowNodeType;
   label: string;
   config: Record<string, unknown>;
   status?: WorkflowNodeStatus;
-};
+}
 
-export type WorkflowEdgeData = {
+export interface WorkflowEdgeData extends Record<string, unknown> {
   condition?: string;
-};
+}
 
 export type WorkflowGraphNode = GraphNodeBase<WorkflowNodeData>;
 export type WorkflowGraphEdge = GraphEdgeBase<WorkflowEdgeData>;
@@ -94,20 +94,20 @@ export type AgentType = "codex" | "droid" | "claude" | "roo";
 
 export type SpawnNodeStatus = "spawning" | "running" | "completed" | "failed";
 
-export type SpawnNodeData = {
+export interface SpawnNodeData extends Record<string, unknown> {
   agentId: string;
   agentType: AgentType;
   subtaskId: string;
   status: SpawnNodeStatus;
   waveIndex: number;
   label?: string;
-};
+}
 
 export type SpawnDependencyType = "spawned_by" | "depends_on";
 
-export type SpawnEdgeData = {
+export interface SpawnEdgeData extends Record<string, unknown> {
   dependencyType: SpawnDependencyType;
-};
+}
 
 export type SpawnTreeNode = GraphNodeBase<SpawnNodeData>;
 export type SpawnTreeEdge = GraphEdgeBase<SpawnEdgeData>;
@@ -120,19 +120,19 @@ export type PlanTaskType = "code" | "research" | "review" | "deploy" | "test";
 
 export type PlanTaskStatus = "pending" | "in_progress" | "completed";
 
-export type PlanNodeData = {
+export interface PlanNodeData extends Record<string, unknown> {
   taskId: string;
   title: string;
   type: PlanTaskType;
   assignee?: string;
   status: PlanTaskStatus;
-};
+}
 
 export type PlanDependencyType = "blocks" | "requires";
 
-export type PlanEdgeData = {
+export interface PlanEdgeData extends Record<string, unknown> {
   dependencyType: PlanDependencyType;
-};
+}
 
 export type PlanGraphNode = GraphNodeBase<PlanNodeData>;
 export type PlanGraphEdge = GraphEdgeBase<PlanEdgeData>;
@@ -141,14 +141,14 @@ export type PlanGraphEdge = GraphEdgeBase<PlanEdgeData>;
 // RAG EMBEDDING PROJECTION — Embedding space visualization
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EmbeddingPointData = {
+export interface EmbeddingPointData extends Record<string, unknown> {
   chunkId: string;
   label: string;
   cluster?: number;
   score?: number;
   documentId?: string;
   content?: string;
-};
+}
 
 export type EmbeddingNode = GraphNodeBase<EmbeddingPointData>;
 // No edges for embedding visualization (points in space)

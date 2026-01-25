@@ -8,18 +8,18 @@ import { Terminal, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type TerminalTab = {
+interface TerminalTab {
   id: string;
   title: string;
-};
+}
 
-type TerminalTabsProps = {
+interface TerminalTabsProps {
   tabs: TerminalTab[];
   activeId: string;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   className?: string;
-};
+}
 
 export function TerminalTabs({
   tabs,

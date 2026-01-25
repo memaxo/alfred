@@ -13,10 +13,10 @@ import {
   type TestSession,
 } from "./auth";
 
-type CreateClientOptions = {
+interface CreateClientOptions {
   session?: TestSession;
   headers?: Record<string, string>;
-};
+}
 
 export function createTestClient(
   server: TestServer,

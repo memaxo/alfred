@@ -4,13 +4,13 @@ import { cn } from "@/lib/utils";
 
 import { TabsContext, type TabsContextValue } from "./tabs-context";
 
-export type TabsRootProps = {
+export interface TabsRootProps {
   children: React.ReactNode;
   defaultValue?: string;
   value?: string;
   onValueChange?: (value: string) => void;
   className?: string;
-};
+}
 
 export const TabsRoot = ({
   children,

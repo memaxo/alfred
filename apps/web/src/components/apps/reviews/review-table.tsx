@@ -231,7 +231,7 @@ export function ReviewTable({ onSelectReview, className }: ReviewTableProps) {
     },
   });
 
-  const rows = table.getRowModel().rows;
+  const { rows } = table.getRowModel();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -245,17 +245,19 @@ export function ReviewTable({ onSelectReview, className }: ReviewTableProps) {
 
       switch (e.key) {
         case "j":
-        case "ArrowDown":
+        case "ArrowDown": {
           e.preventDefault();
           setFocusedRowIndex((prev) =>
             prev < rows.length - 1 ? prev + 1 : prev
           );
           break;
+        }
         case "k":
-        case "ArrowUp":
+        case "ArrowUp": {
           e.preventDefault();
           setFocusedRowIndex((prev) => (prev > 0 ? prev - 1 : prev));
           break;
+        }
         case " ": {
           e.preventDefault();
           const row = rows[focusedRowIndex];
@@ -465,18 +467,24 @@ function getSummary(
   subjectData: Record<string, unknown>
 ): string {
   switch (reviewType) {
-    case "tool_execution":
+    case "tool_execution": {
       return `Tool: ${subjectData.toolName ?? "unknown"}`;
-    case "memory":
+    }
+    case "memory": {
       return `Memory: ${(subjectData.fact as string)?.slice(0, 50) ?? "..."}`;
-    case "message":
+    }
+    case "message": {
       return `Message: ${(subjectData.messageContent as string)?.slice(0, 50) ?? "..."}`;
-    case "workflow":
+    }
+    case "workflow": {
       return `Workflow: ${subjectData.decision ?? "decision"}`;
-    case "code":
+    }
+    case "code": {
       return `PR #${subjectData.prNumber ?? "?"}: ${subjectData.prTitle ?? "Code review"}`;
-    default:
+    }
+    default: {
       return "Review";
+    }
   }
 }
 

@@ -3,14 +3,14 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type SplitPaneProps = {
+export interface SplitPaneProps {
   children: [React.ReactNode, React.ReactNode];
   direction?: "horizontal" | "vertical";
   defaultSplit?: string | number;
   minSize?: number | [number, number];
   className?: string;
   onSplitChange?: (split: number) => void;
-};
+}
 
 export function SplitPane({
   children,

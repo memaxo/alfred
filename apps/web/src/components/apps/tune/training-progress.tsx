@@ -4,9 +4,9 @@
  * Training Progress - Training progress charts
  */
 
-type TrainingProgressProps = {
+interface TrainingProgressProps {
   jobId: string | null;
-};
+}
 
 // Mock training data
 const mockLossData = [2.1, 1.8, 1.5, 1.2, 0.95, 0.78, 0.65, 0.55, 0.48, 0.42];

@@ -16,10 +16,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type Props = {
+interface Props {
   children: ReactNode;
   fallback?: ReactNode;
-};
+}
 
 export function VisualBuilderErrorBoundary({ children, fallback }: Props) {
   if (fallback) {

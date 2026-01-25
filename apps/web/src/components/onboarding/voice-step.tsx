@@ -7,9 +7,9 @@ import { useAudioDevices } from "@/components/ui/mic-selector";
 import { cn } from "@/lib/utils";
 import { useVoiceStore, type VoiceMode } from "@/store/voice";
 
-export type VoiceStepProps = {
+export interface VoiceStepProps {
   onComplete?: () => void;
-};
+}
 
 const voiceModes: { value: VoiceMode; label: string; description: string }[] = [
   {
@@ -87,7 +87,7 @@ export function VoiceStep({ onComplete }: VoiceStepProps) {
             </h3>
             {loading ? (
               <p className="text-biolum-dim text-sm">Loading devices...</p>
-            ) : devices.length === 0 ? (
+            ) : (devices.length === 0 ? (
               <p className="text-biolum-dim text-sm">No microphones found</p>
             ) : (
               <div className="space-y-2">
@@ -110,7 +110,7 @@ export function VoiceStep({ onComplete }: VoiceStepProps) {
                   </button>
                 ))}
               </div>
-            )}
+            ))}
 
             {selectedDevice && (
               <div className="mt-4 flex items-center gap-3">

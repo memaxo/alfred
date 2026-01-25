@@ -17,15 +17,15 @@ import { cn } from "@/lib/utils";
 
 export type StatusLevel = "nominal" | "warning" | "critical" | "processing";
 
-export type StatusItem = {
+export interface StatusItem {
   id: string;
   label: string;
   value: string | number;
   status: StatusLevel;
   detail?: string;
-};
+}
 
-export type StatusPanelProps = {
+export interface StatusPanelProps {
   /** Panel title */
   title?: string;
   /** Status items to display */
@@ -42,7 +42,7 @@ export type StatusPanelProps = {
   scanLines?: boolean;
   /** Panel transparency (0-1) */
   transparency?: number;
-};
+}
 
 const STATUS_COLORS: Record<StatusLevel, string> = {
   nominal: "text-emerald-400",
@@ -346,9 +346,9 @@ export function StatusIndicator({
           boxShadow:
             status === "nominal"
               ? "0 0 6px rgba(52, 211, 153, 0.4)"
-              : status === "critical"
+              : (status === "critical"
                 ? "0 0 8px rgba(248, 113, 113, 0.6)"
-                : "0 0 6px rgba(34, 211, 238, 0.4)",
+                : "0 0 6px rgba(34, 211, 238, 0.4)"),
         }}
         transition={
           reduceMotion

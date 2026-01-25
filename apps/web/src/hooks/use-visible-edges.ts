@@ -10,11 +10,11 @@ import { useMemo } from "react";
 
 import { getEdgeVisibility } from "@/lib/desktop/performance";
 
-type EdgeVisibility = {
+interface EdgeVisibility {
   showEdges: boolean;
   showLabels: boolean;
   filterImportant: boolean;
-};
+}
 
 /**
  * Get current edge visibility settings based on zoom.

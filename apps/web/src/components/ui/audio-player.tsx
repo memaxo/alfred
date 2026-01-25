@@ -53,13 +53,13 @@ function formatTime(seconds: number) {
     : `${mins}:${formattedSecs}`;
 }
 
-type AudioPlayerItem<TData = unknown> = {
+interface AudioPlayerItem<TData = unknown> {
   id: string | number;
   src: string;
   data?: TData;
-};
+}
 
-type AudioPlayerApi<TData = unknown> = {
+interface AudioPlayerApi<TData = unknown> {
   ref: RefObject<HTMLAudioElement | null>;
   activeItem: AudioPlayerItem<TData> | null;
   duration: number | undefined;
@@ -73,7 +73,7 @@ type AudioPlayerApi<TData = unknown> = {
   pause: () => void;
   seek: (time: number) => void;
   setPlaybackRate: (rate: number) => void;
-};
+}
 
 const AudioPlayerContext = createContext<AudioPlayerApi<unknown> | null>(null);
 
@@ -110,7 +110,7 @@ export function AudioPlayerProvider<TData = unknown>({
   const [readyState, setReadyState] = useState<number>(0);
   const [networkState, setNetworkState] = useState<number>(0);
   const [time, setTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number | undefined>(undefined);
+  const [duration, setDuration] = useState<number | undefined>();
   const [error, setError] = useState<MediaError | null>(null);
   const [activeItem, _setActiveItem] = useState<AudioPlayerItem<TData> | null>(
     null
@@ -148,7 +148,7 @@ export function AudioPlayerProvider<TData = unknown>({
       if (playPromiseRef.current) {
         try {
           await playPromiseRef.current;
-        } catch (_error) {}
+        } catch {}
       }
 
       if (item === undefined) {
@@ -190,7 +190,7 @@ export function AudioPlayerProvider<TData = unknown>({
     if (playPromiseRef.current) {
       try {
         await playPromiseRef.current;
-      } catch (_e) {}
+      } catch {}
     }
 
     audioRef.current.pause();
@@ -377,9 +377,9 @@ export const AudioPlayerDuration = ({
   );
 };
 
-type SpinnerProps = {
+interface SpinnerProps {
   className?: string;
-};
+}
 
 function Spinner({ className }: SpinnerProps) {
   return (

@@ -5,19 +5,19 @@ import { HardDrive } from "lucide-react";
 import { VirtualList } from "@/components/ui/virtual-list";
 import { cn } from "@/lib/utils";
 
-export type DockerVolume = {
+export interface DockerVolume {
   name: string;
   driver: string;
-};
+}
 
-type VolumeListProps = {
+interface VolumeListProps {
   volumes: DockerVolume[];
   selectedName: string | null;
   onSelect: (name: string) => void;
   className?: string;
   isLoading?: boolean;
   error?: string;
-};
+}
 
 export function VolumeList({
   volumes,

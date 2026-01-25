@@ -7,7 +7,7 @@ import {
   componentStatus,
 } from "../src/components/manifest";
 
-type AuditReport = {
+interface AuditReport {
   summary: {
     total: number;
     pending: number;
@@ -15,24 +15,24 @@ type AuditReport = {
     integrated: number;
     statusMismatches: number;
   };
-  pending: Array<{
+  pending: {
     name: ComponentName;
     fileExists: boolean;
     usedInCode: boolean;
-  }>;
-  installed: Array<{
+  }[];
+  installed: {
     name: ComponentName;
     filePath: string | null;
     readyForIntegration: boolean;
-  }>;
-  integrated: Array<{ name: ComponentName; files: string[] }>;
-  gaps: Array<{ component: string; issue: string; recommendation: string }>;
-};
+  }[];
+  integrated: { name: ComponentName; files: string[] }[];
+  gaps: { component: string; issue: string; recommendation: string }[];
+}
 
-type LocalFiles = {
+interface LocalFiles {
   candidates: string[];
   existing: string[];
-};
+}
 
 type ExportIndex = Map<ComponentName, string[]>;
 
@@ -62,7 +62,7 @@ const KNOWN_FILES: Partial<Record<ComponentName, string[]>> = {
 };
 
 function toKebab(name: string): string {
-  return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+  return name.replaceAll(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
 function listFilesRecursive(dir: string): string[] {

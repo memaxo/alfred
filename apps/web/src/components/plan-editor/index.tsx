@@ -12,12 +12,12 @@ import { DependencyGraph } from "./dependency-graph";
 import { ValidationPanel } from "./validation-panel";
 import { WaveList } from "./wave-list";
 
-export type PlanEditorProps = {
+export interface PlanEditorProps {
   plan: PlanPhaseOutput;
   onSave?: (plan: PlanPhaseOutput) => Promise<void>;
   onExecute?: (plan: PlanPhaseOutput) => void;
   onCancel?: () => void;
-};
+}
 
 export function PlanEditor({
   plan,

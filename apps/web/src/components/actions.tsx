@@ -19,10 +19,10 @@ import type { AssistantAction } from "@/hooks/use-assistant-stream";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type ActionsProps = {
+interface ActionsProps {
   actions: AssistantAction[];
   className?: string;
-};
+}
 
 function StatusIcon({ status }: { status: AssistantAction["status"] }) {
   if (status === "completed") {

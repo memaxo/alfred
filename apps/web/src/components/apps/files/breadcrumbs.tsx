@@ -8,11 +8,11 @@ import { ChevronRight, Home } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type BreadcrumbsProps = {
+interface BreadcrumbsProps {
   path: string;
   onNavigate: (path: string) => void;
   className?: string;
-};
+}
 
 export function Breadcrumbs({ path, onNavigate, className }: BreadcrumbsProps) {
   const parts = path.split("/").filter(Boolean);

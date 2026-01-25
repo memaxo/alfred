@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 import type { Container } from "./index";
 
-type ContainerListProps = {
+interface ContainerListProps {
   containers: Container[];
   filter: "all" | "running" | "agent";
   selectedId: string | null;
@@ -19,7 +19,7 @@ type ContainerListProps = {
   className?: string;
   isLoading?: boolean;
   error?: string;
-};
+}
 
 export function ContainerList({
   containers,

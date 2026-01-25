@@ -30,10 +30,10 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-type ThreadItemProps = {
+interface ThreadItemProps {
   item: ThreadItem;
   expanded?: boolean;
-};
+}
 
 function ReasoningItemView({ item }: { item: ReasoningItem }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -84,11 +84,11 @@ function CommandExecutionItemView({ item }: { item: CommandExecutionItem }) {
   const statusIcon =
     item.status === "in_progress" ? (
       <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-    ) : item.status === "completed" ? (
+    ) : (item.status === "completed" ? (
       <CheckCircle className="h-3 w-3 text-green-500" />
     ) : (
       <AlertCircle className="h-3 w-3 text-red-500" />
-    );
+    ));
 
   return (
     <div className="rounded bg-zinc-900/50 p-2 text-xs">
@@ -157,11 +157,11 @@ function McpToolCallItemView({ item }: { item: McpToolCallItem }) {
   const statusIcon =
     item.status === "in_progress" ? (
       <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-    ) : item.status === "completed" ? (
+    ) : (item.status === "completed" ? (
       <CheckCircle className="h-3 w-3 text-green-500" />
     ) : (
       <AlertCircle className="h-3 w-3 text-red-500" />
-    );
+    ));
 
   return (
     <div className="rounded bg-zinc-900/50 p-2 text-xs">
@@ -255,24 +255,33 @@ function ErrorItemView({ item }: { item: ErrorItem }) {
 
 export function ThreadItemView({ item }: ThreadItemProps) {
   switch (item.type) {
-    case "reasoning":
+    case "reasoning": {
       return <ReasoningItemView item={item} />;
-    case "agent_message":
+    }
+    case "agent_message": {
       return <AgentMessageItemView item={item} />;
-    case "command_execution":
+    }
+    case "command_execution": {
       return <CommandExecutionItemView item={item} />;
-    case "file_change":
+    }
+    case "file_change": {
       return <FileChangeItemView item={item} />;
-    case "mcp_tool_call":
+    }
+    case "mcp_tool_call": {
       return <McpToolCallItemView item={item} />;
-    case "web_search":
+    }
+    case "web_search": {
       return <WebSearchItemView item={item} />;
-    case "todo_list":
+    }
+    case "todo_list": {
       return <TodoListItemView item={item} />;
-    case "error":
+    }
+    case "error": {
       return <ErrorItemView item={item} />;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 

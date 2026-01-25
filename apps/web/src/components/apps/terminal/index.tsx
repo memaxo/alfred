@@ -32,17 +32,17 @@ import { TerminalTabs } from "./terminal-tabs";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TerminalAppProps = {
+interface TerminalAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
-type TerminalTab = {
+interface TerminalTab {
   id: string;
   title: string;
   profile: TerminalProfile;
   isActive: boolean;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

@@ -40,21 +40,26 @@ export function useCognitiveStateIntegration(
     // Map cognitive phase to orb state
     let orbState: OrbState = "idle";
     switch (cognitiveState.phase) {
-      case "capturing":
+      case "capturing": {
         orbState = "listening";
         break;
+      }
       case "thinking":
-      case "deciding":
+      case "deciding": {
         orbState = "processing";
         break;
-      case "executing":
+      }
+      case "executing": {
         orbState = "active";
         break;
-      case "reflecting":
+      }
+      case "reflecting": {
         orbState = "processing";
         break;
-      default:
+      }
+      default: {
         orbState = "idle";
+      }
     }
 
     // Apply autonomy level to visual intensity
@@ -136,9 +141,9 @@ export function useVoiceFFTIntegration(
       // Use raw input/output levels
       const level = voiceState.isListening
         ? (voiceState.inputLevel ?? 0)
-        : voiceState.isSpeaking
+        : (voiceState.isSpeaking
           ? (voiceState.outputLevel ?? 0)
-          : 0;
+          : 0);
       audioLow = level;
       audioMid = level * 0.7;
     }
@@ -167,12 +172,12 @@ export function useWorkflowRuntimeIntegration(
     status?: "running" | "suspended" | "completed" | "failed" | "cancelled";
     currentTaskId?: string | null;
     progress?: number; // 0-1
-    events?: Array<{
+    events?: {
       type: string;
       nodeId?: string;
       edgeId?: string;
       timestamp: number;
-    }>;
+    }[];
   }
 ) {
   useEffect(() => {
@@ -224,10 +229,8 @@ export function useWorkflowRuntimeIntegration(
     // Activate edges/nodes based on events
     // This would integrate with the Mindscape store to trigger edge activity
     for (const event of recentEvents) {
-      if (event.edgeId) {
-      }
-      if (event.nodeId) {
-      }
+      if (event.edgeId) {}
+      if (event.nodeId) {}
     }
   }, [engine, workflowState?.events]);
 }
@@ -289,7 +292,6 @@ export function useThemeIntegration(
 
     // Cortex is designed for dark theme
     // Light theme would require shader modifications
-    if (theme === "light") {
-    }
+    if (theme === "light") {}
   }, [engine, theme]);
 }

@@ -22,12 +22,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/utils/trpc";
 
-export type ContainerCreateDialogProps = {
+export interface ContainerCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  networks: Array<{ name: string }>;
+  networks: { name: string }[];
   onCreated?: (containerId: string | null) => void;
-};
+}
 
 export function ContainerCreateDialog({
   open,
@@ -77,12 +77,12 @@ export function ContainerCreateDialog({
       setError("Image is required");
       return;
     }
-    const ports = parsed.ports;
+    const { ports } = parsed;
     if (ports === null) {
       setError("Ports must be lines like 8080:80");
       return;
     }
-    const env = parsed.env;
+    const { env } = parsed;
     if (env === null) {
       setError("Env must be lines like KEY=VALUE");
       return;
@@ -223,7 +223,7 @@ function parsePorts(
   if (lines.length === 0) {
     return [];
   }
-  const out: Array<{ host: number; container: number }> = [];
+  const out: { host: number; container: number }[] = [];
   for (const line of lines) {
     const m = /^(\d{1,5}):(\d{1,5})$/u.exec(line);
     if (!(m?.[1] && m[2])) {

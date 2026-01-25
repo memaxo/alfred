@@ -8,16 +8,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type ReasoningStep = {
+interface ReasoningStep {
   id: string;
   thought: string;
   confidence?: number;
-};
+}
 
-type ThinkProps = {
+interface ThinkProps {
   reasoning: ReasoningStep[];
   className?: string;
-};
+}
 
 export function Think({ reasoning, className }: ThinkProps) {
   if (reasoning.length === 0) {

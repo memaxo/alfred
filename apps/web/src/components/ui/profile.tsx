@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-export type ProfileDropdownProps = {
+export interface ProfileDropdownProps {
   trigger: ReactNode;
   label?: string;
   email?: string;
   className?: string;
   children?: ReactNode;
-};
+}
 
 export function ProfileDropdown({
   trigger,

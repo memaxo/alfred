@@ -9,14 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-export type VoidDialogProps = {
+export interface VoidDialogProps {
   open: boolean;
   onOpenChange?: (open: boolean) => void;
   title?: string;
   description?: string;
   children: ReactNode;
   className?: string;
-};
+}
 
 export function VoidDialog({
   open,

@@ -10,13 +10,13 @@ import { Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type ArtifactProps = {
+interface ArtifactProps {
   name: string;
   path: string;
   kind: "file" | "directory" | "code";
   size?: number;
   className?: string;
-};
+}
 
 export function Artifact({ name, path, kind, size, className }: ArtifactProps) {
   return (

@@ -8,12 +8,12 @@ import type { TRPCAppRouter } from "@/utils/trpc";
 
 import type { ReminderResource } from "./schemas";
 
-type ReminderInput = {
+interface ReminderInput {
   title: string;
   description?: string;
   due: string;
   recurring?: string;
-};
+}
 
 function toISOString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;

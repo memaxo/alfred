@@ -12,12 +12,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type ExecutionLogProps = {
+interface ExecutionLogProps {
   runId: string;
   agentId: string | null;
   onClose: () => void;
   className?: string;
-};
+}
 
 const levelColors: Record<string, string> = {
   info: "text-blue-400",

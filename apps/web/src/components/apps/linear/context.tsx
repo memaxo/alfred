@@ -11,16 +11,20 @@ import {
 
 import { trpc } from "@/utils/trpc";
 
-type Team = { id: string; name: string; key: string };
-type WorkflowState = {
+interface Team {
+  id: string;
+  name: string;
+  key: string;
+}
+interface WorkflowState {
   id: string;
   name: string;
   color: string;
   type: string;
   position: number;
-};
+}
 
-type LinearContextValue = {
+interface LinearContextValue {
   isConnected: boolean;
   isExpired: boolean;
   isLoading: boolean;
@@ -31,7 +35,7 @@ type LinearContextValue = {
   stateFilter: string | null;
   setStateFilter: (state: string | null) => void;
   refetchAll: () => void;
-};
+}
 
 const LinearContext = createContext<LinearContextValue | null>(null);
 

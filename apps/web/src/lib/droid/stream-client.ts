@@ -27,7 +27,7 @@ type RawDroidStreamEvent =
   | { type: "obligation"; data?: string }
   | { type: "resume"; data?: string };
 
-export type DroidStreamOptions = {
+export interface DroidStreamOptions {
   input: {
     prompt: string;
     auto: "read" | "low" | "medium" | "high";
@@ -45,11 +45,11 @@ export type DroidStreamOptions = {
   onEvent?: (event: DroidStreamEvent) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
-};
+}
 
-type DroidStreamTestHarness = {
+interface DroidStreamTestHarness {
   subscribe: (options: DroidStreamOptions) => { unsubscribe: () => void };
-};
+}
 
 function getTestHarness(): DroidStreamTestHarness | null {
   if (typeof globalThis === "undefined") {
@@ -73,7 +73,7 @@ function normalizeObligations(value: unknown): Obligation[] {
       typeof (entry as { type?: unknown }).type === "string" &&
       typeof (entry as { reason?: unknown }).reason === "string"
     ) {
-      const metadata = (entry as { metadata?: unknown }).metadata;
+      const { metadata } = entry as { metadata?: unknown };
       result.push({
         type: (entry as { type: string }).type,
         reason: (entry as { reason: string }).reason,
@@ -95,16 +95,16 @@ function normalizeResumeEvents(value: unknown): ObligationResumeEvent[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  const allowed: ObligationResumeEvent[] = [
+  const allowed = new Set<ObligationResumeEvent>([
     "bio-authz",
     "mfa-authz",
     "human-authz",
-  ];
+  ]);
   const result: ObligationResumeEvent[] = [];
   for (const entry of value) {
     if (
       typeof entry === "string" &&
-      allowed.includes(entry as ObligationResumeEvent)
+      allowed.has(entry as ObligationResumeEvent)
     ) {
       result.push(entry as ObligationResumeEvent);
     }
@@ -194,9 +194,9 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
     const message =
       typeof payload.message === "string"
         ? payload.message
-        : typeof payload.data === "string"
+        : (typeof payload.data === "string"
           ? payload.data
-          : "";
+          : "");
     return { type: "notice", message };
   }
 
@@ -210,7 +210,7 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
       const obligations = normalizeObligations(parsed.obligations);
       const resumeEvents = normalizeResumeEvents(parsed.resumeEvents);
       return { type: "obligation", runId, obligations, resumeEvents };
-    } catch (_error) {
+    } catch {
       return null;
     }
   }
@@ -223,7 +223,7 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
         return null;
       }
       return { type: "resume", runId };
-    } catch (_error) {
+    } catch {
       return null;
     }
   }

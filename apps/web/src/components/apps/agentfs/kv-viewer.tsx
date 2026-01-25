@@ -14,10 +14,10 @@ import { trpc } from "@/utils/trpc";
 
 import type { Workspace } from "./index";
 
-type KVViewerProps = {
+interface KVViewerProps {
   workspace: Workspace;
   className?: string;
-};
+}
 
 export function KVViewer({ workspace, className }: KVViewerProps) {
   const [search, setSearch] = useState("");

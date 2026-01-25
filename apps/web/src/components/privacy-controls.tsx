@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export type PrivacyControlsProps = {
+export interface PrivacyControlsProps {
   onForget?: () => void;
   onExport?: () => void;
   forgetDisabled?: boolean;
   exportDisabled?: boolean;
   className?: string;
-};
+}
 
 export function PrivacyControls({
   onForget,

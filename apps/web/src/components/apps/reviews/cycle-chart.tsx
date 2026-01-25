@@ -37,12 +37,14 @@ export function ReviewCycleTimeChart({ className }: ReviewCycleTimeChartProps) {
 
   const { data, isLoading } = trpc.review.cycleTime.useQuery(
     { period },
-    { refetchInterval: 60000 }
+    { refetchInterval: 60_000 }
   );
 
   // Memoize formatted display values
   const displayData = useMemo(() => {
-    if (!data) return null;
+    if (!data) {
+      return null;
+    }
     return {
       avgCycleTime: formatMs(data.avgCycleTime),
       codeAvg: formatMs(data.codeAvg),
@@ -200,10 +202,16 @@ export function ReviewCycleTimeChart({ className }: ReviewCycleTimeChartProps) {
 }
 
 function formatMs(ms: number): string {
-  if (ms === 0) return "0s";
-  if (ms < 60000) return `${Math.round(ms / 1000)}s`;
-  if (ms < 3600000) return `${Math.round(ms / 60000)}m`;
-  return `${(ms / 3600000).toFixed(1)}h`;
+  if (ms === 0) {
+    return "0s";
+  }
+  if (ms < 60_000) {
+    return `${Math.round(ms / 1000)}s`;
+  }
+  if (ms < 3_600_000) {
+    return `${Math.round(ms / 60_000)}m`;
+  }
+  return `${(ms / 3_600_000).toFixed(1)}h`;
 }
 
 function ChartSkeleton({ className }: { className?: string }) {

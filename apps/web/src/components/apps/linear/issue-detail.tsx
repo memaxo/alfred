@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type IssueDetailProps = {
+interface IssueDetailProps {
   issueId: string;
   onClose: () => void;
   className?: string;
-};
+}
 
 export function IssueDetail({
   issueId: _issueId,

@@ -107,9 +107,9 @@ const initialEdges: Edge<FlowEdgeData>[] = [
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-type WorkflowCanvasProps = {
+interface WorkflowCanvasProps {
   onNodeSelect?: (nodeId: string | null) => void;
-};
+}
 
 export function WorkflowCanvas({ onNodeSelect }: WorkflowCanvasProps) {
   const [nodes, _setNodes, onNodesChange] = useNodesState(initialNodes);

@@ -15,12 +15,12 @@ export type FocusableElement = HTMLElement & {
   focus: (options?: FocusOptions) => void;
 };
 
-export type FocusTrapOptions = {
+export interface FocusTrapOptions {
   initialFocus?: HTMLElement | string;
   returnFocus?: boolean;
   escapeDeactivates?: boolean;
   onEscape?: () => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SELECTORS
@@ -51,7 +51,7 @@ export function getFocusableElements(
 ): FocusableElement[] {
   const elements =
     container.querySelectorAll<FocusableElement>(FOCUSABLE_SELECTOR);
-  return Array.from(elements).filter((el) => {
+  return [...elements].filter((el) => {
     // Filter out hidden elements
     const style = window.getComputedStyle(el);
     return style.display !== "none" && style.visibility !== "hidden";

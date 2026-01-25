@@ -43,7 +43,7 @@ export function extractFieldName(schema: UIComponent): string {
 /**
  * Join array of IDs, filtering out empty strings.
  */
-export function joinIds(ids: Array<string | undefined>): string | undefined {
+export function joinIds(ids: (string | undefined)[]): string | undefined {
   const filtered = ids.filter((id) => id && id.trim().length > 0);
   return filtered.length > 0 ? filtered.join(" ") : undefined;
 }

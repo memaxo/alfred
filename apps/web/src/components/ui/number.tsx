@@ -5,12 +5,12 @@ import { memo, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type SlidingNumberProps = {
+export interface SlidingNumberProps {
   value: number;
   format?: (value: number) => string;
   className?: string;
   ariaLabel?: string;
-};
+}
 
 export const SlidingNumber = memo(function SlidingNumber({
   value,

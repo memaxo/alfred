@@ -37,7 +37,7 @@ import { type StatusItem, StatusPanel } from "./status-panel";
 /**
  * JARVIS HUD configuration
  */
-export type JarvisHUDConfig = {
+export interface JarvisHUDConfig {
   /** Enable status panel */
   statusPanel?: boolean;
   /** Status panel position */
@@ -60,12 +60,12 @@ export type JarvisHUDConfig = {
   customStatusItems?: StatusItem[];
   /** Callback when JARVIS speaks (for TTS integration) */
   onSpeak?: (message: string) => void;
-};
+}
 
 /**
  * JARVIS context for child components
  */
-type JarvisContextValue = {
+interface JarvisContextValue {
   state: AmbientState;
   greeting: string;
   statusSummary: string;
@@ -77,7 +77,7 @@ type JarvisContextValue = {
   speak: (message: string) => void;
   updateSystemStatus: (updates: Partial<AmbientState["systems"]>) => void;
   updateContext: (updates: Partial<AmbientState["context"]>) => void;
-};
+}
 
 const JarvisContext = React.createContext<JarvisContextValue | null>(null);
 
@@ -136,9 +136,9 @@ function getDefaultStatusItems(state: AmbientState): StatusItem[] {
       status:
         state.user.fatiguePrediction < 0.4
           ? "nominal"
-          : state.user.fatiguePrediction < 0.7
+          : (state.user.fatiguePrediction < 0.7
             ? "warning"
-            : "critical",
+            : "critical"),
     },
   ];
 }

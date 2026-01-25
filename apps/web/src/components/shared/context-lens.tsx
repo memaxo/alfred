@@ -17,11 +17,11 @@ export function ContextLens({
   runtimeContext,
 }: {
   label: string;
-  ragDocuments: Array<{
+  ragDocuments: {
     label: string;
     summary: string;
     source: "vector" | "graph";
-  }>;
+  }[];
   isLoading: boolean;
   isError: boolean;
   contextSnapshot?: {
@@ -64,9 +64,9 @@ export function ContextLens({
   // The trigger button has a descriptive aria-label.
   const contextCount = ragDocuments.length;
   const contextStatusLabel = contextSnapshot
-    ? contextSnapshot.status === "cache"
+    ? (contextSnapshot.status === "cache"
       ? "Cached context"
-      : "Fresh context"
+      : "Fresh context")
     : "Active context";
   const a11yLabel = isError
     ? `Context retrieval unavailable for ${label}`
@@ -114,11 +114,11 @@ export function ContextLens({
               <span className="mt-1 block text-amber-400">
                 Context retrieval unavailable.
               </span>
-            ) : ragDocuments.length > 0 ? (
+            ) : (ragDocuments.length > 0 ? (
               " Related knowledge retrieved automatically:"
             ) : (
               " No related documents found."
-            )}
+            ))}
           </div>
           {contextSnapshot && (
             <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-2">

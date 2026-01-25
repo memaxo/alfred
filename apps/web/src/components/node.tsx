@@ -8,13 +8,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type NodeProps = {
+interface NodeProps {
   id: string;
   label: string;
   type: "task" | "decision" | "action";
   status: "pending" | "running" | "completed" | "error";
   className?: string;
-};
+}
 
 export function Node({ label, type, status, className }: NodeProps) {
   return (

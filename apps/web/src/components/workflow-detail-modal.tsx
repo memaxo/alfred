@@ -23,11 +23,11 @@ type WorkflowReasoningResult =
   inferRouterOutputs<TRPCAppRouter>["workflow"]["reasoning"];
 type WorkflowEvents = inferRouterOutputs<TRPCAppRouter>["workflow"]["events"];
 
-export type WorkflowDetailModalProps = {
+export interface WorkflowDetailModalProps {
   workflow: WorkflowRun | null;
   open: boolean;
   onClose: () => void;
-};
+}
 
 export function WorkflowDetailModal({
   workflow,
@@ -40,9 +40,9 @@ export function WorkflowDetailModal({
   >(
     workflow?.status === "completed"
       ? "work"
-      : workflow?.status === "failed"
+      : (workflow?.status === "failed"
         ? "error"
-        : "overview"
+        : "overview")
   );
 
   const eventsQuery = trpc.workflow.events.useQuery(
@@ -103,7 +103,7 @@ export function WorkflowDetailModal({
   );
 }
 
-type WorkflowDetailContentProps = {
+interface WorkflowDetailContentProps {
   workflow: WorkflowRun;
   activeTab: "overview" | "work" | "events" | "error";
   onTabChange: (tab: "overview" | "work" | "events" | "error") => void;
@@ -115,7 +115,7 @@ type WorkflowDetailContentProps = {
   footer?: React.ReactNode;
   onMindscapeNavigate?: () => void;
   onNavigateToMindscape?: (documentId: string) => void;
-};
+}
 
 export function WorkflowDetailContent({
   workflow,
@@ -230,9 +230,9 @@ export function WorkflowDetailContent({
                 <p className="text-biolum">
                   {workflow.completedAt
                     ? new Date(workflow.completedAt).toLocaleString()
-                    : workflow.status === "running"
+                    : (workflow.status === "running"
                       ? "In progress..."
-                      : "—"}
+                      : "—")}
                 </p>
               </div>
               {workflow.errorMessage && (
@@ -428,10 +428,10 @@ export function WorkflowDetailContent({
                               variant={
                                 agent.status === "completed"
                                   ? "success"
-                                  : agent.status === "failed" ||
+                                  : (agent.status === "failed" ||
                                       agent.status === "stuck"
                                     ? "error"
-                                    : "default"
+                                    : "default")
                               }
                             >
                               {agent.status}
@@ -457,7 +457,7 @@ export function WorkflowDetailContent({
               <p className="py-8 text-center text-biolum-dim">
                 Loading events...
               </p>
-            ) : events.length === 0 ? (
+            ) : (events.length === 0 ? (
               <p className="py-8 text-center text-biolum-dim">
                 No events recorded.
               </p>
@@ -535,7 +535,7 @@ export function WorkflowDetailContent({
                   </div>
                 ))}
               </div>
-            )}
+            ))}
           </div>
         )}
 
@@ -570,13 +570,13 @@ function normalizeTimestamp(
   return value;
 }
 
-type EscalationEventData = {
+interface EscalationEventData {
   agentId: string;
   reason: string;
   details: string;
   suggestions?: string[];
   severity: "warning" | "blocking";
-};
+}
 
 function parseEscalation(eventData: unknown): EscalationEventData | null {
   if (!eventData || typeof eventData !== "object") {

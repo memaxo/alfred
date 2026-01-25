@@ -12,12 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type NewFileDialogProps = {
+interface NewFileDialogProps {
   isOpen: boolean;
   basePath: string;
   onClose: () => void;
   onCreate: (path: string) => void;
-};
+}
 
 export function NewFileDialog({
   isOpen,

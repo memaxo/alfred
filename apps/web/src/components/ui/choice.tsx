@@ -4,20 +4,20 @@ import * as RadioGroup from "@radix-ui/react-radio-group";
 
 import { cn } from "@/lib/utils";
 
-export type ChoiceOption = {
+export interface ChoiceOption {
   value: string;
   label: string;
   description?: string;
   disabled?: boolean;
-};
+}
 
-export type ChoiceProps = {
+export interface ChoiceProps {
   value?: string;
   onValueChange?: (value: string) => void;
   options: ChoiceOption[];
   className?: string;
   layout?: "row" | "col";
-};
+}
 
 export function Choice({
   value,

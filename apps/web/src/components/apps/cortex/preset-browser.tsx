@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
 
 import type { CortexPreset } from "./index";
 
-type PresetBrowserProps = {
+interface PresetBrowserProps {
   selectedId?: string;
   onSelect: (preset: CortexPreset) => void;
-};
+}
 
 const mockPresets: CortexPreset[] = [
   {
@@ -29,21 +29,21 @@ const mockPresets: CortexPreset[] = [
     name: "Deep Thought",
     description: "Rotating pattern for processing",
     category: "orb",
-    parameters: { intensity: 0.8, frequency: 2.0, speed: 2.0 },
+    parameters: { intensity: 0.8, frequency: 2, speed: 2 },
   },
   {
     id: "orb-active",
     name: "Full Power",
     description: "High intensity for active state",
     category: "orb",
-    parameters: { intensity: 1.0, frequency: 3.0, speed: 2.5 },
+    parameters: { intensity: 1, frequency: 3, speed: 2.5 },
   },
   {
     id: "wall-aurora",
     name: "Aurora",
     description: "Northern lights effect",
     category: "wallpaper",
-    parameters: { intensity: 0.6, frequency: 1.0, colorShift: 0.5 },
+    parameters: { intensity: 0.6, frequency: 1, colorShift: 0.5 },
   },
   {
     id: "wall-waves",
@@ -57,7 +57,7 @@ const mockPresets: CortexPreset[] = [
     name: "Data Flow",
     description: "Flowing data visualization",
     category: "graph",
-    parameters: { intensity: 0.7, frequency: 1.5, speed: 1.0 },
+    parameters: { intensity: 0.7, frequency: 1.5, speed: 1 },
   },
 ];
 
@@ -76,7 +76,7 @@ const categoryColors = {
 export function PresetBrowser({ selectedId, onSelect }: PresetBrowserProps) {
   const grouped = mockPresets.reduce<Record<string, CortexPreset[]>>(
     (acc, preset) => {
-      const category = preset.category;
+      const { category } = preset;
       const existing = acc[category] ?? [];
       acc[category] = [...existing, preset];
       return acc;

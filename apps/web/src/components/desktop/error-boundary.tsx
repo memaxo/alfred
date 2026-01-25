@@ -20,18 +20,18 @@ import { Button } from "@/components/ui/button";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ErrorBoundaryProps = {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   layerName?: string;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-};
+}
 
-type ErrorBoundaryState = {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorCount: number;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHELL ERROR BOUNDARY

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type VisualColorPickerProps = {
+export interface VisualColorPickerProps {
   /** Label for the color picker */
   label: string;
   /** Current oklch color string */
@@ -27,7 +27,7 @@ export type VisualColorPickerProps = {
   description?: string;
   /** Additional class name */
   className?: string;
-};
+}
 
 /**
  * Parse oklch string to components

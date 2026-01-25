@@ -16,31 +16,31 @@ import { cn } from "@/lib/utils";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type GraphNode = {
+export interface GraphNode {
   id: string;
   label: string;
   type: string;
   relevance: number;
-};
+}
 
-export type GraphEdge = {
+export interface GraphEdge {
   id: string;
   source: string;
   target: string;
   type: string;
   weight: number;
-};
+}
 
-export type GraphData = {
+export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
-};
+}
 
-type CompactKnowledgeGraphProps = {
+interface CompactKnowledgeGraphProps {
   data: GraphData;
   onNodeClick?: (nodeId: string) => void;
   className?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS

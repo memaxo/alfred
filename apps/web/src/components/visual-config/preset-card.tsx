@@ -25,7 +25,7 @@ const PRESET_ICONS: Record<string, LucideIcon> = {
   maximum: Sparkles,
 };
 
-export type PresetCardProps = {
+export interface PresetCardProps {
   /** Preset identifier */
   preset: VisualPreset;
   /** Display name */
@@ -42,7 +42,7 @@ export type PresetCardProps = {
   disabled?: boolean;
   /** Additional class name */
   className?: string;
-};
+}
 
 export function PresetCard({
   preset,

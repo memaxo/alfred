@@ -57,12 +57,12 @@ export const Z_INDEX = {
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type AlfredDesktopShellProps = {
+interface AlfredDesktopShellProps {
   children?: ReactNode;
   onWorkflowNavigate?: (runId: string) => void;
   onVisualize?: (windowId: string) => void;
   onAsk?: (windowId: string, label?: string) => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

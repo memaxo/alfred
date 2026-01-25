@@ -14,7 +14,7 @@ const getMediaStream = createClientOnlyFn((): Promise<MediaStream> => {
 
 const getAudioContext = createClientOnlyFn(() => {
   if (typeof AudioContext === "undefined") {
-    throw new Error("audio_context_unavailable");
+    throw new TypeError("audio_context_unavailable");
   }
   return new AudioContext();
 });
@@ -93,14 +93,14 @@ export function useVoiceAudio() {
               const idx = Math.floor(i * ratio);
               const val = buffer[idx];
               const s = Math.max(-1, Math.min(1, val));
-              int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+              int16[i] = s < 0 ? s * 0x80_00 : s * 0x7F_FF;
             }
 
             await client.sendAudioChunk({
               audio: int16.buffer,
               mimeType: "audio/raw;codec=pcm_s16le;rate=16000",
             });
-          } catch (_err) {
+          } catch {
             // ignore chunk errors
           }
         }

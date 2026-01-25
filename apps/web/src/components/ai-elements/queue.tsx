@@ -13,25 +13,25 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-export type QueueMessagePart = {
+export interface QueueMessagePart {
   type: string;
   text?: string;
   url?: string;
   filename?: string;
   mediaType?: string;
-};
+}
 
-export type QueueMessage = {
+export interface QueueMessage {
   id: string;
   parts: QueueMessagePart[];
-};
+}
 
-export type QueueTodo = {
+export interface QueueTodo {
   id: string;
   title: string;
   description?: string;
   status?: "pending" | "completed";
-};
+}
 
 export type QueueItemProps = ComponentProps<"li">;
 

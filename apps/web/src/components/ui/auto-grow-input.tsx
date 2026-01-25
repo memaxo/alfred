@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type AutoGrowInputProps = {
+export interface AutoGrowInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -10,7 +10,7 @@ export type AutoGrowInputProps = {
   maxHeight?: number;
   className?: string;
   disabled?: boolean;
-};
+}
 
 export function AutoGrowInput({
   value,

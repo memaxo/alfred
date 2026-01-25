@@ -85,7 +85,7 @@ type GlobalWithImage = typeof globalThis & {
 };
 
 // oxlint-disable noExplicitAny: Test stub requires this to mimic browser Image constructor
-const ImageStub = function (this: any) {
+const ImageStub = function ImageStub(this: any) {
   this.src = "";
   this.width = 0;
   this.height = 0;
@@ -232,7 +232,7 @@ const createMemoryStorage = (): Storage => {
       store.clear();
     },
     key(index: number) {
-      return Array.from(store.keys())[index] ?? null;
+      return [...store.keys()][index] ?? null;
     },
     getItem(key: string) {
       return store.has(key) ? (store.get(key) ?? null) : null;
@@ -257,13 +257,10 @@ const ensureStorage = (key: "localStorage" | "sessionStorage") => {
     });
   };
 
-  type GlobalWithStorage = typeof globalThis & {
-    [K in typeof key]?: Storage;
-  };
+  type GlobalWithStorage = typeof globalThis &
+    Partial<Record<typeof key, Storage>>;
 
-  type WindowWithStorage = Window & {
-    [K in typeof key]?: Storage;
-  };
+  type WindowWithStorage = Window & Partial<Record<typeof key, Storage>>;
 
   if (typeof (globalThis as GlobalWithStorage)[key] === "undefined") {
     assign(globalThis);

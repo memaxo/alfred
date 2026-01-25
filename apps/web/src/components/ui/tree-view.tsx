@@ -3,21 +3,21 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type TreeNode = {
+export interface TreeNode {
   id: string;
   label: string;
   icon?: React.ReactNode;
   children?: TreeNode[];
   data?: Record<string, unknown>;
-};
+}
 
-export type TreeViewProps = {
+export interface TreeViewProps {
   data: TreeNode[];
   selectedId?: string;
   onSelect?: (nodeId: string, node: TreeNode) => void;
   renderLabel?: (node: TreeNode) => React.ReactNode;
   className?: string;
-};
+}
 
 interface TreeNodeInternal extends TreeNode {
   parentIds: string[];

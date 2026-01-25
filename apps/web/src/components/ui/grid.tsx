@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type GridProps = {
+export interface GridProps {
   children: ReactNode;
   cols?: 1 | 2 | 3 | 4;
   className?: string;
-};
+}
 
 export function Grid({ children, cols = 3, className }: GridProps) {
   return (

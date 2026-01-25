@@ -3,10 +3,10 @@ import {
   AutonomySlider,
 } from "@/components/autonomy-slider";
 
-export type PreferencesStepProps = {
+export interface PreferencesStepProps {
   autonomy: AutonomyLevel;
   onAutonomyChange: (value: AutonomyLevel) => void;
-};
+}
 
 export function PreferencesStep({
   autonomy,

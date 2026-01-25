@@ -10,9 +10,9 @@ import { GitBranch, GitFork, Repeat, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type NodeCanvasProps = {
+interface NodeCanvasProps {
   className?: string;
-};
+}
 
 // Mock workflow nodes
 const mockNodes = [

@@ -14,17 +14,17 @@ import { trpc } from "@/utils/trpc";
 
 import type { Workspace } from "./index";
 
-type FileAuditProps = {
+interface FileAuditProps {
   workspace: Workspace;
   className?: string;
-};
+}
 
-type FileChange = {
+interface FileChange {
   path: string;
   changeType: "created" | "modified" | "deleted";
   sizeBytes: number;
   mtime: number;
-};
+}
 
 function isSensitiveAgentfsPath(filePath: string): boolean {
   const lower = filePath.toLowerCase();
@@ -83,9 +83,9 @@ export function FileAudit({ workspace, className }: FileAuditProps) {
 
   const previewChunkBytes = 200_000;
   const [offsetBytes, setOffsetBytes] = useState(0);
-  const [chunks, setChunks] = useState<
-    Array<{ offset: number; content: string }>
-  >([]);
+  const [chunks, setChunks] = useState<{ offset: number; content: string }[]>(
+    []
+  );
 
   useEffect(() => {
     setOffsetBytes(0);
@@ -375,17 +375,17 @@ function renderHexPreview(base64: string): string {
     const max = Math.min(512, bin.length);
     const bytes = new Uint8Array(max);
     for (let i = 0; i < max; i++) {
-      bytes[i] = bin.charCodeAt(i);
+      bytes[i] = bin.codePointAt(i) ?? 0;
     }
 
     const lines: string[] = [];
     for (let i = 0; i < bytes.length; i += 16) {
       const slice = bytes.subarray(i, i + 16);
-      const hex = Array.from(slice)
+      const hex = [...slice]
         .map((b) => b.toString(16).padStart(2, "0"))
         .join(" ");
-      const ascii = Array.from(slice)
-        .map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : "."))
+      const ascii = [...slice]
+        .map((b) => (b >= 32 && b <= 126 ? String.fromCodePoint(b) : "."))
         .join("");
       lines.push(
         `${i.toString(16).padStart(8, "0")}  ${hex.padEnd(47)}  ${ascii}`
@@ -409,15 +409,15 @@ function FileChangeRow({
   const Icon =
     file.changeType === "created"
       ? Plus
-      : file.changeType === "deleted"
+      : (file.changeType === "deleted"
         ? Minus
-        : Edit;
+        : Edit);
   const iconColor =
     file.changeType === "created"
       ? "text-green-400"
-      : file.changeType === "deleted"
+      : (file.changeType === "deleted"
         ? "text-red-400"
-        : "text-yellow-400";
+        : "text-yellow-400");
 
   return (
     <button

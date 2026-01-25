@@ -24,7 +24,7 @@ function getBuildConstants(): Record<string, string> {
   // Get version from package.json
   try {
     const rootPackageJson = JSON.parse(
-      readFileSync(resolve(__dirname, "../../package.json"), "utf-8")
+      readFileSync(resolve(__dirname, "../../package.json"), "utf8")
     );
     constants.BUILD_VERSION = JSON.stringify(rootPackageJson.version || "dev");
   } catch {
@@ -34,7 +34,7 @@ function getBuildConstants(): Record<string, string> {
   // Try git describe for version
   try {
     const gitVersion = execSync("git describe --tags --always", {
-      encoding: "utf-8",
+      encoding: "utf8",
       cwd: resolve(__dirname, "../.."),
     }).trim();
     if (gitVersion) {
@@ -50,7 +50,7 @@ function getBuildConstants(): Record<string, string> {
   // Git commit
   try {
     const gitCommit = execSync("git rev-parse HEAD", {
-      encoding: "utf-8",
+      encoding: "utf8",
       cwd: resolve(__dirname, "../.."),
     }).trim();
     constants.GIT_COMMIT = JSON.stringify(gitCommit);
@@ -61,7 +61,7 @@ function getBuildConstants(): Record<string, string> {
   // Git branch
   try {
     const gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
-      encoding: "utf-8",
+      encoding: "utf8",
       cwd: resolve(__dirname, "../.."),
     }).trim();
     constants.GIT_BRANCH = JSON.stringify(gitBranch);
@@ -163,7 +163,6 @@ const fumadocsVirtualPlugin = {
     if (id === "fumadocs-mdx:collections/server") {
       return resolve(__dirname, ".source/server.ts");
     }
-    return;
   },
 };
 
@@ -190,7 +189,7 @@ const useEffectEventShimPlugin = {
     let transformed = code;
 
     // Remove useEffectEvent from the react import
-    transformed = transformed.replace(
+    transformed = transformed.replaceAll(
       /import\s*\{([^}]*)\}\s*from\s*['"]react['"]/g,
       (_match, imports) => {
         const importList = imports
@@ -315,7 +314,6 @@ export default defineConfig({
           }
           // All other vendors stay together to avoid circular deps
           // Vite's default chunking will still optimize
-          return;
         },
       },
     },

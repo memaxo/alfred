@@ -99,7 +99,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("800");
+      expect(frame.dataset.width).toBe("800");
     });
 
     it("uses compact width when viewMode is compact", () => {
@@ -112,7 +112,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("600");
+      expect(frame.dataset.width).toBe("600");
     });
 
     it("defaults to full viewMode when data is invalid", () => {
@@ -123,7 +123,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("800");
+      expect(frame.dataset.width).toBe("800");
     });
 
     it("sets correct window type", () => {
@@ -132,7 +132,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-window-type")).toBe("settings");
+      expect(frame.dataset.windowType).toBe("settings");
     });
   });
 
@@ -157,7 +157,7 @@ describe("SettingsWindow", () => {
       );
 
       const frame = getByTestId("window-frame");
-      expect(frame.getAttribute("data-width")).toBe("800");
+      expect(frame.dataset.width).toBe("800");
     });
 
     it("handles optional label field", () => {
@@ -183,7 +183,7 @@ describe("SettingsWindow", () => {
 
       const frame = getByTestId("window-frame");
       // Maximized uses full width
-      expect(frame.getAttribute("data-width")).toBe("800");
+      expect(frame.dataset.width).toBe("800");
     });
   });
 });

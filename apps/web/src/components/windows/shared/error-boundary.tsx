@@ -4,17 +4,17 @@ import { Component, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
-type Props = {
+interface Props {
   windowId: string;
   children: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-};
+}
 
-type State = {
+interface State {
   hasError: boolean;
   error: Error | null;
   errorCount: number;
-};
+}
 
 export class WindowErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {

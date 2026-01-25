@@ -6,19 +6,19 @@ import { cn } from "@/lib/utils";
 
 import { DateField } from "./date";
 
-export type DateRangeValue = {
+export interface DateRangeValue {
   from?: Date;
   to?: Date;
-};
+}
 
-export type DateRangeFieldProps = {
+export interface DateRangeFieldProps {
   value?: DateRangeValue;
   onChange?: (next: DateRangeValue) => void;
   disabled?: boolean;
   className?: string;
   fromPlaceholder?: string;
   toPlaceholder?: string;
-};
+}
 
 export function DateRangeField({
   value,

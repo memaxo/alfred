@@ -10,11 +10,11 @@ import { Brain, Calendar, FileText, GitBranch, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type GraphCanvasProps = {
+interface GraphCanvasProps {
   selectedEntityId: string | null;
   onSelectEntity: (id: string | null) => void;
   className?: string;
-};
+}
 
 // Mock entities for visualization
 const mockEntities = [

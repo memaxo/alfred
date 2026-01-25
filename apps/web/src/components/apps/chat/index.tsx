@@ -36,12 +36,12 @@ import { VoiceIndicator } from "./voice-indicator";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ChatAppProps = {
+interface ChatAppProps {
   windowId?: string;
   className?: string;
   // Can be used standalone or wrapped in window chrome
   standalone?: boolean;
-};
+}
 
 type AgentType = "assistant" | "codex" | "droid" | "roo" | "claude";
 

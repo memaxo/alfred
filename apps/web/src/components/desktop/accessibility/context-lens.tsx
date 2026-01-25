@@ -15,20 +15,20 @@ import { cn } from "@/lib/utils";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ContextInfo = {
+export interface ContextInfo {
   title: string;
   description?: string;
   metadata?: Record<string, string>;
   shortcuts?: { key: string; action: string }[];
-};
+}
 
-type ContextLensProps = {
+interface ContextLensProps {
   info: ContextInfo;
   children: React.ReactNode;
   position?: "top" | "bottom" | "left" | "right";
   delay?: number;
   className?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -97,11 +97,11 @@ export function ContextLens({
 // TOOLTIP
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TooltipProps = {
+interface TooltipProps {
   info: ContextInfo;
   coords: { x: number; y: number };
   position: "top" | "bottom" | "left" | "right";
-};
+}
 
 function ContextLensTooltip({ info, coords, position }: TooltipProps) {
   const offsetY = position === "bottom" ? 8 : -8;

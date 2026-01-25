@@ -52,7 +52,7 @@ export function ReviewContextDrawer({
 
         {isLoading ? (
           <DrawerSkeleton />
-        ) : review ? (
+        ) : (review ? (
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="space-y-6 p-6">
               {/* Header */}
@@ -186,7 +186,7 @@ export function ReviewContextDrawer({
               </div>
             </div>
           </ScrollArea>
-        ) : null}
+        ) : null)}
       </SheetContent>
     </Sheet>
   );
@@ -217,18 +217,24 @@ function getSummary(
   subjectData: Record<string, unknown>
 ): string {
   switch (reviewType) {
-    case "tool_execution":
+    case "tool_execution": {
       return `Tool: ${subjectData.toolName ?? "unknown"}`;
-    case "memory":
+    }
+    case "memory": {
       return `Memory: ${(subjectData.fact as string)?.slice(0, 50) ?? "..."}`;
-    case "message":
+    }
+    case "message": {
       return `Message: ${(subjectData.messageContent as string)?.slice(0, 50) ?? "..."}`;
-    case "workflow":
+    }
+    case "workflow": {
       return `Workflow: ${subjectData.decision ?? "decision"}`;
-    case "code":
+    }
+    case "code": {
       return `PR #${subjectData.prNumber ?? "?"}: ${subjectData.prTitle ?? "Code review"}`;
-    default:
+    }
+    default: {
       return "Review";
+    }
   }
 }
 

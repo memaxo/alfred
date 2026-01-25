@@ -4,10 +4,10 @@
  * Displays errors and warnings for plan validation.
  */
 
-export type ValidationPanelProps = {
+export interface ValidationPanelProps {
   errors: string[];
   warnings: string[];
-};
+}
 
 export function ValidationPanel({ errors, warnings }: ValidationPanelProps) {
   if (errors.length === 0 && warnings.length === 0) {

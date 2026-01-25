@@ -7,12 +7,12 @@
 import { Cpu, Gauge, HardDrive } from "lucide-react";
 import { useEffect, useState } from "react";
 
-type GpuMetrics = {
+interface GpuMetrics {
   utilization: number;
   memory: number;
   fps: number;
   temperature?: number;
-};
+}
 
 export function GpuMonitor() {
   const [metrics, setMetrics] = useState<GpuMetrics>({

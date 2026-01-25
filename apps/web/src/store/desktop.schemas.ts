@@ -180,31 +180,44 @@ export function getWindowDataSchema(
   windowType: string | undefined
 ): z.ZodTypeAny {
   switch (windowType) {
-    case "chat":
+    case "chat": {
       return chatWindowDataSchema;
-    case "terminal":
+    }
+    case "terminal": {
       return terminalWindowDataSchema;
-    case "droid":
+    }
+    case "droid": {
       return droidWindowDataSchema;
-    case "note":
+    }
+    case "note": {
       return noteWindowDataSchema;
-    case "reminder":
+    }
+    case "reminder": {
       return reminderWindowDataSchema;
-    case "todo":
+    }
+    case "todo": {
       return todoWindowDataSchema;
-    case "workflow":
+    }
+    case "workflow": {
       return workflowWindowDataSchema;
-    case "workflowlist":
+    }
+    case "workflowlist": {
       return workflowListWindowDataSchema;
-    case "settings":
+    }
+    case "settings": {
       return settingsWindowDataSchema;
-    case "integrations":
+    }
+    case "integrations": {
       return integrationsWindowDataSchema;
-    case "knowledge":
+    }
+    case "knowledge": {
       return knowledgeWindowDataSchema;
-    case "concept":
+    }
+    case "concept": {
       return conceptWindowDataSchema;
-    default:
+    }
+    default: {
       return baseWindowDataSchema;
+    }
   }
 }

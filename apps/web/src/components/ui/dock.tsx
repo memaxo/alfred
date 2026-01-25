@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type DockProps = {
+export interface DockProps {
   children: ReactNode;
   className?: string;
-};
+}
 
 export function Dock({ children, className }: DockProps) {
   return (

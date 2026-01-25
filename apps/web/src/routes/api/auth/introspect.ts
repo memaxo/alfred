@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/auth/introspect")({
         let isDbConnectionError: ((error: unknown) => boolean) | null = null;
         try {
           const helpers = await getDbHelpers();
-          isDbConnectionError = helpers.isDbConnectionError;
+          ({ isDbConnectionError } = helpers);
           const { db, oauthAccessToken, eq } = helpers;
 
           // Look up token in database

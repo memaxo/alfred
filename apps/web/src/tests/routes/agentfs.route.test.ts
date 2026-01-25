@@ -31,7 +31,7 @@ mock.module("../../../server/agentfs", () => ({
     ),
   openAgentfsDb: vi.fn(async () => ({
     baseDir: null,
-    fsdb: { close: async () => undefined },
+    fsdb: { close: async () => {} },
   })),
 }));
 

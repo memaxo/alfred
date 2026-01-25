@@ -38,7 +38,7 @@ export type DesktopActionId =
   | "ask"
   | (string & {}); // Allow for dynamic spawn action IDs
 
-export type DesktopAction = {
+export interface DesktopAction {
   id: DesktopActionId;
   label: string;
   icon: LucideIcon;
@@ -47,7 +47,7 @@ export type DesktopAction = {
   variant?: "default" | "destructive";
   aliases?: string[];
   category: "spawn" | "window" | "workflow" | "knowledge";
-};
+}
 
 // Spawn actions are auto-generated from the window registry
 function generateSpawnActions(): DesktopAction[] {

@@ -100,7 +100,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   const runId = windowData.runId ?? windowData.resourceRef?.id;
   const plan = windowData.plan as StructuredPlan | undefined;
   const activeView = windowData.activeView ?? "list";
-  const summaryText = windowData.summaryText;
+  const { summaryText } = windowData;
   const escalation = windowData.escalation as WorkflowEscalation | undefined;
 
   const [autoLevel, setAutoLevel] = useState<AutoLevel>(
@@ -234,7 +234,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
         id: s.id,
         name: s.name,
         status,
-        progress: status === "completed" ? 100 : status === "running" ? 10 : 0,
+        progress: status === "completed" ? 100 : (status === "running" ? 10 : 0),
         tasks: [
           {
             id: s.id,
@@ -284,7 +284,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   );
 
   useEffect(() => {
-    const data = persistedPlanQuery.data;
+    const { data } = persistedPlanQuery;
     if (!data || plan) {
       return;
     }

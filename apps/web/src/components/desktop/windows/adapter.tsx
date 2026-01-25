@@ -363,7 +363,7 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
         const newBounds = { ...currentBounds };
 
         switch (direction) {
-          case "n":
+          case "n": {
             newBounds.y = currentBounds.y + deltaY;
             newBounds.height = currentBounds.height - deltaY;
             newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
@@ -374,7 +374,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               Math.min(newBounds.y, minY + maxY - newBounds.height)
             );
             break;
-          case "s":
+          }
+          case "s": {
             newBounds.height = currentBounds.height + deltaY;
             newBounds.height = Math.max(minH, Math.min(newBounds.height, maxH));
             newBounds.height = Math.min(
@@ -382,7 +383,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               minY + maxY - currentBounds.y
             );
             break;
-          case "e":
+          }
+          case "e": {
             newBounds.width = currentBounds.width + deltaX;
             newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
             newBounds.width = Math.min(
@@ -390,7 +392,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               minX + maxX - currentBounds.x
             );
             break;
-          case "w":
+          }
+          case "w": {
             newBounds.x = currentBounds.x + deltaX;
             newBounds.width = currentBounds.width - deltaX;
             newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
@@ -401,7 +404,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               Math.min(newBounds.x, minX + maxX - newBounds.width)
             );
             break;
-          case "ne":
+          }
+          case "ne": {
             newBounds.y = currentBounds.y + deltaY;
             newBounds.height = currentBounds.height - deltaY;
             newBounds.width = currentBounds.width + deltaX;
@@ -418,7 +422,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               minX + maxX - currentBounds.x
             );
             break;
-          case "nw":
+          }
+          case "nw": {
             newBounds.x = currentBounds.x + deltaX;
             newBounds.y = currentBounds.y + deltaY;
             newBounds.width = currentBounds.width - deltaX;
@@ -438,7 +443,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               Math.min(newBounds.y, minY + maxY - newBounds.height)
             );
             break;
-          case "se":
+          }
+          case "se": {
             newBounds.width = currentBounds.width + deltaX;
             newBounds.height = currentBounds.height + deltaY;
             newBounds.width = Math.max(minW, Math.min(newBounds.width, maxW));
@@ -452,7 +458,8 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               minY + maxY - currentBounds.y
             );
             break;
-          case "sw":
+          }
+          case "sw": {
             newBounds.x = currentBounds.x + deltaX;
             newBounds.width = currentBounds.width - deltaX;
             newBounds.height = currentBounds.height + deltaY;
@@ -469,6 +476,7 @@ export function useWindowProps(windowId: string): WindowComponentProps | null {
               minY + maxY - currentBounds.y
             );
             break;
+          }
         }
 
         setBounds(windowId, newBounds);

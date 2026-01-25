@@ -24,7 +24,7 @@ export type ErrorSeverity = "critical" | "error" | "warning" | "info";
 /**
  * Captured error entry
  */
-export type CapturedError = {
+export interface CapturedError {
   type: "console" | "page" | "network" | "server";
   severity: ErrorSeverity;
   message: string;
@@ -32,12 +32,12 @@ export type CapturedError = {
   url?: string;
   stack?: string;
   statusCode?: number;
-};
+}
 
 /**
  * Error monitor configuration
  */
-export type ErrorMonitorConfig = {
+export interface ErrorMonitorConfig {
   /** Fail immediately on critical errors */
   failFast?: boolean;
   /** Severity levels that cause test failure */
@@ -45,10 +45,10 @@ export type ErrorMonitorConfig = {
   /** Patterns to ignore (e.g., known warnings) */
   ignorePatterns?: RegExp[];
   /** Console message types to capture */
-  captureConsoleTypes?: Array<"error" | "warning" | "log" | "info">;
+  captureConsoleTypes?: ("error" | "warning" | "log" | "info")[];
   /** Network status codes to treat as errors */
   errorStatusCodes?: number[];
-};
+}
 
 const DEFAULT_ERROR_CONFIG: Required<ErrorMonitorConfig> = {
   failFast: true,
@@ -122,7 +122,7 @@ export class ErrorMonitor {
 
     // Page errors (uncaught exceptions)
     this.page.on("pageerror", (error) => {
-      const message = error.message;
+      const { message } = error;
       if (this.shouldIgnore(message)) {
         return;
       }
@@ -297,12 +297,15 @@ export class ErrorMonitor {
 
   private consoleSeverity(type: string): ErrorSeverity {
     switch (type) {
-      case "error":
+      case "error": {
         return "error";
-      case "warning":
+      }
+      case "warning": {
         return "warning";
-      default:
+      }
+      default: {
         return "info";
+      }
     }
   }
 
@@ -329,14 +332,14 @@ export function createErrorMonitor(
 /**
  * Minimal interface for screenshot capture
  */
-export type ScreenshotCapture = {
+export interface ScreenshotCapture {
   capture(name: string, options?: CaptureOptions): Promise<string>;
-};
+}
 
 /**
  * Options for screenshot capture
  */
-export type CaptureOptions = {
+export interface CaptureOptions {
   /** Specific element to capture */
   selector?: string;
   /** Full page screenshot */
@@ -349,19 +352,19 @@ export type CaptureOptions = {
   delay?: number;
   /** Custom clip region */
   clip?: { x: number; y: number; width: number; height: number };
-};
+}
 
 /**
  * Screenshot metadata for analysis
  */
-export type ScreenshotMetadata = {
+export interface ScreenshotMetadata {
   name: string;
   path: string;
   timestamp: string;
   viewport: { width: number; height: number };
   url: string;
   phase: TestPhase;
-};
+}
 
 /**
  * Test lifecycle phases for organized screenshots
@@ -395,8 +398,8 @@ export abstract class ScreenshotStrategy implements ScreenshotCapture {
   }
 
   protected buildPath(name: string): string {
-    const sanitized = name.replace(/[^a-z0-9-_]/gi, "_");
-    const testName = this.testInfo.title.replace(/[^a-z0-9-_]/gi, "_");
+    const sanitized = name.replaceAll(/[^a-z0-9-_]/gi, "_");
+    const testName = this.testInfo.title.replaceAll(/[^a-z0-9-_]/gi, "_");
     return `${testName}__${sanitized}`;
   }
 }
@@ -665,9 +668,9 @@ export function createScreenshotManager(
  * });
  * ```
  */
-export type ScreenshotFixture = {
+export interface ScreenshotFixture {
   screenshots: ScreenshotManager;
-};
+}
 
 export function withScreenshots<_T extends { page: Page }>(
   base: typeof import("@playwright/test").test
@@ -707,10 +710,10 @@ export function withScreenshots<_T extends { page: Page }>(
  * });
  * ```
  */
-export type TestHarnessFixture = {
+export interface TestHarnessFixture {
   screenshots: ScreenshotManager;
   errors: ErrorMonitor;
-};
+}
 
 export function withTestHarness<_T extends { page: Page }>(
   base: typeof import("@playwright/test").test,
@@ -941,6 +944,6 @@ export async function assertWithScreenshot<T>(
       error instanceof Error ? error : new Error(String(error))
     );
     // TypeScript doesn't understand captureAndThrow always throws
-    throw new Error("unreachable");
+    throw new Error("unreachable", { cause: error });
   }
 }

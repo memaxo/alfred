@@ -12,11 +12,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type ProcessListProps = {
+interface ProcessListProps {
   className?: string;
-};
+}
 
-type Process = {
+interface Process {
   id: string;
   name: string;
   type: string;
@@ -24,7 +24,7 @@ type Process = {
   cpu: number;
   memory: number;
   uptime: number;
-};
+}
 
 export function ProcessList({ className }: ProcessListProps) {
   const { data, isLoading, error, refetch } = trpc.admin.processesList.useQuery(
@@ -99,9 +99,9 @@ function ProcessRow({ process }: { process: Process }) {
   const Icon =
     process.type === "agent"
       ? Bot
-      : process.type === "service"
+      : (process.type === "service"
         ? Server
-        : Terminal;
+        : Terminal);
   const statusColors = {
     running: "text-green-400",
     idle: "text-yellow-400",

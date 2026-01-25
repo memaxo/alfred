@@ -12,10 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type LogsViewerProps = {
+interface LogsViewerProps {
   containerId: string;
   className?: string;
-};
+}
 
 const levelColors = {
   debug: "text-biolum-dim",

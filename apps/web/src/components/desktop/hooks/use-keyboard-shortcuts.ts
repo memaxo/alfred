@@ -120,15 +120,18 @@ export function useKeyboardShortcuts() {
         }
 
         switch (e.key) {
-          case "ArrowLeft":
+          case "ArrowLeft": {
             tileWindow(focusedWindowId, "left");
             break;
-          case "ArrowRight":
+          }
+          case "ArrowRight": {
             tileWindow(focusedWindowId, "right");
             break;
-          case "ArrowUp":
+          }
+          case "ArrowUp": {
             maximizeWindow(focusedWindowId);
             break;
+          }
           case "ArrowDown": {
             const win = windows.find((w) => w.id === focusedWindowId);
             if (win?.state === "maximized") {

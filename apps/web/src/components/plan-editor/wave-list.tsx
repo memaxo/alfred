@@ -6,14 +6,14 @@
 
 import type { SubTask, WavePlan } from "@alfred/pipeline/schemas";
 
-export type WaveListProps = {
+export interface WaveListProps {
   waves: WavePlan[];
   subtasks: SubTask[];
   onReorder?: (taskId: string, newIndex: number) => void;
   onEdit?: (taskId: string, updates: Partial<SubTask>) => void;
   onRemove?: (taskId: string) => void;
   onMoveToWave?: (taskId: string, waveId: string) => void;
-};
+}
 
 export function WaveList({
   waves,

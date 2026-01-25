@@ -16,13 +16,13 @@ export type AgentStatus =
   | "failed"
   | "waiting";
 
-export type AgentNodeData = {
+export interface AgentNodeData extends Record<string, unknown> {
   label: string;
   role: string;
   status: AgentStatus;
   progress?: number;
   tokens?: number;
-};
+}
 
 const statusIcons: Record<AgentStatus, typeof Bot> = {
   idle: Bot,

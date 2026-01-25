@@ -4,20 +4,20 @@ import { describe, expect, it } from "bun:test";
 
 import { deriveActions } from "./use-assistant-stream";
 
-type ToolCallPart = {
+interface ToolCallPart {
   type: "tool-call";
   toolCallId: string;
   toolName: string;
   input?: unknown;
-};
+}
 
-type ToolResultPart = {
+interface ToolResultPart {
   type: "tool-result";
   toolCallId: string;
   toolName?: string;
   output?: unknown;
   isError?: boolean;
-};
+}
 
 function createMessage(
   parts: unknown[],

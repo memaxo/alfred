@@ -14,7 +14,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { useDesktopStore } from "@/store/desktop";
-import { type MindscapeNode, useMindscapeStore } from "@/store/mindscape";
+import {
+  type MindscapeEdge,
+  type MindscapeNode,
+  useMindscapeStore,
+} from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
 
 import { KnowledgeEntityNode } from "../knowledge/entity-node";
@@ -174,12 +178,12 @@ function MindscapeCanvasInner() {
 
   const uniqueEntityTypes = useMemo(() => {
     const types = new Set(entitiesData?.entities.map((e) => e.type) ?? []);
-    return Array.from(types).sort();
+    return [...types].sort();
   }, [entitiesData]);
 
   return (
     <div className="relative h-full w-full bg-void">
-      <ReactFlow
+      <ReactFlow<MindscapeNode, MindscapeEdge>
         colorMode="dark"
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         edges={edges}

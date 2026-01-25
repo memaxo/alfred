@@ -12,20 +12,20 @@ import {
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import { cn } from "@/lib/utils";
 
-export type AudioDevice = {
+export interface AudioDevice {
   deviceId: string;
   label: string;
   groupId: string;
-};
+}
 
-export type MicSelectorProps = {
+export interface MicSelectorProps {
   value?: string;
   onValueChange?: (deviceId: string) => void;
   muted?: boolean;
   onMutedChange?: (muted: boolean) => void;
   disabled?: boolean;
   className?: string;
-};
+}
 
 export function MicSelector({
   value,
@@ -116,7 +116,7 @@ export function MicSelector({
       <DropdownMenuContent align="center" className="w-72" side="top">
         {loading ? (
           <DropdownMenuItem disabled>Loading devices...</DropdownMenuItem>
-        ) : error ? (
+        ) : (error ? (
           <DropdownMenuItem disabled>Error: {error}</DropdownMenuItem>
         ) : (
           devices.map((device) => (
@@ -132,7 +132,7 @@ export function MicSelector({
               )}
             </DropdownMenuItem>
           ))
-        )}
+        ))}
         {devices.length > 0 && (
           <>
             <DropdownMenuSeparator />
@@ -197,7 +197,7 @@ export function useAudioDevices() {
         .map((device) => {
           let cleanLabel =
             device.label || `Microphone ${device.deviceId.slice(0, 8)}`;
-          cleanLabel = cleanLabel.replace(/\s*\([^)]*\)/g, "").trim();
+          cleanLabel = cleanLabel.replaceAll(/\s*\([^)]*\)/g, "").trim();
 
           return {
             deviceId: device.deviceId,
@@ -207,9 +207,9 @@ export function useAudioDevices() {
         });
 
       setDevices(audioInputs);
-    } catch (err) {
+    } catch (error) {
       setError(
-        err instanceof Error ? err.message : "Failed to get audio devices"
+        error instanceof Error ? error.message : "Failed to get audio devices"
       );
     } finally {
       setLoading(false);
@@ -221,7 +221,7 @@ export function useAudioDevices() {
       return;
     }
 
-    const mediaDevices = navigator.mediaDevices;
+    const { mediaDevices } = navigator;
     if (!mediaDevices) {
       setDevices([]);
       setError("media_devices_unavailable");
@@ -246,7 +246,7 @@ export function useAudioDevices() {
         .map((device) => {
           let cleanLabel =
             device.label || `Microphone ${device.deviceId.slice(0, 8)}`;
-          cleanLabel = cleanLabel.replace(/\s*\([^)]*\)/g, "").trim();
+          cleanLabel = cleanLabel.replaceAll(/\s*\([^)]*\)/g, "").trim();
 
           return {
             deviceId: device.deviceId,
@@ -257,9 +257,9 @@ export function useAudioDevices() {
 
       setDevices(audioInputs);
       setHasPermission(true);
-    } catch (err) {
+    } catch (error) {
       setError(
-        err instanceof Error ? err.message : "Failed to get audio devices"
+        error instanceof Error ? error.message : "Failed to get audio devices"
       );
     } finally {
       setLoading(false);

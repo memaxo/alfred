@@ -8,12 +8,12 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type ControlsProps = {
+interface ControlsProps {
   agent: "assistant" | "orchestrator";
   onAgentChange: (agent: "assistant" | "orchestrator") => void;
   onClear?: () => void;
   className?: string;
-};
+}
 
 export function Controls({
   agent,

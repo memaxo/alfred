@@ -7,17 +7,17 @@
 
 import { cn } from "@/lib/utils";
 
-type BranchOption = {
+interface BranchOption {
   id: string;
   label: string;
   reasoning: string;
   selected?: boolean;
-};
+}
 
-type BranchProps = {
+interface BranchProps {
   branches: BranchOption[];
   className?: string;
-};
+}
 
 export function Branch({ branches, className }: BranchProps) {
   return (

@@ -24,9 +24,9 @@ import { useDesktopStore } from "@/store/desktop";
 import { AppLauncherButton } from "./app-launcher";
 import { TaskbarButton } from "./taskbar-button";
 
-type TaskbarProps = {
+interface TaskbarProps {
   style?: CSSProperties;
-};
+}
 
 export function Taskbar({ style }: TaskbarProps) {
   const {
@@ -67,7 +67,7 @@ export function Taskbar({ style }: TaskbarProps) {
   const visibleTypes = useMemo(() => {
     const runningTypes = Object.keys(windowsByType) as WindowType[];
     const all = new Set([...dockPins, ...runningTypes]);
-    return Array.from(all);
+    return [...all];
   }, [dockPins, windowsByType]);
 
   const handleAppClick = useCallback(

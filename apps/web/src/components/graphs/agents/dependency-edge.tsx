@@ -14,9 +14,9 @@ import {
 
 import { cn } from "@/lib/utils";
 
-export type DependencyEdgeData = {
+export interface DependencyEdgeData extends Record<string, unknown> {
   type: "spawn" | "dependency" | "data";
-};
+}
 
 const edgeStyles: Record<string, { stroke: string; dasharray?: string }> = {
   spawn: { stroke: "stroke-green-500/60" },

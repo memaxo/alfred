@@ -2,9 +2,9 @@ import { ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export type IntegrationsStepProps = {
+export interface IntegrationsStepProps {
   onSkip: () => void;
-};
+}
 
 export function IntegrationsStep({ onSkip }: IntegrationsStepProps) {
   const handleLinearConnect = () => {

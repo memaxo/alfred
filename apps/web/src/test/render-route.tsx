@@ -13,7 +13,7 @@ import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
 export type TestTrpcHandler = (input: unknown) => unknown | Promise<unknown>;
 
-export type TestTrpcHandlers = {
+export interface TestTrpcHandlers {
   queries?: Record<string, TestTrpcHandler>;
   mutations?: Record<string, TestTrpcHandler>;
   subscriptions?: Record<
@@ -27,7 +27,7 @@ export type TestTrpcHandlers = {
       }
     ) => undefined | (() => void)
   >;
-};
+}
 
 export function createTestQueryClient(
   config: QueryClientConfig = {}
@@ -58,9 +58,9 @@ export function createTestTrpcClient(
         const map =
           op.type === "query"
             ? handlers.queries
-            : op.type === "mutation"
+            : (op.type === "mutation"
               ? handlers.mutations
-              : handlers.subscriptions;
+              : handlers.subscriptions);
         const handler = map?.[op.path];
 
         if (op.type === "subscription") {
@@ -120,18 +120,18 @@ export function createTestTrpcClient(
   });
 }
 
-export type RenderRouteOptions = {
+export interface RenderRouteOptions {
   queryClient?: QueryClient;
   trpcClient?: TRPCClient<TRPCAppRouter>;
   wrapper?: ComponentType<{ children: ReactNode }>;
-};
+}
 
 export function renderRoute(
   ui: ReactElement,
   options: RenderRouteOptions = {}
 ) {
   const queryClient = options.queryClient ?? createTestQueryClient();
-  const trpcClient = options.trpcClient;
+  const { trpcClient } = options;
 
   function Wrapper({ children }: { children: ReactNode }) {
     let tree: ReactNode = children;

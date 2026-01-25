@@ -59,10 +59,10 @@ function ConsentPage() {
         setStatus("error");
         setError("Authorization denied");
       }
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       setStatus("error");
       const message =
-        err instanceof Error ? err.message : "Failed to process consent";
+        error instanceof Error ? error.message : "Failed to process consent";
       setError(message);
     }
   };
@@ -90,7 +90,7 @@ function ConsentPage() {
               You can close this window now.
             </p>
           </div>
-        ) : status === "error" && errorMessage ? (
+        ) : (status === "error" && errorMessage ? (
           <div className="space-y-4 py-4 text-center">
             <p className="text-red-400 text-sm">{errorMessage}</p>
             <button
@@ -151,7 +151,7 @@ function ConsentPage() {
               </button>
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

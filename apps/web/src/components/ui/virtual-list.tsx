@@ -11,7 +11,7 @@ import { Virtuoso } from "react-virtuoso";
 
 import { cn } from "@/lib/utils";
 
-type VirtualListProps<T> = {
+interface VirtualListProps<T> {
   data: T[];
   renderItem: (item: T, index: number) => ReactNode;
   isLoading?: boolean;
@@ -21,7 +21,7 @@ type VirtualListProps<T> = {
   headerText?: string;
   className?: string;
   itemClassName?: string;
-};
+}
 
 export function VirtualList<T>({
   data,

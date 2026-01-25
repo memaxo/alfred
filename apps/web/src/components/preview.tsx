@@ -11,12 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type PreviewProps = {
+interface PreviewProps {
   url: string;
   title: string;
   status: "preview" | "active" | "failed";
   className?: string;
-};
+}
 
 export function Preview({ url, title, status, className }: PreviewProps) {
   return (

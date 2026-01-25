@@ -39,7 +39,7 @@ function calculateZoneBounds(
   const sideWidth = width * (1 - mainRatio) - gap / 2;
 
   switch (layout) {
-    case "float":
+    case "float": {
       return [
         {
           id: "center",
@@ -47,8 +47,9 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
 
-    case "split-h":
+    case "split-h": {
       return [
         {
           id: "left",
@@ -61,8 +62,9 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
 
-    case "split-v":
+    case "split-v": {
       return [
         {
           id: "top",
@@ -75,8 +77,9 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
 
-    case "quad":
+    case "quad": {
       return [
         {
           id: "top-left",
@@ -114,8 +117,9 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
 
-    case "main-side":
+    case "main-side": {
       return [
         {
           id: "left",
@@ -128,8 +132,9 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
 
-    case "stack":
+    case "stack": {
       return [
         {
           id: "full",
@@ -137,6 +142,7 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
 
     case "columns": {
       // Default to 3 columns
@@ -160,7 +166,7 @@ function calculateZoneBounds(
       ];
     }
 
-    default:
+    default: {
       return [
         {
           id: "center",
@@ -168,6 +174,7 @@ function calculateZoneBounds(
           occupied: false,
         },
       ];
+    }
   }
 }
 
@@ -355,7 +362,7 @@ export const createTilingSlice: StateCreator<
       return;
     }
 
-    const assignments: Array<{ windowId: string; zone: TileZone }> = [];
+    const assignments: { windowId: string; zone: TileZone }[] = [];
     for (
       let i = 0;
       i < Math.min(floatingWindows.length, availableZones.length);

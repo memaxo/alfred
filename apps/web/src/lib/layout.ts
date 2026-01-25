@@ -2,7 +2,11 @@ import type { Edge, Node } from "@xyflow/react";
 
 import { layoutSemantic, type SemanticLayoutOptions } from "./layout-semantic";
 
-type NodeData = { type?: string; label?: string; [key: string]: unknown };
+interface NodeData {
+  type?: string;
+  label?: string;
+  [key: string]: unknown;
+}
 
 export function getLayoutedElements<T extends NodeData>(
   nodes: Node<T>[],

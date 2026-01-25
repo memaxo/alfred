@@ -10,22 +10,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type MistakeLedgerProps = {
+interface MistakeLedgerProps {
   timeRange: "day" | "week" | "month";
-};
+}
 
 // Compute time filter based on range
 function getTimeFilter(range: "day" | "week" | "month"): string | undefined {
   const now = new Date();
   switch (range) {
-    case "day":
+    case "day": {
       return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    case "week":
+    }
+    case "week": {
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    case "month":
+    }
+    case "month": {
       return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    default:
+    }
+    default: {
       return;
+    }
   }
 }
 

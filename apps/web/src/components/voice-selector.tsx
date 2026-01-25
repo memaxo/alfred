@@ -21,11 +21,11 @@ import {
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type VoiceSelectorProps = {
+interface VoiceSelectorProps {
   value?: string;
   onValueChange?: (value: string) => void;
   className?: string;
-};
+}
 
 export function VoiceSelector({
   value,
@@ -93,13 +93,13 @@ export function VoiceSelector({
       };
 
       await audio.play();
-    } catch (_error) {
+    } catch {
       setPlayingVoice(null);
       toast.error("Failed to load voice preview");
     }
   };
 
-  const isLoading = voicesQuery.isLoading;
+  const { isLoading } = voicesQuery;
 
   return (
     <Popover onOpenChange={setOpen} open={open}>

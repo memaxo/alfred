@@ -32,7 +32,7 @@ const projectWindowDataSchema = z.object({
   selectedProjectId: z.string().uuid().optional(),
 });
 
-type Project = {
+interface Project {
   id: string;
   name: string;
   slug: string;
@@ -40,7 +40,7 @@ type Project = {
   linearProjectId: string | null;
   linearTeamId: string | null;
   lastActiveAt: Date | null;
-};
+}
 
 export function ProjectWindow({ id, data, selected }: NodeProps) {
   const lod = useLOD();
@@ -227,7 +227,7 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
                 <div className="flex items-center justify-center py-8 text-biolum-faint text-sm">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
                 </div>
-              ) : projects.length === 0 ? (
+              ) : (projects.length === 0 ? (
                 <p className="py-8 text-center text-biolum-faint text-sm">
                   No projects yet. Detect one above.
                 </p>
@@ -261,7 +261,7 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
                     </li>
                   ))}
                 </ul>
-              )}
+              ))}
             </div>
           </ScrollArea>
 

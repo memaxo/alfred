@@ -27,10 +27,10 @@ import {
   withWindowAdapter,
 } from "../windows/registry";
 
-type WindowLayerProps = {
+interface WindowLayerProps {
   style?: CSSProperties;
   focusedWindowId: string | null;
-};
+}
 
 function WindowRenderer({
   windowId,

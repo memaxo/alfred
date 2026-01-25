@@ -29,12 +29,12 @@ import { ProjectBoard } from "./project-board";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type LinearAppProps = {
+interface LinearAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
-export type Issue = {
+export interface Issue {
   id: string;
   identifier: string;
   title: string;
@@ -45,7 +45,7 @@ export type Issue = {
   labels: string[];
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

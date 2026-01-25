@@ -49,12 +49,12 @@ import { WorkspaceList } from "./workspace-list";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type AgentFSAppProps = {
+interface AgentFSAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
-export type Workspace = {
+export interface Workspace {
   id: string;
   runId: string;
   dbPath: string;
@@ -66,7 +66,7 @@ export type Workspace = {
   checkpointCount: number;
   pinned: boolean;
   retentionDays: number | null;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -172,8 +172,8 @@ export function AgentFSApp({
       }
       lastInvalidateMs.current = now;
 
-      const runId = selectedWorkspace.runId;
-      const dbPath = selectedWorkspace.dbPath;
+      const { runId } = selectedWorkspace;
+      const { dbPath } = selectedWorkspace;
 
       if (event.toolCalls?.length) {
         void utils.agentfs.operationsList.invalidate({
@@ -333,7 +333,7 @@ export function AgentFSApp({
                   const suffix = sha ? sha.slice(0, 12) : "cas";
                   a.download = `agentfs-${selectedWorkspace.runId}-${suffix}.tar.gz`;
                   a.rel = "noopener";
-                  document.body.appendChild(a);
+                  document.body.append(a);
                   a.click();
                   a.remove();
                 } finally {

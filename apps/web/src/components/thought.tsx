@@ -8,17 +8,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type ThoughtStep = {
+interface ThoughtStep {
   id: string;
   step: number;
   thought: string;
   evidence?: string[];
-};
+}
 
-type ThoughtProps = {
+interface ThoughtProps {
   thoughts: ThoughtStep[];
   className?: string;
-};
+}
 
 export function Thought({ thoughts, className }: ThoughtProps) {
   return (

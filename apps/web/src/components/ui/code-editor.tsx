@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type CodeEditorProps = {
+export interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
   language?: string;
@@ -12,7 +12,7 @@ export type CodeEditorProps = {
   className?: string;
   lineNumbers?: boolean;
   height?: string;
-};
+}
 
 export function CodeEditor({
   value,
@@ -49,7 +49,7 @@ export function CodeEditor({
       e.preventDefault();
       const start = textareaRef.current?.selectionStart ?? 0;
       const end = textareaRef.current?.selectionEnd ?? 0;
-      const newValue = `${value.substring(0, start)}  ${value.substring(end)}`;
+      const newValue = `${value.slice(0, start)}  ${value.slice(end)}`;
       onChange(newValue);
       requestAnimationFrame(() => {
         textareaRef.current?.setSelectionRange(start + 2, start + 2);

@@ -2,13 +2,13 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type ColorPickerProps = {
+export interface ColorPickerProps {
   value?: string;
   onChange?: (color: string) => void;
   presetColors?: string[];
   className?: string;
   disabled?: boolean;
-};
+}
 
 const PRESET_COLORS = [
   "#ef4444",

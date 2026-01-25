@@ -27,13 +27,13 @@ import { useDesktopStore } from "@/store/desktop";
 
 import { WindowPreview } from "./window-preview";
 
-type TaskbarButtonProps = {
+interface TaskbarButtonProps {
   type: WindowType;
   isRunning: boolean;
   isFocused: boolean;
   onClick: () => void;
   windows: WindowInstance[];
-};
+}
 
 export function TaskbarButton({
   type,

@@ -34,7 +34,7 @@ const PRESET_BALANCED: VisualConfig = {
     enabled: true,
     threshold: 0.8,
     intensity: 0.5,
-    blurRadius: 2.0,
+    blurRadius: 2,
   },
   chromaticAberration: {
     enabled: true,

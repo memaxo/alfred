@@ -1,4 +1,4 @@
-export type VADOptions = {
+export interface VADOptions {
   fftSize?: number;
   minDecibels?: number;
   maxDecibels?: number;
@@ -6,7 +6,7 @@ export type VADOptions = {
   silenceThreshold?: number; // 0-255, approximate energy level
   silenceDurationMs?: number;
   speechThreshold?: number; // 0-255
-};
+}
 
 export type VADEvent = "speech_start" | "speech_end";
 export type VADCallback = (event: VADEvent) => void;

@@ -6,9 +6,9 @@
 
 import { cn } from "@/lib/utils";
 
-type PerformanceChartProps = {
+interface PerformanceChartProps {
   className?: string;
-};
+}
 
 export function PerformanceChart({ className }: PerformanceChartProps) {
   // Mock data

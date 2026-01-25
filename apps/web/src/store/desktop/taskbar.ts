@@ -108,7 +108,7 @@ export const createTaskbarSlice: StateCreator<
   // ─────────────────────────────────────────────────────────────────────────
 
   spawnKnowledgeGraph: (
-    nodes: Array<{
+    nodes: {
       id: string;
       label: string;
       entityType?: string;
@@ -116,14 +116,14 @@ export const createTaskbarSlice: StateCreator<
       archived?: string;
       description?: string;
       hgHash?: string;
-    }>,
-    edges: Array<{
+    }[],
+    edges: {
       id: string;
       fromId: string;
       toId: string;
       kind: string;
       weight?: number;
-    }>,
+    }[],
     centerPosition?: { x: number; y: number }
   ) => {
     const { spawnKnowledgeGraph: spawnGraph } = get();

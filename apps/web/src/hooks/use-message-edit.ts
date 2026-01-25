@@ -4,11 +4,11 @@ import { useCallback, useState } from "react";
 
 import { getMessageText } from "@/utils/message";
 
-type UseMessageEditProps = {
+interface UseMessageEditProps {
   handleEdit: (id: string, text: string) => void;
-};
+}
 
-type MessageEditState = {
+interface MessageEditState {
   cancelEditing: () => void;
   editingMessageId: string | null;
   editText: string;
@@ -16,7 +16,7 @@ type MessageEditState = {
   saveEdit: () => void;
   setEditText: (text: string) => void;
   startEditing: (message: AssistantUIMessage) => void;
-};
+}
 
 export function useMessageEdit({
   handleEdit,

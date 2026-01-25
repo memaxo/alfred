@@ -19,18 +19,18 @@ import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 import { useOrbStore } from "@/store/orb";
 
-type QuickActionsProps = {
+interface QuickActionsProps {
   onClose: () => void;
   className?: string;
-};
+}
 
-const actions: Array<{
+const actions: {
   id: string;
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
   label: string;
   color: string;
   windowType?: WindowType;
-}> = [
+}[] = [
   {
     id: "chat",
     icon: MessageSquare,

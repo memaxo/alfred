@@ -26,9 +26,7 @@ function ComponentRoute() {
 
   const componentName = useMemo(() => {
     const key = name as ComponentName;
-    return Object.prototype.hasOwnProperty.call(componentRegistry, key)
-      ? key
-      : null;
+    return Object.hasOwn(componentRegistry, key) ? key : null;
   }, [name]);
 
   if (!componentName) {

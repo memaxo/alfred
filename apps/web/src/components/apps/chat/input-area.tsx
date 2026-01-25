@@ -12,14 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-type InputAreaProps = {
+interface InputAreaProps {
   onSubmit: (text: string) => void;
   onVoiceToggle: () => void;
   isRecording: boolean;
   disabled?: boolean;
   error?: Error | null;
   className?: string;
-};
+}
 
 export function InputArea({
   onSubmit,

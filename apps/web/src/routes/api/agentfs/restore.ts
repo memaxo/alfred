@@ -3,7 +3,7 @@ import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 function safeRunId(runId: string): string {
-  return runId.replace(/[^a-zA-Z0-9-]/g, "-");
+  return runId.replaceAll(/[^a-zA-Z0-9-]/g, "-");
 }
 
 function isSha256Hex(value: string): boolean {

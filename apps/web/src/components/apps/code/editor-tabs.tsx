@@ -11,14 +11,14 @@ import { cn } from "@/lib/utils";
 
 import type { FileTab } from "./types";
 
-type EditorTabsProps = {
+interface EditorTabsProps {
   tabs: FileTab[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   onReorder?: (tabs: FileTab[]) => void;
   className?: string;
-};
+}
 
 export function EditorTabs({
   tabs,

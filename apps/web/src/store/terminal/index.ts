@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type TerminalProfile = {
+export interface TerminalProfile {
   id: string;
   name: string;
   type: "local" | "ssh" | "docker";
@@ -12,16 +12,16 @@ export type TerminalProfile = {
   container?: string;
   cwd?: string;
   isDefault?: boolean;
-};
+}
 
-type TerminalProfileStore = {
+interface TerminalProfileStore {
   profiles: TerminalProfile[];
   addProfile: (profile: Omit<TerminalProfile, "id">) => TerminalProfile;
   updateProfile: (id: string, updates: Partial<TerminalProfile>) => void;
   deleteProfile: (id: string) => void;
   setDefault: (id: string) => void;
   getDefault: () => TerminalProfile;
-};
+}
 
 const DEFAULT_PROFILES: TerminalProfile[] = [
   {

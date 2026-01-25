@@ -5,12 +5,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type AudioAnalyserOptions = {
+export interface AudioAnalyserOptions {
   fftSize?: number;
   smoothingTimeConstant?: number;
   minDecibels?: number;
   maxDecibels?: number;
-};
+}
 
 function createAudioAnalyser(
   mediaStream: MediaStream,
@@ -59,7 +59,7 @@ export function useAudioVolume(
 ) {
   const [volume, setVolume] = useState(0);
   const volumeRef = useRef(0);
-  const frameId = useRef<number | undefined>(undefined);
+  const frameId = useRef<number | null>(null);
 
   // Memoize options to prevent unnecessary re-renders
   const memoizedOptions = useMemo(
@@ -114,7 +114,7 @@ export function useAudioVolume(
 
     return () => {
       cleanup();
-      if (frameId.current) {
+      if (frameId.current !== null) {
         cancelAnimationFrame(frameId.current);
       }
     };
@@ -123,13 +123,13 @@ export function useAudioVolume(
   return volume;
 }
 
-export type MultiBandVolumeOptions = {
+export interface MultiBandVolumeOptions {
   bands?: number;
   loPass?: number; // Low frequency cutoff
   hiPass?: number; // High frequency cutoff
   updateInterval?: number; // Update interval in ms
   analyserOptions?: AudioAnalyserOptions;
-};
+}
 
 const multibandDefaults: MultiBandVolumeOptions = {
   bands: 5,
@@ -179,7 +179,7 @@ export function useMultibandVolume(
     new Array(opts.bands).fill(0)
   );
   const bandsRef = useRef<number[]>(new Array(opts.bands).fill(0));
-  const frameId = useRef<number | undefined>(undefined);
+  const frameId = useRef<number | null>(null);
 
   useEffect(() => {
     if (!mediaStream) {
@@ -252,7 +252,7 @@ export function useMultibandVolume(
 
     return () => {
       cleanup();
-      if (frameId.current) {
+      if (frameId.current !== null) {
         cancelAnimationFrame(frameId.current);
       }
     };
@@ -387,7 +387,7 @@ const BarVisualizerComponent = ({
   const [fakeVolumeBands, setFakeVolumeBands] = useState<number[]>(() =>
     new Array(barCount).fill(0.2)
   );
-  const fakeAnimationRef = useRef<number | undefined>(undefined);
+  const fakeAnimationRef = useRef<number | null>(null);
 
   // Animate fake volume bands for speaking and listening states
   useEffect(() => {
@@ -443,7 +443,7 @@ const BarVisualizerComponent = ({
     fakeAnimationRef.current = requestAnimationFrame(updateFakeVolume);
 
     return () => {
-      if (fakeAnimationRef.current) {
+      if (fakeAnimationRef.current !== null) {
         cancelAnimationFrame(fakeAnimationRef.current);
       }
     };

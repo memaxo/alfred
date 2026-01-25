@@ -51,12 +51,12 @@ export type ToolbarAction =
   | "undo"
   | "redo";
 
-export type RichTextToolbarProps = {
+export interface RichTextToolbarProps {
   onAction: (action: ToolbarAction, value?: string) => void;
   activeActions?: Set<ToolbarAction>;
   className?: string;
   compact?: boolean;
-};
+}
 
 const actionIcons: Record<
   Exclude<ToolbarAction, "divider">,
@@ -201,14 +201,14 @@ export function RichTextToolbar({
   );
 }
 
-export type RichTextEditorProps = {
+export interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   compactToolbar?: boolean;
   toolbarActions?: ToolbarAction[];
-};
+}
 
 export function RichTextEditor({
   value,
@@ -233,15 +233,17 @@ export function RichTextEditor({
     tpl.innerHTML = html;
 
     // Remove high-risk elements entirely.
-    for (const el of Array.from(
-      tpl.content.querySelectorAll("script,style,iframe,object,embed,link,meta")
-    )) {
+    for (const el of [
+      ...tpl.content.querySelectorAll(
+        "script,style,iframe,object,embed,link,meta"
+      ),
+    ]) {
       el.remove();
     }
 
     // Strip event handlers and javascript: URLs.
-    for (const el of Array.from(tpl.content.querySelectorAll("*"))) {
-      for (const attr of Array.from(el.attributes)) {
+    for (const el of [...tpl.content.querySelectorAll("*")]) {
+      for (const attr of [...el.attributes]) {
         const name = attr.name.toLowerCase();
         const val = attr.value.trim().toLowerCase();
 

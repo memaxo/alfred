@@ -16,12 +16,12 @@ import { cn } from "@/lib/utils";
 
 import { Shimmer } from "./shimmer";
 
-type ReasoningContextValue = {
+interface ReasoningContextValue {
   isStreaming: boolean;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   duration: number | undefined;
-};
+}
 
 const ReasoningContext = createContext<ReasoningContextValue | null>(null);
 

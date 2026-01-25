@@ -12,18 +12,18 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type Thread = {
+interface Thread {
   id: string;
   title: string;
   preview: string;
   timestamp: Date;
   messageCount: number;
-};
+}
 
-type ThreadSidebarProps = {
+interface ThreadSidebarProps {
   onClose: () => void;
   className?: string;
-};
+}
 
 // Mock threads for now
 const mockThreads: Thread[] = [

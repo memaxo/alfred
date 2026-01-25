@@ -2,13 +2,13 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type ToggleGroupProps = {
+export interface ToggleGroupProps {
   children: React.ReactNode;
   value?: string;
   onValueChange?: (value: string) => void;
   className?: string;
   type?: "single" | "multiple";
-};
+}
 
 const ToggleGroupContext = React.createContext<{
   value?: string;
@@ -30,12 +30,12 @@ export function ToggleGroup({
   );
 }
 
-export type ToggleGroupItemProps = {
+export interface ToggleGroupItemProps {
   value: string;
   children: React.ReactNode;
   disabled?: boolean;
   className?: string;
-};
+}
 
 export function ToggleGroupItem({
   value,

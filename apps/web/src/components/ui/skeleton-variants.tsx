@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 
 import { Skeleton } from "./skeleton";
 
-export type SkeletonAvatarProps = {
+export interface SkeletonAvatarProps {
   className?: string;
-};
+}
 
 export function SkeletonAvatar({ className }: SkeletonAvatarProps) {
   return (
@@ -19,12 +19,12 @@ export function SkeletonAvatar({ className }: SkeletonAvatarProps) {
   );
 }
 
-export type SkeletonCardProps = {
+export interface SkeletonCardProps {
   className?: string;
   hasHeader?: boolean;
   hasImage?: boolean;
   lines?: number;
-};
+}
 
 export const SkeletonCard = ({
   className,
@@ -67,10 +67,10 @@ export const SkeletonCard = ({
 
 SkeletonCard.displayName = "SkeletonCard";
 
-export type SkeletonTableRowProps = {
+export interface SkeletonTableRowProps {
   cells?: number;
   className?: string;
-};
+}
 
 export function SkeletonTableRow({
   cells = 4,
@@ -87,11 +87,11 @@ export function SkeletonTableRow({
   );
 }
 
-export type SkeletonTableProps = {
+export interface SkeletonTableProps {
   rows?: number;
   cells?: number;
   className?: string;
-};
+}
 
 export function SkeletonTable({
   rows = 5,
@@ -116,10 +116,10 @@ export function SkeletonTable({
   );
 }
 
-export type SkeletonChartProps = {
+export interface SkeletonChartProps {
   bars?: number;
   className?: string;
-};
+}
 
 export function SkeletonChart({ bars = 8, className }: SkeletonChartProps) {
   return (
@@ -139,10 +139,10 @@ export function SkeletonChart({ bars = 8, className }: SkeletonChartProps) {
   );
 }
 
-export type SkeletonFormProps = {
+export interface SkeletonFormProps {
   fields?: number;
   className?: string;
-};
+}
 
 export function SkeletonForm({ fields = 3, className }: SkeletonFormProps) {
   return (

@@ -2,10 +2,10 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type TabsListProps = {
+export interface TabsListProps {
   children: React.ReactNode;
   className?: string;
-};
+}
 
 export const TabsList = ({
   children,

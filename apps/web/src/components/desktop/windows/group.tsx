@@ -11,10 +11,10 @@ import type { ResizeDirection } from "./types";
 
 import { ResizeHandles } from "./resize-handles";
 
-type WindowGroupChromeProps = {
+interface WindowGroupChromeProps {
   groupId: string;
   children: (activeWindowId: string) => React.ReactNode;
-};
+}
 
 export function WindowGroupChrome({
   groupId,
@@ -204,7 +204,7 @@ export function WindowGroupChrome({
     return null;
   }
 
-  const bounds = group.bounds;
+  const { bounds } = group;
   const isMaximized = group.state === "maximized";
 
   return (
@@ -257,12 +257,12 @@ export function WindowGroupChrome({
   );
 }
 
-type TabButtonProps = {
+interface TabButtonProps {
   label: string;
   isActive: boolean;
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
-};
+}
 
 function TabButton({ label, isActive, onClick, onClose }: TabButtonProps) {
   return (

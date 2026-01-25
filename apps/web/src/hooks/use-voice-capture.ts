@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { trpc } from "@/utils/trpc";
 
-type UseVoiceCaptureOptions = {
+interface UseVoiceCaptureOptions {
   deviceId?: string;
   onTranscript?: (text: string) => Promise<void> | void;
   onError?: (error: Error) => void;
-};
+}
 
-type UseVoiceCaptureReturn = {
+interface UseVoiceCaptureReturn {
   isRecording: boolean;
   isProcessing: boolean;
   transcript: string;
@@ -19,7 +19,7 @@ type UseVoiceCaptureReturn = {
   stopRecording: () => void;
   playAudio: (audioBase64: string, mimeType: string) => void;
   clearTranscript: () => void;
-};
+}
 
 const MAX_RECORDING_MS = 10_000; // keep clips short for MVP
 
@@ -130,8 +130,8 @@ export function useVoiceCapture({
       setTranscript(text);
       setError(null);
       await onTranscript?.(text);
-    } catch (err) {
-      handleError(err);
+    } catch (error) {
+      handleError(error);
     } finally {
       setManualProcessing(false);
     }
@@ -146,8 +146,8 @@ export function useVoiceCapture({
     }
     try {
       mediaRecorderRef.current.stop();
-    } catch (err) {
-      handleError(err);
+    } catch (error) {
+      handleError(error);
     }
   }, [handleError]);
 
@@ -183,10 +183,13 @@ export function useVoiceCapture({
         stopRecording();
       }, MAX_RECORDING_MS);
       timeoutRef.current = timeoutId;
-    } catch (err) {
+    } catch (error) {
       cleanupStream();
-      if (err instanceof Error && err.message === "media_devices_unavailable") {
-        handleError(err);
+      if (
+        error instanceof Error &&
+        error.message === "media_devices_unavailable"
+      ) {
+        handleError(error);
       } else {
         handleError(new Error("voice_unavailable_on_server"));
       }
@@ -214,8 +217,8 @@ export function useVoiceCapture({
       }
       const audio = new Audio(source);
       audioRef.current = audio;
-      audio.play().catch((err) => {
-        handleError(err);
+      audio.play().catch((error) => {
+        handleError(error);
       });
     },
     [handleError]

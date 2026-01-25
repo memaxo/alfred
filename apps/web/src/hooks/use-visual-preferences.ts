@@ -17,16 +17,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { trpc } from "@/utils/trpc";
 
-export type UseVisualPreferencesOptions = {
+export interface UseVisualPreferencesOptions {
   /** Cortex engine to apply config changes to */
   engine?: CortexEngine | null;
   /** Auto-apply changes to engine */
   autoApply?: boolean;
   /** Enable optimistic updates */
   optimistic?: boolean;
-};
+}
 
-export type UseVisualPreferencesResult = {
+export interface UseVisualPreferencesResult {
   /** Current visual configuration */
   config: VisualConfig;
   /** Whether config is loading */
@@ -51,7 +51,7 @@ export type UseVisualPreferencesResult = {
   importConfig: (json: string) => boolean;
   /** Reload from server */
   refetch: () => void;
-};
+}
 
 /**
  * Hook for managing visual preferences with Cortex engine integration

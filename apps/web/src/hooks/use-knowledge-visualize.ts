@@ -49,8 +49,9 @@ export function useKnowledgeVisualize() {
         );
 
         return windowIds;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         setError(message);
         return [];
       } finally {

@@ -2,7 +2,7 @@ import type { StateCreator } from "zustand";
 
 import type { DesktopState, WindowInstance } from "./types.new";
 
-export type KnowledgeNode = {
+export interface KnowledgeNode {
   id: string;
   label: string;
   entityType?: string;
@@ -10,23 +10,23 @@ export type KnowledgeNode = {
   archived?: string;
   description?: string;
   hgHash?: string;
-};
+}
 
-export type KnowledgeEdge = {
+export interface KnowledgeEdge {
   id: string;
   fromId: string;
   toId: string;
   kind: string;
   weight?: number;
-};
+}
 
-export type KnowledgeSlice = {
+export interface KnowledgeSlice {
   spawnKnowledgeGraph: (
     nodes: KnowledgeNode[],
     edges: KnowledgeEdge[],
     centerPosition?: { x: number; y: number }
   ) => string[];
-};
+}
 
 export const createKnowledgeSlice: StateCreator<
   DesktopState,

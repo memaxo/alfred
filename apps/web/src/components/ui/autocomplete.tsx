@@ -19,14 +19,14 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type AutocompleteItem = {
+export interface AutocompleteItem {
   value: string;
   label: string;
   keywords?: string[];
   disabled?: boolean;
-};
+}
 
-export type AutocompleteProps = {
+export interface AutocompleteProps {
   value?: string;
   onValueChange?: (value: string) => void;
   items: AutocompleteItem[];
@@ -35,7 +35,7 @@ export type AutocompleteProps = {
   emptyLabel?: string;
   disabled?: boolean;
   className?: string;
-};
+}
 
 export function Autocomplete({
   value,

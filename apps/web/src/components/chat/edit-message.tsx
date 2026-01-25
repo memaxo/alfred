@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-type EditMessageProps = {
+interface EditMessageProps {
   initialText: string;
   onSave: (newText: string) => void;
   onCancel: () => void;
   disabled?: boolean;
   className?: string;
-};
+}
 
 export function EditMessage({
   initialText,

@@ -4,20 +4,20 @@ import type { ReactNode, RefObject } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type TermLine = {
+export interface TermLine {
   id: string;
   text: string;
   channel?: "stdout" | "stderr" | "system";
-};
+}
 
-export type TermProps = {
+export interface TermProps {
   title?: string;
   lines: TermLine[];
   empty?: ReactNode;
   className?: string;
   scrollRef?: RefObject<HTMLDivElement | null>;
   maxHeight?: number;
-};
+}
 
 export function Term({
   title,

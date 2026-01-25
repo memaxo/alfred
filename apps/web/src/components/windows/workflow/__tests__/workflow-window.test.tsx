@@ -40,7 +40,7 @@ mock.module("sonner", () => ({
 }));
 
 mock.module("@/store/desktop", () => ({
-  useDesktopStore: (selector: (s: any) => unknown) =>
+  useDesktopStore: (selector: (s: { updateWindowData: unknown }) => unknown) =>
     selector({
       updateWindowData: updateWindowDataMock,
     }),
@@ -103,7 +103,7 @@ mock.module("../workflow-canvas", () => ({
 import { WorkflowWindow } from "../workflow-window";
 
 async function tick() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await Promise.resolve();
 }
 
 function createWrapper() {
@@ -130,13 +130,11 @@ describe("WorkflowWindow (start form)", () => {
 
   it("requires requirement before starting", async () => {
     const { getByPlaceholderText, getByText } = render(
-      (
-        <WorkflowWindow
-          data={{ type: "workflow", viewMode: "full", requirement: "" }}
-          id="wwin"
-          selected={false}
-        />
-      ) as any,
+      <WorkflowWindow
+        data={{ type: "workflow", viewMode: "full", requirement: "" }}
+        id="wwin"
+        selected={false}
+      />,
       { wrapper: createWrapper() }
     );
 
@@ -154,17 +152,15 @@ describe("WorkflowWindow (start form)", () => {
 
   it("writes trimmed requirement draft on start", async () => {
     const { getByText } = render(
-      (
-        <WorkflowWindow
-          data={{
-            type: "workflow",
-            viewMode: "full",
-            requirement: "  Ship it  ",
-          }}
-          id="wwin"
-          selected={false}
-        />
-      ) as any,
+      <WorkflowWindow
+        data={{
+          type: "workflow",
+          viewMode: "full",
+          requirement: "  Ship it  ",
+        }}
+        id="wwin"
+        selected={false}
+      />,
       { wrapper: createWrapper() }
     );
 
@@ -174,21 +170,22 @@ describe("WorkflowWindow (start form)", () => {
     });
 
     expect(updateWindowDataMock).toHaveBeenCalledTimes(1);
-    const arg = updateWindowDataMock.mock.calls[0]?.[1] as any;
-    expect(arg.requirement).toBe("Ship it");
-    expect(arg.status).toBe("planning");
-    expect(Array.isArray(arg.messages)).toBe(true);
+    const arg = updateWindowDataMock.mock.calls[0]?.[1];
+    expect(typeof arg).toBe("object");
+    expect(arg).not.toBeNull();
+    const argObj = arg as Record<string, unknown>;
+    expect(argObj.requirement).toBe("Ship it");
+    expect(argObj.status).toBe("planning");
+    expect(Array.isArray(argObj.messages)).toBe(true);
   });
 
   it("clicking Generate Plan triggers form submit", async () => {
     const { getByText } = render(
-      (
-        <WorkflowWindow
-          data={{ type: "workflow", viewMode: "full", requirement: "Do work" }}
-          id="wwin"
-          selected={false}
-        />
-      ) as any,
+      <WorkflowWindow
+        data={{ type: "workflow", viewMode: "full", requirement: "Do work" }}
+        id="wwin"
+        selected={false}
+      />,
       { wrapper: createWrapper() }
     );
 
@@ -198,8 +195,11 @@ describe("WorkflowWindow (start form)", () => {
     });
 
     expect(updateWindowDataMock).toHaveBeenCalledTimes(1);
-    const arg = updateWindowDataMock.mock.calls[0]?.[1] as any;
-    expect(arg.requirement).toBe("Do work");
-    expect(arg.status).toBe("planning");
+    const arg = updateWindowDataMock.mock.calls[0]?.[1];
+    expect(typeof arg).toBe("object");
+    expect(arg).not.toBeNull();
+    const argObj = arg as Record<string, unknown>;
+    expect(argObj.requirement).toBe("Do work");
+    expect(argObj.status).toBe("planning");
   });
 });

@@ -19,12 +19,12 @@ import { Label } from "@/components/ui/label";
 import { useAppForm, useSubmitInvalidFocus } from "@/form";
 import { trpc } from "@/utils/trpc";
 
-type ProfileData = {
+interface ProfileData {
   name: string | null;
   email: string | null;
   avatar: string | null;
   timezone: string | null;
-};
+}
 
 const profileSchema = z.object({
   name: z.string(),
@@ -278,9 +278,9 @@ export function ProfileSection() {
   const { data: profile, isLoading } = trpc.profile.get.useQuery();
 
   const timezoneItems: AutocompleteItem[] = useMemo(() => {
-    const supportedValuesOf = (
-      Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
-    ).supportedValuesOf;
+    const { supportedValuesOf } = Intl as unknown as {
+      supportedValuesOf?: (key: string) => string[];
+    };
     const tz =
       typeof supportedValuesOf === "function"
         ? supportedValuesOf("timeZone")

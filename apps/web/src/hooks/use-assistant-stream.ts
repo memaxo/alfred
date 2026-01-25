@@ -15,24 +15,24 @@ export type AssistantActionStatus =
   | "completed"
   | "error";
 
-export type AssistantAction = {
+export interface AssistantAction {
   id: string;
   name: string;
   args: Record<string, unknown>;
   status: AssistantActionStatus;
   result?: unknown;
   error?: string;
-};
+}
 
-type UseAssistantStreamOptions = {
+interface UseAssistantStreamOptions {
   onError?: (error: Error) => void;
   onResponse?: (response: Response) => void;
   initialMessages?: AssistantUIMessage[];
   initialConversationId?: string | null;
   api?: string;
-};
+}
 
-export type UseAssistantStreamReturn = {
+export interface UseAssistantStreamReturn {
   messages: AssistantUIMessage[];
   actions: AssistantAction[];
   status: string;
@@ -48,7 +48,7 @@ export type UseAssistantStreamReturn = {
     approved: boolean;
     reason?: string;
   }) => void;
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -162,15 +162,15 @@ export function deriveActions(
           error:
             state === "output-denied"
               ? "Denied"
-              : typeof part.errorText === "string"
+              : (typeof part.errorText === "string"
                 ? part.errorText
-                : existing?.error,
+                : existing?.error),
         });
       }
     }
   }
 
-  return Array.from(actionMap.values());
+  return [...actionMap.values()];
 }
 
 export function useAssistantStream(

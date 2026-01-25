@@ -14,7 +14,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export type DataStreamProps = {
+export interface DataStreamProps {
   /** Stream direction */
   direction?: "up" | "down" | "left" | "right";
   /** Number of data particles */
@@ -31,9 +31,9 @@ export type DataStreamProps = {
   className?: string;
   /** Whether stream is active */
   active?: boolean;
-};
+}
 
-type Particle = {
+interface Particle {
   id: number;
   x: number;
   y: number;
@@ -41,9 +41,9 @@ type Particle = {
   speed: number;
   opacity: number;
   char?: string;
-};
+}
 
-const DATA_CHARS = "01アイウエオカキクケコABCDEF∆∇∂∫≈≠".split("");
+const DATA_CHARS = [..."01アイウエオカキクケコABCDEF∆∇∂∫≈≠"];
 
 /**
  * Generate random data character

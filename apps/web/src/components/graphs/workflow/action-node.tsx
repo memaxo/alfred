@@ -11,12 +11,13 @@ import { cn } from "@/lib/utils";
 
 export type WorkflowNodeType = "trigger" | "action" | "condition" | "output";
 
-export type WorkflowNodeData = {
+export interface WorkflowNodeData {
+  [key: string]: unknown;
   label: string;
   type: WorkflowNodeType;
   description?: string;
   config?: Record<string, unknown>;
-};
+}
 
 const typeIcons: Record<WorkflowNodeType, typeof Zap> = {
   trigger: Zap,

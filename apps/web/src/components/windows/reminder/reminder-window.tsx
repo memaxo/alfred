@@ -200,7 +200,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
       }
       removeWindow(id);
       toast.success("Reminder deleted");
-    } catch (_error) {
+    } catch {
       toast.error("Failed to delete reminder");
       setIsDeleting(false);
     }
@@ -281,7 +281,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
           </div>
-        ) : mode === "edit" ? (
+        ) : (mode === "edit" ? (
           <form.AppForm>
             <form
               className="flex flex-col gap-3"
@@ -414,7 +414,7 @@ export function ReminderWindow({ id, data, selected }: NodeProps) {
               )}
             </div>
           </div>
-        )}
+        ))}
       </div>
     </WindowFrame>
   );

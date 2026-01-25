@@ -2,12 +2,12 @@ import { ThumbsDown, ThumbsUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export type CognitiveFeedbackControlsProps = {
+export interface CognitiveFeedbackControlsProps {
   disabled?: boolean;
   onPositive: () => void;
   onNegative: () => void;
   testIdPrefix?: string;
-};
+}
 
 export function CognitiveFeedbackControls({
   disabled,

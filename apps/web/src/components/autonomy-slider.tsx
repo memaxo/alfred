@@ -10,12 +10,12 @@ import { cn } from "@/lib/utils";
 
 export type AutonomyLevel = "read" | "low" | "medium" | "high";
 
-export type AutonomySliderProps = {
+export interface AutonomySliderProps {
   value: AutonomyLevel;
   onChange: (value: AutonomyLevel) => void;
   disabled?: boolean;
   className?: string;
-};
+}
 
 const autonomyLevels: AutonomyLevel[] = ["read", "low", "medium", "high"];
 

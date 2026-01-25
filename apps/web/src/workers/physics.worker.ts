@@ -1,19 +1,19 @@
 // --- Types ---
 
-export type PhysicsNode = {
+export interface PhysicsNode {
   id: string;
   x: number;
   y: number;
   type: string;
   draggable?: boolean;
   isDragging?: boolean;
-};
+}
 
-export type PhysicsEdge = {
+export interface PhysicsEdge {
   id: string;
   source: string;
   target: string;
-};
+}
 
 export type WorkerMessage =
   | { type: "UPDATE_NODES"; nodes: PhysicsNode[]; edges: PhysicsEdge[] }
@@ -22,7 +22,7 @@ export type WorkerMessage =
   | { type: "STOP" }
   | { type: "START" };
 
-export type PhysicsConfig = {
+export interface PhysicsConfig {
   stiffness: number;
   repulsion: number;
   gravity: number;
@@ -31,7 +31,7 @@ export type PhysicsConfig = {
   zoneStrength: number;
   focusId: string | null;
   dt: number; // Time step (unused in simple Verlet, but good for future)
-};
+}
 
 // --- State ---
 
@@ -79,7 +79,7 @@ function tick() {
     return;
   }
 
-  const nodesArray = Array.from(nodes.values());
+  const nodesArray = [...nodes.values()];
   const positions = new Float32Array(nodesArray.length * 2); // [x, y, x, y...]
 
   // Pre-calc focus connections
@@ -111,13 +111,13 @@ function tick() {
       const dy = a.y - b.y;
       const distSq = Math.max(dx * dx + dy * dy, 100);
 
-      let repulsion = config.repulsion;
+      let { repulsion } = config;
       // Boost repulsion if focused and nodes are unrelated
       if (config.focusId) {
         const aRel = a.id === config.focusId || connectedToFocus.has(a.id);
         const bRel = b.id === config.focusId || connectedToFocus.has(b.id);
         if (!(aRel || bRel)) {
-          repulsion *= 3.0;
+          repulsion *= 3;
         }
       }
 

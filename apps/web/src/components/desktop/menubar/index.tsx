@@ -42,9 +42,9 @@ import type { AppMenuAction, AppMenuCategory, AppMenus } from "./types";
 
 import { Clock } from "./clock";
 
-type MenuBarProps = {
+interface MenuBarProps {
   style?: CSSProperties;
-};
+}
 
 export function MenuBar({ style }: MenuBarProps) {
   const {
@@ -263,10 +263,10 @@ function AlfredMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 // APP-SPECIFIC MENUS
 // ─────────────────────────────────────────────────────────────────────────────
 
-type AppMenuBarProps = {
+interface AppMenuBarProps {
   appName: string;
   menus: Partial<Record<AppMenuCategory, AppMenuAction[]>>;
-};
+}
 
 function AppMenuBar({ appName, menus }: AppMenuBarProps) {
   const menuCategories: AppMenuCategory[] = [

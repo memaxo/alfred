@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type VisualSectionProps = {
+export interface VisualSectionProps {
   /** Section title */
   title: string;
   /** Optional description */
@@ -21,7 +21,7 @@ export type VisualSectionProps = {
   children: React.ReactNode;
   /** Additional class name */
   className?: string;
-};
+}
 
 export function VisualSection({
   title,

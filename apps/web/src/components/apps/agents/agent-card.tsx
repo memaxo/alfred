@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 type AgentStatus = "pending" | "spawning" | "running" | "completed" | "failed";
 
-type Agent = {
+interface Agent {
   id: string;
   name: string;
   type: "codex" | "droid" | "claude" | "roo";
@@ -27,14 +27,14 @@ type Agent = {
   wave: number;
   parentId?: string;
   output?: string;
-};
+}
 
-type AgentCardProps = {
+interface AgentCardProps {
   agent: Agent;
   isSelected: boolean;
   onClick: () => void;
   className?: string;
-};
+}
 
 const typeIcons = {
   codex: Terminal,
@@ -112,15 +112,20 @@ export function AgentCard({
 
 function StatusIndicator({ status }: { status: AgentStatus }) {
   switch (status) {
-    case "completed":
+    case "completed": {
       return <CheckCircle className="h-4 w-4 text-green-400" />;
-    case "failed":
+    }
+    case "failed": {
       return <XCircle className="h-4 w-4 text-red-400" />;
-    case "running":
+    }
+    case "running": {
       return <Loader2 className="h-4 w-4 animate-spin text-biolum" />;
-    case "spawning":
+    }
+    case "spawning": {
       return <Loader2 className="h-4 w-4 animate-spin text-yellow-400" />;
-    default:
+    }
+    default: {
       return <div className="h-4 w-4 rounded-full bg-white/20" />;
+    }
   }
 }

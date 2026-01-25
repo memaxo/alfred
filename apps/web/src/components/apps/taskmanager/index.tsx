@@ -32,10 +32,10 @@ import { RunList } from "./run-list";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TaskManagerAppProps = {
+interface TaskManagerAppProps {
   windowId?: string;
   className?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

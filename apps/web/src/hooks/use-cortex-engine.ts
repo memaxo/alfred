@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RenderingCapability = "webgpu" | "webgl" | "canvas2d";
 
-export type UseCortexEngineOptions = {
+export interface UseCortexEngineOptions {
   /** Enable post-processing effects */
   postProcessing?: boolean;
   /** Callback when engine is ready */
@@ -19,16 +19,16 @@ export type UseCortexEngineOptions = {
   onError?: (error: Error) => void;
   /** Auto-start render loop */
   autoStart?: boolean;
-};
+}
 
-export type UseCortexEngineResult = {
+export interface UseCortexEngineResult {
   engine: CortexEngine | null;
   capability: RenderingCapability | null;
   isReady: boolean;
   error: Error | null;
   start: () => void;
   stop: () => void;
-};
+}
 
 /**
  * Hook to manage Cortex WebGPU engine lifecycle
@@ -157,11 +157,12 @@ export function useCortexEngine(
         if (autoStart) {
           cortex.start();
         }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
+      } catch (error) {
+        const errObj =
+          error instanceof Error ? error : new Error(String(error));
+        setError(errObj);
         setIsReady(true);
-        onError?.(error);
+        onError?.(errObj);
       } finally {
         initializingRef.current = false;
       }

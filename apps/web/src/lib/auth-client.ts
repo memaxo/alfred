@@ -13,18 +13,18 @@ const baseClient = createAuthClient({
 });
 
 // Type extension for passkey methods that are expected by the codebase
-type PasskeyMethods = {
+interface PasskeyMethods {
   passkey: {
     addPasskey: (opts?: {
       name?: string;
     }) => Promise<{ data?: unknown; error?: unknown }>;
     listUserPasskeys: () => Promise<{
-      data?: Array<{
+      data?: {
         id: string;
         name?: string | null;
         deviceType?: string | null;
         createdAt?: string | Date | null;
-      }>;
+      }[];
       error?: unknown;
     }>;
     deletePasskey: (opts: {
@@ -41,7 +41,7 @@ type PasskeyMethods = {
       autoFill?: boolean;
     }) => Promise<{ data?: unknown; error?: unknown }>;
   };
-};
+}
 
 export const authClient = installTestAuthClient(
   baseClient as typeof baseClient & PasskeyMethods

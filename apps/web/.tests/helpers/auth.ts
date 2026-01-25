@@ -69,7 +69,7 @@ async function waitForDesktopReady(page: Page): Promise<void> {
     const errorText = await page
       .getByText(/Something went wrong/i)
       .locator("..")
-      .innerText()
+      .textContent()
       .catch(() => null);
     throw new Error(
       `desktop_shell_missing: ${JSON.stringify({ ...debug, errorText })}`
@@ -124,7 +124,7 @@ export async function signUpTestUser(page: Page) {
   }
   let lastConsoleError: string | null = null;
   const consoleErrors: string[] = [];
-  const requestFailures: Array<{ url: string; errorText: string | null }> = [];
+  const requestFailures: { url: string; errorText: string | null }[] = [];
   const nodeModuleRequests: string[] = [];
   let lastPageError: { message: string; stack: string | null } | null = null;
   page.on("console", (msg) => {
@@ -187,7 +187,7 @@ export async function signUpTestUser(page: Page) {
   }
   try {
     await waitForDesktopReady(page);
-  } catch (err) {
+  } catch (error) {
     const suffix = JSON.stringify({
       lastConsoleError,
       consoleErrors,
@@ -195,10 +195,10 @@ export async function signUpTestUser(page: Page) {
       requestFailures,
       nodeModuleRequests,
     });
-    if (err instanceof Error) {
-      err.message = `${err.message}\n\nplaywright_page_errors: ${suffix}`;
+    if (error instanceof Error) {
+      error.message = `${error.message}\n\nplaywright_page_errors: ${suffix}`;
     }
-    throw err;
+    throw error;
   }
   return {
     name: session.user.name,

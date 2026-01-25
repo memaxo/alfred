@@ -3,20 +3,20 @@ import { useState } from "react";
 
 import { BiolumBadge } from "@/components/tremor";
 
-export type WorkflowError = {
+export interface WorkflowError {
   message: string;
   stack?: string;
   context?: Record<string, unknown>;
   timestamp?: string;
   failedStep?: string;
   failedTool?: string;
-};
+}
 
-export type WorkflowErrorPanelProps = {
+export interface WorkflowErrorPanelProps {
   error: WorkflowError;
   runId: string;
   className?: string;
-};
+}
 
 const commonIssues: Record<string, string[]> = {
   timeout: [

@@ -71,8 +71,8 @@ describe("InputArea", () => {
     const input = getByPlaceholderText("Type a message...");
     fireEvent.change(input, { target: { value: "Test message" } });
 
-    const sendButton = Array.from(container.querySelectorAll("button")).find(
-      (btn) => btn.querySelector("svg.lucide-send")
+    const sendButton = [...container.querySelectorAll("button")].find((btn) =>
+      btn.querySelector("svg.lucide-send")
     ) as HTMLButtonElement;
 
     expect(sendButton).toBeTruthy();
@@ -126,8 +126,8 @@ describe("InputArea", () => {
     ) as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: "Test message" } });
 
-    const sendButton = Array.from(container.querySelectorAll("button")).find(
-      (btn) => btn.querySelector("svg.lucide-send")
+    const sendButton = [...container.querySelectorAll("button")].find((btn) =>
+      btn.querySelector("svg.lucide-send")
     ) as HTMLButtonElement;
 
     await waitFor(() => expect(sendButton.disabled).toBe(false));
@@ -152,8 +152,8 @@ describe("InputArea", () => {
     const input = getByPlaceholderText("Type a message...");
     fireEvent.change(input, { target: { value: "Test" } });
 
-    const sendButton = Array.from(container.querySelectorAll("button")).find(
-      (btn) => btn.querySelector("svg.lucide-send")
+    const sendButton = [...container.querySelectorAll("button")].find((btn) =>
+      btn.querySelector("svg.lucide-send")
     ) as HTMLButtonElement;
 
     await waitFor(() => expect(sendButton.disabled).toBe(false));
@@ -172,11 +172,11 @@ describe("InputArea", () => {
     const input = getByPlaceholderText(
       "Type a message..."
     ) as HTMLTextAreaElement;
-    const sendButton = Array.from(container.querySelectorAll("button")).find(
-      (btn) => btn.querySelector("svg.lucide-send")
+    const sendButton = [...container.querySelectorAll("button")].find((btn) =>
+      btn.querySelector("svg.lucide-send")
     ) as HTMLButtonElement;
-    const voiceButton = Array.from(container.querySelectorAll("button")).find(
-      (btn) => btn.querySelector("svg.lucide-mic")
+    const voiceButton = [...container.querySelectorAll("button")].find((btn) =>
+      btn.querySelector("svg.lucide-mic")
     ) as HTMLButtonElement;
 
     expect(input.disabled).toBe(true);
@@ -200,8 +200,8 @@ describe("InputArea", () => {
       const input = getByPlaceholderText("Type a message...");
       fireEvent.change(input, { target: { value: "Test" } });
 
-      const sendButton = Array.from(container.querySelectorAll("button")).find(
-        (btn) => btn.querySelector("svg.lucide-send")
+      const sendButton = [...container.querySelectorAll("button")].find((btn) =>
+        btn.querySelector("svg.lucide-send")
       ) as HTMLButtonElement;
 
       await waitFor(() => expect(sendButton.disabled).toBe(false));
@@ -227,7 +227,7 @@ describe("InputArea", () => {
         />
       );
 
-      const voiceButton = Array.from(container.querySelectorAll("button")).find(
+      const voiceButton = [...container.querySelectorAll("button")].find(
         (btn) => btn.querySelector("svg.lucide-mic")
       ) as HTMLButtonElement;
 

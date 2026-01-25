@@ -11,28 +11,28 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type DiffPanelProps = {
+interface DiffPanelProps {
   prId: string;
   className?: string;
-};
+}
 
-type FileDiff = {
+interface FileDiff {
   path: string;
   additions: number;
   deletions: number;
   hunks: DiffHunk[];
-};
+}
 
-type DiffHunk = {
+interface DiffHunk {
   header: string;
   lines: DiffLine[];
-};
+}
 
-type DiffLine = {
+interface DiffLine {
   type: "context" | "addition" | "deletion";
   content: string;
   lineNumber?: number;
-};
+}
 
 // Mock diff data
 const mockFiles: FileDiff[] = [
@@ -165,17 +165,17 @@ function DiffLineRow({ line }: { line: DiffLine }) {
   const bgColor =
     line.type === "addition"
       ? "bg-green-500/10"
-      : line.type === "deletion"
+      : (line.type === "deletion"
         ? "bg-red-500/10"
-        : "";
+        : "");
   const textColor =
     line.type === "addition"
       ? "text-green-400"
-      : line.type === "deletion"
+      : (line.type === "deletion"
         ? "text-red-400"
-        : "text-biolum-dim";
+        : "text-biolum-dim");
   const prefix =
-    line.type === "addition" ? "+" : line.type === "deletion" ? "-" : " ";
+    line.type === "addition" ? "+" : (line.type === "deletion" ? "-" : " ");
 
   return (
     <div

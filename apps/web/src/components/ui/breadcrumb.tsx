@@ -5,18 +5,18 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
 
-export type BreadcrumbItem = {
+export interface BreadcrumbItem {
   label: string;
   href?: string;
   onClick?: () => void;
-};
+}
 
-export type BreadcrumbProps = {
+export interface BreadcrumbProps {
   items: BreadcrumbItem[];
   separator?: React.ReactNode;
   homeHref?: string;
   className?: string;
-};
+}
 
 export function Breadcrumb({
   items,

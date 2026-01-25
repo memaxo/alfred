@@ -23,7 +23,7 @@ export type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 // WINDOW COMPONENT PROPS — New props interface (no ReactFlow dependency)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type WindowComponentProps = {
+export interface WindowComponentProps {
   /** The complete window instance */
   window: WindowInstance;
 
@@ -48,7 +48,7 @@ export type WindowComponentProps = {
 
   /** Optional className override */
   className?: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LEGACY ADAPTER PROPS — Bridge between old NodeProps and new interface
@@ -86,7 +86,7 @@ export type LegacyWindowComponentType = React.ComponentType<any>;
 /**
  * Window metadata for the registry
  */
-export type WindowMetadata = {
+export interface WindowMetadata {
   /** Human-readable label */
   label: string;
   /** Icon component or string */
@@ -104,15 +104,15 @@ export type WindowMetadata = {
   singleton: boolean;
   /** Window tier for z-ordering priority */
   tier: "primary" | "secondary" | "tertiary";
-};
+}
 
 /**
  * Complete registry entry for a window type
  */
-export type WindowRegistryEntry = {
+export interface WindowRegistryEntry {
   type: WindowType;
   component: WindowComponentType | LegacyWindowComponentType | null;
   metadata: WindowMetadata;
   /** Whether using legacy adapter */
   isLegacy: boolean;
-};
+}
