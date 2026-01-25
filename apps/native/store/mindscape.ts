@@ -7,7 +7,7 @@ import type {
   MindscapeViewport,
 } from "./mindscape.types";
 
-type MindscapeState = {
+interface MindscapeState {
   nodes: MindscapeNode[];
   edges: MindscapeEdge[];
   viewport: MindscapeViewport;
@@ -34,7 +34,7 @@ type MindscapeState = {
     windowType: string;
   }) => string;
   pulseEdge: (edgeId: string) => void;
-};
+}
 
 function clamp(n: number, min: number, max: number) {
   if (n < min) {

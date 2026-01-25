@@ -1,12 +1,14 @@
+import type { ViewStyle } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
+
 import React, { useEffect } from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   withRepeat,
   withSequence,
-  SharedValue,
 } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
 

@@ -46,12 +46,12 @@ export type OrbState =
   | "acting"
   | "error";
 
-export type OrbStateConfig = {
+export interface OrbStateConfig {
   corona: string;
   glow: number;
   pulseSpeed: number;
   particleDirection: "inward" | "outward" | "orbital" | "scatter" | "none";
-};
+}
 
 export const ORB_STATES: Record<OrbState, OrbStateConfig> = {
   dormant: {
@@ -69,7 +69,7 @@ export const ORB_STATES: Record<OrbState, OrbStateConfig> = {
   listening: {
     corona: "#00D9FF",
     glow: 0.7,
-    pulseSpeed: 1.0,
+    pulseSpeed: 1,
     particleDirection: "inward",
   },
   speaking: {
@@ -93,7 +93,7 @@ export const ORB_STATES: Record<OrbState, OrbStateConfig> = {
   error: {
     corona: "#FF3366",
     glow: 0.8,
-    pulseSpeed: 2.0,
+    pulseSpeed: 2,
     particleDirection: "scatter",
   },
 } as const;
@@ -118,7 +118,7 @@ export const ANIMATION = {
   glowBlurRadiusActive: 35,
 
   // Corona ring
-  coronaNoiseScale: 5.0,
+  coronaNoiseScale: 5,
   coronaNoiseSpeed: 0.1,
   coronaWidth: 0.15,
 } as const;

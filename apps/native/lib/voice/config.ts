@@ -16,10 +16,10 @@ const IOS_INTERRUPTION_MODE = {
 
 export type AudioSessionMode = "voice" | "playback" | "carplay";
 
-type AudioSessionConfig = {
+interface AudioSessionConfig {
   mode: AudioSessionMode;
   background: boolean;
-};
+}
 
 let lastAppliedConfig: AudioSessionConfig | null = null;
 

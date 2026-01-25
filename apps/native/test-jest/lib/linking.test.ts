@@ -1,7 +1,7 @@
 import { generateShareLink, parseDeepLink } from "@/lib/linking";
 
 describe("linking utilities", () => {
-  describe("generateShareLink", () => {
+  describe(generateShareLink, () => {
     it("should generate a valid note share link", () => {
       const link = generateShareLink("note", "123");
       expect(link).toContain("https://alfred.app/notes/123");
@@ -13,7 +13,7 @@ describe("linking utilities", () => {
     });
   });
 
-  describe("parseDeepLink", () => {
+  describe(parseDeepLink, () => {
     it("should parse a note deep link", () => {
       const result = parseDeepLink("alfred://notes/123");
       expect(result).toMatchObject({ type: "note", id: "123" });

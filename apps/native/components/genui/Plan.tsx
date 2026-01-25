@@ -167,9 +167,9 @@ function PhaseItem({ phase, index, isLast, onPress, theme }: PhaseItemProps) {
           color={
             phase.status === "active"
               ? "full"
-              : phase.status === "completed"
+              : (phase.status === "completed"
                 ? "standard"
-                : "dim"
+                : "dim")
           }
         >
           {phase.title}
@@ -209,21 +209,24 @@ function getStatusConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (status) {
-    case "pending":
+    case "pending": {
       return {
         bgColor: "transparent",
         borderColor: theme.colors.biolum.faint,
       };
-    case "active":
+    }
+    case "active": {
       return {
         bgColor: theme.colors.glass.active,
         borderColor: theme.colors.biolum.standard,
       };
-    case "completed":
+    }
+    case "completed": {
       return {
         bgColor: "rgba(145, 200, 145, 0.2)",
         borderColor: theme.colors.semantic.success,
       };
+    }
   }
 }
 

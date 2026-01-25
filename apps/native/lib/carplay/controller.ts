@@ -72,7 +72,7 @@ export type CarPlayState =
 
 export type CarPlayMode = "simple" | "orchestrator";
 
-type CarPlayControllerConfig = {
+interface CarPlayControllerConfig {
   /** tRPC client for API calls */
   trpc?: unknown;
   /** Mode: simple (basic voice) or orchestrator (full workflow control) */
@@ -89,7 +89,7 @@ type CarPlayControllerConfig = {
   getCookie?: () => string | null;
   /** Base URL for voice streaming */
   baseUrl?: string | null;
-};
+}
 
 class CarPlayController {
   private state: CarPlayState = "disconnected";
@@ -135,7 +135,7 @@ class CarPlayController {
     // Subscribe to store changes and check for new critical escalations
     let prevEscalationCount = 0;
     useCarPlayStore.subscribe((state) => {
-      const escalations = state.escalations;
+      const { escalations } = state;
       if (escalations.length > prevEscalationCount) {
         const newEscalation = escalations.at(-1);
         if (newEscalation && newEscalation.priority === "critical") {
@@ -448,7 +448,7 @@ class CarPlayController {
       } else {
         await this.processSimpleIntent(transcript);
       }
-    } catch (_error) {
+    } catch {
       playErrorCue();
       this.showError("Failed to process your request. Please try again.");
     }
@@ -537,24 +537,28 @@ class CarPlayController {
         break;
       }
 
-      case "navigation":
+      case "navigation": {
         await this.handleNavigation(intent.target);
         break;
+      }
 
-      case "help":
+      case "help": {
         await this.showResponse(getHelpText());
         break;
+      }
 
-      case "new_task":
+      case "new_task": {
         // For now, acknowledge and suggest using the app
         await this.showResponse(
           `I heard: "${intent.requirement}". Creating new tasks via voice is coming soon. Please use the app for now.`
         );
         break;
-      default:
+      }
+      default: {
         // Fall back to simple mode for conversational
         await this.processSimpleIntent(transcript);
         break;
+      }
     }
   }
 
@@ -562,30 +566,36 @@ class CarPlayController {
     CarPlay.dismissTemplate(); // Dismiss voice template
 
     switch (target) {
-      case "status":
+      case "status": {
         this.currentTab = 0;
         this.doRefreshDashboard();
         await this.speak("Showing workflow status.");
         break;
-      case "decisions":
+      }
+      case "decisions": {
         this.currentTab = 1;
         this.doRefreshDashboard();
         await this.speak("Showing decision queue.");
         break;
-      case "prs":
+      }
+      case "prs": {
         this.currentTab = 2;
         this.doRefreshDashboard();
         await this.speak("Showing pull requests.");
         break;
-      case "voice":
+      }
+      case "voice": {
         this.startVoiceInteraction();
         break;
-      case "back":
+      }
+      case "back": {
         CarPlay.popTemplate();
         break;
-      case "home":
+      }
+      case "home": {
         CarPlay.popToRootTemplate();
         break;
+      }
     }
 
     this.setState("connected");
@@ -740,9 +750,7 @@ class CarPlayController {
   };
 
   private readonly handleAudioInterruption = (began: boolean): void => {
-    if (began) {
-    } else {
-    }
+    if (began) {} else {}
   };
 
   // ============================================================================

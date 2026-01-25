@@ -2,7 +2,7 @@ import { Orb } from "@/components/orb/orb";
 
 import { renderWithProviders } from "../../utils/test-helpers";
 
-describe("Orb", () => {
+describe(Orb, () => {
   it("should render correctly", () => {
     // Skia is mocked in setup.ts
     const { getByTestId } = renderWithProviders(

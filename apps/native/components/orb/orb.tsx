@@ -30,7 +30,7 @@ import { LiquidSurface } from "./layers/surface";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type OrbProps = {
+export interface OrbProps {
   /** Current orb state */
   state: OrbState;
   /** Input volume from VAD (0-1) */
@@ -45,7 +45,7 @@ export type OrbProps = {
   onPress?: () => void;
   /** Test ID for testing */
   testID?: string;
-};
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

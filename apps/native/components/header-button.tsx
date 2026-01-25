@@ -6,10 +6,10 @@ import { Pressable } from "react-native";
 const HEADER_ICON_SIZE = 20;
 const HEADER_PRESSED_OPACITY = 0.7;
 
-type HeaderButtonProps = {
+interface HeaderButtonProps {
   onPress?: () => void;
   pressableRef?: ComponentProps<typeof Pressable>["ref"];
-};
+}
 
 export function HeaderButton({ onPress, pressableRef }: HeaderButtonProps) {
   return (

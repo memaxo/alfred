@@ -22,7 +22,7 @@ import { ANIMATION, ORB_STATES, type OrbState } from "../constants";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type ParticleFieldProps = {
+interface ParticleFieldProps {
   /** Center point of the field */
   center: SkPoint;
   /** Outer radius of the particle field */
@@ -37,16 +37,16 @@ type ParticleFieldProps = {
   particleCount: number;
   /** Maximum number of connection lines (for performance) */
   maxConnections?: number;
-};
+}
 
-type Particle = {
+interface Particle {
   id: number;
   baseAngle: number;
   baseRadius: number;
   size: number;
   speed: number;
   phase: number;
-};
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ export function ParticleField({
   );
 
   const stateConfig = ORB_STATES[state];
-  const particleDirection = stateConfig.particleDirection;
+  const { particleDirection } = stateConfig;
 
   // Calculate particle positions based on time and state
   const particlePositions = useDerivedValue(() => {
@@ -109,33 +109,38 @@ export function ParticleField({
 
       // Apply state-based movement
       switch (particleDirection) {
-        case "inward":
+        case "inward": {
           // Particles drift toward center
           r *= 0.7 + 0.3 * (1 - vol);
           angle += t * particle.speed * 0.3;
           break;
+        }
 
-        case "outward":
+        case "outward": {
           // Particles push outward
           r *= 1 + vol * 0.3;
           angle += t * particle.speed * 0.5;
           break;
+        }
 
-        case "orbital":
+        case "orbital": {
           // Gentle orbital motion
           angle += t * particle.speed * 0.2;
           r += Math.sin(t * particle.speed + particle.phase) * 10;
           break;
+        }
 
-        case "scatter":
+        case "scatter": {
           // Chaotic scatter
           angle += Math.sin(t * 3 + particle.phase) * 0.5;
           r += Math.sin(t * 5 + particle.phase) * 20;
           break;
-        default:
+        }
+        default: {
           // Minimal drift
           angle += t * particle.speed * 0.05;
           break;
+        }
       }
 
       // Convert polar to cartesian

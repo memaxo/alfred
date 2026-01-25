@@ -45,7 +45,9 @@ export async function markAttempted(id: string, error?: string): Promise<void> {
     .where(eq(syncQueue.id, id))
     .limit(1);
 
-  if (item.length === 0) return;
+  if (item.length === 0) {
+    return;
+  }
 
   const newAttempts = (item[0].attempts ?? 0) + 1;
 

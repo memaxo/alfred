@@ -15,12 +15,12 @@ import { ALFRED_COLORS } from "../constants";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type CoreVoidProps = {
+interface CoreVoidProps {
   /** Center point of the void */
   center: SkPoint;
   /** Radius of the void */
   radius: number;
-};
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

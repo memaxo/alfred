@@ -58,8 +58,12 @@ export function ToolCallCard({
   }));
 
   const formatValue = (value: unknown): string => {
-    if (value === undefined || value === null) return "";
-    if (typeof value === "string") return value;
+    if (value === undefined || value === null) {
+      return "";
+    }
+    if (typeof value === "string") {
+      return value;
+    }
     try {
       return JSON.stringify(value, null, 2);
     } catch {
@@ -139,7 +143,7 @@ function StateIcon({
   theme: ReturnType<typeof useVoidTheme>;
 }) {
   switch (state) {
-    case "pending":
+    case "pending": {
       return (
         <Ionicons
           name="time-outline"
@@ -147,11 +151,13 @@ function StateIcon({
           color={theme.colors.biolum.faint}
         />
       );
-    case "running":
+    }
+    case "running": {
       return (
         <Ionicons name="sync" size={16} color={theme.colors.biolum.standard} />
       );
-    case "success":
+    }
+    case "success": {
       return (
         <Ionicons
           name="checkmark-circle"
@@ -159,7 +165,8 @@ function StateIcon({
           color={theme.colors.semantic.success}
         />
       );
-    case "error":
+    }
+    case "error": {
       return (
         <Ionicons
           name="alert-circle"
@@ -167,6 +174,7 @@ function StateIcon({
           color={theme.colors.semantic.error}
         />
       );
+    }
   }
 }
 
@@ -175,30 +183,34 @@ function getStateConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (state) {
-    case "pending":
+    case "pending": {
       return {
         borderColor: theme.colors.biolum.faint,
         badgeBackground: theme.colors.glass.surface,
         badgeTextColor: "faint" as const,
       };
-    case "running":
+    }
+    case "running": {
       return {
         borderColor: theme.colors.biolum.standard,
         badgeBackground: theme.colors.glass.hover,
         badgeTextColor: "standard" as const,
       };
-    case "success":
+    }
+    case "success": {
       return {
         borderColor: theme.colors.semantic.success,
         badgeBackground: "rgba(145, 200, 145, 0.15)",
         badgeTextColor: "bright" as const,
       };
-    case "error":
+    }
+    case "error": {
       return {
         borderColor: theme.colors.semantic.error,
         badgeBackground: "rgba(200, 145, 145, 0.15)",
         badgeTextColor: "faint" as const,
       };
+    }
   }
 }
 

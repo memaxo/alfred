@@ -6,23 +6,40 @@ const writtenFiles: string[] = [];
 const savedFiles = new Map<string, string>();
 
 // Mock AsyncStorage
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  getItem: jest.fn(async (key: string) => mockStorage.get(key) ?? null),
-  setItem: jest.fn((key: string, value: string) => {
-    mockStorage.set(key, value);
-    return Promise.resolve();
-  }),
-  removeItem: jest.fn((key: string) => {
-    mockStorage.delete(key);
-    return Promise.resolve();
-  }),
-}));
+jest.mock<typeof import("@react-native-async-storage/async-storage")>(
+  "@react-native-async-storage/async-storage",
+  () => {
+    const storage = {
+      getItem: jest.fn(async (key: string) => mockStorage.get(key) ?? null),
+      setItem: jest.fn((key: string, value: string) => {
+        mockStorage.set(key, value);
+        return Promise.resolve();
+      }),
+      removeItem: jest.fn((key: string) => {
+        mockStorage.delete(key);
+        return Promise.resolve();
+      }),
+    };
+
+    return {
+      __esModule: true,
+      default: storage,
+      AsyncStorage: storage,
+      useAsyncStorage: () => storage,
+      ...storage,
+    } as any;
+  }
+);
 
 // Mock react-native
-jest.mock("react-native", () => ({
-  Platform: { OS: "ios" },
-  NativeModules: {},
-}));
+jest.mock<typeof import("react-native")>(
+  "react-native",
+  () =>
+    ({
+      Platform: { OS: "ios" },
+      NativeModules: {},
+    }) as any
+);
 
 class MockSound {
   private onUpdate:
@@ -57,13 +74,17 @@ const mockCreateAsync = jest.fn(({ uri }: { uri: string }) => {
   return Promise.resolve({ sound: new MockSound(uri) });
 });
 
-jest.mock("expo-av", () => ({
-  Audio: {
-    Sound: {
-      createAsync: jest.fn((...args: any[]) => mockCreateAsync(args[0])),
-    },
-  },
-}));
+jest.mock<typeof import("expo-av")>(
+  "expo-av",
+  () =>
+    ({
+      Audio: {
+        Sound: {
+          createAsync: jest.fn((...args: any[]) => mockCreateAsync(args[0])),
+        },
+      },
+    }) as any
+);
 
 const mockWriteAsStringAsync = jest.fn(
   (uri: string, data: string, _options?: unknown) => {
@@ -77,23 +98,38 @@ const mockDeleteAsync = jest.fn((uri: string) => {
   return Promise.resolve();
 });
 
-jest.mock("expo-file-system", () => ({
-  cacheDirectory: "/tmp/",
-  documentDirectory: "/tmp/doc/",
-  EncodingType: { Base64: "base64" },
-  writeAsStringAsync: jest.fn((...args: any[]) =>
-    mockWriteAsStringAsync(args[0], args[1], args[2])
-  ),
-  deleteAsync: jest.fn((...args: any[]) => mockDeleteAsync(args[0])),
-}));
+jest.mock<typeof import("expo-file-system")>(
+  "expo-file-system",
+  () =>
+    ({
+      cacheDirectory: "/tmp/",
+      documentDirectory: "/tmp/doc/",
+      EncodingType: { Base64: "base64" },
+      writeAsStringAsync: jest.fn((...args: any[]) =>
+        mockWriteAsStringAsync(args[0], args[1], args[2])
+      ),
+      deleteAsync: jest.fn((...args: any[]) => mockDeleteAsync(args[0])),
+    }) as any
+);
 
 const mockConfigureAudioSession = jest.fn(async () => {});
 
-jest.mock("../lib/voice/config", () => ({
-  configureAudioSession: jest.fn((..._args: any[]) =>
-    mockConfigureAudioSession()
-  ),
-}));
+jest.mock<typeof import("../lib/voice/config")>(
+  "../lib/voice/config",
+  () =>
+    ({
+      configureAudioSession: jest.fn((..._args: any[]) =>
+        mockConfigureAudioSession()
+      ),
+      resetAudioSession: jest.fn(),
+      supportsBackgroundAudio: jest.fn(() => false),
+      getAudioConfigHints: jest.fn(() => ({
+        allowBluetooth: true,
+        allowAirPlay: true,
+        allowRecording: true,
+      })),
+    }) as any
+);
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -153,8 +189,8 @@ describe("native voice queue + playback", () => {
       return Promise.resolve();
     });
 
-    expect(order).toEqual(["stt", "tts", "s2s"]);
-    expect(await queueModule.getQueueSize()).toBe(0);
+    expect(order).toStrictEqual(["stt", "tts", "s2s"]);
+    await expect(queueModule.getQueueSize()).resolves.toBe(0);
   });
 
   it("preserves audio payloads when retries are scheduled", async () => {

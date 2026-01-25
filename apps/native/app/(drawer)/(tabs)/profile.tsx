@@ -27,12 +27,12 @@ import { useVoidTheme } from "@/hooks/use-void-theme";
 import { useAuthClient } from "@/lib/auth-client";
 import { queryClient, trpc } from "@/utils/trpc";
 
-type Passkey = {
+interface Passkey {
   id: string;
   name: string | null;
   deviceType?: string;
   createdAt?: string;
-};
+}
 
 export default function ProfileTab() {
   const theme = useVoidTheme();
@@ -72,10 +72,10 @@ export default function ProfileTab() {
         Alert.alert("Success", "Passkey added successfully");
         loadPasskeys();
       }
-    } catch (err) {
+    } catch (error) {
       Alert.alert(
         "Error",
-        err instanceof Error ? err.message : "Failed to add passkey"
+        error instanceof Error ? error.message : "Failed to add passkey"
       );
     } finally {
       setIsAddingPasskey(false);
@@ -95,10 +95,12 @@ export default function ProfileTab() {
             try {
               await authClient.passkey.deletePasskey({ id: passkeyId });
               loadPasskeys();
-            } catch (err) {
+            } catch (error) {
               Alert.alert(
                 "Error",
-                err instanceof Error ? err.message : "Failed to delete passkey"
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete passkey"
               );
             }
           },
@@ -128,7 +130,9 @@ export default function ProfileTab() {
 
   const currentVoice = (() => {
     const pref = preferenceQuery.data?.find((p) => p.key === "voice.tts");
-    if (!pref?.value) return;
+    if (!pref?.value) {
+      return;
+    }
     if (typeof pref.value === "string") {
       try {
         if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
@@ -146,7 +150,9 @@ export default function ProfileTab() {
     const pref = preferenceQuery.data?.find(
       (p) => p.key === "voice.stt.language"
     );
-    if (!pref?.value) return;
+    if (!pref?.value) {
+      return;
+    }
     if (typeof pref.value === "string") {
       try {
         if (pref.value.startsWith('"') && pref.value.endsWith('"')) {

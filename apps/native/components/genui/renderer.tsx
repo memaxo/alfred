@@ -56,7 +56,9 @@ function renderUIComponent(
   }
 
   const Component = getGenUIComponent(component);
-  if (!Component) return null;
+  if (!Component) {
+    return null;
+  }
 
   // Handle children if present
   const renderedChildren = children?.map((child, index) =>

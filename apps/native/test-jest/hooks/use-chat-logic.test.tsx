@@ -1,19 +1,48 @@
 import { act, renderHook } from "@testing-library/react-native";
 
-jest.mock("@ai-sdk/react", () => ({ useChat: jest.fn() }));
-jest.mock("@/lib/voice/session", () => ({ useVoiceSessionNative: jest.fn() }));
-
-jest.mock("@/lib/auth-client", () => ({
-  useAuthClient: () => ({
-    useSession: () => ({ data: null }),
-    getCookie: () => "",
-  }),
+jest.mock<typeof import("@ai-sdk/react")>(
+  "@ai-sdk/react",
+  () =>
+    ({
+      Chat: () => null,
+      experimental_useObject: jest.fn(),
+      useChat: jest.fn(),
+      useCompletion: jest.fn(),
+    }) as unknown as typeof import("@ai-sdk/react")
+);
+jest.mock<typeof import("@/lib/voice/session")>("@/lib/voice/session", () => ({
+  useVoiceSessionNative: jest.fn(),
 }));
 
-jest.mock("@/lib/api", () => ({
-  useServerUrl: () => ({ serverUrl: "https://example.com" }),
-  useTrpcClient: () => ({}),
-}));
+jest.mock<typeof import("@/lib/auth-client")>(
+  "@/lib/auth-client",
+  () =>
+    ({
+      useAuthClient: () => ({
+        useSession: () => ({ data: null }),
+        getCookie: () => "",
+        deleteUser: { callback: jest.fn() },
+      }),
+    }) as unknown as typeof import("@/lib/auth-client")
+);
+
+jest.mock<typeof import("@/lib/api")>(
+  "@/lib/api",
+  () =>
+    ({
+      ApiProvider: () => null,
+      useApiContext: () => {
+        throw new Error("useApiContext_unexpected_in_test");
+      },
+      useAuthClient: () => ({
+        useSession: () => ({ data: null }),
+        getCookie: () => "",
+        deleteUser: { callback: jest.fn() },
+      }),
+      useServerUrl: () => ({ serverUrl: "https://example.com" }),
+      useTrpcClient: () => ({}),
+    }) as unknown as typeof import("@/lib/api")
+);
 
 const { useChat: useChatAi } = require("@ai-sdk/react") as {
   useChat: jest.Mock;
@@ -28,7 +57,7 @@ const { useChatLogic } = require("@/hooks/use-chat-logic") as {
   useChatLogic: typeof UseChatLogic;
 };
 
-type VoiceStreamMock = {
+interface VoiceStreamMock {
   status:
     | "idle"
     | "connecting"
@@ -39,7 +68,7 @@ type VoiceStreamMock = {
   transcript: string;
   start: () => Promise<void>;
   stop: () => Promise<void>;
-};
+}
 
 describe("useChatLogic", () => {
   beforeEach(() => {
@@ -67,8 +96,8 @@ describe("useChatLogic", () => {
   it("should initialize with default values", () => {
     const { result } = renderHook(() => useChatLogic());
 
-    expect(result.current.messages).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.messages).toStrictEqual([]);
+    expect(result.current.isLoading).toBeFalsy();
     expect(result.current.currentAgent).toBe("assistant");
   });
 
@@ -90,7 +119,7 @@ describe("useChatLogic", () => {
       result.current.setAgent("orchestrator");
     });
 
-    expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledOnce();
     expect(result.current.currentAgent).toBe("orchestrator");
     expect(useChatAi).toHaveBeenLastCalledWith(
       expect.objectContaining({ id: "chat-orchestrator" })
@@ -152,11 +181,11 @@ describe("useChatLogic", () => {
     rerender({ tick: 1 });
 
     expect(sendMessage).toHaveBeenCalledWith({ text: "hello from voice" });
-    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledOnce();
 
     // Re-rendering while still idle should not send again.
     rerender({ tick: 2 });
-    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledOnce();
 
     // Leaving idle should reset the guard so the next idle cycle sends again.
     act(() => {

@@ -9,10 +9,10 @@ import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 
 export type AudioState = "idle" | "listening" | "speaking" | "interrupted";
 
-type AudioSessionConfig = {
+interface AudioSessionConfig {
   onInterruption?: (began: boolean) => void;
   onBargeIn?: () => void;
-};
+}
 
 class CarPlayAudioSession {
   private currentState: AudioState = "idle";

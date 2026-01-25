@@ -70,12 +70,15 @@ export function useBreathing({
 
 function getIntensityConfig(intensity: "subtle" | "normal" | "strong") {
   switch (intensity) {
-    case "subtle":
+    case "subtle": {
       return { scale: 1.01, opacity: 0.9 };
-    case "normal":
+    }
+    case "normal": {
       return { scale: 1.03, opacity: 0.85 };
-    case "strong":
+    }
+    case "strong": {
       return { scale: 1.05, opacity: 0.8 };
+    }
   }
 }
 

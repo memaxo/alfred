@@ -17,9 +17,9 @@ import {
 } from "@alfred/ui/chat";
 import { Text, View } from "react-native";
 
-export type MessageBubbleProps = {
+export interface MessageBubbleProps {
   message: UIMessage;
-};
+}
 
 function formatStructured(value: unknown): string {
   if (typeof value === "string") {

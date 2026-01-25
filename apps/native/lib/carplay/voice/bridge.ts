@@ -25,7 +25,7 @@ export type CarPlayVoiceStatus =
   | "speaking"
   | "error";
 
-export type CarPlayVoiceBridgeConfig = {
+export interface CarPlayVoiceBridgeConfig {
   /** Base URL for voice streaming (optional) */
   baseUrl?: string | null;
   /** Cookie accessor for authenticated WebSocket */
@@ -38,9 +38,9 @@ export type CarPlayVoiceBridgeConfig = {
   onStatusChange?: (status: CarPlayVoiceStatus) => void;
   /** Callback on error */
   onError?: (error: string) => void;
-};
+}
 
-export type CarPlayVoiceBridge = {
+export interface CarPlayVoiceBridge {
   /** Current voice status */
   status: CarPlayVoiceStatus;
   /** Current transcript (partial or final) */
@@ -63,7 +63,7 @@ export type CarPlayVoiceBridge = {
   toggleMute: () => boolean;
   /** Access to underlying voice session */
   session: ReturnType<typeof useVoiceSessionNative>;
-};
+}
 
 const CARPLAY_SURFACE: VoiceSessionSurface = "carplay";
 
@@ -96,20 +96,25 @@ export function useCarPlayVoice(
 
     switch (streamStatus) {
       case "connecting":
-      case "recording":
+      case "recording": {
         newStatus = "listening";
         break;
-      case "processing":
+      }
+      case "processing": {
         newStatus = "processing";
         break;
-      case "playing":
+      }
+      case "playing": {
         newStatus = "speaking";
         break;
-      case "error":
+      }
+      case "error": {
         newStatus = "error";
         break;
-      default:
+      }
+      default: {
         newStatus = "idle";
+      }
     }
 
     setStatus(newStatus);
@@ -142,7 +147,7 @@ export function useCarPlayVoice(
 
   // Track errors
   useEffect(() => {
-    const error = voiceSession.stream.error;
+    const { error } = voiceSession.stream;
     if (error) {
       config?.onError?.(error);
     }

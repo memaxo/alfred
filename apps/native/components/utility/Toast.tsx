@@ -120,34 +120,38 @@ function getTypeConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (type) {
-    case "success":
+    case "success": {
       return {
         icon: "checkmark-circle" as const,
         iconColor: theme.colors.semantic.success,
         indicatorColor: theme.colors.semantic.success,
         borderColor: "rgba(145, 200, 145, 0.3)",
       };
-    case "warning":
+    }
+    case "warning": {
       return {
         icon: "warning" as const,
         iconColor: theme.colors.semantic.warning,
         indicatorColor: theme.colors.semantic.warning,
         borderColor: "rgba(200, 180, 145, 0.3)",
       };
-    case "error":
+    }
+    case "error": {
       return {
         icon: "alert-circle" as const,
         iconColor: theme.colors.semantic.error,
         indicatorColor: theme.colors.semantic.error,
         borderColor: "rgba(200, 145, 145, 0.3)",
       };
-    default:
+    }
+    default: {
       return {
         icon: "information-circle" as const,
         iconColor: theme.colors.semantic.info,
         indicatorColor: theme.colors.semantic.info,
         borderColor: "rgba(145, 170, 200, 0.3)",
       };
+    }
   }
 }
 

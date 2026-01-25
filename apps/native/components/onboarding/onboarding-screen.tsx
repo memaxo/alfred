@@ -18,12 +18,12 @@ import { haptics } from "@/lib/haptics";
 
 const { width } = Dimensions.get("window");
 
-type OnboardingSlide = {
+interface OnboardingSlide {
   title: string;
   description: string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
-};
+}
 
 const slides: OnboardingSlide[] = [
   {

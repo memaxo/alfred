@@ -185,20 +185,26 @@ export function ReviewCard({
   const getReviewSummary = () => {
     const { subjectData, reviewType } = review;
     switch (reviewType) {
-      case "tool_execution":
+      case "tool_execution": {
         return subjectData.toolName || "Tool Execution";
-      case "message":
+      }
+      case "message": {
         return subjectData.messageContent?.slice(0, 50) || "Message";
-      case "memory":
+      }
+      case "memory": {
         return subjectData.memoryFact || "Memory";
-      case "workflow":
+      }
+      case "workflow": {
         return subjectData.workflowDecision || "Workflow";
-      case "code":
+      }
+      case "code": {
         return (
           subjectData.prTitle || `PR #${subjectData.prNumber}` || "Code Review"
         );
-      default:
+      }
+      default: {
         return "Review";
+      }
     }
   };
 
@@ -345,9 +351,15 @@ function formatRelativeTime(date: Date): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
+  if (minutes < 1) {
+    return "just now";
+  }
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
   return `${days}d ago`;
 }
 

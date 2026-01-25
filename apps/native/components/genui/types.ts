@@ -17,7 +17,7 @@ export interface ChartSchema extends GenUIBaseSchema {
   component: "chart";
   props: {
     type?: "line" | "bar" | "area";
-    data: Array<{ x: number | string; y: number; label?: string }>;
+    data: { x: number | string; y: number; label?: string }[];
     xLabel?: string;
     yLabel?: string;
     title?: string;
@@ -28,12 +28,12 @@ export interface ChartSchema extends GenUIBaseSchema {
 export interface GridSchema extends GenUIBaseSchema {
   component: "grid";
   props: {
-    columns: Array<{
+    columns: {
       key: string;
       header: string;
       width?: number;
-    }>;
-    data: Array<Record<string, unknown>>;
+    }[];
+    data: Record<string, unknown>[];
     showHeader?: boolean;
     striped?: boolean;
   };
@@ -43,13 +43,13 @@ export interface GridSchema extends GenUIBaseSchema {
 export interface ListSchema extends GenUIBaseSchema {
   component: "list";
   props: {
-    items: Array<{
+    items: {
       id: string;
       title: string;
       subtitle?: string;
       icon?: string;
       onPress?: () => void;
-    }>;
+    }[];
     showSeparators?: boolean;
   };
 }
@@ -84,13 +84,13 @@ export interface ProgressSchema extends GenUIBaseSchema {
 export interface TimelineSchema extends GenUIBaseSchema {
   component: "timeline";
   props: {
-    phases: Array<{
+    phases: {
       id: string;
       title: string;
       description?: string;
       status: "pending" | "active" | "completed" | "error";
       timestamp?: string;
-    }>;
+    }[];
     showConnectors?: boolean;
   };
 }
@@ -125,16 +125,16 @@ export interface PlanSchema extends GenUIBaseSchema {
   component: "plan";
   props: {
     title: string;
-    phases: Array<{
+    phases: {
       id: string;
       name: string;
-      tasks: Array<{
+      tasks: {
         id: string;
         title: string;
         completed: boolean;
-      }>;
+      }[];
       progress: number;
-    }>;
+    }[];
     totalProgress: number;
   };
 }
@@ -155,7 +155,7 @@ export interface MatrixSchema extends GenUIBaseSchema {
   props: {
     rows: number;
     cols: number;
-    data: Array<Array<string | number>>;
+    data: (string | number)[][];
     rowHeaders?: string[];
     colHeaders?: string[];
   };
@@ -176,12 +176,12 @@ export interface CiteSchema extends GenUIBaseSchema {
 export interface BranchSchema extends GenUIBaseSchema {
   component: "branch";
   props: {
-    branches: Array<{
+    branches: {
       id: string;
       label: string;
       preview?: string;
       timestamp?: string;
-    }>;
+    }[];
     currentBranchId?: string;
   };
 }
@@ -191,10 +191,10 @@ export interface SelectSchema extends GenUIBaseSchema {
   component: "select";
   props: {
     label: string;
-    options: Array<{
+    options: {
       value: string;
       label: string;
-    }>;
+    }[];
     value?: string;
     placeholder?: string;
   };

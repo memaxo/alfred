@@ -8,16 +8,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
-type Props = {
+interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
-};
+}
 
-type State = {
+interface State {
   hasError: boolean;
   error: Error | null;
-};
+}
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {

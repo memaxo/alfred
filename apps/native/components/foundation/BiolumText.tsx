@@ -1,5 +1,7 @@
+import type { TextStyle } from "react-native";
+
 import React from "react";
-import { Text, TextStyle, StyleSheet } from "react-native";
+import { Text, StyleSheet } from "react-native";
 
 import type {
   TypographyCategory,

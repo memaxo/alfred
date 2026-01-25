@@ -95,8 +95,9 @@ export function speakWorkflowUpdate(
   const name = truncateForSpeech(workflow.requirement, 8);
 
   switch (event) {
-    case "started":
+    case "started": {
       return `Starting workflow: ${name}.`;
+    }
     case "progress": {
       const progressText = `${name} is ${workflow.progress}% complete.`;
       const taskText = workflow.currentTask
@@ -104,14 +105,18 @@ export function speakWorkflowUpdate(
         : "";
       return `${progressText} ${taskText}`.trim();
     }
-    case "completed":
+    case "completed": {
       return `Workflow complete: ${name}. ${workflow.completedTasks} ${pluralize("task", workflow.completedTasks)} finished.`;
-    case "failed":
+    }
+    case "failed": {
       return `Workflow failed: ${name}. Check the app for details.`;
-    case "paused":
+    }
+    case "paused": {
       return `Workflow paused: ${name}. Say resume when ready.`;
-    default:
+    }
+    default: {
       return `${name}: ${event}.`;
+    }
   }
 }
 
@@ -124,15 +129,18 @@ export function speakPRSummary(pr: PullRequest): string {
 
   let ciStatus = "";
   switch (pr.ciStatus) {
-    case "success":
+    case "success": {
       ciStatus = "CI passing.";
       break;
-    case "failure":
+    }
+    case "failure": {
       ciStatus = "CI failing.";
       break;
-    case "pending":
+    }
+    case "pending": {
       ciStatus = "CI running.";
       break;
+    }
   }
 
   const prompt = "Say approve to merge, or defer to review later.";
@@ -156,12 +164,14 @@ export function speakPlanSummary(plan: ExecPlan): string {
 
   let risk = "";
   switch (plan.riskLevel) {
-    case "high":
+    case "high": {
       risk = "High risk.";
       break;
-    case "medium":
+    }
+    case "medium": {
       risk = "Medium risk.";
       break;
+    }
   }
 
   const prompt = "Say approve to start, modify to adjust scope, or reject.";
@@ -254,20 +264,27 @@ export function speakConfirmation(
   const contextStr = context ? ` ${truncateForSpeech(context, 6)}` : "";
 
   switch (action) {
-    case "approved":
+    case "approved": {
       return `Approved${contextStr}. Proceeding.`;
-    case "rejected":
+    }
+    case "rejected": {
       return `Rejected${contextStr}.`;
-    case "deferred":
+    }
+    case "deferred": {
       return `Deferred${contextStr}. I'll remind you later.`;
-    case "paused":
+    }
+    case "paused": {
       return `Paused${contextStr}. Say resume when ready.`;
-    case "resumed":
+    }
+    case "resumed": {
       return `Resuming${contextStr}.`;
-    case "cancelled":
+    }
+    case "cancelled": {
       return `Cancelled${contextStr}.`;
-    default:
+    }
+    default: {
       return "Done.";
+    }
   }
 }
 

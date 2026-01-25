@@ -186,7 +186,7 @@ export function PrReviewWindow({ window: _window }: WindowComponentProps) {
             <TouchableOpacity
               className="mt-2 self-start rounded-md bg-secondary px-3 py-2"
               onPress={() => {
-                const url = (prQuery.data as any).url;
+                const { url } = prQuery.data as any;
                 if (typeof url === "string" && url.length > 0) {
                   void Linking.openURL(url).catch(() => {});
                 }

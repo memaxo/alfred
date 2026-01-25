@@ -197,30 +197,34 @@ function getStatusConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (status) {
-    case "pending":
+    case "pending": {
       return {
         label: "To Do",
         badgeBg: theme.colors.glass.surface,
         checkboxBorder: theme.colors.biolum.faint,
       };
-    case "in_progress":
+    }
+    case "in_progress": {
       return {
         label: "In Progress",
         badgeBg: theme.colors.glass.hover,
         checkboxBorder: theme.colors.biolum.standard,
       };
-    case "completed":
+    }
+    case "completed": {
       return {
         label: "Done",
         badgeBg: "rgba(145, 200, 145, 0.2)",
         checkboxBorder: theme.colors.semantic.success,
       };
-    case "blocked":
+    }
+    case "blocked": {
       return {
         label: "Blocked",
         badgeBg: "rgba(200, 145, 145, 0.2)",
         checkboxBorder: theme.colors.semantic.error,
       };
+    }
   }
 }
 

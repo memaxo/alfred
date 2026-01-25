@@ -61,7 +61,9 @@ function BranchNodeItem({
   const reduceMotion = useReducedMotion();
   const hasChildren = node.children && node.children.length > 0;
 
-  if (depth >= maxDepth) return null;
+  if (depth >= maxDepth) {
+    return null;
+  }
 
   return (
     <View style={styles.nodeContainer}>

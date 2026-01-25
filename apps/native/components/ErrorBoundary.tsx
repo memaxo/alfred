@@ -1,4 +1,6 @@
-import React, { Component, ReactNode } from "react";
+import type { ReactNode } from "react";
+
+import React, { Component } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { VoidContainer } from "./foundation/VoidContainer";

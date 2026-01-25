@@ -13,7 +13,7 @@ export function logError(scope: string, error: unknown): void {
 
   let message: string;
   if (error instanceof Error) {
-    message = error.message;
+    ({ message } = error);
   } else if (typeof error === "string") {
     message = error;
   } else {

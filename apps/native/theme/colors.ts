@@ -10,7 +10,7 @@ export function oklchToRgb(l: number, c: number, h: number): string {
 
 export const VOID_PALETTE = {
   void: {
-    absolute: oklchToRgb(0.0, 0, 0), // #000000 - True black
+    absolute: oklchToRgb(0, 0, 0), // #000000 - True black
     deep: oklchToRgb(0.05, 0, 0), // #0a0a0a - Primary background
     surface: oklchToRgb(0.1, 0, 0), // #171717 - Elevated surface
     raised: oklchToRgb(0.14, 0, 0), // #212121 - Cards, modals

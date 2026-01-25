@@ -50,12 +50,15 @@ export function TodosWindow({ window }: WindowComponentProps) {
   const tasks = query.data ?? [];
   const filtered = useMemo(() => {
     switch (filter) {
-      case "active":
+      case "active": {
         return tasks.filter((t) => t.status !== "completed");
-      case "completed":
+      }
+      case "completed": {
         return tasks.filter((t) => t.status === "completed");
-      default:
+      }
+      default: {
         return tasks;
+      }
     }
   }, [tasks, filter]);
 
@@ -149,7 +152,7 @@ export function TodosWindow({ window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : filtered.length === 0 ? (
+        ) : (filtered.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             Nothing here yet.
           </Text>
@@ -196,7 +199,7 @@ export function TodosWindow({ window }: WindowComponentProps) {
               );
             })}
           </View>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

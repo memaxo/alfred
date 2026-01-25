@@ -43,7 +43,9 @@ class SyncEngine {
   private isInitialized = false;
 
   async initialize(trpcClient: TRPCClient<TRPCAppRouter>): Promise<void> {
-    if (this.isInitialized) return;
+    if (this.isInitialized) {
+      return;
+    }
 
     this.trpcClient = trpcClient;
     this.isInitialized = true;
@@ -153,23 +155,30 @@ class SyncEngine {
     action: SyncAction,
     payload: unknown
   ): Promise<void> {
-    if (!this.trpcClient) throw new Error("tRPC client not initialized");
+    if (!this.trpcClient) {
+      throw new Error("tRPC client not initialized");
+    }
 
     switch (tableName) {
-      case "notes":
+      case "notes": {
         await this.syncNote(recordId, action, payload);
         break;
-      case "reminders":
+      }
+      case "reminders": {
         await this.syncReminder(recordId, action, payload);
         break;
-      case "timers":
+      }
+      case "timers": {
         await this.syncTimer(recordId, action, payload);
         break;
-      case "bookmarks":
+      }
+      case "bookmarks": {
         await this.syncBookmark(recordId, action, payload);
         break;
-      default:
+      }
+      default: {
         logger.warn("unknown_sync_table", { tableName });
+      }
     }
   }
 
@@ -178,26 +187,31 @@ class SyncEngine {
     action: SyncAction,
     payload: unknown
   ): Promise<void> {
-    if (!this.trpcClient) return;
+    if (!this.trpcClient) {
+      return;
+    }
     const data = payload as Record<string, unknown> | null;
 
     switch (action) {
-      case "create":
+      case "create": {
         await this.trpcClient.note.create.mutate({
           content: String(data?.body ?? data?.content ?? ""),
           title: data?.title ? String(data.title) : undefined,
         });
         break;
-      case "update":
+      }
+      case "update": {
         await this.trpcClient.note.update.mutate({
           id: recordId,
           title: data?.title ? String(data.title) : undefined,
           content: data?.body ? String(data.body) : undefined,
         });
         break;
-      case "delete":
+      }
+      case "delete": {
         await this.trpcClient.note.delete.mutate({ id: recordId });
         break;
+      }
     }
   }
 
@@ -206,7 +220,9 @@ class SyncEngine {
     action: SyncAction,
     payload: unknown
   ): Promise<void> {
-    if (!this.trpcClient) return;
+    if (!this.trpcClient) {
+      return;
+    }
     const data = payload as Record<string, unknown> | null;
 
     switch (action) {
@@ -222,14 +238,16 @@ class SyncEngine {
         });
         break;
       }
-      case "update":
+      case "update": {
         if (data?.completedAt) {
           await this.trpcClient.remind.fire.mutate({ id: recordId });
         }
         break;
-      case "delete":
+      }
+      case "delete": {
         await this.trpcClient.remind.delete.mutate({ id: recordId });
         break;
+      }
     }
   }
 
@@ -238,7 +256,9 @@ class SyncEngine {
     action: SyncAction,
     payload: unknown
   ): Promise<void> {
-    if (!this.trpcClient) return;
+    if (!this.trpcClient) {
+      return;
+    }
     const data = payload as Record<string, unknown> | null;
 
     switch (action) {
@@ -252,14 +272,16 @@ class SyncEngine {
         });
         break;
       }
-      case "update":
+      case "update": {
         if (data?.completedAt) {
           await this.trpcClient.timer.done.mutate({ id: recordId });
         }
         break;
-      case "delete":
+      }
+      case "delete": {
         await this.trpcClient.timer.cancel.mutate({ id: recordId });
         break;
+      }
     }
   }
 
@@ -268,20 +290,24 @@ class SyncEngine {
     action: SyncAction,
     payload: unknown
   ): Promise<void> {
-    if (!this.trpcClient) return;
+    if (!this.trpcClient) {
+      return;
+    }
     const data = payload as Record<string, unknown> | null;
 
     switch (action) {
-      case "create":
+      case "create": {
         await this.trpcClient.book.create.mutate({
           url: String(data?.url ?? ""),
           title: data?.title ? String(data.title) : undefined,
           tags: Array.isArray(data?.tags) ? (data.tags as string[]) : undefined,
         });
         break;
-      case "delete":
+      }
+      case "delete": {
         await this.trpcClient.book.delete.mutate({ id: recordId });
         break;
+      }
     }
   }
 

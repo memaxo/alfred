@@ -55,7 +55,7 @@ export function useReminderNotifications(
         });
 
         notificationIdRef.current = notificationId;
-      } catch (_error) {}
+      } catch {}
     };
 
     scheduleNotification();

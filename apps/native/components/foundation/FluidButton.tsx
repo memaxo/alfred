@@ -1,6 +1,8 @@
+import type { ViewStyle } from "react-native";
+
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { StyleSheet, Pressable, ViewStyle } from "react-native";
+import { StyleSheet, Pressable } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -64,7 +66,9 @@ export function FluidButton({
   };
 
   const handlePress = () => {
-    if (disabled || loading) return;
+    if (disabled || loading) {
+      return;
+    }
     if (haptic) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -135,7 +139,7 @@ function getSizeConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (size) {
-    case "small":
+    case "small": {
       return {
         minWidth: theme.touchTargets.minimum,
         minHeight: theme.touchTargets.minimum,
@@ -143,7 +147,8 @@ function getSizeConfig(
         paddingHorizontal: theme.spacing.md,
         borderRadius: theme.radii.sm,
       };
-    case "medium":
+    }
+    case "medium": {
       return {
         minWidth: theme.touchTargets.comfortable,
         minHeight: theme.touchTargets.comfortable,
@@ -151,7 +156,8 @@ function getSizeConfig(
         paddingHorizontal: theme.spacing.lg,
         borderRadius: theme.radii.md,
       };
-    case "large":
+    }
+    case "large": {
       return {
         minWidth: theme.touchTargets.large,
         minHeight: theme.touchTargets.large,
@@ -159,6 +165,7 @@ function getSizeConfig(
         paddingHorizontal: theme.spacing.xl,
         borderRadius: theme.radii.lg,
       };
+    }
   }
 }
 
@@ -167,24 +174,27 @@ function getVariantConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (variant) {
-    case "primary":
+    case "primary": {
       return {
         background: theme.colors.glass.active,
         border: "rgba(255, 255, 255, 0.20)",
         textColor: "full" as const,
       };
-    case "secondary":
+    }
+    case "secondary": {
       return {
         background: theme.colors.glass.surface,
         border: theme.colors.glass.border,
         textColor: "bright" as const,
       };
-    case "ghost":
+    }
+    case "ghost": {
       return {
         background: "transparent",
         border: "transparent",
         textColor: "standard" as const,
       };
+    }
   }
 }
 

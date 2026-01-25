@@ -80,7 +80,7 @@ export function Chart({
           {({ points, chartBounds }) => {
             const yPoints = points.y as PointsArray;
             switch (type) {
-              case "line":
+              case "line": {
                 return (
                   <Line
                     points={yPoints}
@@ -91,7 +91,8 @@ export function Chart({
                     }
                   />
                 );
-              case "bar":
+              }
+              case "bar": {
                 return (
                   <Bar
                     points={yPoints}
@@ -103,7 +104,8 @@ export function Chart({
                     roundedCorners={{ topLeft: 4, topRight: 4 }}
                   />
                 );
-              case "area":
+              }
+              case "area": {
                 return (
                   <Area
                     points={yPoints}
@@ -114,8 +116,10 @@ export function Chart({
                     }
                   />
                 );
-              default:
+              }
+              default: {
                 return null;
+              }
             }
           }}
         </CartesianChart>

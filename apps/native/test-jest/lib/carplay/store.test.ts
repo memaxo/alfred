@@ -52,7 +52,7 @@ describe("CarPlay Store", () => {
 
     it("should set workflows", () => {
       useCarPlayStore.getState().setWorkflows([mockWorkflow]);
-      const workflows = useCarPlayStore.getState().workflows;
+      const { workflows } = useCarPlayStore.getState();
       expect(workflows.size).toBe(1);
       expect(workflows.get("wf-1")?.requirement).toBe("Implement feature X");
     });

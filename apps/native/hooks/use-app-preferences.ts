@@ -71,7 +71,9 @@ export function useAppPreferences() {
 
   // Parse preferences into typed object
   const preferences = useMemo<AppPreferences>(() => {
-    if (!rawPreferences) return DEFAULT_PREFERENCES;
+    if (!rawPreferences) {
+      return DEFAULT_PREFERENCES;
+    }
 
     const prefMap = new Map(rawPreferences.map((p) => [p.key, p.value]));
 
@@ -196,27 +198,34 @@ export function usePreference<K extends keyof AppPreferences>(
   const setValue = useCallback(
     (value: AppPreferences[K]) => {
       switch (key) {
-        case "theme":
+        case "theme": {
           setTheme(value as ThemeMode);
           break;
-        case "agentMode":
+        }
+        case "agentMode": {
           setAgentMode(value as AgentMode);
           break;
-        case "voiceEnabled":
+        }
+        case "voiceEnabled": {
           setVoiceEnabled(value as boolean);
           break;
-        case "voiceId":
+        }
+        case "voiceId": {
           setVoiceId(value as string | null);
           break;
-        case "reducedMotion":
+        }
+        case "reducedMotion": {
           setReducedMotion(value as boolean);
           break;
-        case "hapticsEnabled":
+        }
+        case "hapticsEnabled": {
           setHapticsEnabled(value as boolean);
           break;
-        case "chatThreadId":
+        }
+        case "chatThreadId": {
           setChatThreadId(value as string | null);
           break;
+        }
       }
     },
     [

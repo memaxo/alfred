@@ -24,7 +24,7 @@ import { SIMPLEX_NOISE_2D } from "../shaders/noise";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type LiquidSurfaceProps = {
+interface LiquidSurfaceProps {
   /** Center point of the surface */
   center: SkPoint;
   /** Radius of the surface */
@@ -33,7 +33,7 @@ type LiquidSurfaceProps = {
   volume: SharedValue<number>;
   /** Animation time */
   time: SharedValue<number>;
-};
+}
 
 // ─── Shader Source ───────────────────────────────────────────────────────────
 

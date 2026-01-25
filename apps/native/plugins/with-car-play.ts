@@ -2,9 +2,9 @@ import type { ConfigPlugin } from "@expo/config-plugins";
 
 import { withEntitlementsPlist } from "@expo/config-plugins";
 
-type CarPlayConfig = {
+interface CarPlayConfig {
   enabled?: boolean;
-};
+}
 
 const withCarPlay: ConfigPlugin<CarPlayConfig> = (config, props) => {
   if (!props?.enabled) {

@@ -1,6 +1,8 @@
+import type { ViewStyle } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -136,29 +138,33 @@ function formatNumber(
   decimals: number
 ): string {
   switch (format) {
-    case "currency":
+    case "currency": {
       return value.toLocaleString("en-US", {
         style: "currency",
         currency: "USD",
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
       });
-    case "percent":
+    }
+    case "percent": {
       return value.toLocaleString("en-US", {
         style: "percent",
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
       });
-    case "compact":
+    }
+    case "compact": {
       return Intl.NumberFormat("en-US", {
         notation: "compact",
         maximumFractionDigits: 1,
       }).format(value);
-    default:
+    }
+    default: {
       return value.toLocaleString("en-US", {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
       });
+    }
   }
 }
 

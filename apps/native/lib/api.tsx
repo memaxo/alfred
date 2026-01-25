@@ -32,7 +32,7 @@ import {
 
 type AuthClient = ReturnType<typeof createAuthClient>;
 
-type ApiContextValue = {
+interface ApiContextValue {
   authClient: AuthClient;
   trpcClient: TRPCClient<TRPCAppRouter>;
   serverUrl: string | null;
@@ -42,7 +42,7 @@ type ApiContextValue = {
     input: string
   ) => Promise<{ ok: true; url: string } | { ok: false; error: string }>;
   resetServerUrl: () => Promise<void>;
-};
+}
 
 const ApiContext = createContext<ApiContextValue | null>(null);
 

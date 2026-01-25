@@ -1,6 +1,8 @@
+import type { ViewStyle } from "react-native";
+
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useVoidTheme } from "../../hooks/use-void-theme";
 import { NoiseOverlay } from "./NoiseOverlay";
@@ -58,7 +60,7 @@ function getGradientConfig(
   colors: ReturnType<typeof useVoidTheme>["colors"]
 ) {
   switch (type) {
-    case "ambient":
+    case "ambient": {
       return {
         colors: [
           colors.void.surface,
@@ -69,20 +71,23 @@ function getGradientConfig(
         start: { x: 0.5, y: 0.4 },
         end: { x: 0.5, y: 1 },
       };
-    case "header":
+    }
+    case "header": {
       return {
         colors: [colors.void.surface, "transparent"] as const,
         locations: [0, 1] as const,
         start: { x: 0.5, y: 0 },
         end: { x: 0.5, y: 1 },
       };
-    case "control":
+    }
+    case "control": {
       return {
         colors: ["transparent", colors.void.surface] as const,
         locations: [0, 1] as const,
         start: { x: 0.5, y: 0 },
         end: { x: 0.5, y: 1 },
       };
+    }
   }
 }
 

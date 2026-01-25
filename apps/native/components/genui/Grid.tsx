@@ -1,10 +1,11 @@
+import type { ListRenderItemInfo } from "react-native";
+
 import React from "react";
 import {
   StyleSheet,
   View,
   FlatList,
   Pressable,
-  ListRenderItemInfo,
   type DimensionValue,
 } from "react-native";
 import Animated, {
@@ -46,7 +47,9 @@ export function Grid({
   const theme = useVoidTheme();
 
   const renderHeader = () => {
-    if (!showHeader) return null;
+    if (!showHeader) {
+      return null;
+    }
 
     return (
       <View
@@ -191,7 +194,9 @@ function GridRowItem({
 }
 
 function formatCellValue(value: unknown): string {
-  if (value === null || value === undefined) return "-";
+  if (value === null || value === undefined) {
+    return "-";
+  }
   if (typeof value === "number") {
     return value.toLocaleString();
   }

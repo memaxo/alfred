@@ -40,7 +40,9 @@ export function ReviewDetailsModal({
 }: ReviewDetailsModalProps) {
   const theme = useVoidTheme();
 
-  if (!review) return null;
+  if (!review) {
+    return null;
+  }
 
   const handleApprove = () => {
     onApprove(review);
@@ -228,7 +230,7 @@ function renderReviewContent(review: Review) {
   const { subjectData, reviewType } = review;
 
   switch (reviewType) {
-    case "tool_execution":
+    case "tool_execution": {
       return (
         <>
           <BiolumText color="bright" size="large" variant="body">
@@ -246,8 +248,9 @@ function renderReviewContent(review: Review) {
           )}
         </>
       );
+    }
 
-    case "memory":
+    case "memory": {
       return (
         <>
           <BiolumText color="bright" size="large" variant="body">
@@ -263,8 +266,9 @@ function renderReviewContent(review: Review) {
           </BiolumText>
         </>
       );
+    }
 
-    case "message":
+    case "message": {
       return (
         <>
           <BiolumText color="bright" size="large" variant="body">
@@ -281,8 +285,9 @@ function renderReviewContent(review: Review) {
           </BiolumText>
         </>
       );
+    }
 
-    case "workflow":
+    case "workflow": {
       return (
         <>
           <BiolumText color="bright" size="large" variant="body">
@@ -300,8 +305,9 @@ function renderReviewContent(review: Review) {
           )}
         </>
       );
+    }
 
-    case "code":
+    case "code": {
       return (
         <>
           <BiolumText color="bright" size="large" variant="body">
@@ -331,13 +337,15 @@ function renderReviewContent(review: Review) {
           )}
         </>
       );
+    }
 
-    default:
+    default: {
       return (
         <BiolumText color="dim" size="medium" variant="body">
           No additional details available
         </BiolumText>
       );
+    }
   }
 }
 

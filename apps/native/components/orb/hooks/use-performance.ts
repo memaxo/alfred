@@ -12,7 +12,7 @@ import { Dimensions, Platform } from "react-native";
 
 type PerformanceTier = "low" | "medium" | "high";
 
-type PerformanceConfig = {
+interface PerformanceConfig {
   /** Performance tier for this device */
   tier: PerformanceTier;
   /** Number of particles to render */
@@ -27,7 +27,7 @@ type PerformanceConfig = {
   enableShaders: boolean;
   /** Particle update frequency (1 = every frame, 2 = every other frame) */
   particleUpdateFrequency: number;
-};
+}
 
 // ─── Device Detection ────────────────────────────────────────────────────────
 
@@ -127,7 +127,7 @@ export function clampForPerformance(
   max: number,
   tier: PerformanceTier
 ): number {
-  const tierMultiplier = { high: 1.0, medium: 0.7, low: 0.4 }[tier];
+  const tierMultiplier = { high: 1, medium: 0.7, low: 0.4 }[tier];
   const adjusted = value * tierMultiplier;
   return Math.max(min, Math.min(max, adjusted));
 }

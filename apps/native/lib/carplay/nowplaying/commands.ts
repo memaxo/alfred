@@ -13,11 +13,11 @@
 import { useCarPlayStore } from "../store";
 import { speakWorkflowUpdate } from "../voice/speech";
 
-export type RemoteCommandHandlers = {
+export interface RemoteCommandHandlers {
   onSpeak: (text: string) => Promise<void>;
   onPauseUpdates: () => void;
   onResumeUpdates: () => void;
-};
+}
 
 let handlers: RemoteCommandHandlers | null = null;
 let isPaused = false;

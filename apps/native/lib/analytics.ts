@@ -12,16 +12,16 @@
 
 declare const __DEV__: boolean;
 
-type AnalyticsEvent = {
+interface AnalyticsEvent {
   name: string;
   properties?: Record<string, unknown>;
-};
+}
 
-type AnalyticsUser = {
+interface AnalyticsUser {
   id: string;
   email?: string;
   name?: string;
-};
+}
 
 class Analytics {
   private enabled = false;

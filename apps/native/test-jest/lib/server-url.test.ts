@@ -1,10 +1,10 @@
 import { classifyServerUrl, normalizeServerUrl } from "@/lib/server-url";
 
 describe("server-url", () => {
-  describe("normalizeServerUrl", () => {
+  describe(normalizeServerUrl, () => {
     it("adds https scheme and strips path", () => {
       const res = normalizeServerUrl("alfred-home.example.ts.net/healthz");
-      expect(res.ok).toBe(true);
+      expect(res.ok).toBeTruthy();
       if (!res.ok) {
         return;
       }
@@ -13,7 +13,7 @@ describe("server-url", () => {
 
     it("preserves explicit http scheme", () => {
       const res = normalizeServerUrl("http://localhost:3000/");
-      expect(res.ok).toBe(true);
+      expect(res.ok).toBeTruthy();
       if (!res.ok) {
         return;
       }
@@ -22,11 +22,11 @@ describe("server-url", () => {
 
     it("rejects empty", () => {
       const res = normalizeServerUrl("   ");
-      expect(res.ok).toBe(false);
+      expect(res.ok).toBeFalsy();
     });
   });
 
-  describe("classifyServerUrl", () => {
+  describe(classifyServerUrl, () => {
     it("detects .ts.net hostnames", () => {
       const c = classifyServerUrl("https://alfred-home.example.ts.net");
       expect(c.kind).toBe("tailnet-hostname");

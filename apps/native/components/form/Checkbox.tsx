@@ -33,7 +33,9 @@ export function Checkbox({
   const glowOpacity = useSharedValue(0);
 
   const handlePress = () => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onChange(!checked);
     if (!reduceMotion) {
@@ -54,9 +56,9 @@ export function Checkbox({
 
   const borderColor = disabled
     ? theme.colors.biolum.whisper
-    : checked || indeterminate
+    : (checked || indeterminate
       ? theme.colors.biolum.standard
-      : theme.colors.biolum.faint;
+      : theme.colors.biolum.faint);
 
   const backgroundColor =
     checked || indeterminate ? theme.colors.glass.active : "transparent";

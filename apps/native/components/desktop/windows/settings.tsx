@@ -247,7 +247,7 @@ export function SettingsWindow(_props: WindowComponentProps) {
                   key: "voice.stt.chunk_size",
                   value: v,
                   source: "user",
-                  confidence: 1.0,
+                  confidence: 1,
                 })
               }
             >

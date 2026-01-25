@@ -1,7 +1,9 @@
+import type { ViewStyle } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { StyleSheet, Pressable, ViewStyle } from "react-native";
+import { StyleSheet, Pressable } from "react-native";
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -63,7 +65,9 @@ export function FloatingAction({
   };
 
   const handlePress = () => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress();
   };

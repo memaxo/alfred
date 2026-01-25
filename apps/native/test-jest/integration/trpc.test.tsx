@@ -6,22 +6,28 @@ import { trpc } from "@/utils/trpc";
 import { createMockNote } from "../utils/mock-factories";
 
 // Mock tRPC
-jest.mock("@/utils/trpc", () => ({
-  trpc: {
-    note: {
-      list: { useQuery: jest.fn() },
-      create: { useMutation: jest.fn() },
-      delete: { useMutation: jest.fn() },
-    },
-  },
-}));
+jest.mock<typeof import("@/utils/trpc")>(
+  "@/utils/trpc",
+  () =>
+    ({
+      trpc: {
+        note: {
+          list: { useQuery: jest.fn() },
+          create: { useMutation: jest.fn() },
+          delete: { useMutation: jest.fn() },
+        },
+      },
+      createTrpcClient: jest.fn(),
+      queryClient: {},
+    }) as unknown as typeof import("@/utils/trpc")
+);
 
 describe("tRPC Integration Flows", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("Notes Flow", () => {
+  describe("notes Flow", () => {
     it("should create a note and then see it in the list", async () => {
       const mockNote = createMockNote({ id: "123", title: "Integration Test" });
 
@@ -29,17 +35,17 @@ describe("tRPC Integration Flows", () => {
       const mutate = jest.fn((_data, options) => {
         options?.onSuccess?.(mockNote);
       });
-      (trpc.note.create.useMutation as jest.Mock).mockReturnValue({
+      jest.mocked(trpc.note.create.useMutation).mockReturnValue({
         mutate,
         isPending: false,
-      });
+      } as unknown as ReturnType<typeof trpc.note.create.useMutation>);
 
       // Mock list query
-      (trpc.note.list.useQuery as jest.Mock).mockReturnValue({
+      jest.mocked(trpc.note.list.useQuery).mockReturnValue({
         data: [mockNote],
         isLoading: false,
         refetch: jest.fn(),
-      });
+      } as unknown as ReturnType<typeof trpc.note.list.useQuery>);
 
       // 1. Create note
       const { result: createResult } = renderHook(() => useNoteCreate());
@@ -50,7 +56,10 @@ describe("tRPC Integration Flows", () => {
         });
       });
 
-      expect(mutate).toHaveBeenCalled();
+      expect(mutate).toHaveBeenCalledWith({
+        title: "Integration Test",
+        content: "Content",
+      });
 
       // 2. Fetch list
       const { result: listResult } = renderHook(() =>
@@ -65,10 +74,10 @@ describe("tRPC Integration Flows", () => {
 
     it("should delete a note", () => {
       const mutate = jest.fn();
-      (trpc.note.delete.useMutation as jest.Mock).mockReturnValue({
+      jest.mocked(trpc.note.delete.useMutation).mockReturnValue({
         mutate,
         isPending: false,
-      });
+      } as unknown as ReturnType<typeof trpc.note.delete.useMutation>);
 
       const { result } = renderHook(() => useNoteDelete());
 

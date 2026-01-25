@@ -29,7 +29,9 @@ export function ChatInputVoid({
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled) {
+      return;
+    }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onSend(trimmed);
@@ -38,7 +40,9 @@ export function ChatInputVoid({
   }, [text, disabled, onSend]);
 
   const handleVoice = useCallback(() => {
-    if (!onVoice) return;
+    if (!onVoice) {
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onVoice();
   }, [onVoice]);

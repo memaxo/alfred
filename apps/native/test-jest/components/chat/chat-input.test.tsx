@@ -4,7 +4,7 @@ import { ChatInput } from "@/components/chat/chat-input";
 
 import { renderWithProviders } from "../../utils/test-helpers";
 
-describe("ChatInput", () => {
+describe(ChatInput, () => {
   it("should render correctly", () => {
     const { getByPlaceholderText } = renderWithProviders(
       <ChatInput onSend={jest.fn()} />
@@ -33,6 +33,6 @@ describe("ChatInput", () => {
     );
     const sendButton = getByLabelText("Send message");
 
-    expect(sendButton.props.accessibilityState.disabled).toBe(true);
+    expect(sendButton.props.accessibilityState.disabled).toBeTruthy();
   });
 });

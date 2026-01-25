@@ -43,12 +43,12 @@ export type DesktopMode = "desktop" | "mindscape";
 
 export type ViewMode = "compact" | "full" | "maximized";
 
-export type Bounds = {
+export interface Bounds {
   x: number;
   y: number;
   width: number;
   height: number;
-};
+}
 
 export type WindowState = "normal" | "minimized" | "maximized" | "fullscreen";
 
@@ -70,7 +70,7 @@ export type WindowData = {
   viewMode: ViewMode;
 } & Record<string, unknown>;
 
-export type WindowInstance = {
+export interface WindowInstance {
   id: string;
   type: WindowType;
   data: WindowData;
@@ -82,4 +82,4 @@ export type WindowInstance = {
   isFocused: boolean;
   createdAt: number;
   lastFocusedAt: number;
-};
+}

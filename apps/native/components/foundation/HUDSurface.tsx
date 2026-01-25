@@ -1,5 +1,7 @@
+import type { ViewStyle, StyleProp } from "react-native";
+
 import React from "react";
-import { StyleSheet, View, ViewStyle, StyleProp } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -62,24 +64,27 @@ function getElevationConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (level) {
-    case 1:
+    case 1: {
       return {
         background: theme.colors.glass.surface,
         borderColor: theme.colors.glass.border,
         borderRadius: theme.radii.lg,
       };
-    case 2:
+    }
+    case 2: {
       return {
         background: theme.colors.glass.hover,
         borderColor: theme.colors.glass.border,
         borderRadius: theme.radii.xl,
       };
-    case 3:
+    }
+    case 3: {
       return {
         background: theme.colors.glass.active,
         borderColor: "rgba(255, 255, 255, 0.10)",
         borderRadius: theme.radii.xxl,
       };
+    }
   }
 }
 

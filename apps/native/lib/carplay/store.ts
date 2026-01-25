@@ -18,7 +18,7 @@ import type {
   WorkflowState,
 } from "./types";
 
-type CarPlayStore = {
+interface CarPlayStore {
   // Connection
   connectionStatus: ConnectionStatus;
   lastSyncAt: number | null;
@@ -101,7 +101,7 @@ type CarPlayStore = {
 
   // Reset
   reset: () => void;
-};
+}
 
 // Priority sort order
 const priorityOrder: Record<EscalationPriority, number> = {
@@ -293,15 +293,15 @@ export const useCarPlayStore = create<CarPlayStore>((set, get) => ({
       // Secondary sort by creation time (oldest first)
       const aTime =
         "createdAt" in a
-          ? typeof a.createdAt === "number"
+          ? (typeof a.createdAt === "number"
             ? a.createdAt
-            : new Date(a.createdAt).getTime()
+            : new Date(a.createdAt).getTime())
           : 0;
       const bTime =
         "createdAt" in b
-          ? typeof b.createdAt === "number"
+          ? (typeof b.createdAt === "number"
             ? b.createdAt
-            : new Date(b.createdAt).getTime()
+            : new Date(b.createdAt).getTime())
           : 0;
       return aTime - bTime;
     });

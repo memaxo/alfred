@@ -1,5 +1,7 @@
+import type { ViewStyle } from "react-native";
+
 import React, { useRef, useEffect } from "react";
-import { StyleSheet, View, ScrollView, ViewStyle } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { useVoidTheme, useReducedMotion } from "../../hooks/use-void-theme";

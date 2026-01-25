@@ -24,7 +24,7 @@ import { SIMPLEX_NOISE_2D } from "../shaders/noise";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type CoronaRingProps = {
+interface CoronaRingProps {
   /** Center point of the ring */
   center: SkPoint;
   /** Base radius of the ring */
@@ -35,7 +35,7 @@ type CoronaRingProps = {
   volume: SharedValue<number>;
   /** Animation time */
   time: SharedValue<number>;
-};
+}
 
 // ─── Shader Source ───────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ export function CoronaRing({
   const coronaShaderSource = useCoronaShader();
 
   // Convert color to RGBA for shader
-  const colorRgba = hexToRgba(color, 1.0);
+  const colorRgba = hexToRgba(color, 1);
 
   // Animated uniforms
   const uniforms = useDerivedValue(() => ({

@@ -59,7 +59,7 @@ export function parseDeepLink(url: string): {
 } {
   try {
     const parsed = Linking.parse(url);
-    const path = parsed.path;
+    const { path } = parsed;
 
     if (!path) {
       return { type: "unknown" };
@@ -98,7 +98,7 @@ export function parseDeepLink(url: string): {
     }
 
     return { type: "unknown", path };
-  } catch (_error) {
+  } catch {
     return { type: "unknown" };
   }
 }

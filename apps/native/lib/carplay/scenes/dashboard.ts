@@ -34,13 +34,13 @@ const ICONS = {
   failed: require("../../../../assets/carplay/workflow-failed.png"),
 };
 
-export type DashboardCallbacks = {
+export interface DashboardCallbacks {
   onVoice: () => void;
   onWorkflowSelect: (workflow: WorkflowState) => void;
   onEscalationSelect: (escalation: Escalation) => void;
   onPRSelect: (pr: PullRequest) => void;
   onPlanSelect: (plan: ExecPlan) => void;
-};
+}
 
 // Create the main TabBar dashboard
 export function createDashboardTemplate(
@@ -223,13 +223,15 @@ function createVoiceTab(callbacks: DashboardCallbacks): GridTemplate {
     buttons,
     onButtonPressed: (e) => {
       switch (e.id) {
-        case "talk":
+        case "talk": {
           callbacks.onVoice();
           break;
-        case "status":
+        }
+        case "status": {
           // Speak current status
           callbacks.onVoice();
           break;
+        }
         case "plans": {
           const plans = store.pendingPlans;
           if (plans[0]) {
@@ -251,42 +253,54 @@ export function refreshDashboard(callbacks: DashboardCallbacks): void {
 // Get status icon based on workflow state
 function getWorkflowIcon(status: WorkflowState["status"]) {
   switch (status) {
-    case "running":
+    case "running": {
       return ICONS.running;
-    case "suspended":
+    }
+    case "suspended": {
       return ICONS.blocked;
-    case "completed":
+    }
+    case "completed": {
       return ICONS.complete;
-    case "failed":
+    }
+    case "failed": {
       return ICONS.blocked;
-    default:
+    }
+    default: {
       return ICONS.status;
+    }
   }
 }
 
 // Get icon based on priority
 function getPriorityIcon(priority: string) {
   switch (priority) {
-    case "critical":
+    case "critical": {
       return ICONS.blocked;
-    case "high":
+    }
+    case "high": {
       return ICONS.decisions;
-    default:
+    }
+    default: {
       return ICONS.status;
+    }
   }
 }
 
 // Get icon based on CI status
 function getCIStatusIcon(status: string) {
   switch (status) {
-    case "success":
+    case "success": {
       return ICONS.complete;
-    case "failure":
+    }
+    case "failure": {
       return ICONS.blocked;
-    case "running":
+    }
+    case "running": {
       return ICONS.running;
-    default:
+    }
+    default: {
       return ICONS.status;
+    }
   }
 }
 
@@ -295,5 +309,5 @@ function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) {
     return text;
   }
-  return `${text.substring(0, maxLength - 3)}...`;
+  return `${text.slice(0, maxLength - 3)}...`;
 }

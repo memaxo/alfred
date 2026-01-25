@@ -21,7 +21,7 @@ import { ANIMATION, hexToRgba } from "../constants";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type GlowLayerProps = {
+interface GlowLayerProps {
   /** Center point of the glow */
   center: SkPoint;
   /** Base radius of the orb (glow extends beyond this) */
@@ -34,7 +34,7 @@ type GlowLayerProps = {
   time: SharedValue<number>;
   /** Pulse speed multiplier */
   pulseSpeed: SharedValue<number>;
-};
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

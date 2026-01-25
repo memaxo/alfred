@@ -30,7 +30,7 @@ function splitTags(input: string): string[] {
     .split(/[,\n]/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-  return Array.from(new Set(parts)).slice(0, 32);
+  return [...new Set(parts)].slice(0, 32);
 }
 
 export default function CaptureScreen() {
@@ -64,7 +64,9 @@ export default function CaptureScreen() {
 
   const sendText = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
     createMutation.mutate({
       payload: { kind: "text", text: trimmed },
       evidence,
@@ -72,7 +74,9 @@ export default function CaptureScreen() {
   }, [text, createMutation, evidence]);
 
   const toggleVoice = useCallback(async () => {
-    if (createMutation.isPending) return;
+    if (createMutation.isPending) {
+      return;
+    }
 
     if (!captureRef.current) {
       captureRef.current = new ExpoCapture();
@@ -87,7 +91,9 @@ export default function CaptureScreen() {
     try {
       const clip = await captureRef.current.stop();
       setRecording(false);
-      if (!clip?.audioBase64) return;
+      if (!clip?.audioBase64) {
+        return;
+      }
       createMutation.mutate({
         payload: {
           kind: "voice",

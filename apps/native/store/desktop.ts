@@ -10,7 +10,7 @@ import type {
   WindowType,
 } from "./desktop.types";
 
-type DesktopState = {
+interface DesktopState {
   mode: DesktopMode;
   setMode: (mode: DesktopMode) => void;
   toggleMode: () => void;
@@ -42,7 +42,7 @@ type DesktopState = {
     size: { width: number; height: number }
   ) => void;
   setTile: (windowId: string, zone: TileZone | null) => void;
-};
+}
 
 function now() {
   return Date.now();
@@ -98,9 +98,9 @@ export const useDesktopStore = create<DesktopState>((set, get) => ({
   closeWindow: (windowId) => {
     set((s) => {
       const remaining = s.windows.filter((w) => w.id !== windowId);
-      const nextFocused = remaining
-        .slice()
-        .sort((a, b) => b.lastFocusedAt - a.lastFocusedAt)[0];
+      const nextFocused = [...remaining].sort(
+        (a, b) => b.lastFocusedAt - a.lastFocusedAt
+      )[0];
       return {
         windows: remaining.map((w) => ({
           ...w,

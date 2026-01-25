@@ -43,7 +43,7 @@ function getExpoProjectId(): string | null {
     "projectId" in extraId &&
     typeof (extraId as { projectId?: unknown }).projectId === "string"
   ) {
-    const projectId = (extraId as { projectId: string }).projectId;
+    const { projectId } = extraId as { projectId: string };
     if (projectId !== "your-project-id-here") {
       return projectId;
     }

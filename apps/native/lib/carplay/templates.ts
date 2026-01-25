@@ -69,7 +69,7 @@ export function createResponseTemplate(
 ): InformationTemplate {
   // Truncate response for CarPlay (max 3-4 lines)
   const truncated =
-    response.length > 200 ? `${response.substring(0, 197)}...` : response;
+    response.length > 200 ? `${response.slice(0, 197)}...` : response;
 
   return new InformationTemplate({
     title: "Alfred",
@@ -81,15 +81,18 @@ export function createResponseTemplate(
     ],
     onActionButtonPressed: (e) => {
       switch (e.id) {
-        case "repeat":
+        case "repeat": {
           onRepeat();
           break;
-        case "followup":
+        }
+        case "followup": {
           onFollowUp();
           break;
-        case "done":
+        }
+        case "done": {
           CarPlay.popTemplate();
           break;
+        }
       }
     },
   });
@@ -97,7 +100,7 @@ export function createResponseTemplate(
 
 // Create list template for recent conversations/queries
 export function createHistoryTemplate(
-  items: Array<{ id: string; query: string; timestamp: Date }>,
+  items: { id: string; query: string; timestamp: Date }[],
   onSelect: (id: string) => void
 ): ListTemplate {
   return new ListTemplate({
@@ -108,7 +111,7 @@ export function createHistoryTemplate(
         items: items.slice(0, 5).map((item) => ({
           text:
             item.query.length > 50
-              ? `${item.query.substring(0, 47)}...`
+              ? `${item.query.slice(0, 47)}...`
               : item.query,
           detailText: formatTimeAgo(item.timestamp),
         })),
@@ -180,18 +183,22 @@ export function createMainTemplate(
     ],
     onButtonPressed: (e) => {
       switch (e.id) {
-        case "voice":
+        case "voice": {
           onVoice();
           break;
-        case "history":
+        }
+        case "history": {
           onHistory();
           break;
-        case "reminders":
+        }
+        case "reminders": {
           onReminders();
           break;
-        case "notes":
+        }
+        case "notes": {
           onNotes();
           break;
+        }
       }
     },
   });
@@ -239,7 +246,7 @@ export function createErrorAlert(
 
 // Create reminders list template
 export function createRemindersTemplate(
-  reminders: Array<{ id: string; title: string; dueDate?: Date }>,
+  reminders: { id: string; title: string; dueDate?: Date }[],
   onSelect: (id: string) => void
 ): ListTemplate {
   return new ListTemplate({
@@ -269,7 +276,7 @@ export function createRemindersTemplate(
 
 // Create notes list template
 export function createNotesTemplate(
-  notes: Array<{ id: string; title: string; preview: string }>,
+  notes: { id: string; title: string; preview: string }[],
   onSelect: (id: string) => void
 ): ListTemplate {
   return new ListTemplate({
@@ -281,7 +288,7 @@ export function createNotesTemplate(
         header: "Recent Notes",
         items: notes.slice(0, 10).map((note) => ({
           text: note.title || "Untitled",
-          detailText: note.preview.substring(0, 50),
+          detailText: note.preview.slice(0, 50),
         })),
       },
     ],
@@ -325,7 +332,7 @@ function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) {
     return text;
   }
-  return `${text.substring(0, maxLength - 3)}...`;
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 // ============================================================================
@@ -475,18 +482,22 @@ export function createWorkflowDetailTemplate(
     actions,
     onActionButtonPressed: (e) => {
       switch (e.id) {
-        case "pause":
+        case "pause": {
           onPause();
           break;
-        case "resume":
+        }
+        case "resume": {
           onResume();
           break;
-        case "cancel":
+        }
+        case "cancel": {
           onCancel();
           break;
-        case "back":
+        }
+        case "back": {
           onBack();
           break;
+        }
       }
     },
   });
@@ -520,15 +531,18 @@ export function createEscalationDetailTemplate(
     ],
     onActionButtonPressed: (e) => {
       switch (e.id) {
-        case "approve":
+        case "approve": {
           onApprove();
           break;
-        case "reject":
+        }
+        case "reject": {
           onReject();
           break;
-        case "defer":
+        }
+        case "defer": {
           onDefer();
           break;
+        }
       }
       CarPlay.popTemplate();
     },
@@ -561,15 +575,18 @@ export function createPRDetailTemplate(
     ],
     onActionButtonPressed: (e) => {
       switch (e.id) {
-        case "approve":
+        case "approve": {
           onApprove();
           break;
-        case "changes":
+        }
+        case "changes": {
           onRequestChanges();
           break;
-        case "defer":
+        }
+        case "defer": {
           onDefer();
           break;
+        }
       }
       CarPlay.popTemplate();
     },
@@ -603,15 +620,18 @@ export function createPlanApprovalTemplate(
     ],
     onActionButtonPressed: (e) => {
       switch (e.id) {
-        case "approve":
+        case "approve": {
           onApprove();
           break;
-        case "modify":
+        }
+        case "modify": {
           onModify();
           break;
-        case "reject":
+        }
+        case "reject": {
           onReject();
           break;
+        }
       }
       CarPlay.popTemplate();
     },
@@ -636,15 +656,18 @@ export function createEscalationAlert(
     ],
     onActionButtonPressed: (e) => {
       switch (e.id) {
-        case "approve":
+        case "approve": {
           onApprove();
           break;
-        case "reject":
+        }
+        case "reject": {
           onReject();
           break;
-        case "defer":
+        }
+        case "defer": {
           onDefer();
           break;
+        }
       }
       CarPlay.dismissTemplate();
     },
@@ -654,42 +677,54 @@ export function createEscalationAlert(
 // Helper: Get workflow status icon
 function getWorkflowStatusIcon(status: WorkflowState["status"]) {
   switch (status) {
-    case "running":
+    case "running": {
       return WORKFLOW_RUNNING_ICON;
-    case "suspended":
+    }
+    case "suspended": {
       return WORKFLOW_PAUSED_ICON;
-    case "completed":
+    }
+    case "completed": {
       return WORKFLOW_COMPLETE_ICON;
+    }
     case "failed":
-    case "cancelled":
+    case "cancelled": {
       return WORKFLOW_FAILED_ICON;
-    default:
+    }
+    default: {
       return WORKFLOW_RUNNING_ICON;
+    }
   }
 }
 
 // Helper: Get priority icon
 function getPriorityIcon(priority: EscalationPriority) {
   switch (priority) {
-    case "critical":
+    case "critical": {
       return REMINDERS_ICON;
-    case "high":
+    }
+    case "high": {
       return HISTORY_ICON;
-    default:
+    }
+    default: {
       return NOTES_ICON;
+    }
   }
 }
 
 // Helper: Get CI status icon
 function getCIIcon(status: string) {
   switch (status) {
-    case "success":
+    case "success": {
       return NOTES_ICON;
-    case "failure":
+    }
+    case "failure": {
       return REMINDERS_ICON;
-    case "running":
+    }
+    case "running": {
       return VOICE_ICON;
-    default:
+    }
+    default: {
       return HISTORY_ICON;
+    }
   }
 }

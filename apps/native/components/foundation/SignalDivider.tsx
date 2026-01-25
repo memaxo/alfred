@@ -1,5 +1,7 @@
+import type { ViewStyle } from "react-native";
+
 import React, { useEffect } from "react";
-import { StyleSheet, ViewStyle } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

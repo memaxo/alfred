@@ -84,22 +84,27 @@ async function executeCommand(command: OfflineCommand): Promise<void> {
   // - workflow.pauseWorkflow / resumeWorkflow / cancelWorkflow
 
   switch (command.type) {
-    case "escalation_decision":
+    case "escalation_decision": {
       break;
+    }
 
-    case "pr_decision":
+    case "pr_decision": {
       break;
+    }
 
-    case "plan_decision":
+    case "plan_decision": {
       break;
+    }
 
-    case "workflow_action":
+    case "workflow_action": {
       break;
+    }
 
-    default:
+    default: {
       throw new Error(
         `Unknown command type: ${(command as OfflineCommand).type}`
       );
+    }
   }
 }
 

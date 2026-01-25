@@ -1,7 +1,9 @@
+import type { BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
+import type { ReactNode } from "react";
+
 import BottomSheetLib, {
   BottomSheetBackdrop,
   BottomSheetView,
-  BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import React, {
   createContext,
@@ -9,7 +11,6 @@ import React, {
   useState,
   useCallback,
   useRef,
-  ReactNode,
 } from "react";
 
 import { useVoidTheme } from "../hooks/use-void-theme";

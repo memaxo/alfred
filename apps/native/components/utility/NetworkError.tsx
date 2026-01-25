@@ -78,14 +78,22 @@ export function QueryError({
     message.includes("session");
 
   const getErrorIcon = () => {
-    if (isNetworkError) return "cloud-offline-outline";
-    if (isAuthError) return "lock-closed-outline";
+    if (isNetworkError) {
+      return "cloud-offline-outline";
+    }
+    if (isAuthError) {
+      return "lock-closed-outline";
+    }
     return "alert-circle-outline";
   };
 
   const getErrorTitle = () => {
-    if (isNetworkError) return "Connection Error";
-    if (isAuthError) return "Session Expired";
+    if (isNetworkError) {
+      return "Connection Error";
+    }
+    if (isAuthError) {
+      return "Session Expired";
+    }
     return "Something Went Wrong";
   };
 

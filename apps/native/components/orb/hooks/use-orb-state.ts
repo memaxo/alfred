@@ -25,7 +25,7 @@ type StreamStatus =
 /**
  * Input props from the voice session
  */
-type VoiceSessionState = {
+interface VoiceSessionState {
   /** Current status of the voice stream */
   status: StreamStatus;
   /** VAD confidence (0-1), null when not available */
@@ -34,12 +34,12 @@ type VoiceSessionState = {
   isActive: boolean;
   /** Error message if status is 'error' */
   error: string | null;
-};
+}
 
 /**
  * Output props for the Orb component
  */
-type OrbStateOutput = {
+interface OrbStateOutput {
   /** Mapped orb state */
   state: OrbState;
   /** Input volume for visualization */
@@ -50,7 +50,7 @@ type OrbStateOutput = {
   statusLabel: string;
   /** Whether the orb should show as active */
   isActive: boolean;
-};
+}
 
 // ─── Status Mapping ──────────────────────────────────────────────────────────
 

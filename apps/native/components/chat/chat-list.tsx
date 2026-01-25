@@ -6,11 +6,11 @@ import { FlatList, View, StyleSheet } from "react-native";
 import { EmptyState } from "../utility/EmptyState";
 import { MessageBubbleVoid } from "./MessageBubbleVoid";
 
-export type ChatListProps = {
+export interface ChatListProps {
   messages: UIMessage[];
   isLoading?: boolean;
   streamingMessageId?: string | null;
-};
+}
 
 // Memoized message item for performance
 const MemoizedMessageBubble = memo(

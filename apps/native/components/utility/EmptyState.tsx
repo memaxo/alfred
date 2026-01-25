@@ -1,6 +1,8 @@
+import type { ViewStyle } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useVoidTheme } from "../../hooks/use-void-theme";
 import { BiolumText, CaptionText } from "../foundation/BiolumText";

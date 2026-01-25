@@ -5,10 +5,10 @@ const STORAGE_KEY = "alfred.serverUrl";
 
 export type ServerUrlSource = "override" | "env" | "missing";
 
-export type ServerUrlState = {
+export interface ServerUrlState {
   url: string | null;
   source: ServerUrlSource;
-};
+}
 
 export type NormalizeResult =
   | { ok: true; url: string }

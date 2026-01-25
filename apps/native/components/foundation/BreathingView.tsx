@@ -1,5 +1,6 @@
+import type { ViewStyle } from "react-native";
+
 import React, { useEffect } from "react";
-import { ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -82,12 +83,15 @@ export function BreathingView({
 
 function getIntensityConfig(intensity: "subtle" | "normal" | "strong") {
   switch (intensity) {
-    case "subtle":
+    case "subtle": {
       return { scale: 1.01, opacity: 0.8 };
-    case "normal":
+    }
+    case "normal": {
       return { scale: 1.03, opacity: 0.9 };
-    case "strong":
+    }
+    case "strong": {
       return { scale: 1.05, opacity: 1 };
+    }
   }
 }
 

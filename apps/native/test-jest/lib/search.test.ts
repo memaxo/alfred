@@ -25,7 +25,7 @@ describe("search utilities", () => {
     },
   ];
 
-  describe("fuzzySearch", () => {
+  describe(fuzzySearch, () => {
     it("should find items by title", () => {
       const results = fuzzySearch(items, "apple", (item) => [item.title]);
       expect(results).toHaveLength(1);
@@ -45,7 +45,7 @@ describe("search utilities", () => {
     });
   });
 
-  describe("sortFunctions", () => {
+  describe(sortFunctions, () => {
     it("should sort by date newest first", () => {
       const itemsWithCreatedAt = items.map((item) => ({
         ...item,
@@ -63,17 +63,17 @@ describe("search utilities", () => {
     });
   });
 
-  describe("filterFunctions", () => {
+  describe(filterFunctions, () => {
     it("should filter by pending status", () => {
       const filtered = items.filter(filterFunctions.isPending);
       expect(filtered).toHaveLength(2);
-      expect(filtered.every((i) => !i.fired)).toBe(true);
+      expect(filtered.every((i) => !i.fired)).toBeTruthy();
     });
 
     it("should filter by completed status", () => {
       const filtered = items.filter(filterFunctions.isCompleted);
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].fired).toBe(true);
+      expect(filtered[0].fired).toBeTruthy();
     });
   });
 });

@@ -36,9 +36,9 @@ import { getVoiceStreamUrl } from "./env";
 import { playBase64 } from "./play";
 import { enqueue } from "./queue";
 
-type MutationAdapter = {
+interface MutationAdapter {
   mutation<TInput, TOutput>(path: string, input: TInput): Promise<TOutput>;
-};
+}
 
 type MutationInvoker = (path: string, input: unknown) => Promise<unknown>;
 type QueryInvoker = (path: string, input?: unknown) => Promise<unknown>;
@@ -156,7 +156,7 @@ function toMutationAdapter(trpc: unknown): MutationAdapter {
   };
 }
 
-type VoiceSessionNativeOptions = {
+interface VoiceSessionNativeOptions {
   mode?: "classic" | "s2s";
   surface?: VoiceSessionSurface;
   /**
@@ -180,7 +180,7 @@ type VoiceSessionNativeOptions = {
       "thread" | "resource" | "ttsVoice" | "ttsFormat" | "language" | "prompt"
     >
   >;
-};
+}
 
 type StreamStatus =
   | "idle"
@@ -190,7 +190,7 @@ type StreamStatus =
   | "playing"
   | "error";
 
-type NativeStreamState = {
+interface NativeStreamState {
   supported: boolean;
   status: StreamStatus;
   transport: "webrtc" | "ws" | null;
@@ -203,7 +203,7 @@ type NativeStreamState = {
   autoStopReason: string | null;
   error: string | null;
   sessionId: string | null;
-};
+}
 
 const STREAM_CHUNK_MS = 1200;
 const STREAM_TIMEOUT_MS = 20_000;
@@ -236,22 +236,22 @@ function decodeBase64ToBytes(value: string): Uint8Array {
   const binary = decode(value);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+    bytes[i] = binary.codePointAt(i) ?? 0;
   }
   return bytes;
 }
 
-type RtcIceServer = {
+interface RtcIceServer {
   credential?: string;
   url?: string;
   urls?: string | string[];
   username?: string;
-};
+}
 
-type EventTargetLike = {
+interface EventTargetLike {
   addEventListener?: (type: string, listener: (event: unknown) => void) => void;
   [key: string]: unknown;
-};
+}
 
 function addEvt(
   target: unknown,
@@ -280,8 +280,8 @@ function parseIceServers(value: unknown): RtcIceServer[] {
     if (!isRecord(item)) {
       continue;
     }
-    const urls = item.urls;
-    const url = item.url;
+    const { urls } = item;
+    const { url } = item;
     const record: RtcIceServer = {};
     if (
       typeof urls === "string" ||
@@ -312,12 +312,12 @@ function parseIceCandidateInfo(value: unknown): {
   if (!isRecord(value)) {
     return null;
   }
-  const candidate = value.candidate;
+  const { candidate } = value;
   if (typeof candidate !== "string" || candidate.length === 0) {
     return null;
   }
-  const sdpMLineIndex = value.sdpMLineIndex;
-  const sdpMid = value.sdpMid;
+  const { sdpMLineIndex } = value;
+  const { sdpMid } = value;
   return {
     candidate,
     sdpMLineIndex:
@@ -444,17 +444,16 @@ export function useVoiceSessionNative(
 
   const refreshSessionInfo = useCallback(async () => {
     try {
-      const sessions = (await resolveQuery(
-        trpc,
-        "voice.sessions",
-        undefined
-      )) as VoiceSessionDescriptor[] | undefined | null;
+      const sessions = (await resolveQuery(trpc, "voice.sessions")) as
+        | VoiceSessionDescriptor[]
+        | undefined
+        | null;
       const snapshot = sessions && sessions.length > 0 ? sessions[0] : null;
       if (snapshot) {
         syncSessionInfo(snapshot);
       }
       return snapshot;
-    } catch (_error) {
+    } catch {
       return null;
     }
   }, [syncSessionInfo, trpc]);
@@ -718,49 +717,61 @@ export function useVoiceSessionNative(
     (event: VoiceStreamServerEvent) => {
       switch (event._) {
         case "ready":
-        case "pong":
+        case "pong": {
           return;
-        case "session_started":
+        }
+        case "session_started": {
           logger.info("voice_webrtc_session_started", {
             sessionId: event.sessionId,
           });
           streamHandlers.onSessionStarted({ sessionId: event.sessionId });
           return;
-        case "partial_transcript":
+        }
+        case "partial_transcript": {
           streamHandlers.onPartialTranscript({ text: event.text });
           return;
-        case "final_transcript":
+        }
+        case "final_transcript": {
           streamHandlers.onFinalTranscript({ text: event.text });
           return;
-        case "vad_state":
+        }
+        case "vad_state": {
           streamHandlers.onVadState({
             vadConfidence: event.vadConfidence ?? null,
           });
           return;
-        case "auto_stop":
+        }
+        case "auto_stop": {
           streamHandlers.onAutoStop({ reason: event.reason });
           return;
-        case "assistant_message":
+        }
+        case "assistant_message": {
           streamHandlers.onAssistantMessage({
             text: event.text,
             raw: event.raw,
           });
           return;
-        case "tts_complete":
+        }
+        case "tts_complete": {
           streamHandlers.onTtsComplete();
           return;
-        case "interrupt":
+        }
+        case "interrupt": {
           streamHandlers.onInterrupt();
           return;
-        case "status":
+        }
+        case "status": {
           streamHandlers.onStatus({ state: event.state as StreamStatus });
           return;
-        case "error":
+        }
+        case "error": {
           streamHandlers.onError({ message: event.message });
           return;
+        }
         // WebRTC uses RTP audio instead of `tts_chunk`.
-        case "tts_chunk":
+        case "tts_chunk": {
           return;
+        }
       }
     },
     [streamHandlers]
@@ -837,7 +848,7 @@ export function useVoiceSessionNative(
           if (!isRecord(msg)) {
             return;
           }
-          const data = msg.data;
+          const { data } = msg;
           if (typeof data !== "string") {
             return;
           }
@@ -886,7 +897,7 @@ export function useVoiceSessionNative(
         if (!isRecord(ev)) {
           return;
         }
-        const channel = ev.channel;
+        const { channel } = ev;
         if (!channel) {
           return;
         }
@@ -1156,9 +1167,9 @@ export function useVoiceSessionNative(
         const errorText =
           error instanceof Error
             ? [error.message, error.stack].filter(Boolean).join("\n")
-            : typeof error === "string"
+            : (typeof error === "string"
               ? error
-              : "voice_webrtc_failed";
+              : "voice_webrtc_failed");
         setStreamState((prev) => ({
           ...prev,
           error: errorText,

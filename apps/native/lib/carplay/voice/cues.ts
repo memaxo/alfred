@@ -37,24 +37,28 @@ export async function playCue(type: AudioCueType): Promise<void> {
     const Haptics = await import("expo-haptics");
 
     switch (type) {
-      case "listening":
+      case "listening": {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         break;
-      case "confirmed":
+      }
+      case "confirmed": {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
         );
         break;
-      case "error":
+      }
+      case "error": {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         break;
-      case "notification":
+      }
+      case "notification": {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Warning
         );
         break;
+      }
     }
-  } catch (_error) {
+  } catch {
     // Haptics unavailable (e.g., simulator), silently ignore
   }
 }

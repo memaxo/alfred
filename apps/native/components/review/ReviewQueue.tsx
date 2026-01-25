@@ -60,7 +60,9 @@ export function ReviewQueue({
   const [filter, setFilter] = useState<ReviewFilter>("all");
 
   const filteredReviews = reviews.filter((review) => {
-    if (filter === "all") return true;
+    if (filter === "all") {
+      return true;
+    }
     return review.reviewType === filter;
   });
 
@@ -244,47 +246,59 @@ export function ReviewQueue({
 
 function getReviewTitle(review: Review): string {
   switch (review.reviewType) {
-    case "tool_execution":
+    case "tool_execution": {
       return review.subjectData.toolName || "Tool Execution";
-    case "message":
+    }
+    case "message": {
       return "Message Quality";
-    case "memory":
+    }
+    case "memory": {
       return "Memory Association";
-    case "workflow":
+    }
+    case "workflow": {
       return "Workflow Decision";
-    case "code":
+    }
+    case "code": {
       return (
         review.subjectData.prTitle ||
         `PR #${review.subjectData.prNumber}` ||
         "Code Review"
       );
-    default:
+    }
+    default: {
       return "Review";
+    }
   }
 }
 
 function getReviewSummary(review: Review): string {
   switch (review.reviewType) {
-    case "tool_execution":
+    case "tool_execution": {
       return review.subjectData.summary || "Tool execution pending review";
-    case "message":
+    }
+    case "message": {
       return (
         review.subjectData.messageContent?.slice(0, 100) ||
         "Message pending review"
       );
-    case "memory":
+    }
+    case "memory": {
       return (
         review.subjectData.memoryFact || "Memory association pending review"
       );
-    case "workflow":
+    }
+    case "workflow": {
       return (
         review.subjectData.workflowDecision ||
         "Workflow decision pending review"
       );
-    case "code":
+    }
+    case "code": {
       return review.subjectData.summary || "Code changes pending review";
-    default:
+    }
+    default: {
       return "Pending review";
+    }
   }
 }
 
@@ -295,9 +309,15 @@ function formatRelativeTime(date: Date): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
+  if (minutes < 1) {
+    return "just now";
+  }
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
   return `${days}d ago`;
 }
 

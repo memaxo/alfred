@@ -70,7 +70,7 @@ export function SignUp() {
     void form.handleSubmit();
   }, [form]);
 
-  const canSubmit = form.state.canSubmit;
+  const { canSubmit } = form.state;
   const { name, email, password } = form.state.values;
 
   return (

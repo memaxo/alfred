@@ -121,17 +121,19 @@ export function SignIn() {
           },
         }
       );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Passkey sign-in failed");
-      setDebugError(__DEV__ ? String(err) : null);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Passkey sign-in failed"
+      );
+      setDebugError(__DEV__ ? String(error) : null);
       setIsPasskeyLoading(false);
     }
   };
 
   const isAnyLoading = isLoading || isPasskeyLoading;
-  const canSubmit = form.state.canSubmit;
-  const email = form.state.values.email;
-  const password = form.state.values.password;
+  const { canSubmit } = form.state;
+  const { email } = form.state.values;
+  const { password } = form.state.values;
 
   return (
     <View className="mt-6 rounded-lg border border-border bg-card p-4">

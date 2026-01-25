@@ -185,8 +185,11 @@ function MatrixCell({
 
   const animatedStyle = useAnimatedStyle(() => {
     let baseOpacity = 0;
-    if (isSelected) baseOpacity = 0.15;
-    else if (isHighlighted) baseOpacity = 0.1;
+    if (isSelected) {
+      baseOpacity = 0.15;
+    } else if (isHighlighted) {
+      baseOpacity = 0.1;
+    }
 
     return {
       backgroundColor: `rgba(255, 255, 255, ${baseOpacity + 0.05 * bgOpacity.value})`,

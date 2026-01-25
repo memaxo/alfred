@@ -152,9 +152,7 @@ export default function ChatScreen() {
           <ChatList
             isLoading={isLoading}
             messages={messages}
-            streamingMessageId={
-              isLoading ? messages[messages.length - 1]?.id : null
-            }
+            streamingMessageId={isLoading ? messages.at(-1)?.id : null}
           />
 
           {/* Input area */}

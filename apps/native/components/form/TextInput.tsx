@@ -1,10 +1,7 @@
+import type { TextInputProps as RNTextInputProps } from "react-native";
+
 import React, { useState } from "react";
-import {
-  StyleSheet,
-  TextInput as RNTextInput,
-  View,
-  TextInputProps as RNTextInputProps,
-} from "react-native";
+import { StyleSheet, TextInput as RNTextInput, View } from "react-native";
 
 import { useVoidTheme } from "../../hooks/use-void-theme";
 import { CaptionText } from "../foundation/BiolumText";

@@ -5,15 +5,19 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { renderWithProviders } from "../utils/test-helpers";
 
 // Mock expo-router
-jest.mock("expo-router", () => ({
-  useRouter: jest.fn(),
-  useLocalSearchParams: jest.fn(),
-  Stack: {
-    Screen: ({ options: _options }: any) => null,
-  },
-}));
+jest.mock<typeof import("expo-router")>(
+  "expo-router",
+  () =>
+    ({
+      useRouter: jest.fn(),
+      useLocalSearchParams: jest.fn(),
+      Stack: {
+        Screen: ({ options: _options }: any) => null,
+      },
+    }) as unknown as typeof import("expo-router")
+);
 
-describe("Navigation Integration", () => {
+describe("navigation Integration", () => {
   const mockRouter = {
     push: jest.fn(),
     replace: jest.fn(),
@@ -22,8 +26,10 @@ describe("Navigation Integration", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useRouter as jest.Mock).mockReturnValue(mockRouter);
-    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    jest
+      .mocked(useRouter)
+      .mockReturnValue(mockRouter as unknown as ReturnType<typeof useRouter>);
+    jest.mocked(useLocalSearchParams).mockReturnValue({});
   });
 
   it("should navigate when button is pressed", () => {
@@ -45,7 +51,7 @@ describe("Navigation Integration", () => {
   });
 
   it("should handle route parameters", () => {
-    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: "123" });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: "123" });
 
     const TestComponent = () => {
       const { id } = useLocalSearchParams<{ id: string }>();

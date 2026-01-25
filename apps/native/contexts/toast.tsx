@@ -1,14 +1,12 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  ReactNode,
-} from "react";
+import type { ReactNode } from "react";
+
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Toast, ToastType } from "../components/utility/Toast";
+import type { ToastType } from "../components/utility/Toast";
+
+import { Toast } from "../components/utility/Toast";
 
 interface ToastItem {
   id: string;

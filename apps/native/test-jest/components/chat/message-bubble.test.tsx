@@ -3,7 +3,7 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { createMockMessage } from "../../utils/mock-factories";
 import { renderWithProviders } from "../../utils/test-helpers";
 
-describe("MessageBubble", () => {
+describe(MessageBubble, () => {
   it("should render user message correctly", () => {
     const message = createMockMessage({ role: "user", content: "Hello" });
     const { getByText } = renderWithProviders(

@@ -37,7 +37,9 @@ export function Choice({
   const theme = useVoidTheme();
 
   const handleSelect = (optionValue: string) => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (multiple) {
@@ -125,12 +127,12 @@ function ChoiceItem({
   }));
 
   const IconComponent = multiple
-    ? selected
+    ? (selected
       ? "checkbox"
-      : "square-outline"
-    : selected
+      : "square-outline")
+    : (selected
       ? "radio-button-on"
-      : "radio-button-off";
+      : "radio-button-off");
 
   return (
     <Pressable onPress={handlePress} disabled={disabled}>
@@ -164,7 +166,7 @@ function ChoiceItem({
           <BiolumText
             variant="body"
             size="medium"
-            color={disabled ? "faint" : selected ? "full" : "standard"}
+            color={disabled ? "faint" : (selected ? "full" : "standard")}
           >
             {option.label}
           </BiolumText>

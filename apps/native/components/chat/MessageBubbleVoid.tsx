@@ -48,9 +48,15 @@ function isToolError(part: unknown): boolean {
 }
 
 function formatStructured(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
   try {
     return JSON.stringify(value, null, 2);
   } catch {
@@ -173,10 +179,10 @@ function renderParts(
         | {
             component: string;
             props?: Record<string, unknown>;
-            children?: Array<{
+            children?: {
               component: string;
               props?: Record<string, unknown>;
-            }>;
+            }[];
           }
         | undefined;
       if (!ui || typeof ui !== "object" || !("component" in ui)) {

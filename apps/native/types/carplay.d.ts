@@ -1,14 +1,14 @@
 declare module "@g4rb4g3/react-native-carplay" {
-  type VoiceControlTemplateConfig = {
+  interface VoiceControlTemplateConfig {
     title: string;
     subtitle?: string;
     buttons?: unknown[];
-  };
+  }
 
-  type VoiceControlButtonConfig = {
+  interface VoiceControlButtonConfig {
     id: string;
     onPress: () => void | Promise<void>;
-  };
+  }
 
   type VoiceControlTemplateCtor = new (
     config: VoiceControlTemplateConfig
@@ -18,14 +18,14 @@ declare module "@g4rb4g3/react-native-carplay" {
     config: VoiceControlButtonConfig
   ) => unknown;
 
-  type CarPlayApi = {
+  interface CarPlayApi {
     registerOnConnect?(handler: () => void): void;
     VoiceControlTemplate?: VoiceControlTemplateCtor;
     VoiceControlButton?: VoiceControlButtonCtor;
     CarPlayButton?: VoiceControlButtonCtor;
     pushTemplate?(template: unknown, animated: boolean): void;
     connected?: boolean;
-  };
+  }
 
   const CarPlay: CarPlayApi;
   export default CarPlay;

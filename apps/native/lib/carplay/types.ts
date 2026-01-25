@@ -14,7 +14,7 @@ export type WorkflowStatus =
   | "cancelled";
 
 // Workflow state for CarPlay display
-export type WorkflowState = {
+export interface WorkflowState {
   id: string;
   requirement: string;
   status: WorkflowStatus;
@@ -27,7 +27,7 @@ export type WorkflowState = {
   updatedAt: number;
   planId?: string;
   linearIssueId?: string;
-};
+}
 
 // Escalation priority levels
 export type EscalationPriority = "critical" | "high" | "normal";
@@ -46,7 +46,7 @@ export type EscalationReason =
   | "other";
 
 // Escalation for decision queue
-export type Escalation = {
+export interface Escalation {
   id: string;
   workflowId: string;
   workflowName: string;
@@ -59,14 +59,14 @@ export type Escalation = {
   priority: EscalationPriority;
   severity: EscalationSeverity;
   createdAt: number;
-};
+}
 
-export type EscalationOption = {
+export interface EscalationOption {
   id: string;
   label: string;
   action: "approve" | "reject" | "defer" | "custom";
   value?: string;
-};
+}
 
 // PR status from GitHub router
 export type PRStatus = "open" | "merged" | "closed";
@@ -74,7 +74,7 @@ export type PRReviewStatus = "pending" | "approved" | "changes_requested";
 export type PRCIStatus = "pending" | "success" | "failure" | "running";
 
 // Pull request for review
-export type PullRequest = {
+export interface PullRequest {
   id: string;
   number: number;
   title: string;
@@ -93,10 +93,10 @@ export type PullRequest = {
   url: string;
   createdAt: string;
   updatedAt: string;
-};
+}
 
 // ExecPlan for approval
-export type ExecPlan = {
+export interface ExecPlan {
   id: string;
   runId: string;
   title: string;
@@ -107,14 +107,14 @@ export type ExecPlan = {
   waveCount: number;
   subtaskCount: number;
   createdAt: number;
-};
+}
 
-export type ExecPlanPhase = {
+export interface ExecPlanPhase {
   id: string;
   name: string;
   taskCount: number;
   estimatedMinutes: number;
-};
+}
 
 // Connection status for sync
 export type ConnectionStatus =
@@ -142,7 +142,7 @@ export type CarPlayEventType =
   | "agent:progress";
 
 // Unified CarPlay event from backend
-export type CarPlayEvent = {
+export interface CarPlayEvent {
   type: CarPlayEventType;
   timestamp: number;
   data:
@@ -151,9 +151,9 @@ export type CarPlayEvent = {
     | PREventData
     | PlanEventData
     | AgentEventData;
-};
+}
 
-export type WorkflowEventData = {
+export interface WorkflowEventData {
   kind: "workflow";
   runId: string;
   status: WorkflowStatus;
@@ -161,24 +161,24 @@ export type WorkflowEventData = {
   currentTask?: string;
   summary?: string;
   error?: string;
-};
+}
 
-export type EscalationEventData = {
+export interface EscalationEventData {
   kind: "escalation";
   escalation: Escalation;
-};
+}
 
-export type PREventData = {
+export interface PREventData {
   kind: "pr";
   pullRequest: PullRequest;
-};
+}
 
-export type PlanEventData = {
+export interface PlanEventData {
   kind: "plan";
   plan: ExecPlan;
-};
+}
 
-export type AgentEventData = {
+export interface AgentEventData {
   kind: "agent";
   agentId: string;
   workflowId: string;
@@ -186,7 +186,7 @@ export type AgentEventData = {
   status: "spawned" | "running" | "complete" | "error";
   progress?: number;
   outcome?: string;
-};
+}
 
 // Review queue item (from review router)
 export type ReviewType =
@@ -196,7 +196,7 @@ export type ReviewType =
   | "workflow"
   | "code";
 
-export type ReviewItem = {
+export interface ReviewItem {
   id: string;
   type: ReviewType;
   priority: EscalationPriority;
@@ -206,7 +206,7 @@ export type ReviewItem = {
   workflowRunId?: string;
   prNumber?: number;
   createdAt: string;
-};
+}
 
 // Voice command intent types
 export type VoiceIntent =
@@ -216,24 +216,24 @@ export type VoiceIntent =
   | "task_assignment"
   | "unknown";
 
-export type ParsedVoiceCommand = {
+export interface ParsedVoiceCommand {
   intent: VoiceIntent;
   action?: "pause" | "resume" | "cancel" | "approve" | "reject" | "defer";
   workflowName?: string;
   workflowId?: string;
   taskDescription?: string;
   confidence: number;
-};
+}
 
 // TTS priority for queue
 export type TTSPriority = "immediate" | "high" | "normal" | "low";
 
-export type TTSRequest = {
+export interface TTSRequest {
   id: string;
   text: string;
   priority: TTSPriority;
   createdAt: number;
-};
+}
 
 // Offline command for queue
 export type OfflineCommandType =
@@ -242,11 +242,11 @@ export type OfflineCommandType =
   | "plan_decision"
   | "workflow_action";
 
-export type OfflineCommand = {
+export interface OfflineCommand {
   id: string;
   type: OfflineCommandType;
   targetId: string;
   action: string;
   reason?: string;
   createdAt: number;
-};
+}

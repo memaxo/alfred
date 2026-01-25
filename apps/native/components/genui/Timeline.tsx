@@ -188,34 +188,38 @@ function getStatusConfig(
   theme: ReturnType<typeof useVoidTheme>
 ) {
   switch (status) {
-    case "pending":
+    case "pending": {
       return {
         indicatorBg: "transparent",
         indicatorBorder: theme.colors.biolum.faint,
         icon: undefined,
         iconColor: undefined,
       };
-    case "active":
+    }
+    case "active": {
       return {
         indicatorBg: theme.colors.glass.active,
         indicatorBorder: theme.colors.biolum.standard,
         icon: "ellipse" as const,
         iconColor: theme.colors.biolum.full,
       };
-    case "completed":
+    }
+    case "completed": {
       return {
         indicatorBg: "rgba(145, 200, 145, 0.2)",
         indicatorBorder: theme.colors.semantic.success,
         icon: "checkmark" as const,
         iconColor: theme.colors.semantic.success,
       };
-    case "error":
+    }
+    case "error": {
       return {
         indicatorBg: "rgba(200, 145, 145, 0.2)",
         indicatorBorder: theme.colors.semantic.error,
         icon: "close" as const,
         iconColor: theme.colors.semantic.error,
       };
+    }
   }
 }
 

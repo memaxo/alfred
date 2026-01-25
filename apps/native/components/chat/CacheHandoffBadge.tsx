@@ -51,7 +51,9 @@ export function CacheHandoffBadge({
     shadowOpacity: glowOpacity.value,
   }));
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Animated.View

@@ -27,11 +27,11 @@ import {
   speakWorkflowUpdate,
 } from "./speech";
 
-export type VoiceHandlerResult = {
+export interface VoiceHandlerResult {
   text: string;
   success: boolean;
   data?: unknown;
-};
+}
 
 /**
  * Handle status query - "what's the status?"
@@ -63,7 +63,7 @@ export async function handleStatusQuery(
       success: true,
       data: running,
     };
-  } catch (_error) {
+  } catch {
     return {
       text: speakError("checking status"),
       success: false,
@@ -77,7 +77,7 @@ export async function handleStatusQuery(
 export async function handleDecisionQuery(): Promise<VoiceHandlerResult> {
   try {
     const store = useCarPlayStore.getState();
-    const escalations = store.escalations;
+    const { escalations } = store;
     const reviewCount = store.reviews.length;
 
     return {
@@ -85,7 +85,7 @@ export async function handleDecisionQuery(): Promise<VoiceHandlerResult> {
       success: true,
       data: { escalations, reviewCount },
     };
-  } catch (_error) {
+  } catch {
     return {
       text: speakError("checking decisions"),
       success: false,
@@ -130,7 +130,7 @@ export async function handleEscalationDecision(
       ),
       success: true,
     };
-  } catch (_error) {
+  } catch {
     return {
       text: speakError("handling decision"),
       success: false,
@@ -178,7 +178,7 @@ export async function handlePRDecision(
       text: "To request changes, please use the app to leave a comment.",
       success: false,
     };
-  } catch (_error) {
+  } catch {
     return {
       text: speakError("handling PR"),
       success: false,
@@ -226,7 +226,7 @@ export async function handlePlanDecision(
       text: speakConfirmation("rejected", plan.requirement),
       success: true,
     };
-  } catch (_error) {
+  } catch {
     return {
       text: speakError("handling plan"),
       success: false,
@@ -256,28 +256,31 @@ export async function handleWorkflowControl(
     // await client.workflow.pause/resume/cancel({ runId });
 
     switch (action) {
-      case "pause":
+      case "pause": {
         store.updateWorkflow(workflowId, { status: "suspended" });
         return {
           text: speakConfirmation("paused", workflow.requirement),
           success: true,
         };
+      }
 
-      case "resume":
+      case "resume": {
         store.updateWorkflow(workflowId, { status: "running" });
         return {
           text: speakConfirmation("resumed", workflow.requirement),
           success: true,
         };
+      }
 
-      case "cancel":
+      case "cancel": {
         store.updateWorkflow(workflowId, { status: "cancelled" });
         return {
           text: speakConfirmation("cancelled", workflow.requirement),
           success: true,
         };
+      }
     }
-  } catch (_error) {
+  } catch {
     return {
       text: speakError(`${action} workflow`),
       success: false,

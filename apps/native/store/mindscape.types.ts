@@ -1,4 +1,8 @@
-export type MindscapeViewport = { x: number; y: number; zoom: number };
+export interface MindscapeViewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
 
 export type MindscapeNodeType =
   | "entity"
@@ -8,7 +12,7 @@ export type MindscapeNodeType =
   | "window"
   | "agent";
 
-export type MindscapeNodeData = {
+export interface MindscapeNodeData {
   label: string;
   type: MindscapeNodeType;
   description?: string;
@@ -20,23 +24,23 @@ export type MindscapeNodeData = {
   confidence?: number;
   archived?: boolean;
   hgHash?: string;
-};
+}
 
-export type MindscapeEdgeData = {
+export interface MindscapeEdgeData {
   label?: string;
   type: "relation" | "reference" | "spawn" | "dependency";
   weight?: number;
-};
+}
 
-export type MindscapeNode = {
+export interface MindscapeNode {
   id: string;
   position: { x: number; y: number };
   data: MindscapeNodeData;
-};
+}
 
-export type MindscapeEdge = {
+export interface MindscapeEdge {
   id: string;
   source: string;
   target: string;
   data: MindscapeEdgeData;
-};
+}

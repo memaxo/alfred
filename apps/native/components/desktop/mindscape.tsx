@@ -157,7 +157,7 @@ export function MindscapeCanvas() {
   );
 
   const gridDots = useMemo(() => {
-    const dots: Array<{ x: number; y: number }> = [];
+    const dots: { x: number; y: number }[] = [];
     const gap = 32;
     for (let x = 0; x < width; x += gap) {
       for (let y = 0; y < height; y += gap) {

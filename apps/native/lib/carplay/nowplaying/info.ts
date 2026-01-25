@@ -19,20 +19,20 @@ import type { WorkflowState } from "../types";
 
 import { useCarPlayStore } from "../store";
 
-export type NowPlayingConfig = {
+export interface NowPlayingConfig {
   onPlayPause?: () => void;
   onNextTrack?: () => void;
   onPreviousTrack?: () => void;
   onMorePressed?: () => void;
-};
+}
 
-export type NowPlayingInfo = {
+export interface NowPlayingInfo {
   workflowId: string;
   title: string;
   status: WorkflowState["status"];
   progress: number;
   currentTask?: string;
-};
+}
 
 let currentTemplate: NowPlayingTemplate | null = null;
 let currentInfo: NowPlayingInfo | null = null;

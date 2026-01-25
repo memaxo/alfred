@@ -39,7 +39,9 @@ export function ReviewCardStack({
 
   const handleSwipeRight = useCallback(
     (review: Review) => {
-      if (isAnimating.value) return;
+      if (isAnimating.value) {
+        return;
+      }
       isAnimating.value = true;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -61,7 +63,9 @@ export function ReviewCardStack({
 
   const handleSwipeLeft = useCallback(
     (review: Review) => {
-      if (isAnimating.value) return;
+      if (isAnimating.value) {
+        return;
+      }
       isAnimating.value = true;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

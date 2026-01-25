@@ -17,16 +17,20 @@ const fallbackDir = () => cacheDirectory ?? documentDirectory ?? "";
 
 const extensionForMime = (mimeType: string) => {
   switch (mimeType) {
-    case "audio/mpeg":
+    case "audio/mpeg": {
       return "mp3";
+    }
     case "audio/ogg":
-    case "audio/opus":
+    case "audio/opus": {
       return "opus";
+    }
     case "audio/wav":
-    case "audio/x-wav":
+    case "audio/x-wav": {
       return "wav";
-    default:
+    }
+    default: {
       return "m4a";
+    }
   }
 };
 

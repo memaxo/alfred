@@ -8,13 +8,13 @@ import { useAuthClient } from "@/lib/auth-client";
 import { TestProviders } from "../utils/test-helpers";
 
 // Mock auth client
-jest.mock("@/lib/auth-client", () => ({
+jest.mock<typeof import("@/lib/auth-client")>("@/lib/auth-client", () => ({
   useAuthClient: jest.fn(),
 }));
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-describe("Authentication Integration", () => {
+describe("authentication Integration", () => {
   const authClientMock = {
     useSession: jest.fn(),
     signIn: { email: jest.fn() },
@@ -27,11 +27,15 @@ describe("Authentication Integration", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useAuthClient as unknown as jest.Mock).mockReturnValue(authClientMock);
+    jest
+      .mocked(useAuthClient)
+      .mockReturnValue(
+        authClientMock as unknown as ReturnType<typeof useAuthClient>
+      );
   });
 
   it("should handle login flow", async () => {
-    const signInMock = authClientMock.signIn.email as jest.Mock;
+    const signInMock = jest.mocked(authClientMock.signIn.email);
     signInMock.mockResolvedValue({ data: { user: { id: "1" } }, error: null });
 
     await act(async () => {
@@ -66,12 +70,12 @@ describe("Authentication Integration", () => {
   });
 
   it("should handle onboarding status persistence", async () => {
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("true");
+    jest.mocked(AsyncStorage.getItem).mockResolvedValue("true");
 
     const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.hasCompletedOnboarding).toBe(true);
+      expect(result.current.hasCompletedOnboarding).toBeTruthy();
     });
   });
 });

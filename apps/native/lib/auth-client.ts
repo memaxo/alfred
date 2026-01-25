@@ -4,18 +4,18 @@ import { useAuthClient as useAuthClientBase } from "@/lib/api";
 
 // Type extension for passkey methods that are expected by the codebase
 // but missing from the client plugin export in this version.
-type PasskeyMethods = {
+interface PasskeyMethods {
   passkey: {
     addPasskey: (opts?: {
       name?: string;
     }) => Promise<{ data?: unknown; error?: unknown }>;
     listUserPasskeys: () => Promise<{
-      data?: Array<{
+      data?: {
         id: string;
         name?: string | null;
         deviceType?: string | null;
         createdAt?: string | Date | null;
-      }>;
+      }[];
       error?: unknown;
     }>;
     deletePasskey: (opts: {
@@ -39,7 +39,7 @@ type PasskeyMethods = {
       }
     ) => Promise<{ data?: unknown; error?: unknown }>;
   };
-};
+}
 
 export type AuthClient = ReturnType<typeof createAuthClient> & PasskeyMethods;
 

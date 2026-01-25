@@ -12,10 +12,10 @@ import {
 
 import { trpc } from "@/utils/trpc";
 
-type VoiceSelectorProps = {
+interface VoiceSelectorProps {
   value?: string;
   onValueChange?: (value: string) => void;
-};
+}
 
 export function VoiceSelector({ value, onValueChange }: VoiceSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -72,12 +72,12 @@ export function VoiceSelector({ value, onValueChange }: VoiceSelectorProps) {
           setPlayingVoice(null);
         }
       });
-    } catch (_error) {
+    } catch {
       setPlayingVoice(null);
     }
   };
 
-  const isLoading = voicesQuery.isLoading;
+  const { isLoading } = voicesQuery;
 
   return (
     <View>

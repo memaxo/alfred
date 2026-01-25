@@ -82,7 +82,7 @@ export default function NoteDetailScreen() {
         await Clipboard.setStringAsync(shareUrl);
         Alert.alert("Link Copied", "Note link has been copied to clipboard");
       }
-    } catch (_error) {
+    } catch {
       // Fallback to clipboard
       await Clipboard.setStringAsync(shareUrl);
       Alert.alert("Link Copied", "Note link has been copied to clipboard");

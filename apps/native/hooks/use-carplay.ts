@@ -16,7 +16,7 @@ import {
 import { useSyncStatus } from "../lib/sync/hooks";
 import { trpc } from "../utils/trpc";
 
-type UseCarPlayOptions = {
+interface UseCarPlayOptions {
   /** Mode: 'simple' for basic voice, 'orchestrator' for full workflow control */
   mode?: CarPlayMode;
   /** Legacy: Direct voice input handler (used in simple mode) */
@@ -27,16 +27,16 @@ type UseCarPlayOptions = {
   getCookie?: () => string | null;
   /** Base URL for voice streaming */
   baseUrl?: string | null;
-};
+}
 
-type UseCarPlayReturn = {
+interface UseCarPlayReturn {
   isConnected: boolean;
   state: CarPlayState;
   mode: CarPlayMode;
   startVoiceInteraction: () => void;
   processVoiceInput: (transcript: string) => Promise<void>;
   handleStreamChunk: (chunk: string) => void;
-};
+}
 
 export function useCarPlay(options: UseCarPlayOptions = {}): UseCarPlayReturn {
   const [state, setState] = useState<CarPlayState>("disconnected");

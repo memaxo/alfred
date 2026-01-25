@@ -41,7 +41,7 @@ export function useOnboarding() {
       try {
         const completed = await AsyncStorage.getItem(ONBOARDING_KEY);
         setHasCompletedOnboarding(completed === "true");
-      } catch (_error) {
+      } catch {
         setHasCompletedOnboarding(false);
       } finally {
         setIsLoading(false);
@@ -55,7 +55,7 @@ export function useOnboarding() {
     try {
       await AsyncStorage.setItem(ONBOARDING_KEY, "true");
       setHasCompletedOnboarding(true);
-    } catch (_error) {}
+    } catch {}
   };
 
   return {

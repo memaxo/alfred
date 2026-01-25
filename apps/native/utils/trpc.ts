@@ -12,12 +12,12 @@ export const trpc = createTRPCReact<AppRouter>();
 export const queryClient = new QueryClient();
 
 function base64EncodeUtf8(value: string): string {
-  type BufferLike = {
+  interface BufferLike {
     from: (
       value: string,
       encoding: string
     ) => { toString: (encoding: string) => string };
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (B) {
     return B.from(value, "utf8").toString("base64") as string;

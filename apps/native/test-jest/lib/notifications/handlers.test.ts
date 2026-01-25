@@ -4,8 +4,8 @@
  * These tests verify the notification handler types and routing logic.
  */
 
-describe("Notification Handlers Types", () => {
-  describe("NotificationType", () => {
+describe("notification Handlers Types", () => {
+  describe("notificationType", () => {
     it("should define expected notification types", () => {
       const types = [
         "reminder.due",
@@ -24,7 +24,7 @@ describe("Notification Handlers Types", () => {
     });
   });
 
-  describe("Deep link routing", () => {
+  describe("deep link routing", () => {
     it("should generate correct reminder deep link pattern", () => {
       const reminderId = "123";
       const expectedLink = `alfred://library/reminder/${reminderId}`;
@@ -54,7 +54,7 @@ describe("Notification Handlers Types", () => {
     });
   });
 
-  describe("NotificationData", () => {
+  describe("notificationData", () => {
     it("should have expected shape", () => {
       const mockData = {
         type: "reminder.due" as const,

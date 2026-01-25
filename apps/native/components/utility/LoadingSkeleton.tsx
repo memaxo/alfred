@@ -62,7 +62,7 @@ export function LoadingSkeleton({
   const items = Array.from({ length: count }, (_, i) => i);
 
   switch (variant) {
-    case "chat":
+    case "chat": {
       return (
         <View style={styles.container}>
           {items.map((i) => (
@@ -82,8 +82,9 @@ export function LoadingSkeleton({
           ))}
         </View>
       );
+    }
 
-    case "card":
+    case "card": {
       return (
         <View style={styles.container}>
           {items.map((i) => (
@@ -97,8 +98,9 @@ export function LoadingSkeleton({
           ))}
         </View>
       );
+    }
 
-    case "detail":
+    case "detail": {
       return (
         <View style={styles.container}>
           <Skeleton height={200} borderRadius={12} />
@@ -110,9 +112,10 @@ export function LoadingSkeleton({
           </View>
         </View>
       );
+    }
 
     case "list":
-    default:
+    default: {
       return (
         <View style={styles.container}>
           {items.map((i) => (
@@ -126,6 +129,7 @@ export function LoadingSkeleton({
           ))}
         </View>
       );
+    }
   }
 }
 

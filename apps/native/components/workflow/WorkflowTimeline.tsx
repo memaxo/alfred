@@ -1,11 +1,13 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
+import type { TimelineItem } from "../genui/Timeline";
+
 import { useVoidTheme } from "../../hooks/use-void-theme";
 import { BiolumText, CaptionText } from "../foundation/BiolumText";
 import { HUDSurface } from "../foundation/HUDSurface";
 import { Progress } from "../genui/Progress";
-import { Timeline, TimelineItem } from "../genui/Timeline";
+import { Timeline } from "../genui/Timeline";
 
 export interface WorkflowPhase {
   id: string;

@@ -194,26 +194,33 @@ export default function DriveScreen() {
   }, [voice]);
 
   useEffect(() => {
-    if (!voice.stream?.supported) return;
+    if (!voice.stream?.supported) {
+      return;
+    }
     switch (voice.stream.status) {
-      case "recording":
+      case "recording": {
         setStatus("holding");
         break;
-      case "processing":
+      }
+      case "processing": {
         setStatus("thinking");
         break;
-      case "playing":
+      }
+      case "playing": {
         setStatus("responding");
         break;
-      case "idle":
+      }
+      case "idle": {
         if (voice.stream.assistantText) {
           setReply(voice.stream.assistantText);
           setStatus("idle");
         }
         break;
-      case "error":
+      }
+      case "error": {
         setStatus("error");
         break;
+      }
     }
   }, [
     voice.stream?.assistantText,
@@ -223,7 +230,9 @@ export default function DriveScreen() {
 
   // Orb animation effect
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion) {
+      return;
+    }
 
     if (status === "holding") {
       orbScale.value = withRepeat(
@@ -336,16 +345,21 @@ export default function DriveScreen() {
 
   const label = useMemo(() => {
     switch (status) {
-      case "holding":
+      case "holding": {
         return "Listening…";
-      case "thinking":
+      }
+      case "thinking": {
         return "Thinking…";
-      case "responding":
+      }
+      case "responding": {
         return "Speaking…";
-      case "error":
+      }
+      case "error": {
         return "Check connection";
-      default:
+      }
+      default: {
         return "Hold to talk";
+      }
     }
   }, [status]);
 
@@ -364,16 +378,21 @@ export default function DriveScreen() {
       return "Hands-free unavailable";
     }
     switch (voice.stream.status) {
-      case "recording":
+      case "recording": {
         return "Listening (auto-stop armed)";
-      case "processing":
+      }
+      case "processing": {
         return "Processing reply…";
-      case "playing":
+      }
+      case "playing": {
         return "Speaking…";
-      case "error":
+      }
+      case "error": {
         return voice.stream.error ?? "Streaming error";
-      default:
+      }
+      default: {
         return 'Tap mic or say "Hey Alfred" to start';
+      }
     }
   }, [voice.stream?.error, voice.stream?.status, voice.stream?.supported]);
 
@@ -384,16 +403,21 @@ export default function DriveScreen() {
 
   const getOrbColor = () => {
     switch (status) {
-      case "error":
+      case "error": {
         return theme.colors.semantic.error;
-      case "holding":
+      }
+      case "holding": {
         return theme.colors.semantic.success;
-      case "thinking":
+      }
+      case "thinking": {
         return theme.colors.biolum.bright;
-      case "responding":
+      }
+      case "responding": {
         return theme.colors.biolum.full;
-      default:
+      }
+      default: {
         return theme.colors.biolum.standard;
+      }
     }
   };
 

@@ -5,19 +5,19 @@ import type { VoiceSessionSurface } from "@alfred/voice/types";
  * Pure types only—no runtime logic should live here.
  */
 
-export type VoiceSttPayload = {
+export interface VoiceSttPayload {
   audioBase64: string;
   mimeType: string;
   language?: string;
   prompt?: string;
-};
+}
 
-export type VoiceTtsPayload = {
+export interface VoiceTtsPayload {
   text: string;
   voice?: string;
-};
+}
 
-export type VoiceS2SPayload = {
+export interface VoiceS2SPayload {
   audioBase64: string;
   mimeType: string;
   language?: string;
@@ -28,30 +28,30 @@ export type VoiceS2SPayload = {
   ttsFormat?: "mp3" | "opus" | "wav";
   sessionId?: string;
   surface?: VoiceSessionSurface;
-};
+}
 
-export type PendingSttItem = {
+export interface PendingSttItem {
   ts: number;
   kind: "stt";
   payload: VoiceSttPayload;
   retryCount: number;
   lastError?: string;
-};
+}
 
-export type PendingTtsItem = {
+export interface PendingTtsItem {
   ts: number;
   kind: "tts";
   payload: VoiceTtsPayload;
   retryCount: number;
   lastError?: string;
-};
+}
 
-export type PendingS2SItem = {
+export interface PendingS2SItem {
   ts: number;
   kind: "s2s";
   payload: VoiceS2SPayload;
   retryCount: number;
   lastError?: string;
-};
+}
 
 export type PendingItem = PendingSttItem | PendingTtsItem | PendingS2SItem;

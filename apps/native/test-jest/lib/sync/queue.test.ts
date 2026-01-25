@@ -5,7 +5,7 @@
  * Full integration tests require expo-sqlite which is not available in Jest.
  */
 
-describe("Sync Queue Types", () => {
+describe("sync Queue Types", () => {
   it("should define valid SyncAction values", () => {
     // Type-level test - verify the expected action types
     const validActions = ["create", "update", "delete"] as const;

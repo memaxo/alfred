@@ -10,7 +10,7 @@ export function createMockNote(
   overrides: Partial<Record<string, unknown>> = {}
 ) {
   return {
-    id: `note-${Math.random().toString(36).substr(2, 9)}`,
+    id: `note-${Math.random().toString(36).slice(2, 9)}`,
     title: "Test Note",
     content: "This is a test note content.",
     tags: ["test", "mock"],
@@ -24,7 +24,7 @@ export function createMockReminder(
   overrides: Partial<Record<string, unknown>> = {}
 ) {
   return {
-    id: `remind-${Math.random().toString(36).substr(2, 9)}`,
+    id: `remind-${Math.random().toString(36).slice(2, 9)}`,
     title: "Test Reminder",
     description: "This is a test reminder description.",
     due: new Date(Date.now() + 86_400_000).toISOString(),
@@ -38,7 +38,7 @@ export function createMockBookmark(
   overrides: Partial<Record<string, unknown>> = {}
 ) {
   return {
-    id: `book-${Math.random().toString(36).substr(2, 9)}`,
+    id: `book-${Math.random().toString(36).slice(2, 9)}`,
     url: "https://example.com",
     title: "Example Domain",
     created: new Date().toISOString(),
@@ -52,7 +52,7 @@ export function createMockMessage(
   const { content: contentOverride, ...messageOverrides } = overrides;
   const content = contentOverride ?? "Hello ALFRED!";
   return {
-    id: `msg-${Math.random().toString(36).substr(2, 9)}`,
+    id: `msg-${Math.random().toString(36).slice(2, 9)}`,
     role: "user",
     parts: [
       {

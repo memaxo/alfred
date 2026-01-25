@@ -18,7 +18,7 @@ export function fuzzyMatch(query: string, text: string): number {
 
   // Exact match gets highest score
   if (textLower === queryLower) {
-    return 1.0;
+    return 1;
   }
 
   // Starts with query gets high score
@@ -84,11 +84,11 @@ export function fuzzySearch<T>(
 /**
  * Sort options for lists
  */
-export type SortOption<T> = {
+export interface SortOption<T> {
   key: string;
   label: string;
   sortFn: (a: T, b: T) => number;
-};
+}
 
 /**
  * Common sort functions
@@ -154,11 +154,11 @@ export const sortFunctions = {
 /**
  * Filter options
  */
-export type FilterOption<T> = {
+export interface FilterOption<T> {
   key: string;
   label: string;
   filterFn: (item: T) => boolean;
-};
+}
 
 /**
  * Common filter functions

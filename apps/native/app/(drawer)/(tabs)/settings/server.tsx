@@ -17,16 +17,21 @@ import { queryClient } from "@/utils/trpc";
 
 function describeClassification(kind: string): string {
   switch (kind) {
-    case "tailnet-hostname":
+    case "tailnet-hostname": {
       return "Tailnet hostname (.ts.net)";
-    case "tailnet-ipv4":
+    }
+    case "tailnet-ipv4": {
       return "Tailnet IPv4 (100.64.0.0/10)";
-    case "tailnet-ipv6":
+    }
+    case "tailnet-ipv6": {
       return "Tailnet IPv6 (fd7a:115c:a1e0::/48)";
-    case "non-tailnet":
+    }
+    case "non-tailnet": {
       return "Non-tailnet URL";
-    default:
+    }
+    default: {
       return "Unknown";
+    }
   }
 }
 

@@ -35,7 +35,7 @@ export function CodexWindow({ window: _window }: WindowComponentProps) {
   const run = trpc.codex.run.useMutation({
     onSuccess: (data) => {
       setResult(String((data as any).result ?? ""));
-      const runId = (data as any).runId;
+      const { runId } = data as any;
       if (typeof runId === "string" && runId.length > 0) {
         setSelectedRunId(runId);
       }

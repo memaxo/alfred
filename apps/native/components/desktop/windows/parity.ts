@@ -1,6 +1,6 @@
 import type { WindowType } from "@/store/desktop.types";
 
-export type WindowParity = {
+export interface WindowParity {
   /**
    * Canonical reference implementation in the web app.
    *
@@ -23,7 +23,7 @@ export type WindowParity = {
    * render real data (or empty state) and support at least one core action.
    */
   readonly contract: readonly string[];
-};
+}
 
 export const windowParity: Record<WindowType, WindowParity> = {
   chat: {

@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-export type ChatInputProps = {
+export interface ChatInputProps {
   onSend: (text: string) => void;
   onVoice?: () => void;
   onCall?: () => void;
@@ -16,7 +16,7 @@ export type ChatInputProps = {
   isRecording?: boolean;
   placeholder?: string;
   showCallButton?: boolean;
-};
+}
 
 export function ChatInput({
   onSend,

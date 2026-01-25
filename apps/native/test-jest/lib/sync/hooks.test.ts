@@ -5,7 +5,7 @@
  * Full integration tests require expo-sqlite and native modules.
  */
 
-describe("Sync Hooks Types", () => {
+describe("sync Hooks Types", () => {
   it("should define expected SyncStatus shape", () => {
     // Verify expected status interface
     const mockStatus = {

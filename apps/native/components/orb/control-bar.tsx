@@ -20,7 +20,7 @@ import { ALFRED_COLORS } from "./constants";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type ControlBarProps = {
+interface ControlBarProps {
   /** Whether microphone is muted */
   isMuted: boolean;
   /** Whether the call is active */
@@ -31,7 +31,7 @@ type ControlBarProps = {
   onEndCall: () => void;
   /** Callback when voice toggle is pressed */
   onToggleVoice: () => void;
-};
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 

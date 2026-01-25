@@ -34,11 +34,11 @@ export type CarPlayIntent =
   | { type: "conversational"; text: string }
   | { type: "new_task"; requirement: string };
 
-export type IntentClassificationResult = {
+export interface IntentClassificationResult {
   intent: CarPlayIntent;
   confidence: number;
   usedBackend: boolean;
-};
+}
 
 // Pattern matchers for common CarPlay commands
 const STATUS_PATTERNS = [
@@ -134,7 +134,7 @@ export async function classifyCarPlayIntent(
         usedBackend: true,
       };
     }
-  } catch (_error) {}
+  } catch {}
 
   // Default: treat as new task or conversational
   if (

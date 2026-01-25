@@ -22,13 +22,13 @@ const POLL_INTERVAL_MS = 30_000; // 30 second fallback polling
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30_000;
 
-type SyncManagerState = {
+interface SyncManagerState {
   isSubscribed: boolean;
   pollTimer: ReturnType<typeof setInterval> | null;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   reconnectAttempts: number;
   unsubscribeNetInfo: (() => void) | null;
-};
+}
 
 class CarPlaySyncManager {
   private readonly state: SyncManagerState = {
@@ -94,7 +94,7 @@ class CarPlaySyncManager {
       }
 
       store.setLastSyncAt(Date.now());
-    } catch (_error) {
+    } catch {
       this.scheduleReconnect();
     }
   }
@@ -154,7 +154,7 @@ class CarPlaySyncManager {
 
       store.setLastSyncAt(Date.now());
       store.setConnectionStatus("connected");
-    } catch (_error) {
+    } catch {
       // Don't change connection status on poll failure - may be temporary
     }
   }
@@ -377,7 +377,7 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
   const { type, timestamp } = pipelineEvent;
 
   switch (type) {
-    case "pipeline:start":
+    case "pipeline:start": {
       return {
         type: "workflow:started",
         timestamp,
@@ -387,8 +387,9 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           status: "running",
         },
       };
+    }
 
-    case "pipeline:complete":
+    case "pipeline:complete": {
       return {
         type: "workflow:completed",
         timestamp,
@@ -399,8 +400,9 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           summary: pipelineEvent.summary,
         },
       };
+    }
 
-    case "pipeline:failed":
+    case "pipeline:failed": {
       return {
         type: "workflow:failed",
         timestamp,
@@ -411,8 +413,9 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           error: pipelineEvent.error,
         },
       };
+    }
 
-    case "pipeline:suspend":
+    case "pipeline:suspend": {
       return {
         type: "workflow:suspended",
         timestamp,
@@ -422,8 +425,9 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           status: "suspended",
         },
       };
+    }
 
-    case "agent:spawn":
+    case "agent:spawn": {
       return {
         type: "agent:spawn",
         timestamp,
@@ -435,8 +439,9 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           status: "spawned",
         },
       };
+    }
 
-    case "agent:complete":
+    case "agent:complete": {
       return {
         type: "agent:complete",
         timestamp,
@@ -448,8 +453,9 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           outcome: pipelineEvent.outcome,
         },
       };
+    }
 
-    case "agent:escalate-request":
+    case "agent:escalate-request": {
       return {
         type: "escalation:created",
         timestamp,
@@ -476,9 +482,11 @@ export function mapPipelineEventToCarPlayEvent(pipelineEvent: {
           },
         },
       };
+    }
 
-    default:
+    default: {
       return null;
+    }
   }
 }
 

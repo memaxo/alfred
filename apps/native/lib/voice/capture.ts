@@ -9,12 +9,12 @@ import {
 
 const MIME_TYPE = "audio/m4a";
 
-type ExpoCaptureOptions = {
+interface ExpoCaptureOptions {
   /** Enable background audio recording (default: true) */
   background?: boolean;
   /** Audio session mode (default: "voice") */
   mode?: AudioSessionMode;
-};
+}
 
 /**
  * Audio capture adapter for Expo/React Native.
