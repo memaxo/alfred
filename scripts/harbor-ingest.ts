@@ -10,13 +10,13 @@ import { sql } from "drizzle-orm";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type HarborRun = {
+interface HarborRun {
   taskId: string;
   runId: string;
   reward: number;
   trajectoryPath: string;
   metadata?: Record<string, unknown>;
-};
+}
 
 async function readReward(rewardPath: string): Promise<number> {
   const content = await Bun.file(rewardPath).text();
@@ -204,9 +204,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     console.error(
-      `harbor_ingest_failed: ${err instanceof Error ? err.message : String(err)}`
+      `harbor_ingest_failed: ${error instanceof Error ? error.message : String(error)}`
     );
     process.exit(1);
   });

@@ -151,8 +151,8 @@ async function main() {
     // Optional: Check metrics if possible
     // console.log("Checking metrics...");
     // But metrics registry is internal to the process. We can't check it easily from here unless we expose it.
-  } catch (e) {
-    console.error("❌ FAILURE:", e);
+  } catch (error) {
+    console.error("❌ FAILURE:", error);
     process.exit(1);
   }
 }

@@ -10,7 +10,7 @@ import {
 } from "@trpc/client";
 import { Buffer } from "node:buffer";
 
-type Args = {
+interface Args {
   baseUrl: string;
   concurrency: number;
   requests: number;
@@ -23,20 +23,20 @@ type Args = {
   timeoutMs: number;
   streamTimeoutMs: number;
   verifyPersisted: boolean;
-};
+}
 
 type StreamOutcome = "completed" | "failed" | "suspended";
 
-type StreamMetrics = {
+interface StreamMetrics {
   outcome: StreamOutcome;
   runId: string | null;
   timeToFirstMs: number | null;
   timeToCompleteMs: number | null;
   eventCounts: Record<string, number>;
   error?: string;
-};
+}
 
-type RunResult = {
+interface RunResult {
   ok: number;
   failed: number;
   timeToFirstMs: number[];
@@ -44,7 +44,7 @@ type RunResult = {
   eventCounts: Record<string, number>;
   errors: string[];
   durationMs: number;
-};
+}
 
 function parseIntArg(value: string | undefined, fallback: number): number {
   if (!value) {
@@ -69,10 +69,12 @@ function parseAuto(value: string | undefined): Args["auto"] {
     case "read":
     case "low":
     case "medium":
-    case "high":
+    case "high": {
       return value;
-    default:
+    }
+    default: {
       return "low";
+    }
   }
 }
 
@@ -302,9 +304,11 @@ function runStream(
           if (!Array.isArray(events) || events.length === 0) {
             persistedError = "persisted_events_missing";
           }
-        } catch (err) {
+        } catch (error) {
           persistedError =
-            err instanceof Error ? err.message : String(err ?? "unknown_error");
+            error instanceof Error
+              ? error.message
+              : String(error ?? "unknown_error");
         }
       }
       resolve({
@@ -420,28 +424,7 @@ async function runLoadTest(args: Args): Promise<RunResult> {
       next += 1;
 
       const requirement = `${args.requirePrefix} #${idx}`;
-      let runId: string | undefined;
-      try {
-        const startResult = await client.workflow.start.mutate({
-          requirement,
-          auto: args.auto,
-          projectId: args.projectId,
-        });
-        runId =
-          startResult && typeof startResult.runId === "string"
-            ? startResult.runId
-            : undefined;
-      } catch (error) {
-        failed += 1;
-        const msg =
-          error instanceof Error
-            ? error.message
-            : `start_failed:${String(error)}`;
-        if (runErrors.length < 25) {
-          runErrors.push(msg);
-        }
-        continue;
-      }
+      const runId = crypto.randomUUID();
 
       const streamResult = await runStream(
         client,

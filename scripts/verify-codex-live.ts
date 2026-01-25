@@ -76,7 +76,8 @@ async function checkDockerAvailable(): Promise<void> {
       throw error;
     }
     throw new Error(
-      "docker_not_available: Install Docker Desktop or ensure 'docker' is in PATH."
+      "docker_not_available: Install Docker Desktop or ensure 'docker' is in PATH.",
+      { cause: error }
     );
   }
 }
@@ -109,7 +110,8 @@ async function checkPostgresAvailable(databaseUrl: string): Promise<void> {
     }
     throw new Error(
       "postgres_check_failed: Unable to verify Postgres availability. " +
-        "Ensure Docker is running and container alfred-postgres exists."
+        "Ensure Docker is running and container alfred-postgres exists.",
+      { cause: error }
     );
   }
 }

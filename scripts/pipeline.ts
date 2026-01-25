@@ -6,7 +6,7 @@
  * Runs the new @alfred/pipeline orchestrator to execute workflow requirements.
  *
  * Usage:
- *   bun scripts/pipeline.ts --requirement "Create packages/util/src/string.ts with capitalize function"
+ *   bun scripts/pipeline.ts --requirement "Add a capitalize() helper to src/string.ts"
  */
 
 import { PipelineRunner, registerDefaultStages } from "@alfred/pipeline";

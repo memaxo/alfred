@@ -95,7 +95,7 @@ try {
 
     const maxParallel = Math.max(
       0,
-      ...Array.from(agentsByWave.values()).map((agents) => agents.length)
+      ...[...agentsByWave.values()].map((agents) => agents.length)
     );
     if (maxParallel < requiredParallel) {
       console.error(

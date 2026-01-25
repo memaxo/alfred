@@ -170,7 +170,7 @@ async function main() {
       `   ✅ Completed 3 concurrent requests in ${duration2.toFixed(2)}ms`
     );
     results.forEach((r) => {
-      console.log(`     req[${r.id}]: "${r.text.substring(0, 30)}..."`);
+      console.log(`     req[${r.id}]: "${r.text.slice(0, 30)}..."`);
     });
     console.log();
 

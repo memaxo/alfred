@@ -1,6 +1,6 @@
-type GitLsFilesResult = {
+interface GitLsFilesResult {
   files: string[];
-};
+}
 
 async function gitLsFiles(): Promise<GitLsFilesResult> {
   const proc = Bun.spawn(["git", "ls-files", "-z"], {
@@ -66,7 +66,7 @@ async function main() {
   );
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

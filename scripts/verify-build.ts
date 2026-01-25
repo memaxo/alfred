@@ -40,7 +40,7 @@ async function verifyBuild() {
     let leaked = false;
 
     for (const file of jsFiles) {
-      const content = await readFile(join(distPath, file), "utf-8");
+      const content = await readFile(join(distPath, file), "utf8");
 
       for (const forbidden of FORBIDDEN_STRINGS) {
         const index = content.indexOf(forbidden);
@@ -49,7 +49,9 @@ async function verifyBuild() {
           // For strictness, we warn on ANY occurrence.
           const start = Math.max(0, index - 50);
           const end = Math.min(content.length, index + forbidden.length + 50);
-          const context = content.slice(start, end).replace(/\n/g, "\\n");
+          const context = content
+            .slice(start, end)
+            .replaceAll("\n", String.raw`\n`);
 
           // Allow list for known false positives
           const isFalsePositive =

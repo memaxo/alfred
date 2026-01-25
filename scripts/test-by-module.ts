@@ -433,7 +433,7 @@ async function main() {
           }
           console.log(`Type: ${failure.failureType}`);
           console.log(
-            `Error: ${failure.error.substring(0, 200)}${failure.error.length > 200 ? "..." : ""}`
+            `Error: ${failure.error.slice(0, 200)}${failure.error.length > 200 ? "..." : ""}`
           );
           if (failure.stack) {
             console.log(

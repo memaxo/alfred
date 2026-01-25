@@ -62,54 +62,54 @@ const CODE_RABBIT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const CODE_RABBIT_POLL_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 // Types
-type LinearIssue = {
+interface LinearIssue {
   id: string;
   identifier: string;
   title: string;
   description: string;
   status: string;
   parentId?: string | null;
-};
+}
 
-type PRWithLinear = {
+interface PRWithLinear {
   pr: number;
   linearId: string;
   linearIssueId: string;
   isDraft: boolean;
   title: string;
   url: string;
-};
+}
 
-type CodeRabbitReview = {
+interface CodeRabbitReview {
   actionable: number;
   nitpicks: number;
   body: string;
   submittedAt: string;
-};
+}
 
-type CIStatus = {
+interface CIStatus {
   mergeable: boolean;
   checks: {
     name: string;
     status: "completed" | "pending" | "failed";
     conclusion: "success" | "failure" | "neutral" | null;
   }[];
-};
+}
 
-type TicketCustomData = {
+interface TicketCustomData {
   scope?: string;
   keyFiles?: string;
   keyPatterns?: string;
   tests?: string;
-};
+}
 
-type WorkflowStats = {
+interface WorkflowStats {
   delegated: number;
   prsCreated: number;
   reviewsCompleted: number;
   merged: number;
   errors: string[];
-};
+}
 
 // Utility: Rate limiting delay
 function delay(ms: number): Promise<void> {
@@ -268,8 +268,9 @@ async function callLinearMCP(
       return result?.comment || null;
     }
 
-    default:
+    default: {
       throw new Error(`Unsupported Linear tool: ${toolName}`);
+    }
   }
 }
 
@@ -422,13 +423,13 @@ async function monitorPRs(): Promise<PRWithLinear[]> {
       "number,title,body,isDraft,url",
     ]).text();
 
-    const prs = JSON.parse(prListOutput) as Array<{
+    const prs = JSON.parse(prListOutput) as {
       number: number;
       title: string;
       body: string;
       isDraft: boolean;
       url: string;
-    }>;
+    }[];
 
     // Extract Linear issue IDs
     const prsWithLinear: PRWithLinear[] = [];
@@ -500,17 +501,17 @@ async function getCodeRabbitReview(
       '.[] | select(.user.login == "coderabbitai[bot]")',
     ]).text();
 
-    const reviews = JSON.parse(reviewsOutput) as Array<{
+    const reviews = JSON.parse(reviewsOutput) as {
       body: string;
       submitted_at: string;
-    }>;
+    }[];
 
     if (reviews.length === 0) {
       return null;
     }
 
     const review = reviews[0];
-    const body = review.body;
+    const { body } = review;
 
     // Extract actionable and nitpick counts
     const actionableMatch = body.match(/Actionable comments posted: (\d+)/);
@@ -676,11 +677,11 @@ async function checkCIStatus(pr: number): Promise<CIStatus> {
 
     const prData = JSON.parse(prDataOutput) as {
       mergeable: boolean;
-      statusesCheckRollup: Array<{
+      statusesCheckRollup: {
         name: string;
         status: "completed" | "pending" | "failed";
         conclusion: "success" | "failure" | "neutral" | null;
-      }>;
+      }[];
     };
 
     // Required checks from CI workflow

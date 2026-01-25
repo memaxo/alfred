@@ -15,7 +15,7 @@ import { logger } from "@alfred/logger";
 
 type LoadMode = "handshake" | "stt" | "full";
 
-type LoadConfig = {
+interface LoadConfig {
   url: string;
   mode: LoadMode;
   concurrency: number;
@@ -23,16 +23,16 @@ type LoadConfig = {
   chunkBytes: number;
   chunkIntervalMs: number;
   headers: Record<string, string>;
-};
+}
 
-type Counters = {
+interface Counters {
   connected: number;
   failed: number;
   sessionStarted: number;
   finalTranscript: number;
   ttsComplete: number;
   errors: number;
-};
+}
 
 function intEnv(name: string, fallback: number) {
   const raw = process.env[name];

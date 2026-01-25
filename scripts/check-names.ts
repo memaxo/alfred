@@ -13,12 +13,12 @@
 import { basename, extname } from "node:path";
 import * as ts from "typescript";
 
-type Violation = {
+interface Violation {
   file: string;
   line: number;
   type: "file" | "class" | "param" | "adjective";
   message: string;
-};
+}
 
 const FORBIDDEN_ADJECTIVES = [
   "enhanced",
@@ -236,7 +236,7 @@ async function checkNames(): Promise<Violation[]> {
   const glob = new Bun.Glob(
     "{apps,packages,scripts,tests}/**/*.{ts,tsx,js,jsx}"
   );
-  const files = Array.from(glob.scanSync({ dot: false }));
+  const files = [...glob.scanSync({ dot: false })];
 
   // Read all files in parallel
   const fileContents = await Promise.allSettled(

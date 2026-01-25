@@ -36,7 +36,7 @@ import { type ProxmoxError, proxmox } from "../packages/agent/src/lib/proxmox";
 
 type LxcName = "alfred" | "alfred-db" | "alfred-redis";
 
-type LxcSpec = {
+interface LxcSpec {
   name: LxcName;
   vmid: number;
   hostname: string;
@@ -46,11 +46,11 @@ type LxcSpec = {
   memory: number;
   net0?: string;
   password?: string;
-};
+}
 
-type CliArgs = {
+interface CliArgs {
   verify: boolean;
-};
+}
 
 function parseArgs(argv: string[]): CliArgs {
   let verify = true;
@@ -176,7 +176,7 @@ async function ensureLxc(
 
   try {
     const current = await client.lxcStatus(node, spec.vmid);
-    status = current.status;
+    ({ status } = current);
     console.log(
       `[proxmox] ${spec.name} exists: vmid=${spec.vmid} status=${status}`
     );
@@ -205,7 +205,7 @@ async function ensureLxc(
     );
 
     const current = await client.lxcStatus(node, spec.vmid);
-    status = current.status;
+    ({ status } = current);
   }
 
   if (status !== "running") {
@@ -219,7 +219,7 @@ async function ensureLxc(
       `[proxmox] ${spec.name} start task finished: ${task.exitstatus}`
     );
     const current = await client.lxcStatus(node, spec.vmid);
-    status = current.status;
+    ({ status } = current);
   }
 
   return { status };
@@ -386,9 +386,9 @@ async function main(): Promise<void> {
     const net0 =
       spec.name === "alfred"
         ? alfredNet0
-        : spec.name === "alfred-db"
+        : (spec.name === "alfred-db"
           ? dbNet0
-          : redisNet0;
+          : redisNet0);
     console.log(
       `- ${spec.name}: vmid=${spec.vmid} hostname=${spec.hostname} net0=${net0 ?? "none"}`
     );

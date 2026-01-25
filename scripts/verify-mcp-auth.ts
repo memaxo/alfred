@@ -19,12 +19,12 @@ const BASE_URL = process.argv.includes("--base-url")
   ? process.argv[process.argv.indexOf("--base-url") + 1]
   : process.env.BETTER_AUTH_URL || "http://localhost:3000";
 
-type TestResult = {
+interface TestResult {
   name: string;
   passed: boolean;
   message: string;
   details?: unknown;
-};
+}
 
 const results: TestResult[] = [];
 

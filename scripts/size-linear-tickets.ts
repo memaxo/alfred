@@ -17,11 +17,13 @@
 // Load .env if available
 try {
   const { readFileSync } = await import("node:fs");
-  const envFile = readFileSync(".env", "utf-8");
+  const envFile = readFileSync(".env", "utf8");
   for (const line of envFile.split("\n")) {
     const match = line.match(/^LINEAR_API_KEY=(.+)$/);
     if (match && !process.env.LINEAR_API_KEY) {
-      process.env.LINEAR_API_KEY = match[1].trim().replace(/^["']|["']$/g, "");
+      process.env.LINEAR_API_KEY = match[1]
+        .trim()
+        .replaceAll(/^["']|["']$/g, "");
     }
   }
 } catch {
@@ -38,7 +40,7 @@ const TEAM_NAME = "Alfred-ops";
 const BATCH_SIZE = 50;
 const BATCH_DELAY_MS = 2000;
 
-type LinearIssue = {
+interface LinearIssue {
   id: string;
   identifier: string;
   title: string;
@@ -54,10 +56,10 @@ type LinearIssue = {
     name: string;
   } | null;
   labels: {
-    nodes: Array<{
+    nodes: {
       id: string;
       name: string;
-    }>;
+    }[];
   };
   estimate: number | null;
   createdAt: string;
@@ -67,14 +69,14 @@ type LinearIssue = {
     identifier: string;
   } | null;
   children: {
-    nodes: Array<{
+    nodes: {
       id: string;
       identifier: string;
-    }>;
+    }[];
   };
-};
+}
 
-type LinearTeam = {
+interface LinearTeam {
   id: string;
   name: string;
   issues: {
@@ -84,9 +86,9 @@ type LinearTeam = {
       endCursor: string | null;
     };
   };
-};
+}
 
-type TicketUpdate = {
+interface TicketUpdate {
   ticketId: string;
   identifier: string;
   title: string;
@@ -100,7 +102,7 @@ type TicketUpdate = {
     status?: string;
     comment?: string;
   };
-};
+}
 
 const updates: TicketUpdate[] = [];
 
@@ -132,7 +134,7 @@ async function fetchLinearGraphQL<T>(
 
   const payload = (await response.json()) as {
     data?: T;
-    errors?: Array<{ message: string; path?: unknown[] }>;
+    errors?: { message: string; path?: unknown[] }[];
   };
 
   if (payload.errors && payload.errors.length > 0) {
@@ -172,7 +174,7 @@ async function fetchTeamStates(teamId: string): Promise<Map<string, string>> {
   const data = await fetchLinearGraphQL<{
     team: {
       states: {
-        nodes: Array<{ id: string; name: string; type: string }>;
+        nodes: { id: string; name: string; type: string }[];
       };
     } | null;
   }>(query, { teamId });
@@ -205,13 +207,13 @@ async function fetchTeam(teamName: string): Promise<LinearTeam> {
   `;
 
   const teamsData = await fetchLinearGraphQL<{
-    teams: { nodes: Array<{ id: string; name: string; key: string }> };
+    teams: { nodes: { id: string; name: string; key: string }[] };
   }>(teamsQuery);
 
   const team = teamsData.teams.nodes.find(
     (t) =>
       t.name === teamName ||
-      t.key === teamName.toLowerCase().replace(/\s+/g, "-")
+      t.key === teamName.toLowerCase().replaceAll(/\s+/g, "-")
   );
 
   if (!team) {
@@ -507,50 +509,52 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
 
   // Labels
   const labels: string[] = [];
-  const existingLabels = issue.labels.nodes.map((l) => l.name.toLowerCase());
+  const existingLabels = new Set(
+    issue.labels.nodes.map((l) => l.name.toLowerCase())
+  );
 
-  if (isFeature && !existingLabels.includes("feature")) {
+  if (isFeature && !existingLabels.has("feature")) {
     labels.push("Feature");
   }
-  if (isBug && !existingLabels.includes("bug")) {
+  if (isBug && !existingLabels.has("bug")) {
     labels.push("Bug");
   }
-  if (isTechDebt && !existingLabels.includes("tech-debt")) {
+  if (isTechDebt && !existingLabels.has("tech-debt")) {
     labels.push("tech-debt");
   }
-  if (isDoc && !existingLabels.includes("documentation")) {
+  if (isDoc && !existingLabels.has("documentation")) {
     labels.push("Documentation");
   }
-  if (isInfra && !existingLabels.includes("infrastructure")) {
+  if (isInfra && !existingLabels.has("infrastructure")) {
     labels.push("Infrastructure");
   }
-  if (isTest && !existingLabels.includes("testing")) {
+  if (isTest && !existingLabels.has("testing")) {
     labels.push("testing");
   }
-  if (isEpic && !existingLabels.includes("epic")) {
+  if (isEpic && !existingLabels.has("epic")) {
     labels.push("epic");
   }
 
   // Domain labels
-  if (title.includes("tool") && !existingLabels.includes("tools")) {
+  if (title.includes("tool") && !existingLabels.has("tools")) {
     labels.push("tools");
   }
-  if (title.includes("workflow") && !existingLabels.includes("workflow")) {
+  if (title.includes("workflow") && !existingLabels.has("workflow")) {
     labels.push("workflow");
   }
-  if (title.includes("voice") && !existingLabels.includes("voice")) {
+  if (title.includes("voice") && !existingLabels.has("voice")) {
     labels.push("voice");
   }
-  if (title.includes("knowledge") && !existingLabels.includes("knowledge")) {
+  if (title.includes("knowledge") && !existingLabels.has("knowledge")) {
     labels.push("knowledge");
   }
-  if (title.includes("ui") && !existingLabels.includes("ui")) {
+  if (title.includes("ui") && !existingLabels.has("ui")) {
     labels.push("ui");
   }
-  if (title.includes("api") && !existingLabels.includes("api")) {
+  if (title.includes("api") && !existingLabels.has("api")) {
     labels.push("api");
   }
-  if (title.includes("auth") && !existingLabels.includes("auth")) {
+  if (title.includes("auth") && !existingLabels.has("auth")) {
     labels.push("auth");
   }
 
@@ -560,12 +564,12 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
     (priority === "High" &&
       (title.includes("core") || title.includes("critical")))
   ) {
-    if (!existingLabels.includes("poc-critical")) {
+    if (!existingLabels.has("poc-critical")) {
       labels.push("poc-critical");
     }
   } else if (
     (priority === "Low" || isDoc || (isTechDebt && priority === "Medium")) &&
-    !existingLabels.includes("post-poc")
+    !existingLabels.has("post-poc")
   ) {
     labels.push("post-poc");
   }
@@ -685,7 +689,7 @@ async function verifyImplementation(
     const file = "packages/runtime/src/orchestrator/index.ts";
     try {
       const { readFile } = await import("node:fs/promises");
-      const content = await readFile(file, "utf-8");
+      const content = await readFile(file, "utf8");
       if (
         content.includes("wavesResult.escalated") &&
         content.includes("workflow_escalated")
@@ -705,7 +709,7 @@ async function verifyImplementation(
     const file = "packages/agent/assistant/src/tool/home.ts";
     try {
       const { readFile } = await import("node:fs/promises");
-      const content = await readFile(file, "utf-8");
+      const content = await readFile(file, "utf8");
       if (content.includes("export const toolHome") && content.length > 500) {
         return {
           isComplete: true,
@@ -901,7 +905,7 @@ ${update.actions.comment ? `- **Note**: ${update.actions.comment}` : ""}
 **Report Generated**: ${new Date().toISOString()}
 `;
 
-    await writeFile(reportPath, report, "utf-8");
+    await writeFile(reportPath, report, "utf8");
     console.log(`\n✅ Report generated: ${reportPath}`);
   } catch (error) {
     console.error("Error processing tickets:", error);

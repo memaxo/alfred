@@ -22,9 +22,9 @@ const LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql";
 const TEAM_NAME = "Alfred-ops";
 
 // Open statuses to include
-const OPEN_STATUSES = ["Backlog", "Todo", "In Progress", "In Review"];
+const OPEN_STATUSES = new Set(["Backlog", "Todo", "In Progress", "In Review"]);
 
-type LinearIssue = {
+interface LinearIssue {
   id: string;
   identifier: string;
   title: string;
@@ -40,10 +40,10 @@ type LinearIssue = {
     name: string;
   } | null;
   labels: {
-    nodes: Array<{
+    nodes: {
       id: string;
       name: string;
-    }>;
+    }[];
   };
   estimate: number | null;
   createdAt: string;
@@ -53,22 +53,22 @@ type LinearIssue = {
     identifier: string;
   } | null;
   children: {
-    nodes: Array<{
+    nodes: {
       id: string;
       identifier: string;
-    }>;
+    }[];
   };
-};
+}
 
-type LinearTeam = {
+interface LinearTeam {
   id: string;
   name: string;
   states: {
-    nodes: Array<{
+    nodes: {
       id: string;
       name: string;
       type: string;
-    }>;
+    }[];
   };
   issues: {
     nodes: LinearIssue[];
@@ -77,7 +77,7 @@ type LinearTeam = {
       endCursor: string | null;
     };
   };
-};
+}
 
 async function fetchLinearGraphQL<T>(
   query: string,
@@ -107,7 +107,7 @@ async function fetchLinearGraphQL<T>(
 
   const payload = (await response.json()) as {
     data?: T;
-    errors?: Array<{ message: string; path?: unknown[] }>;
+    errors?: { message: string; path?: unknown[] }[];
   };
 
   if (payload.errors && payload.errors.length > 0) {
@@ -138,13 +138,13 @@ async function fetchTeam(teamName: string): Promise<LinearTeam> {
   `;
 
   const teamsData = await fetchLinearGraphQL<{
-    teams: { nodes: Array<{ id: string; name: string; key: string }> };
+    teams: { nodes: { id: string; name: string; key: string }[] };
   }>(teamsQuery);
 
   const team = teamsData.teams.nodes.find(
     (t) =>
       t.name === teamName ||
-      t.key === teamName.toLowerCase().replace(/\s+/g, "-")
+      t.key === teamName.toLowerCase().replaceAll(/\s+/g, "-")
   );
 
   if (!team) {
@@ -230,8 +230,7 @@ async function fetchTeam(teamName: string): Promise<LinearTeam> {
 function filterOpenIssues(issues: LinearIssue[]): LinearIssue[] {
   return issues.filter(
     (issue) =>
-      OPEN_STATUSES.includes(issue.state.name) &&
-      issue.state.type !== "canceled"
+      OPEN_STATUSES.has(issue.state.name) && issue.state.type !== "canceled"
   );
 }
 
@@ -271,11 +270,11 @@ function categorizeIssues(issues: LinearIssue[]) {
   return { byStatus, byPriority };
 }
 
-function findDuplicates(issues: LinearIssue[]): Array<{
+function findDuplicates(issues: LinearIssue[]): {
   issues: LinearIssue[];
   similarity: string;
-}> {
-  const duplicates: Array<{ issues: LinearIssue[]; similarity: string }> = [];
+}[] {
+  const duplicates: { issues: LinearIssue[]; similarity: string }[] = [];
   const seen = new Map<string, LinearIssue[]>();
 
   for (const issue of issues) {
@@ -301,7 +300,7 @@ function findDuplicates(issues: LinearIssue[]): Array<{
     if (!issue.description) {
       continue;
     }
-    const descKey = issue.description.substring(0, 100).toLowerCase().trim();
+    const descKey = issue.description.slice(0, 100).toLowerCase().trim();
     if (!descMap.has(descKey)) {
       descMap.set(descKey, []);
     }
@@ -313,7 +312,7 @@ function findDuplicates(issues: LinearIssue[]): Array<{
       // Only flag if 2-3 issues share similar description (avoid false positives)
       duplicates.push({
         issues: matchingIssues,
-        similarity: `Similar description: "${desc.substring(0, 50)}..."`,
+        similarity: `Similar description: "${desc.slice(0, 50)}..."`,
       });
     }
   }
@@ -598,7 +597,7 @@ async function main() {
       `repo-state-${dateStr}.md`
     );
 
-    await writeFile(reportPath, report, "utf-8");
+    await writeFile(reportPath, report, "utf8");
     console.log(`\n✅ Report generated: ${reportPath}`);
     console.log("\nSummary:");
     console.log(`- Open issues: ${openIssues.length}`);

@@ -83,7 +83,7 @@ async function main() {
         process.exit(1);
       }
     } catch {
-      console.log("📩 Received (raw):", data.toString().substring(0, 50));
+      console.log("📩 Received (raw):", data.toString().slice(0, 50));
     }
   });
 

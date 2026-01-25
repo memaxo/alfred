@@ -98,7 +98,7 @@ try {
 
   console.log("PASS: Tool verification successful");
   console.log(`  Total tool calls: ${toolCalls.length}`);
-  console.log(`  Unique tools: ${Array.from(toolNames).join(", ")}`);
+  console.log(`  Unique tools: ${[...toolNames].join(", ")}`);
   process.exit(0);
 } catch (error) {
   console.error(`ERROR: ${error instanceof Error ? error.message : error}`);

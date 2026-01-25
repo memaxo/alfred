@@ -15,11 +15,11 @@ import { join, resolve } from "node:path";
 const ROOT_DIR = resolve(import.meta.dir, "..");
 const PACKAGES_DIR = join(ROOT_DIR, "packages");
 
-type CheckResult = {
+interface CheckResult {
   name: string;
   passed: boolean;
   message?: string;
-};
+}
 
 const results: CheckResult[] = [];
 
@@ -42,9 +42,7 @@ async function checkPackageExports(): Promise<void> {
     for (const pkg of packageDirs) {
       const packageJsonPath = join(PACKAGES_DIR, pkg, "package.json");
       try {
-        const packageJson = JSON.parse(
-          await readFile(packageJsonPath, "utf-8")
-        );
+        const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
         if (packageJson.name) {
           addResult(`Package ${pkg} has name`, true);
         } else {
@@ -82,7 +80,7 @@ async function checkSSRCompatibility(): Promise<void> {
   // Check that server-only packages are properly externalized in vite.config.ts
   const viteConfigPath = join(ROOT_DIR, "apps/web/vite.config.ts");
   try {
-    const viteConfig = await readFile(viteConfigPath, "utf-8");
+    const viteConfig = await readFile(viteConfigPath, "utf8");
     const hasDbExternal = viteConfig.includes("@alfred/db");
     const hasServerOnlyPackages = viteConfig.includes("serverOnlyPackages");
     const hasServerOnlyExternal = hasDbExternal && hasServerOnlyPackages;
@@ -125,7 +123,7 @@ async function checkGracefulDegradation(): Promise<void> {
   // Check that init.ts has graceful degradation
   const initPath = join(ROOT_DIR, "packages/api/src/init.ts");
   try {
-    const initContent = await readFile(initPath, "utf-8");
+    const initContent = await readFile(initPath, "utf8");
     const hasDbCheck = initContent.includes("isDbAvailable");
     const hasUvCheck = initContent.includes("isUvAvailable");
     const hasDbSkipMessage = initContent.includes(

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type TaskDef = {
+interface TaskDef {
   id: string;
   requirement: string;
   verifyCmd: string;
@@ -13,7 +13,7 @@ type TaskDef = {
   profile: "pr" | "nightly" | "weekly" | "full";
   surface: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   auto?: "read" | "low" | "medium" | "high";
-};
+}
 
 function resolveGitCommit(args: {
   gitUrl: string;
@@ -561,9 +561,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     console.error(
-      `harbor_dataset_failed: ${err instanceof Error ? err.message : String(err)}`
+      `harbor_dataset_failed: ${error instanceof Error ? error.message : String(error)}`
     );
     process.exit(1);
   });

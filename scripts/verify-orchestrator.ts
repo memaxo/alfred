@@ -100,7 +100,7 @@ async function verify() {
     authz: `Bearer ${token}`,
   });
 
-  const runId = runtime.runId;
+  const { runId } = runtime;
   logger.info("verification_run_started", { runId });
 
   function kindOfEvent(event: unknown): string | null {
@@ -153,8 +153,10 @@ async function verify() {
           `Content mismatch: expected '${VERIFICATION_CONTENT}', got '${content}'`
         );
       }
-    } catch (fsError) {
-      throw new Error(`File verification failed: ${fsError}`);
+    } catch (error) {
+      throw new Error(`File verification failed: ${error}`, {
+        cause: error,
+      });
     }
   } catch (error) {
     logger.error("verification_failed", {

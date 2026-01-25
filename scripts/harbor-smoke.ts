@@ -215,9 +215,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     console.error(
-      `\n✗ Smoke test failed: ${err instanceof Error ? err.message : String(err)}`
+      `\n✗ Smoke test failed: ${error instanceof Error ? error.message : String(error)}`
     );
     process.exit(1);
   });

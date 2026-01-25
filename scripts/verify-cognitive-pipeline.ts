@@ -19,7 +19,7 @@ import { RuntimeContext } from "@alfred/type/runtime-context";
 const STREAM_ID = `verify-cognitive-${Date.now()}`;
 
 const mockAiAdapter = {
-  generateText({ messages }: { messages: Array<{ content: string }> }) {
+  generateText({ messages }: { messages: { content: string }[] }) {
     const last = messages.at(-1);
     return {
       text: `Mock cognition: ${(last?.content ?? "unknown").slice(0, 60)}`,
@@ -114,11 +114,12 @@ async function processEffects(
           queue.push(...followUp);
           break;
         }
-        default:
+        default: {
           logger.warn("verify_cognitive_effect_unhandled", {
             streamId,
             effect,
           });
+        }
       }
     } catch (error) {
       logger.error("verify_cognitive_effect_failed", {

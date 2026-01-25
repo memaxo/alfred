@@ -5,7 +5,7 @@ import type { AppRouter } from "@alfred/api/routers/index";
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import { Buffer } from "node:buffer";
 
-type Args = {
+interface Args {
   baseUrl: string;
   concurrency: number;
   requests: number;
@@ -16,7 +16,7 @@ type Args = {
   testUserId: string;
   testScopes: string[];
   timeoutMs: number;
-};
+}
 
 function parseIntArg(value: string | undefined, fallback: number): number {
   if (!value) {
@@ -41,10 +41,12 @@ function parseAuto(value: string | undefined): Args["auto"] {
     case "read":
     case "low":
     case "medium":
-    case "high":
+    case "high": {
       return value;
-    default:
+    }
+    default: {
       return "low";
+    }
   }
 }
 
@@ -106,7 +108,7 @@ function parseArgs(argv: string[]): Args {
 
 function usage(): string {
   return [
-    "ALFRED load test: workflow.start",
+    "ALFRED load test: workflow.phase.plan",
     "",
     "Prereqs (dev-only auth bypass):",
     "- Start the web server with TEST_MODE=1 (or VITE_TEST_MODE=1).",
@@ -118,7 +120,7 @@ function usage(): string {
     "Options:",
     "  --base-url        Base URL (default: http://localhost:3000)",
     "  --concurrency     Concurrent in-flight mutations (default: 10)",
-    "  --requests        Total workflow.start calls (default: 100)",
+    "  --requests        Total workflow.phase.plan calls (default: 100)",
     "  --timeout-ms      Hard process timeout (default: 120000)",
     "  --auto            read|low|medium|high (default: low)",
     "  --project-id      Optional projectId",
@@ -185,13 +187,13 @@ function percentile(values: number[], p: number): number {
   return sorted[idx] ?? 0;
 }
 
-type RunResult = {
+interface RunResult {
   ok: number;
   failed: number;
   latenciesMs: number[];
   errors: string[];
   durationMs: number;
-};
+}
 
 async function runLoadTest(args: Args): Promise<RunResult> {
   const testSessionHeader = makeTestSessionHeader({
@@ -241,11 +243,7 @@ async function runLoadTest(args: Args): Promise<RunResult> {
       const requirement = `${args.requirePrefix} #${idx}`;
       const start = performance.now();
       try {
-        await client.workflow.start.mutate({
-          requirement,
-          auto: args.auto,
-          projectId: args.projectId,
-        });
+        await client.workflow.phase.plan.mutate({ requirement });
         ok += 1;
       } catch (error) {
         failed += 1;
@@ -301,7 +299,7 @@ async function main() {
   const max = percentile(result.latenciesMs, 1);
 
   console.log("");
-  console.log("workflow.start load test results");
+  console.log("workflow.phase.plan load test results");
   console.log(`- baseUrl: ${args.baseUrl}`);
   console.log(`- concurrency: ${args.concurrency}`);
   console.log(`- requests: ${args.requests}`);

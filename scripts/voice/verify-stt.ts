@@ -90,8 +90,8 @@ except Exception as e:
       console.error(`      Stderr: ${stderr.trim()}`);
       return false;
     }
-  } catch (e) {
-    console.error(`   ❌ Failed to execute python check: ${e}`);
+  } catch (error) {
+    console.error(`   ❌ Failed to execute python check: ${error}`);
     return false;
   }
 

@@ -15,7 +15,7 @@ import { sql } from "drizzle-orm";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type ExportArgs = {
+interface ExportArgs {
   outDir: string;
   runIds: string[];
   userId: string | null;
@@ -24,7 +24,7 @@ type ExportArgs = {
   offset: number;
   refresh: boolean;
   writeFiles: boolean;
-};
+}
 
 function usage(): string {
   return [
@@ -170,7 +170,7 @@ async function exportOne(
   const validation = isFresh
     ? {
         ok: Boolean(existing!.valid),
-        errors: [] as Array<{ path: string; message: string }>,
+        errors: [] as { path: string; message: string }[],
       }
     : validateAtifTrajectory(trajectory);
 
@@ -201,7 +201,7 @@ async function exportOne(
 
 function pLimit(max: number) {
   let active = 0;
-  const queue: Array<() => void> = [];
+  const queue: (() => void)[] = [];
   const next = () => {
     active -= 1;
     const fn = queue.shift();
@@ -241,7 +241,7 @@ async function main() {
 
   const runIds = args.runIds.length
     ? args.runIds
-    : args.userId
+    : (args.userId
       ? (
           await workflowRepo.listRuns({
             userId: args.userId,
@@ -250,7 +250,7 @@ async function main() {
             offset: args.offset,
           })
         ).map((r) => r.id)
-      : [];
+      : []);
 
   if (runIds.length === 0) {
     process.stderr.write("No runs selected. Provide --runId or --userId.\n");
@@ -287,9 +287,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     process.stderr.write(
-      `trajectory_export_failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `trajectory_export_failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
     process.exit(1);
   });

@@ -7,12 +7,12 @@
  * Usage: bun scripts/verify-tui.ts
  */
 
-type TestResult = {
+interface TestResult {
   name: string;
   passed: boolean;
   message: string;
   durationMs: number;
-};
+}
 
 const results: TestResult[] = [];
 
@@ -35,7 +35,7 @@ async function runTest(
     return result;
   } catch (error) {
     const duration = performance.now() - start;
-    const message = (error as Error).message;
+    const { message } = error as Error;
     const result = { name, passed: false, message, durationMs: duration };
     results.push(result);
     log(`❌ ${name}: ${message}`);
@@ -48,17 +48,17 @@ async function runTest(
 async function testReactTuiEntrypoint() {
   const react = await import("../packages/tui/src/tui/react");
   if (typeof react.createReactTui !== "function") {
-    throw new Error("Expected createReactTui to be a function");
+    throw new TypeError("Expected createReactTui to be a function");
   }
   if (typeof react.Dashboard !== "function") {
-    throw new Error("Expected Dashboard to be exported");
+    throw new TypeError("Expected Dashboard to be exported");
   }
 }
 
 async function testTuiEntrypoint() {
   const tui = await import("../packages/tui/src/tui");
   if (typeof tui.runTui !== "function") {
-    throw new Error("Expected runTui to be a function");
+    throw new TypeError("Expected runTui to be a function");
   }
 }
 
@@ -191,13 +191,13 @@ async function testIntroLogo() {
     throw new Error("Expected LOGO_FULL to be defined");
   }
   if (typeof LOGO_FULL !== "string") {
-    throw new Error("Expected LOGO_FULL to be a string");
+    throw new TypeError("Expected LOGO_FULL to be a string");
   }
 
   // Test coloredLogo function
   const coloredLines = coloredLogo("full");
   if (!Array.isArray(coloredLines)) {
-    throw new Error("Expected coloredLogo to return an array");
+    throw new TypeError("Expected coloredLogo to return an array");
   }
   if (coloredLines.length === 0) {
     throw new Error("Expected coloredLogo to have content");
@@ -210,7 +210,7 @@ async function testIntroGreeting() {
 
   const greeting = getGreeting();
   if (typeof greeting !== "string") {
-    throw new Error("Expected greeting to be a string");
+    throw new TypeError("Expected greeting to be a string");
   }
   if (greeting.length === 0) {
     throw new Error("Expected greeting to have content");
@@ -223,7 +223,7 @@ async function testRegistryImport() {
   const { getRegistry } = await import("../packages/tui/src/registry");
 
   if (typeof getRegistry !== "function") {
-    throw new Error("Expected getRegistry to be a function");
+    throw new TypeError("Expected getRegistry to be a function");
   }
 }
 

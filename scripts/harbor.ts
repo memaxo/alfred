@@ -3,7 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type GenArgs = {
+interface GenArgs {
   outDir: string;
   id: string;
   requirement: string;
@@ -14,7 +14,7 @@ type GenArgs = {
   timeoutSec: number;
   alfredGitUrl: string;
   alfredGitRef: string;
-};
+}
 
 function usage(): string {
   return [
@@ -369,9 +369,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     process.stderr.write(
-      `harbor_gen_failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `harbor_gen_failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
     process.exit(1);
   });

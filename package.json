@@ -7,7 +7,7 @@
       "packages/*"
     ],
     "catalog": {
-      "zod": "^4.2.1",
+      "zod": "^4.3.6",
       "@trpc/server": "^11.6.0",
       "@trpc/client": "^11.6.0",
       "@trpc/react-query": "^11.6.0",
@@ -29,10 +29,10 @@
     "test": "bun scripts/test-bun.ts",
     "test:failfast": "bun scripts/test-failfast.ts",
     "test:pipeline:critical": "ALFRED_TEST_ISOLATE_FILES=1 ALFRED_TEST_ISOLATE_CONCURRENCY=1 ALFRED_TEST_FILE_TIMEOUT_MS=120000 ALFRED_TEST_RUN_TIMEOUT_MS=300000 bun scripts/test-bun.ts --timeout 60000 packages/pipeline/test/integration/golden-path.test.ts packages/pipeline/test/integration/contracts.test.ts packages/pipeline/test/integration/escalation.test.ts packages/pipeline/test/pipeline-suspend-on-escalate.test.ts packages/pipeline/test/resilience/abort.test.ts packages/pipeline/test/resilience/transitions.test.ts packages/pipeline/test/stages/execute-cleanup.test.ts packages/pipeline/test/integration/resume.test.ts packages/pipeline/test/integration/resume-roundtrip.test.ts packages/api/test/workflow.runner.resume.test.ts packages/api/test/workflow.stream.integration.test.ts packages/api/test/workflow.stream.rate-limit.test.ts",
-    "check": "ultracite fix",
-    "lint": "ultracite check",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
+    "check": "oxlint -c .oxlintrc.json --fix . && oxfmt --threads=1 .",
+    "lint": "oxfmt --check --threads=1 . && oxlint -c .oxlintrc.json .",
+    "fmt": "oxfmt --threads=1 .",
+    "fmt:check": "oxfmt --check --threads=1 .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --nested",
     "generate": "turbo gen",
     "boundaries": "turbo boundaries",
@@ -117,7 +117,7 @@
     "@radix-ui/react-slider": "^1.3.6",
     "ajv": "^8.17.1",
     "dotenv": "^17.2.2",
-    "zod": "^4.2.1"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",

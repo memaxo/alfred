@@ -39,7 +39,7 @@ async function main() {
 
   console.log(`\nGenerated ${nodes.length} Graph Nodes:`);
   nodes.forEach((n, i) => {
-    const data = n.data;
+    const { data } = n;
     let desc = "";
     if (data._ === "fact") {
       desc = `FACT: "${data.content}"`;

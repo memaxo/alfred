@@ -8,15 +8,17 @@
  * - `VLLM_MLX_BASE_URL` should include the `/v1` suffix (OpenAI base).
  * - If vllm-mlx was started with `--api-key`, provide `VLLM_MLX_API_KEY`.
  */
-type VerifyOpts = {
+interface VerifyOpts {
   baseUrl: string;
   apiKey?: string;
   model: string;
-};
+}
 
 function readEnvTrim(key: string): string | undefined {
   const v = process.env[key];
-  if (!v) return;
+  if (!v) {
+    return;
+  }
   const t = v.trim();
   return t.length > 0 ? t : undefined;
 }
@@ -137,7 +139,7 @@ async function main(): Promise<void> {
   console.log("\n✓ vllm-mlx checks passed");
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

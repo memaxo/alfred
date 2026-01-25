@@ -72,31 +72,31 @@ const CONFIG = {
 // Types
 // ============================================================================
 
-type ProcessInfo = {
+interface ProcessInfo {
   pid: number;
   command: string;
   name: string;
   critical: boolean;
-};
+}
 
-type PortInfo = {
+interface PortInfo {
   port: number;
   pid: number;
   process: string;
-};
+}
 
-type Issue = {
+interface Issue {
   type: "process" | "port" | "file" | "resource";
   severity: "critical" | "warning";
   description: string;
   fix?: () => Promise<void>;
-};
+}
 
-type CheckResult = {
+interface CheckResult {
   issues: Issue[];
   processes: ProcessInfo[];
   ports: PortInfo[];
-};
+}
 
 // ============================================================================
 // Process Detection
@@ -251,8 +251,8 @@ function checkStaleFiles(): Issue[] {
               unlinkSync(fullPath);
               console.log(`  🗑️  Removed: ${pattern}`);
             }
-          } catch (e) {
-            console.log(`  ⚠️  Failed to remove ${pattern}: ${e}`);
+          } catch (error) {
+            console.log(`  ⚠️  Failed to remove ${pattern}: ${error}`);
           }
         },
       });

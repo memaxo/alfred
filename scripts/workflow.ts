@@ -17,13 +17,13 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type RunArgs = {
+interface RunArgs {
   requirement: string;
   workspace: string | null;
   outTrajectory: string | null;
   auto: "read" | "low" | "medium" | "high";
   mode: "sequential" | "parallel";
-};
+}
 
 function usage(): string {
   return [
@@ -163,7 +163,7 @@ function normalizeWorkflowEvent(event: WorkflowEvent): WorkflowEvent {
 
 function buildPersistedEvents(args: {
   runId: string;
-  workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }>;
+  workflowEvents: { event: WorkflowEvent; createdAt: string }[];
 }): PersistedWorkflowEvent[] {
   const out: PersistedWorkflowEvent[] = [];
   let seq = 1;
@@ -223,9 +223,9 @@ function buildPersistedEvents(args: {
 async function writeTrajectory(args: {
   runId: string;
   requirement: string;
-  workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }>;
+  workflowEvents: { event: WorkflowEvent; createdAt: string }[];
   outPath: string;
-}): Promise<{ ok: boolean; errors: Array<{ path: string; message: string }> }> {
+}): Promise<{ ok: boolean; errors: { path: string; message: string }[] }> {
   const persisted = buildPersistedEvents({
     runId: args.runId,
     workflowEvents: args.workflowEvents,
@@ -272,7 +272,7 @@ async function runWorkflow(args: RunArgs) {
   const session = { user: { id: payload.userId ?? "harbor" } };
 
   const abortController = new AbortController();
-  const workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }> = [];
+  const workflowEvents: { event: WorkflowEvent; createdAt: string }[] = [];
 
   let runError: unknown | null = null;
   try {
@@ -329,9 +329,9 @@ async function runWorkflow(args: RunArgs) {
         error:
           runError instanceof Error
             ? runError.message
-            : runError
+            : (runError
               ? String(runError)
-              : null,
+              : null),
       },
       null,
       2
@@ -364,9 +364,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     process.stderr.write(
-      `workflow_cli_failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `workflow_cli_failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
     process.exit(1);
   });

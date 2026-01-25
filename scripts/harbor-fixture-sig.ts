@@ -85,7 +85,7 @@ async function main() {
   }
 
   const fixtures = await fs.readdir(root, { withFileTypes: true });
-  const results: Array<{ fixture: string; ok: boolean; reason?: string }> = [];
+  const results: { fixture: string; ok: boolean; reason?: string }[] = [];
   for (const entry of fixtures) {
     if (!entry.isDirectory()) {
       continue;
@@ -107,9 +107,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     process.stderr.write(
-      `harbor_fixture_sig_failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `harbor_fixture_sig_failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
     process.exit(1);
   });

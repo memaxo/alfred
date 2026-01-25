@@ -19,11 +19,11 @@ const CASSETTE_DIRS = [
   "packages/test-kit/cassettes",
 ];
 
-type VCRCassette = {
+interface VCRCassette {
   version: number;
   name: string;
   createdAt: string;
-  interactions: Array<{
+  interactions: {
     id: string;
     timestamp: number;
     provider: string;
@@ -39,8 +39,8 @@ type VCRCassette = {
       body: unknown;
     };
     requestHash: string;
-  }>;
-};
+  }[];
+}
 
 const SENSITIVE_PATTERNS = [
   /sk-[a-zA-Z0-9]{48}/g, // OpenAI API key
@@ -141,7 +141,7 @@ async function main() {
   let totalFiles = 0;
   let validFiles = 0;
   let invalidFiles = 0;
-  const allIssues: Array<{ file: string; issues: string[] }> = [];
+  const allIssues: { file: string; issues: string[] }[] = [];
 
   for (const dir of CASSETTE_DIRS) {
     const cassetteDir = path.join(process.cwd(), dir);
@@ -152,7 +152,7 @@ async function main() {
       const issues: string[] = [];
 
       try {
-        const content = await readFile(file, "utf-8");
+        const content = await readFile(file, "utf8");
 
         // Check for sensitive data in raw content
         const sensitiveIssues = checkSensitiveData(content);

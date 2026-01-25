@@ -3,12 +3,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type TaskSummary = {
+interface TaskSummary {
   taskId: string;
   runs: number;
   passed: number;
   failed: number;
-};
+}
 
 async function findRewardFiles(
   root: string,
@@ -90,9 +90,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     process.stderr.write(
-      `harbor_summary_failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `harbor_summary_failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
     process.exit(1);
   });

@@ -67,11 +67,11 @@ export async function collectTmuxSessions(): Promise<string[]> {
   return await listHandler();
 }
 
-type CheckOptions = {
+interface CheckOptions {
   patterns?: RegExp[];
   strict?: boolean;
   quiet?: boolean;
-};
+}
 
 export async function checkTmuxLeaks(
   options?: CheckOptions

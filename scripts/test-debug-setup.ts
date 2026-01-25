@@ -11,8 +11,8 @@ console.log("✓ Debug setup test started");
 try {
   const _inspector = Bun.inspect;
   console.log("✓ Bun.inspect is available");
-} catch (e) {
-  console.error("✗ Bun.inspect not available:", e);
+} catch (error) {
+  console.error("✗ Bun.inspect not available:", error);
   process.exit(1);
 }
 

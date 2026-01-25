@@ -89,7 +89,7 @@ function run() {
 
 try {
   run();
-} catch (err) {
-  console.error(err);
+} catch (error) {
+  console.error(error);
   process.exit(1);
 }

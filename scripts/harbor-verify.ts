@@ -3,7 +3,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type VerifyIssue = { taskId: string; message: string };
+interface VerifyIssue {
+  taskId: string;
+  message: string;
+}
 
 function exists(p: string): Promise<boolean> {
   return fs
@@ -46,7 +49,7 @@ async function main() {
 
   const registryRaw = await fs.readFile(registryPath, "utf8");
   const registry = JSON.parse(registryRaw) as {
-    tasks?: Array<{ id: string; path: string }>;
+    tasks?: { id: string; path: string }[];
   };
   const tasks = Array.isArray(registry.tasks) ? registry.tasks : [];
   const issues: VerifyIssue[] = [];
@@ -68,9 +71,9 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
+  main().catch((error) => {
     process.stderr.write(
-      `harbor_verify_failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `harbor_verify_failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
     process.exit(1);
   });

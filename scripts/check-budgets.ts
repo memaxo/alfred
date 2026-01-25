@@ -54,11 +54,11 @@ async function collectPerfTestFiles(): Promise<string[]> {
   files.add("packages/agent/test/multi/performance.test.ts");
   files.add("packages/runtime/test/performance.test.ts");
 
-  return Array.from(files).sort();
+  return [...files].sort();
 }
 
 function isBudgetCategory(value: string): value is BudgetCategory {
-  return Object.prototype.hasOwnProperty.call(BUDGET_DEFAULTS, value);
+  return Object.hasOwn(BUDGET_DEFAULTS, value);
 }
 
 async function collectCoverage(
@@ -287,9 +287,9 @@ if (import.meta.main) {
     clearTimeout(safetyTimer);
     // If we reach here, main() didn't call exit - force it
     setTimeout(() => process.exit(0), 10);
-  } catch (err) {
+  } catch (error) {
     clearTimeout(safetyTimer);
-    console.error("Fatal error:", err);
+    console.error("Fatal error:", error);
     setTimeout(() => process.exit(1), 10);
   }
 }

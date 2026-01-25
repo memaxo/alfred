@@ -34,14 +34,14 @@ import { createWriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 
-type Options = {
+interface Options {
   cwd: string;
   label: string;
   maxOldSpaceSize: number;
   traceGc: boolean;
   heapProf: boolean;
   cmd: string[];
-};
+}
 
 function parseArgs(): Options {
   const args = process.argv.slice(2);
@@ -147,7 +147,7 @@ Open heapsnapshots in Chrome DevTools:
 
 function timestamp(): string {
   const now = new Date();
-  return now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  return now.toISOString().replaceAll(/[:.]/g, "-").slice(0, 19);
 }
 
 async function ensureDir(dir: string): Promise<void> {

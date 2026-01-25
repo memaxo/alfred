@@ -34,12 +34,12 @@ import { issueAccessToken } from "@alfred/auth/token";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-type FlagArgs = {
+interface FlagArgs {
   retainContainer: boolean;
   strict: boolean;
   skipBuild: boolean;
   opencodeHttp: boolean;
-};
+}
 
 function parseArgs(argv: string[]): FlagArgs {
   const args = new Set(argv);
@@ -194,7 +194,7 @@ async function killPidInContainer(args: {
 }
 
 function formatSnippet(label: string, text: string): string {
-  const compact = text.replace(/\s+/g, " ").trim();
+  const compact = text.replaceAll(/\s+/g, " ").trim();
   const redacted = redactSecrets(compact);
   const snippet =
     redacted.length > 180 ? `${redacted.slice(0, 180)}…` : redacted;
@@ -403,8 +403,8 @@ async function main() {
     throw new Error("workspace_not_agentfs");
   }
 
-  const containerName = ws.containerName;
-  const containerCw = ws.containerCw;
+  const { containerName } = ws;
+  const { containerCw } = ws;
   const agentfsDbPath = ws.dbPath;
 
   console.log("✓ AgentFS workspace ready");

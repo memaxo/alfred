@@ -16,7 +16,7 @@ import type {
   Qwen3VLRerankResponse,
 } from "@alfred/rerank";
 
-type Args = {
+interface Args {
   baseUrl: string;
   concurrency: number;
   requests: number;
@@ -27,7 +27,7 @@ type Args = {
   multimodalRatio: number;
   image?: string;
   timeoutMs: number;
-};
+}
 
 function parseIntArg(value: string | undefined, fallback: number): number {
   if (!value) {
@@ -137,19 +137,19 @@ function percentile(values: number[], p: number): number {
   return sorted[idx] ?? 0;
 }
 
-type StageSample = {
+interface StageSample {
   build_query_ms: number;
   split_docs_ms: number;
   text_only_ms: number;
   multimodal_ms: number;
   sort_ms: number;
   total_ms: number;
-};
+}
 
-type DebugExtra = {
+interface DebugExtra {
   textBatches: Qwen3VLRerankDebugBatch[];
   multimodalDocs: Qwen3VLRerankDebugDoc[];
-};
+}
 
 function toFileUrlMaybe(pathOrUrl: string): string {
   if (
@@ -163,10 +163,8 @@ function toFileUrlMaybe(pathOrUrl: string): string {
   return `file://${pathOrUrl}`;
 }
 
-function buildDocs(
-  args: Args
-): Array<{ id: string; text: string; image?: string }> {
-  const docs: Array<{ id: string; text: string; image?: string }> = [];
+function buildDocs(args: Args): { id: string; text: string; image?: string }[] {
+  const docs: { id: string; text: string; image?: string }[] = [];
   const mmEvery =
     args.multimodalRatio > 0
       ? Math.max(1, Math.floor(1 / args.multimodalRatio))
