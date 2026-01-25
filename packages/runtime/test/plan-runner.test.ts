@@ -1,5 +1,6 @@
 import type { ExecutionPlan } from "@alfred/cognitive";
 
+import { initialAutonomy } from "@alfred/cognitive/state";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 import { PlanRunner } from "../src/loops/plan-runner";
@@ -65,7 +66,7 @@ describe("PlanRunner", () => {
   it("executes a successful plan", async () => {
     getLatestSnapshotMock.mockImplementationOnce(async () => ({
       lastEventId: "00000000-0000-0000-0000-000000000000",
-      state: { auto: { level: 0.5 } },
+      state: { auto: { ...initialAutonomy(0), level: 0.5 } as any },
     }));
     const runner = new PlanRunner(streamId, mockTools, repo);
     const plan: ExecutionPlan = {
@@ -111,7 +112,7 @@ describe("PlanRunner", () => {
   it("throws on tool failure", async () => {
     getLatestSnapshotMock.mockImplementationOnce(async () => ({
       lastEventId: "00000000-0000-0000-0000-000000000000",
-      state: { auto: { level: 0.5 } },
+      state: { auto: { ...initialAutonomy(0), level: 0.5 } as any },
     }));
     const runner = new PlanRunner(streamId, mockTools, repo);
     const plan: ExecutionPlan = {
@@ -160,7 +161,7 @@ describe("PlanRunner", () => {
   it("suspends on tool suspension", async () => {
     getLatestSnapshotMock.mockImplementationOnce(async () => ({
       lastEventId: "00000000-0000-0000-0000-000000000000",
-      state: { auto: { level: 0.5 } },
+      state: { auto: { ...initialAutonomy(0), level: 0.5 } as any },
     }));
     const suspendTools = {
       "suspend-tool": {

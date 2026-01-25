@@ -15,6 +15,7 @@ import { memoryNodes } from "@alfred/db/src/schema/graph";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import {
   afterEach,
+  afterAll,
   beforeAll,
   beforeEach,
   describe,
@@ -33,7 +34,26 @@ import {
 } from "../packages/plan/src/enrich/index.js";
 import { buildStructuredHandoff } from "../packages/runtime/src/orchestrator/handoff.js";
 
-type CmdResult = { exitCode: number; stdout: string; stderr: string };
+let prevEnrichmentEnv: string | undefined;
+
+beforeAll(() => {
+  prevEnrichmentEnv = process.env.ALFRED_ENRICHMENT;
+  process.env.ALFRED_ENRICHMENT = "1";
+});
+
+afterAll(() => {
+  if (prevEnrichmentEnv === undefined) {
+    delete process.env.ALFRED_ENRICHMENT;
+  } else {
+    process.env.ALFRED_ENRICHMENT = prevEnrichmentEnv;
+  }
+});
+
+interface CmdResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
 
 const decoder = new TextDecoder();
 
@@ -278,10 +298,7 @@ describeFn(
       if (testDir) {
         rmSync(testDir, { recursive: true, force: true });
       }
-      for (const dir of createdAgentfsRunDirs.splice(
-        0,
-        createdAgentfsRunDirs.length
-      )) {
+      for (const dir of createdAgentfsRunDirs.splice(0)) {
         rmSync(dir, { recursive: true, force: true });
       }
     });

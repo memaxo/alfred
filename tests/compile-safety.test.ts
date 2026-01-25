@@ -19,12 +19,10 @@ describe("Package export validation", () => {
     for (const pkg of packageDirs) {
       const packageJsonPath = join(PACKAGES_DIR, pkg, "package.json");
       try {
-        const packageJson = JSON.parse(
-          await readFile(packageJsonPath, "utf-8")
-        );
+        const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
         expect(packageJson.name).toBeDefined();
         expect(packageJson.exports || packageJson.main).toBeDefined();
-      } catch (_error) {
+      } catch {
         // Some packages might not have package.json (like test fixtures)
         // That's okay, we just verify the ones that do
       }

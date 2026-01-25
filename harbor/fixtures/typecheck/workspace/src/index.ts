@@ -1,4 +1,6 @@
-type User = { name: string };
+interface User {
+  name: string;
+}
 
 export function formatUser(u: User) {
   return u.name.toUpperCase();

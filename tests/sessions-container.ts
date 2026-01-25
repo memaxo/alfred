@@ -56,7 +56,7 @@ async function run() {
 
   try {
     await workspace.initialize();
-    const containerId = workspace.containerId;
+    const { containerId } = workspace;
     const sessionName = `container-session-${Date.now().toString(36)}`;
     const marker = `CONTAINER_TMUX_${Date.now().toString(36)}`;
 

@@ -40,7 +40,7 @@ describe("GenUI Form Submission Latency", () => {
     // Calculate p95
     latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(iterations * 0.95);
-    const p95Latency = latencies[p95Index] ?? latencies[latencies.length - 1];
+    const p95Latency = latencies[p95Index] ?? latencies.at(-1);
 
     expect(p95Latency).toBeLessThan(100);
   });
@@ -80,7 +80,7 @@ describe("GenUI Form Submission Latency", () => {
 
     latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(iterations * 0.95);
-    const p95Latency = latencies[p95Index] ?? latencies[latencies.length - 1];
+    const p95Latency = latencies[p95Index] ?? latencies.at(-1);
 
     expect(p95Latency).toBeLessThan(100);
   });
@@ -119,7 +119,7 @@ describe("GenUI Form Submission Latency", () => {
 
     latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(iterations * 0.95);
-    const p95Latency = latencies[p95Index] ?? latencies[latencies.length - 1];
+    const p95Latency = latencies[p95Index] ?? latencies.at(-1);
 
     // Large forms might take slightly longer, but should still be reasonable
     expect(p95Latency).toBeLessThan(200); // More lenient for large forms

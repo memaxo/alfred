@@ -36,7 +36,7 @@ describe("GenUI Enrichment Latency", () => {
     // Calculate p95
     latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(iterations * 0.95);
-    const p95Latency = latencies[p95Index] ?? latencies[latencies.length - 1];
+    const p95Latency = latencies[p95Index] ?? latencies.at(-1);
 
     expect(p95Latency).toBeLessThan(50);
   });
@@ -70,7 +70,7 @@ describe("GenUI Enrichment Latency", () => {
 
     latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(iterations * 0.95);
-    const p95Latency = latencies[p95Index] ?? latencies[latencies.length - 1];
+    const p95Latency = latencies[p95Index] ?? latencies.at(-1);
 
     expect(p95Latency).toBeLessThan(50);
   });
@@ -105,7 +105,7 @@ describe("GenUI Enrichment Latency", () => {
 
     latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(iterations * 0.95);
-    const p95Latency = latencies[p95Index] ?? latencies[latencies.length - 1];
+    const p95Latency = latencies[p95Index] ?? latencies.at(-1);
 
     // Large results might take slightly longer, but should still be reasonable
     expect(p95Latency).toBeLessThan(100); // More lenient for large results
