@@ -19,7 +19,7 @@ const getNotesMock = vi.fn();
 const getNoteMock = vi.fn();
 const updateNoteMock = vi.fn();
 const deleteNoteMock = vi.fn();
-const ingestMock = vi.fn().mockResolvedValue(undefined);
+const ingestMock = vi.fn().mockResolvedValue();
 const ensureMirrorNodesMock = vi.fn().mockResolvedValue(new Map());
 const graphWriteStub = {
   createNode: vi.fn(),
@@ -84,7 +84,7 @@ describe("noteRouter", () => {
     getNotesMock.mockReset();
     updateNoteMock.mockReset();
     deleteNoteMock.mockReset();
-    ingestMock.mockReset().mockResolvedValue(undefined);
+    ingestMock.mockReset().mockResolvedValue();
     ensureMirrorNodesMock.mockReset().mockResolvedValue(new Map());
     graphWriteStub.createNode.mockReset();
     graphWriteStub.updateNode.mockReset();

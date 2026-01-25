@@ -23,7 +23,7 @@ export async function deriveAlternativeFacts(
 ): Promise<KnowledgeEntry[]> {
   const doc = nlp(text);
   const sentences = doc.sentences().out("array");
-  const candidates: Array<{ optionA: string; optionB: string }> = [];
+  const candidates: { optionA: string; optionB: string }[] = [];
 
   for (const sentence of sentences) {
     const clauseDoc = nlp(sentence);

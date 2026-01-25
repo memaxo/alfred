@@ -13,6 +13,8 @@
   "references": [
     { "path": "../auth" },
     { "path": "../db" },
+    { "path": "../hooks" },
+    { "path": "../hookpipe" },
     { "path": "../policy" },
     { "path": "../agent" },
     { "path": "../history" },

@@ -20,13 +20,13 @@ export const STATE_TTL_SECONDS = 10 * 60; // 10 minutes
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type SignedStatePayload = {
+export interface SignedStatePayload {
   user: string;
   nonce: string;
   ts: number;
-};
+}
 
-export type LinearViewerPayload = {
+export interface LinearViewerPayload {
   viewer?: {
     id?: string;
     email?: string | null;
@@ -37,16 +37,16 @@ export type LinearViewerPayload = {
       name?: string | null;
     } | null;
   };
-};
+}
 
-export type TokenExchangeResult = {
+export interface TokenExchangeResult {
   accessToken: string;
   refreshToken: string | null;
   scope: string;
   expiresIn: number | null;
-};
+}
 
-export type IssueNode = {
+export interface IssueNode {
   id: string;
   identifier: string;
   title: string;
@@ -56,38 +56,38 @@ export type IssueNode = {
   assignee?: { id: string; name: string; avatarUrl: string | null };
   project?: { id: string; name: string };
   team?: { id: string; name: string };
-  labels?: { nodes: Array<{ id: string; name: string; color: string }> };
+  labels?: { nodes: { id: string; name: string; color: string }[] };
   createdAt: string;
   updatedAt: string;
-};
+}
 
 export type IssueDetail = IssueNode & {
   comments?: {
-    nodes: Array<{
+    nodes: {
       id: string;
       body: string;
       user?: { id: string; name: string };
       createdAt: string;
-    }>;
+    }[];
   };
 };
 
-export type BoardIssue = {
+export interface BoardIssue {
   id: string;
   identifier: string;
   title: string;
   priority: number;
   state?: { id: string };
   assignee?: { id: string; name: string; avatarUrl: string | null };
-};
+}
 
-export type WorkflowState = {
+export interface WorkflowState {
   id: string;
   name: string;
   color: string;
   type: string;
   position: number;
-};
+}
 
 export async function ensureValidToken(
   installation: LinearInstallation | null

@@ -4,7 +4,7 @@ export type FocusSetStatus = "active" | "closed";
 export type FocusLane = "spotlight" | "background" | "maintenance";
 export type FocusCommitmentStatus = "active" | "paused" | "done" | "cancelled";
 
-export type FocusSetRecord = {
+export interface FocusSetRecord {
   id: string;
   title: string | null;
   status: FocusSetStatus;
@@ -14,9 +14,9 @@ export type FocusSetRecord = {
   lastTouchedAt: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-};
+}
 
-export type FocusCommitmentRecord = {
+export interface FocusCommitmentRecord {
   id: string;
   focusSetId: string;
   title: string;
@@ -29,12 +29,12 @@ export type FocusCommitmentRecord = {
   metadata: Record<string, unknown> | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-};
+}
 
 export type AttentionStatus = "open" | "acknowledged" | "resolved";
 export type AttentionUrgency = "low" | "normal" | "high" | "critical";
 
-export type AttentionItemRecord = {
+export interface AttentionItemRecord {
   id: string;
   focusSetId: string | null;
   commitmentId: string | null;
@@ -48,11 +48,11 @@ export type AttentionItemRecord = {
   resolvedAt: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-};
+}
 
 export type DeltaBriefScope = "focus_set" | "commitment" | "workflow_run";
 
-export type DeltaBriefRecord = {
+export interface DeltaBriefRecord {
   id: string;
   focusSetId: string | null;
   commitmentId: string | null;
@@ -63,4 +63,4 @@ export type DeltaBriefRecord = {
   summaryText: string;
   data: Record<string, unknown> | null;
   createdAt: Timestamp;
-};
+}

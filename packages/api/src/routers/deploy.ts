@@ -248,7 +248,7 @@ export const deployRouter = router({
               name?: string;
               containerId?: string;
               hostPort?: number | null;
-              ports?: Array<{ host: number; container: number }>;
+              ports?: { host: number; container: number }[];
             };
           };
 
@@ -266,9 +266,9 @@ export const deployRouter = router({
             Array.isArray(runResult.details?.ports) &&
             runResult.details?.ports.length > 0
               ? (runResult.details?.ports ?? null)
-              : hostPort !== null
+              : (hostPort !== null
                 ? [{ host: hostPort, container: input.build.port }]
-                : null;
+                : null);
 
           upstream = `http://${deployService.PREVIEW_BIND_HOST}:${hostPort}`;
         }
@@ -395,7 +395,7 @@ export const deployRouter = router({
       if (preview?.projectId) {
         const url = process.env.DATABASE_URL;
         if (url && !url.startsWith("sqlite")) {
-          const projectId = preview.projectId;
+          const { projectId } = preview;
           await import("@alfred/db/repo/project")
             .then((repo) => repo.updateProjectLastActive(projectId))
             .catch(() => {});
@@ -490,16 +490,16 @@ export const deployRouter = router({
         const typeFilter =
           input.preview === undefined
             ? undefined
-            : input.preview
+            : (input.preview
               ? "preview"
-              : "production";
+              : "production");
 
         const shouldInclude = (app: string) =>
           appsFilter ? appsFilter.has(app) : true;
 
         const fetchDeployments = () => {
           if (appsFilter && appsFilter.size === 1) {
-            const [singleApp] = Array.from(appsFilter);
+            const [singleApp] = [...appsFilter];
             return deployRepo.listDeployments({
               userId,
               app: singleApp,

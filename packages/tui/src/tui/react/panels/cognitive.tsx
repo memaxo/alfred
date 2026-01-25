@@ -26,13 +26,13 @@ import {
 import { bold, dim, fg } from "../../typography";
 import { useCognitiveStore } from "../hooks/stores";
 
-type CognitivePanelProps = {
+interface CognitivePanelProps {
   width: number;
   height: number;
   focused: boolean;
   x?: number;
   y?: number;
-};
+}
 
 function clamp01(n: number): number {
   if (Number.isNaN(n)) {
@@ -104,7 +104,7 @@ function renderTransitionLines(
   maxLines: number
 ): string[] {
   const lines: string[] = [];
-  const recent = transitions.slice(-maxLines).reverse();
+  const recent = transitions.slice(-maxLines).toReversed();
   for (const t of recent) {
     const from = t.from.toUpperCase();
     const to = t.to.toUpperCase();

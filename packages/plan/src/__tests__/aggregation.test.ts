@@ -78,8 +78,8 @@ describe("Research Aggregation", () => {
         source: "src/app.ts", // Already in internal
         title: "Local File Reference",
         summary: "Local summary",
-        reliability: 1.0,
-        relevanceScore: 1.0,
+        reliability: 1,
+        relevanceScore: 1,
       },
     ];
 

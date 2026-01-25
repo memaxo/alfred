@@ -6,14 +6,14 @@
  */
 
 // Inline manifest types to avoid tsconfig rootDir issues
-type HealthStatus = {
+interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   latencyMs?: number;
   details?: Record<string, unknown>;
-};
+}
 
-type TuiPanelDef = {
+interface TuiPanelDef {
   id: string;
   name: string;
   description?: string;
@@ -21,15 +21,15 @@ type TuiPanelDef = {
   factory: () => Promise<unknown>;
   category?: "monitoring" | "admin" | "debug" | "data";
   defaultVisible?: boolean;
-};
+}
 
-type SubscriptionDef = {
+interface SubscriptionDef {
   id: string;
   path: string;
   description?: string;
-};
+}
 
-type CliManifest = {
+interface CliManifest {
   name: string;
   version: string;
   description: string;
@@ -37,7 +37,7 @@ type CliManifest = {
   subscriptions?: SubscriptionDef[];
   healthCheck?: () => Promise<HealthStatus>;
   dependencies?: string[];
-};
+}
 
 /**
  * Cognitive package CLI manifest

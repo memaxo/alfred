@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import type { PipelineContext, PipelineStage } from "../pipeline";
+import type { ContextOutput, PlanOutput } from "./types";
+
 import { createEvent } from "../events";
-import { type PipelineContext, type PipelineStage } from "../pipeline";
-import { type ContextOutput, type PlanOutput } from "./types";
 
 export class PlanStage implements PipelineStage<ContextOutput, PlanOutput> {
   readonly name = "plan" as const;

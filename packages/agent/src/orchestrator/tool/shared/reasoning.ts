@@ -14,7 +14,7 @@ const DEFAULT_REASONING_CAP_BYTES =
  * Accumulator for reasoning traces during tool execution
  */
 export interface ReasoningAccumulator {
-  traces: Array<{ text: string; timestamp: number }>;
+  traces: { text: string; timestamp: number }[];
   storedBytes: number;
   truncated: boolean;
 }
@@ -164,7 +164,7 @@ function trimBufferToUtf8Boundary(
 
   while (end > 0) {
     try {
-      const text = new TextDecoder("utf8", { fatal: true }).decode(
+      const text = new TextDecoder(undefined, { fatal: true }).decode(
         buffer.subarray(0, end)
       );
       return { text, usedBytes: end };

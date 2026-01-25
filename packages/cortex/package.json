@@ -40,7 +40,8 @@
   "scripts": {
     "build": "tsgo -b",
     "dev": "tsgo -b -w",
-    "lint": "biome check .",
+    "lint": "oxlint -c ../../.oxlintrc.json .",
+    "lint:fix": "oxlint -c ../../.oxlintrc.json --fix .",
     "check-types": "tsgo --noEmit",
     "typecheck": "tsgo -b",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"

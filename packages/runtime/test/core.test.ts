@@ -11,7 +11,7 @@ const { AISDKAdapter } = await import("../src/adapters/ai");
 const originalStream = AISDKAdapter.prototype.stream;
 
 // Stub AISDKAdapter.stream to avoid network calls during unit tests
-AISDKAdapter.prototype.stream = async function* () {
+AISDKAdapter.prototype.stream = async function* stream() {
   yield { _: "finish", finishReason: "stop" } as WorkflowEvent;
 };
 
@@ -92,7 +92,7 @@ describe("WorkflowRuntime", () => {
         model: mockModel,
       });
 
-      const progressEvents: Array<{ pct?: number; message?: string }> = [];
+      const progressEvents: { pct?: number; message?: string }[] = [];
       for await (const event of runtime.stream) {
         if (event._ === "progress") {
           progressEvents.push({ pct: event.pct, message: event.message });
@@ -172,7 +172,7 @@ describe("WorkflowRuntime", () => {
         if (e._ !== "notice") {
           return false;
         }
-        const message = (e as { message?: unknown }).message;
+        const { message } = e as { message?: unknown };
         return message === "workflow_cancelled_before_start";
       });
       expect(notices.length).toBe(1);
@@ -261,7 +261,7 @@ describe("WorkflowRuntime", () => {
         for await (const event of runtime.stream) {
           events.push(event);
         }
-      } catch (_error) {
+      } catch {
         // Error thrown from stream
       }
 
@@ -271,7 +271,7 @@ describe("WorkflowRuntime", () => {
 
     it("fails with workflow_timeout when overall timeout elapses", async () => {
       const previous = AISDKAdapter.prototype.stream;
-      AISDKAdapter.prototype.stream = async function* (options: {
+      AISDKAdapter.prototype.stream = async function* stream(options: {
         abortSignal?: AbortSignal;
       }) {
         const signal = options.abortSignal;

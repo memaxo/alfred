@@ -31,7 +31,7 @@ import { createRequire } from "node:module";
 
 mock.module("@alfred/agent/utils/rate-limiter", () => ({
   llmConcurrency: {
-    acquire: vi.fn().mockResolvedValue(undefined),
+    acquire: vi.fn().mockResolvedValue(),
     release: vi.fn(),
   },
   llmRateLimit: {
@@ -53,6 +53,13 @@ mock.module("@alfred/history", () => ({
       },
     })
   ),
+  calculateBudget: vi.fn(() => ({
+    effectiveContextTokens: 1000,
+    historyRatio: 0.9,
+    systemReserveTokens: 0,
+    headroomTokens: 100,
+    toolingReserveTokens: 0,
+  })),
   getHistoryBudgetDefaults: () => ({}),
 }));
 
@@ -95,7 +102,11 @@ const messages: UIMessage[] = [
   },
 ];
 
-type Case = { label: string; error: unknown; expect: string };
+interface Case {
+  label: string;
+  error: unknown;
+  expect: string;
+}
 
 const cases: Case[] = [
   {
@@ -303,7 +314,7 @@ describe("AISDKAdapter classified error event", () => {
     nextError = error;
 
     const adapter = new AISDKAdapter();
-    const events: Array<{ _: string; message?: string }> = [];
+    const events: { _: string; message?: string }[] = [];
     let thrown: unknown = null;
 
     try {
@@ -313,8 +324,8 @@ describe("AISDKAdapter classified error event", () => {
       })) {
         events.push(event as any);
       }
-    } catch (e) {
-      thrown = e;
+    } catch (error) {
+      thrown = error;
     }
 
     expect(thrown).toBe(error);

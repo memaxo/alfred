@@ -5,7 +5,7 @@ import type { EventSource } from "./source";
  * The standard atom of information in ALFRED.
  * Enhanced with causal and ordering fields for the TUI Debugger.
  */
-export type EventEnvelope<T = unknown> = {
+export interface EventEnvelope<T = unknown> {
   /** Schema version */
   v: number;
 
@@ -37,4 +37,4 @@ export type EventEnvelope<T = unknown> = {
 
   /** The actor that produced this event */
   source?: EventSource;
-};
+}

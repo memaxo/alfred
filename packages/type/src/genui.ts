@@ -12,14 +12,14 @@
  * Provides context about the user, surface, and mode to guide
  * schema generation and component selection.
  */
-export type SchemaContext = {
+export interface SchemaContext {
   userId?: string;
   projectId?: string;
   surface: "web" | "mobile" | "voice" | "tui";
   mode: "assistant" | "workflow" | "focus";
   viewport?: { width?: number; height?: number };
   preference?: { verbosity?: "compact" | "normal" | "verbose" };
-};
+}
 
 /**
  * A single UI component specification.
@@ -28,7 +28,7 @@ export type SchemaContext = {
  * The `props` field contains component-specific properties.
  * The `children` field enables nested component composition.
  */
-export type UIComponent = {
+export interface UIComponent {
   /** Component name from the manifest (e.g., "chart", "grid", "task") */
   component: string;
   /** Component props as key-value pairs */
@@ -37,20 +37,20 @@ export type UIComponent = {
   children?: UIComponent[];
   /** Optional unique key for React reconciliation */
   key?: string;
-};
+}
 
 /**
  * A data-ui message part containing a UI schema.
  *
  * This part type is used in AI SDK messages to embed generative UI.
  */
-export type UIDataPart = {
+export interface UIDataPart {
   type: "data-ui";
   /** The UI component tree to render */
   ui: UIComponent;
   /** Optional identifier for the part */
   id?: string;
-};
+}
 
 /**
  * Result of validating a UI schema.
@@ -62,26 +62,26 @@ export type UISchemaValidationResult =
 /**
  * Options for the UI schema interpreter.
  */
-export type UIInterpreterOptions = {
+export interface UIInterpreterOptions {
   /** Maximum depth for nested component trees (default: 10) */
   maxDepth?: number;
   /** Whether to render unknown components as placeholders (default: true) */
   renderUnknown?: boolean;
   /** Custom error handler for rendering failures */
   onError?: (error: Error, component: UIComponent) => void;
-};
+}
 
 /**
  * A tool result that includes generative UI.
  *
  * Tools can return this structure to provide both data and UI.
  */
-export type GenUIToolResult<T = unknown> = {
+export interface GenUIToolResult<T = unknown> {
   /** The UI component tree to render */
   ui: UIComponent;
   /** The underlying data (for serialization/persistence) */
   data: T;
-};
+}
 
 /**
  * Check if a value is a GenUIToolResult.

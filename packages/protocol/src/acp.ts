@@ -171,13 +171,17 @@ export function mapAcpModeToAutonomy(
   modeId: string
 ): "low" | "medium" | "high" {
   switch (modeId) {
-    case "ask":
+    case "ask": {
       return "low";
-    case "architect":
+    }
+    case "architect": {
       return "medium";
-    case "code":
+    }
+    case "code": {
       return "high";
-    default:
+    }
+    default: {
       return "low";
+    }
   }
 }

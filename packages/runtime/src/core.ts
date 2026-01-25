@@ -80,7 +80,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   private supervisorGateFired = false;
 
   constructor(options: RuntimeOptions) {
-    const createAiAdapter = options.createAiAdapter;
+    const { createAiAdapter } = options;
     // Validate options to catch configuration errors early
     const validated = validateRuntimeOptions(options);
 
@@ -154,7 +154,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     this.runtimeContext.set("aiModel", this.model);
     this.runtimeContext.set("runStartedAt", this.workflowStartTime);
 
-    const inputParam = this._input as Record<string, unknown>;
+    const inputParam = this._input as unknown as Record<string, unknown>;
     if (inputParam.userId && !this.runtimeContext.has("userId")) {
       this.runtimeContext.set("userId", inputParam.userId);
     }
@@ -321,7 +321,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         .register(new ActPhase(this.runId, this.model, this.createAiAdapter))
         .register(new ReportPhase());
 
-      const checkCancelled = function* (this: WorkflowRuntime) {
+      const checkCancelled = function* checkCancelled(this: WorkflowRuntime) {
         if (this.state.cancelled) {
           const cancelledEvent = {
             _: "notice",

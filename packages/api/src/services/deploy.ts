@@ -21,9 +21,9 @@ const PREVIEW_PORT_END = parsePortEnv(process.env.PREVIEW_PORT_END, 30_200);
 export function slugifyApp(app: string) {
   return app
     .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-");
+    .replaceAll(/[^a-z0-9-]+/g, "-")
+    .replaceAll(/^-+|-+$/g, "")
+    .replaceAll(/-{2,}/g, "-");
 }
 
 export function getAppDomain() {
@@ -136,11 +136,11 @@ export async function safeStopContainer(
   }
 }
 
-export type ProbeResult = {
+export interface ProbeResult {
   status: "healthy" | "unhealthy" | "unknown";
   url: string | null;
   ts: string;
-};
+}
 
 export type DeploymentRow = NonNullable<
   Awaited<ReturnType<typeof deployRepo.getDeploymentById>>

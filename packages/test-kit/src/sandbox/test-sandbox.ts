@@ -19,7 +19,7 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export type TestSandbox = {
+export interface TestSandbox {
   /** Root directory of the sandbox - all temp files should go here */
   dir: string;
   /** Create a subdirectory within the sandbox */
@@ -28,7 +28,7 @@ export type TestSandbox = {
   path: (...segments: string[]) => string;
   /** Cleanup the sandbox (should be called in afterEach) */
   cleanup: () => void;
-};
+}
 
 /**
  * Create an isolated test sandbox in the system temp directory.
@@ -153,7 +153,7 @@ export function assertInSandbox(filePath: string): void {
  * Create a workspace-like structure for testing agent operations.
  * Mirrors the structure that agents expect in production.
  */
-export type WorkspaceFixture = {
+export interface WorkspaceFixture {
   sandbox: TestSandbox;
   /** Workspace directory (like packages/voice in production) */
   workspace: string;
@@ -161,7 +161,7 @@ export type WorkspaceFixture = {
   outside: string;
   /** Cleanup both workspace and outside dirs */
   cleanup: () => void;
-};
+}
 
 export function createWorkspaceFixture(prefix: string): WorkspaceFixture {
   const sandbox = createTrackedSandbox(`${prefix}workspace-`);

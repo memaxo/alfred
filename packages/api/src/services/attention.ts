@@ -5,7 +5,7 @@ import { logger } from "@alfred/logger";
 
 import { publishAttention } from "./notify";
 
-type UpsertAttentionArgs = {
+interface UpsertAttentionArgs {
   userId: string;
   workflowRunId?: string | null;
   focusSetId?: string | null;
@@ -15,12 +15,15 @@ type UpsertAttentionArgs = {
   title?: string | null;
   body?: string | null;
   payload?: Record<string, unknown> | null;
-};
+}
 
 type AttentionRow = Awaited<
   ReturnType<typeof attentionRepo.createAttentionItem>
 >;
-export type UpsertAttentionResult = { item: AttentionRow; created: boolean };
+export interface UpsertAttentionResult {
+  item: AttentionRow;
+  created: boolean;
+}
 
 export async function upsertAttentionItem(
   args: UpsertAttentionArgs

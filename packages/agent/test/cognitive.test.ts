@@ -6,7 +6,7 @@ import {
 import { installLoggerMock } from "@alfred/test-kit/logger";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
-import { type CognitiveStateInput } from "../src/orchestrator/tool/cognitive";
+import type { CognitiveStateInput } from "../src/orchestrator/tool/cognitive";
 
 // Install shared mocks
 installAuthTokenMock();
@@ -94,7 +94,7 @@ describe("Cognitive State Tool", () => {
         state: {
           _: "idle",
           since: 1000,
-          physiology: { energy: 1.0, boredom: 0.0, frustration: 0.0 },
+          physiology: { energy: 1, boredom: 0, frustration: 0 },
         },
         streamId: "stream-1",
       };
@@ -260,7 +260,7 @@ describe("Cognitive State Tool", () => {
         state: {
           _: "idle",
           since: 1000,
-          physiology: { energy: 1.0, boredom: 0.0, frustration: 0.0 },
+          physiology: { energy: 1, boredom: 0, frustration: 0 },
         },
         streamId: "stream-1",
       };
@@ -301,7 +301,7 @@ describe("Cognitive State Tool", () => {
         state: {
           _: "idle",
           since: 1000,
-          physiology: { energy: 1.0, boredom: 0.0, frustration: 0.0 },
+          physiology: { energy: 1, boredom: 0, frustration: 0 },
         },
         streamId: "stream-1",
       };

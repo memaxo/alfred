@@ -1,12 +1,12 @@
 /// <reference types="bun-types" />
 
 declare module "bun" {
-  export type RedisSetOptions = {
+  export interface RedisSetOptions {
     EX?: number;
     PX?: number;
     NX?: boolean;
     XX?: boolean;
-  };
+  }
 
   export type RedisCallback = (message: string) => void;
 
@@ -87,17 +87,17 @@ declare module "bun" {
     };
   }
 
-  type Subprocess<
+  interface Subprocess<
     In extends Spawn.Writable = Spawn.Writable,
     Out extends Spawn.Readable = Spawn.Readable,
     Err extends Spawn.Readable = Spawn.Readable,
-  > = {
+  > {
     /**
      * Terminal instance (available when spawned with terminal option)
      * Available in Bun v1.3.5+
      */
     terminal?: Terminal;
-  };
+  }
 }
 
 // Bun.Terminal API (v1.3.5+) - Global augmentation
@@ -170,16 +170,16 @@ declare global {
       };
     }
 
-    type Subprocess<
+    interface Subprocess<
       In extends Spawn.Writable = Spawn.Writable,
       Out extends Spawn.Readable = Spawn.Readable,
       Err extends Spawn.Readable = Spawn.Readable,
-    > = {
+    > {
       /**
        * Terminal instance (available when spawned with terminal option)
        * Available in Bun v1.3.5+
        */
       terminal?: Terminal;
-    };
+    }
   }
 }

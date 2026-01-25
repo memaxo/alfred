@@ -31,9 +31,9 @@ describeFn("trajectoryRepo", () => {
       "trajectoryRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    db = mod.db;
-    workflowRepo = mod.workflowRepo;
-    trajectoryRepo = mod.trajectoryRepo;
+    ({ db } = mod);
+    ({ workflowRepo } = mod);
+    ({ trajectoryRepo } = mod);
     await ensureUser();
   });
 

@@ -28,11 +28,11 @@ export async function evaluatePlanDeterministic(
         {
           judge: "budget",
           criterion: "enforcement",
-          score: 0.0,
+          score: 0,
           reasoning: budgetResult.reason ?? "Budget exceeded",
         },
       ],
-      aggregateScore: 0.0,
+      aggregateScore: 0,
       selected: false,
     };
   }
@@ -49,11 +49,11 @@ export async function evaluatePlanDeterministic(
         {
           judge: "verification",
           criterion: "checks",
-          score: 0.0,
+          score: 0,
           reasoning: `Failed checks: ${verification.failed.join(", ")}`,
         },
       ],
-      aggregateScore: 0.0,
+      aggregateScore: 0,
       selected: false,
     };
   }
@@ -68,7 +68,7 @@ export async function evaluatePlanDeterministic(
       {
         judge: "verification",
         criterion: "checks",
-        score: 1.0,
+        score: 1,
         reasoning: `Passed all checks: ${verification.passed.join(", ")}`,
       },
       {

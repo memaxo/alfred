@@ -5,20 +5,22 @@ import type { Context } from "./context";
 export const t = initTRPC.context<Context>().create();
 
 // Lazy metrics wiring to keep test environment light and avoid import-time side effects
-type TrpcLabels = {
+interface TrpcLabels {
   procedure: string;
   type: string;
-};
+}
 type TrpcErrorLabels = TrpcLabels & { code: string };
-type RateLimitLabels = { procedure: string };
-type Metrics = {
+interface RateLimitLabels {
+  procedure: string;
+}
+interface Metrics {
   trpcRequestDurationSeconds: {
     startTimer: (labels: TrpcLabels) => () => void;
   };
   trpcRequestErrorsTotal: { inc: (labels: TrpcErrorLabels) => void };
   trpcRequestsTotal: { inc: (labels: TrpcLabels) => void };
   rateLimitHitsTotal: { inc: (labels: RateLimitLabels) => void };
-};
+}
 let metricsRef: Metrics | null = null;
 
 const noopMetrics: Metrics = {
@@ -44,7 +46,7 @@ async function getMetrics(): Promise<Metrics> {
       rateLimitHitsTotal: m.rateLimitHitsTotal,
     };
     return metricsRef;
-  } catch (_err) {
+  } catch {
     return noopMetrics;
   }
 }
@@ -85,7 +87,7 @@ const authMiddleware = t.middleware(({ ctx, next }) => {
   });
 });
 
-export const router = t.router;
+export const { router } = t;
 
 const baseProcedure = t.procedure.use(metricsMiddleware);
 
@@ -95,12 +97,12 @@ export const protectedProcedure = baseProcedure.use(authMiddleware);
 
 export const authedProcedure = protectedProcedure;
 
-export type AuthedContext = {
+export interface AuthedContext {
   session: NonNullable<Context["session"]>;
   runtime: Context["runtime"];
   runtimeContext: Context["runtimeContext"];
   policy?: Context["policy"];
-};
+}
 
 // Simple global rate limiter for single-user context
 // 1000 requests per minute is plenty for a personal assistant

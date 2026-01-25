@@ -32,16 +32,16 @@ describeFn("Memory Decay Integration", () => {
       "Memory decay tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const dbMod = await import("@alfred/db");
-    graphRepo = dbMod.graphRepo;
-    db = dbMod.db;
+    ({ graphRepo } = dbMod);
+    ({ db } = dbMod);
 
     // Import decay functions directly
     const graphRead = await import("@alfred/db/repo/graph/read");
     const graphWrite = await import("@alfred/db/repo/graph/write");
-    findNodesForDecay = graphRead.findNodesForDecay;
-    updateNodeConfidenceBatch = graphWrite.updateNodeConfidenceBatch;
-    findNodesByConfidence = graphRead.findNodesByConfidence;
-    archiveNodes = graphWrite.archiveNodes;
+    ({ findNodesForDecay } = graphRead);
+    ({ updateNodeConfidenceBatch } = graphWrite);
+    ({ findNodesByConfidence } = graphRead);
+    ({ archiveNodes } = graphWrite);
     _deleteArchivedNodes = graphWrite.deleteArchivedNodes;
   });
 
@@ -89,7 +89,7 @@ describeFn("Memory Decay Integration", () => {
     const updates = staleNodes.map((node) => {
       const props = (node.properties as Record<string, unknown>) || {};
       const currentConfidence =
-        typeof props.confidence === "number" ? props.confidence : 1.0;
+        typeof props.confidence === "number" ? props.confidence : 1;
       const newConfidence = Math.max(
         0.01, // confidence floor
         currentConfidence * 0.9 // decay factor
@@ -146,7 +146,7 @@ describeFn("Memory Decay Integration", () => {
     const updates = staleNodes.map((node) => {
       const props = (node.properties as Record<string, unknown>) || {};
       const currentConfidence =
-        typeof props.confidence === "number" ? props.confidence : 1.0;
+        typeof props.confidence === "number" ? props.confidence : 1;
       const newConfidence = Math.max(
         0.01, // confidence floor
         currentConfidence * 0.9 // decay factor
@@ -246,7 +246,7 @@ describeFn("Memory Decay Integration", () => {
     const updates = staleNodesFinal.map((node) => {
       const props = (node.properties as Record<string, unknown>) || {};
       const currentConfidence =
-        typeof props.confidence === "number" ? props.confidence : 1.0;
+        typeof props.confidence === "number" ? props.confidence : 1;
       return {
         id: node.id,
         confidence: Math.max(0.01, currentConfidence * 0.9),

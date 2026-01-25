@@ -8,7 +8,7 @@ import { mockRunRegistry, mockWorkflowRepo } from "./utils/router-helpers";
 
 const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
-const recordAuditMock = vi.fn().mockResolvedValue(undefined);
+const recordAuditMock = vi.fn().mockResolvedValue();
 
 mock.module("@alfred/agent/utils/audit", () => ({
   recordAudit: recordAuditMock,
@@ -49,7 +49,7 @@ describe("createWorkflowSuspension", () => {
 
   it("emits obligations with resume events and resumes when policy clears", async () => {
     const emitObligation = vi.fn();
-    const startWorkflow = vi.fn().mockResolvedValue(undefined);
+    const startWorkflow = vi.fn().mockResolvedValue();
     const policyCheck = vi.fn().mockResolvedValue([]);
 
     const suspension = createWorkflowSuspension({

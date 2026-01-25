@@ -25,34 +25,34 @@ export type Clause =
   | { _: "relation"; subject: Term; predicate: string; object: Term }
   | { _: "filter"; variable: Variable; op: Operator; value: string };
 
-export type Query = {
+export interface Query {
   find: Variable[];
   where: Clause[];
   limit?: number;
-};
+}
 
 export type Binding = Map<Variable, string>;
 export type Result = Map<Variable, string>;
-export type SemanticQueryOptions = {
+export interface SemanticQueryOptions {
   embedding: Float32Array;
   maxKnnNodes?: number;
-};
+}
 
-export type ReasoningNodeRecord = {
+export interface ReasoningNodeRecord {
   id: string;
   hash: string;
   label: string;
   properties?: Record<string, unknown> | null;
-};
+}
 
-export type ReasoningEdgeRecord = {
+export interface ReasoningEdgeRecord {
   fromId: string;
   toId: string;
   kind: string;
   metadata?: Record<string, unknown> | null;
-};
+}
 
-export type ReasoningStep = {
+export interface ReasoningStep {
   id: string;
   hash: string;
   text: string;
@@ -60,18 +60,18 @@ export type ReasoningStep = {
   timestamp: number | null;
   previousHash: string | null;
   nextHash: string | null;
-  relations: Array<{ toId: string; kind: string; timeDelta: number | null }>;
-};
+  relations: { toId: string; kind: string; timeDelta: number | null }[];
+}
 
 type Domains = Map<Variable, Set<string>>;
 type RelationClause = Extract<Clause, { _: "relation" }>;
 
-type Arc = {
+interface Arc {
   from: Variable;
   to: Variable;
   clause: RelationClause;
   direction: "forward" | "backward";
-};
+}
 
 type SerializedResult = [Variable, string][];
 
@@ -94,8 +94,14 @@ export const parse = (queryString: string): Query => {
     throw new Error("Invalid query format");
   }
 
-  const find = findMatch[1].split(",").map((v) => variable(v.trim()));
-  const where = parseWhereClauses(whereMatch[1]);
+  const findClause = findMatch[1];
+  const whereClause = whereMatch[1];
+  if (!(findClause && whereClause)) {
+    throw new Error("Invalid query format");
+  }
+
+  const find = findClause.split(",").map((v) => variable(v.trim()));
+  const where = parseWhereClauses(whereClause);
 
   return { find, where };
 };
@@ -136,7 +142,7 @@ const executeInternal = (query: Query, graph: Hypergraph): Result[] => {
 
   CACHE.set(
     key,
-    limited.map((binding) => Array.from(binding.entries()))
+    limited.map((binding) => [...binding.entries()])
   );
 
   return limited;
@@ -166,7 +172,7 @@ const semanticQueryInternal = (
 
   void naturalLanguage;
 
-  const embedding = options.embedding;
+  const { embedding } = options;
   const maxKnnNodes = options.maxKnnNodes ?? 10_000;
 
   if (!graph.embeddingCount || graph.embeddingCount() <= 0) {
@@ -176,7 +182,7 @@ const semanticQueryInternal = (
     return [];
   }
 
-  const vectors = Array.from(graph.embeddingEntries()).map(([id, vec]) => ({
+  const vectors = [...graph.embeddingEntries()].map(([id, vec]) => ({
     id,
     vec,
   }));
@@ -202,30 +208,51 @@ const parseWhereClauses = (whereString: string): Clause[] => {
   let match;
   while ((match = clauseRegex.exec(whereString)) !== null) {
     const predicate = match[1];
-    const args = match[2].split(",").map((a) => a.trim());
+    const argsText = match[2];
+    if (!(predicate && argsText)) {
+      continue;
+    }
+
+    const args = argsText.split(",").map((a) => a.trim());
 
     if (args.length === 1) {
+      const t0 = args[0];
+      if (!t0) {
+        continue;
+      }
       clauses.push({
         _: "fact",
         predicate,
-        terms: [parseTerm(args[0])],
+        terms: [parseTerm(t0)],
       });
     } else if (args.length === 2) {
+      const t0 = args[0];
+      const t1 = args[1];
+      if (!(t0 && t1)) {
+        continue;
+      }
       clauses.push({
         _: "relation",
-        subject: parseTerm(args[0]),
+        subject: parseTerm(t0),
         predicate,
-        object: parseTerm(args[1]),
+        object: parseTerm(t1),
       });
     } else if (
       args.length === 3 &&
+      args[1] &&
       ["<", ">", "=", "!=", "~"].includes(args[1])
     ) {
+      const t0 = args[0];
+      const op = args[1];
+      const value = args[2];
+      if (!(t0 && op && value)) {
+        continue;
+      }
       clauses.push({
         _: "filter",
-        variable: variable(args[0]),
-        op: args[1] as Operator,
-        value: args[2].replace(/["']/g, ""),
+        variable: variable(t0),
+        op: op as Operator,
+        value: value.replaceAll(/["']/g, ""),
       });
     }
   }
@@ -240,7 +267,7 @@ const parseTerm = (termString: string): Term => {
   if (termString.startsWith("?")) {
     return { _: "var", name: variable(termString) };
   }
-  return { _: "const", value: termString.replace(/["']/g, "") };
+  return { _: "const", value: termString.replaceAll(/["']/g, "") };
 };
 
 function initializeVariableDomains(
@@ -319,7 +346,7 @@ function generateCandidates(
 ): Result[] {
   applyAC3(domains, query.where, graph);
 
-  const orderedVariables = Array.from(domains.entries())
+  const orderedVariables = [...domains.entries()]
     .sort((a, b) => a[1].size - b[1].size)
     .map(([name]) => name);
 
@@ -423,8 +450,8 @@ function reviseArc(arc: Arc, domains: Domains, graph: Hypergraph): boolean {
   }
 
   let revised = false;
-  for (const value of Array.from(source)) {
-    const hasSupport = Array.from(target).some((candidate) =>
+  for (const value of [...source]) {
+    const hasSupport = [...target].some((candidate) =>
       relationSatisfiedForValues(value, candidate, arc, graph)
     );
     if (!hasSupport) {
@@ -477,6 +504,9 @@ function clauseSatisfied(
   switch (clause._) {
     case "fact": {
       const term = clause.terms[0];
+      if (!term) {
+        return allowPartial;
+      }
       const value = resolveTerm(term, binding);
       if (!value) {
         return allowPartial;
@@ -520,18 +550,24 @@ function filterPasses(
   const numericValue =
     clause.op === "~" ? Number.NaN : Number.parseFloat(clause.value);
   switch (clause.op) {
-    case ">":
+    case ">": {
       return getConfidence(node) > numericValue;
-    case "<":
+    }
+    case "<": {
       return getConfidence(node) < numericValue;
-    case "=":
+    }
+    case "=": {
       return getNodeContent(node) === clause.value;
-    case "!=":
+    }
+    case "!=": {
       return getNodeContent(node) !== clause.value;
-    case "~":
+    }
+    case "~": {
       return getNodeContent(node).includes(clause.value);
-    default:
+    }
+    default: {
       return false;
+    }
   }
 }
 
@@ -563,7 +599,7 @@ const intersectDomain = (
   allowed: Iterable<string>
 ): void => {
   const allowedSet = new Set(allowed);
-  for (const value of Array.from(domain)) {
+  for (const value of [...domain]) {
     if (!allowedSet.has(value)) {
       domain.delete(value);
     }
@@ -591,7 +627,7 @@ const getFactNodeIds = (graph: Hypergraph): string[] => {
 const asNodeId = (value: string): NodeId => value as NodeId;
 
 const canonicalKey = (query: Query): string => {
-  const find = query.find.slice().sort().join(",");
+  const find = [...query.find].sort().join(",");
   const where = query.where
     .map((clause) => JSON.stringify(clause))
     .sort()
@@ -601,14 +637,18 @@ const canonicalKey = (query: Query): string => {
 
 const getNodeContent = (node: Knowledge): string => {
   switch (node._) {
-    case "fact":
+    case "fact": {
       return node.content;
-    case "relation":
+    }
+    case "relation": {
       return `${node.from} ${node.kind} ${node.to}`;
-    case "insight":
+    }
+    case "insight": {
       return node.conclusion;
-    case "pattern":
+    }
+    case "pattern": {
       return node.rule;
+    }
   }
 };
 
@@ -648,7 +688,7 @@ export function reconstructReasoningChain(
 
   const relations = new Map<
     string,
-    Array<{ toId: string; kind: string; timeDelta: number | null }>
+    { toId: string; kind: string; timeDelta: number | null }[]
   >();
   for (const edge of edges) {
     const bucket = relations.get(edge.fromId) ?? [];

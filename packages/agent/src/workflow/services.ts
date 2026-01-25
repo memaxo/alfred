@@ -1,88 +1,15 @@
+import type { Obligation } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
+import type { z } from "zod";
+
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
-import { type Obligation, type WorkflowEvent } from "@alfred/type";
-import { type RuntimeContext } from "@alfred/type/runtime-context";
-import { type UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
-import { type z } from "zod";
 
-import { getModelForRole } from "../selector";
-import { type WorkflowInputPayload, type workflowInput } from "./schema.js";
+import type { WorkflowInputPayload, workflowInput } from "./schema.js";
+
 export type { WorkflowInputPayload };
-
-// Type for the runtime executor (defined here to avoid circular dependency)
-interface RuntimeExecutor {
-  runId: string;
-  summary: string;
-  stream: AsyncGenerator<WorkflowEvent, void, void>;
-  resume: (payload: { resumeData?: unknown }) => Promise<void>;
-  cancel: () => Promise<void>;
-}
-
-// Common workflow executor type returned by createWorkflowExecutor
-// The resume payload type varies between RuntimeExecutor and RunPlanV6
-// so we use a generic type with a default of unknown
-export interface WorkflowExecutor {
-  runId: string;
-  summary: string;
-  stream: AsyncGenerator<WorkflowEvent, void, void>;
-  // oxlint-disable noExplicitAny: Resume payload varies between executor types
-  resume: (payload: any) => Promise<void>;
-  cancel: () => void | Promise<void>;
-}
-
-// Dynamic import to avoid circular dependency with @alfred/runtime
-// Using a variable to prevent TypeScript from statically analyzing the import
-async function getCreateRuntime(): Promise<(opts: unknown) => RuntimeExecutor> {
-  const modulePath = "@alfred/runtime";
-  const runtime = (await import(modulePath)) as {
-    createRuntime: (opts: unknown) => RuntimeExecutor;
-  };
-  return runtime.createRuntime;
-}
-
-export async function createWorkflowExecutor(
-  input: z.infer<typeof workflowInput>,
-  abortController: AbortController,
-  history?: WorkflowEvent[],
-  runtimeContext?: RuntimeContext<Record<string, unknown>>
-): Promise<WorkflowExecutor> {
-  const { model } = await getModelForRole("planner", {
-    projectId: input.projectId,
-    userId: input.userId,
-  });
-  const createRuntime = await getCreateRuntime();
-
-  return createRuntime({
-    history,
-    input: {
-      requirement: input.requirement,
-      auto: input.auto,
-      planId: input.planId, // Now typed correctly in schema
-      workspace: input.workspace,
-      repoBase: input.repoBase,
-      mode: input.mode,
-      interactive: input.interactive,
-      toolgraph: input.toolgraph,
-      context: input.context,
-      linear:
-        input.linear?.sessionId && input.authzLinear
-          ? {
-              sessionId: input.linear.sessionId,
-              space: input.linear.space,
-              authz: input.authzLinear,
-            }
-          : undefined,
-    },
-    model,
-    runId: input.runId,
-    runtimeContext,
-    signal: abortController.signal,
-    stepTimeoutMs: 5 * 60 * 1000,
-    workflowTimeoutMs: 30 * 60 * 1000,
-  });
-}
 
 interface WorkflowResourceDescriptor {
   kind: "workflow";

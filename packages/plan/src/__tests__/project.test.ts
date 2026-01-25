@@ -28,10 +28,10 @@ describe("Project Detection", () => {
     mockGetById.mockResolvedValue(null);
 
     mockUnarchiveProject.mockReset();
-    mockUnarchiveProject.mockResolvedValue(undefined);
+    mockUnarchiveProject.mockResolvedValue();
 
     mockUpdateLastActive.mockReset();
-    mockUpdateLastActive.mockResolvedValue(undefined);
+    mockUpdateLastActive.mockResolvedValue();
 
     mockCreateProject.mockReset();
     mockCreateProject.mockImplementation(async (data: any) => ({

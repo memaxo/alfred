@@ -11,7 +11,7 @@ const scopesSchema = z.array(z.string().trim().min(1)).min(1);
 const ttlSchema = z.number().int().min(60).max(900).optional();
 
 // In-memory token metadata storage (would be persisted in DB after migration)
-type TokenMetadata = {
+interface TokenMetadata {
   id: string;
   userId: string;
   name: string;
@@ -21,7 +21,7 @@ type TokenMetadata = {
   lastUsedAt: Date | null;
   expiresAt: Date | null;
   revokedAt: Date | null;
-};
+}
 const tokenMetadataStore = new Map<string, TokenMetadata>();
 
 function getTokenPrefix(token: string): string {

@@ -1,8 +1,8 @@
-export type ConflictScanResult = {
+export interface ConflictScanResult {
   files: string[];
   totalMarkers: number;
   counts: Record<string, number>;
-};
+}
 
 const MARKER_PATTERNS = ["<<<<<<<", "=======", ">>>>>>>"];
 

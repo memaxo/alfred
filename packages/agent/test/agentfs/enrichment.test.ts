@@ -5,12 +5,23 @@
  * retry resolutions, decisions, and task learnings.
  */
 
-import {
-  type FailureContext,
-  type RetryResolution,
-  type StructuredHandoff,
+import type {
+  FailureContext,
+  RetryResolution,
+  StructuredHandoff,
 } from "@alfred/type";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "bun:test";
+
+import type { AgentFSInterface } from "../../src/agentfs/types";
 
 import {
   buildFailureContext,
@@ -39,7 +50,21 @@ import {
   type TaskLearning,
 } from "../../src/agentfs/enrichment";
 import { AGENTFS_KV_KEYS } from "../../src/agentfs/keys";
-import { type AgentFSInterface } from "../../src/agentfs/types";
+
+let prevEnrichmentEnv: string | undefined;
+
+beforeAll(() => {
+  prevEnrichmentEnv = process.env.ALFRED_ENRICHMENT;
+  process.env.ALFRED_ENRICHMENT = "1";
+});
+
+afterAll(() => {
+  if (prevEnrichmentEnv === undefined) {
+    delete process.env.ALFRED_ENRICHMENT;
+  } else {
+    process.env.ALFRED_ENRICHMENT = prevEnrichmentEnv;
+  }
+});
 
 // Mock AgentFS interface
 function createMockAgent(): AgentFSInterface & {
@@ -61,7 +86,7 @@ function createMockAgent(): AgentFSInterface & {
         kvStore.delete(key);
       }),
       list: vi.fn(async (prefix: string) => {
-        const entries: Array<{ key: string; value: unknown }> = [];
+        const entries: { key: string; value: unknown }[] = [];
         for (const [key, value] of kvStore.entries()) {
           if (key.startsWith(prefix)) {
             entries.push({ key, value });
@@ -85,7 +110,10 @@ function createMockAgent(): AgentFSInterface & {
 function createFailureContext(
   overrides: Partial<FailureContext> = {}
 ): FailureContext {
+  const ts = overrides.ts ?? Date.now();
   return {
+    createdAt: overrides.createdAt ?? ts,
+    schemaVersion: overrides.schemaVersion ?? 1,
     taskId: "task-1",
     runId: "run-123",
     status: "failure",
@@ -101,7 +129,7 @@ function createFailureContext(
     escalations: [],
     reviewFailures: [],
     durationMs: 5000,
-    ts: Date.now(),
+    ts,
     ...overrides,
   };
 }
@@ -109,7 +137,10 @@ function createFailureContext(
 function createStructuredHandoff(
   overrides: Partial<StructuredHandoff> = {}
 ): StructuredHandoff {
+  const ts = overrides.ts ?? Date.now();
   return {
+    createdAt: overrides.createdAt ?? ts,
+    schemaVersion: overrides.schemaVersion ?? 1,
     summary: "Wave completed with partial success",
     fromWaveId: "wave-1",
     fromTaskIds: ["task-1", "task-2"],
@@ -120,7 +151,7 @@ function createStructuredHandoff(
     toolsAvoided: [{ reason: "Destructive", tool: "rm" }],
     openQuestions: ["Should we add tests?"],
     blockers: [],
-    ts: Date.now(),
+    ts,
     ...overrides,
   };
 }
@@ -211,18 +242,21 @@ describe("AgentFS Enrichment", () => {
 
   describe("RetryResolution", () => {
     it("should persist and retrieve retry resolutions", async () => {
+      const ts = Date.now();
       const resolution: RetryResolution = {
         attempt: 2,
+        createdAt: ts,
         delta: "Fixed by adding missing import",
         failureContext: createFailureContext(),
         runId: "run-123",
+        schemaVersion: 1,
         successContext: {
           toolsUsed: ["shell", "write"],
           filesChanged: ["src/fix.ts"],
           durationMs: 3000,
         },
         taskId: "task-1",
-        ts: Date.now(),
+        ts,
       };
 
       await persistRetryResolution(mockAgent, resolution);
@@ -234,13 +268,16 @@ describe("AgentFS Enrichment", () => {
     });
 
     it("should sort retry resolutions by attempt", async () => {
+      const ts = Date.now();
       const base = {
+        createdAt: ts,
         delta: "Fixed",
         failureContext: createFailureContext(),
         runId: "run-123",
+        schemaVersion: 1,
         successContext: { toolsUsed: [], filesChanged: [], durationMs: 1000 },
         taskId: "task-1",
-        ts: Date.now(),
+        ts,
       };
 
       await persistRetryResolution(mockAgent, { ...base, attempt: 3 });
@@ -275,26 +312,32 @@ describe("AgentFS Enrichment", () => {
     it("should check for successful retry", async () => {
       expect(await hasSuccessfulRetry(mockAgent, "task-1")).toBe(false);
 
+      const ts = Date.now();
       await persistRetryResolution(mockAgent, {
         attempt: 1,
+        createdAt: ts,
         delta: "Fixed",
         failureContext: createFailureContext(),
         runId: "run-123",
+        schemaVersion: 1,
         successContext: { toolsUsed: [], filesChanged: [], durationMs: 1000 },
         taskId: "task-1",
-        ts: Date.now(),
+        ts,
       });
 
       expect(await hasSuccessfulRetry(mockAgent, "task-1")).toBe(true);
     });
 
     it("should get latest retry resolution", async () => {
+      const ts = Date.now();
       const base = {
+        createdAt: ts,
         failureContext: createFailureContext(),
         runId: "run-123",
+        schemaVersion: 1,
         successContext: { toolsUsed: [], filesChanged: [], durationMs: 1000 },
         taskId: "task-1",
-        ts: Date.now(),
+        ts,
       };
 
       await persistRetryResolution(mockAgent, {
@@ -315,11 +358,14 @@ describe("AgentFS Enrichment", () => {
     });
 
     it("should list all retry resolutions sorted by timestamp", async () => {
+      const ts = Date.now();
       const base = {
         attempt: 1,
+        createdAt: ts,
         delta: "Fixed",
         failureContext: createFailureContext(),
         runId: "run-123",
+        schemaVersion: 1,
         successContext: { toolsUsed: [], filesChanged: [], durationMs: 1000 },
       };
 

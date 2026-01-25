@@ -1,5 +1,6 @@
+import type { FileSink } from "bun";
+
 import { logger } from "@alfred/logger";
-import { type FileSink } from "bun";
 import { spawn } from "bun";
 
 type SpawnProc = typeof spawn;
@@ -19,6 +20,42 @@ function basicAuth(username: string, password: string): string {
     "base64"
   );
   return `Basic ${token}`;
+}
+
+function isSseRequest(req: Request): boolean {
+  const accept = req.headers.get("accept")?.toLowerCase() ?? "";
+  if (accept.includes("text/event-stream")) {
+    return true;
+  }
+  try {
+    const p = new URL(req.url).pathname;
+    return p.endsWith("/event") || p.endsWith("/global/event");
+  } catch {
+    return req.url.endsWith("/event") || req.url.endsWith("/global/event");
+  }
+}
+
+async function drain(stream: ReadableStream<Uint8Array> | null): Promise<void> {
+  if (!stream) {
+    return;
+  }
+  const reader = stream.getReader();
+  try {
+    while (true) {
+      const { done } = await reader.read();
+      if (done) {
+        return;
+      }
+    }
+  } catch {
+    // ignore
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // ignore
+    }
+  }
 }
 
 async function readRequestBody(req: Request): Promise<Uint8Array | undefined> {
@@ -163,6 +200,94 @@ async function dockerExecCurl(args: {
   }
 }
 
+async function dockerExecCurlStream(args: {
+  containerName: string;
+  url: string;
+  method: string;
+  headers: Headers;
+  signal: AbortSignal | null;
+}): Promise<Response> {
+  assertAgentfsContainerName(args.containerName);
+
+  const curlArgs: string[] = [
+    "curl",
+    "-sS",
+    "-N",
+    "--request",
+    args.method,
+    "-H",
+    "accept-encoding: identity",
+  ];
+
+  for (const [k, v] of args.headers.entries()) {
+    if (k.toLowerCase() === "host") {
+      continue;
+    }
+    curlArgs.push("-H", `${k}: ${v}`);
+  }
+
+  curlArgs.push(args.url);
+
+  const proc = spawnProc(
+    ["docker", "exec", "-i", args.containerName, ...curlArgs],
+    {
+      env: process.env,
+      stderr: "pipe",
+      stdin: "ignore",
+      stdout: "pipe",
+    }
+  );
+
+  void drain(proc.stderr).catch(() => {});
+
+  const abortHandler = () => {
+    try {
+      proc.kill();
+    } catch {
+      // ignore
+    }
+  };
+
+  if (args.signal) {
+    if (args.signal.aborted) {
+      abortHandler();
+      throw new DOMException("Aborted", "AbortError");
+    }
+    args.signal.addEventListener("abort", abortHandler, { once: true });
+  }
+
+  void proc.exited
+    .then((exitCode) => {
+      if (exitCode !== 0) {
+        logger.warn("opencode_http_docker_exec_failed", {
+          exitCode,
+          url: args.url,
+        });
+      }
+    })
+    .finally(() => {
+      if (args.signal) {
+        args.signal.removeEventListener("abort", abortHandler);
+      }
+    })
+    .catch(() => {});
+
+  const outHeaders = new Headers();
+  if (!outHeaders.has("content-type")) {
+    outHeaders.set("content-type", "text/event-stream");
+  }
+
+  if (proc.stdout && typeof proc.stdout !== "number") {
+    return new Response(proc.stdout as ReadableStream<Uint8Array>, {
+      headers: outHeaders,
+      status: 200,
+    });
+  }
+
+  abortHandler();
+  throw new Error("opencode_http_sse_unavailable");
+}
+
 export function createOpencodeFetch(args: {
   containerName?: string;
   username?: string;
@@ -180,13 +305,25 @@ export function createOpencodeFetch(args: {
       if (authHeader && !headers.has("authorization")) {
         headers.set("authorization", authHeader);
       }
+
+      const signal = req.signal ?? null;
+      if (isSseRequest(req)) {
+        return dockerExecCurlStream({
+          containerName,
+          headers,
+          method: req.method,
+          signal,
+          url: req.url,
+        });
+      }
+
       const body = await readRequestBody(req);
       return dockerExecCurl({
         body,
         containerName,
         headers,
         method: req.method,
-        signal: req.signal ?? null,
+        signal,
         url: req.url,
       });
     };

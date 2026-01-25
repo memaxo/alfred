@@ -45,7 +45,7 @@ describe("PipelineSnapshot", () => {
     });
 
     it("rejects undefined", () => {
-      expect(isSerializable(undefined)).toBe(false);
+      expect(isSerializable(void 0)).toBe(false);
     });
 
     it("rejects Infinity and NaN", () => {

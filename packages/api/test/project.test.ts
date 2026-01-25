@@ -167,7 +167,7 @@ describe("projectRouter", () => {
       mockProjectRepo.getProjectById
         .mockResolvedValueOnce(project)
         .mockResolvedValueOnce(archived);
-      mockProjectRepo.archiveProject.mockResolvedValue(undefined);
+      mockProjectRepo.archiveProject.mockResolvedValue();
 
       const caller = createCaller();
       const result = await caller.archive({ id: VALID_UUID, reason: "done" });
@@ -204,7 +204,7 @@ describe("projectRouter", () => {
       mockProjectRepo.getProjectById
         .mockResolvedValueOnce(project)
         .mockResolvedValueOnce(unarchived);
-      mockProjectRepo.unarchiveProject.mockResolvedValue(undefined);
+      mockProjectRepo.unarchiveProject.mockResolvedValue();
 
       const caller = createCaller();
       const result = await caller.unarchive({ id: VALID_UUID });

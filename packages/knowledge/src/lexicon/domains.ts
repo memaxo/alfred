@@ -9,21 +9,21 @@ import { isDevTool, isFramework, isProgrammingLanguage } from "./code.js";
 /**
  * Topic detection result for extraction
  */
-export type TopicResult = {
+export interface TopicResult {
   topics: string[];
   hasCodeBlock: boolean;
   primaryDomain: string | null;
   confidenceBoost: number;
-};
+}
 
 /**
  * Domain classification result with source tracking
  */
-export type DomainResult = {
+export interface DomainResult {
   domain: string;
   confidence: number;
   source: "learned" | "static" | "seed";
-};
+}
 
 /**
  * Confidence threshold for learned knowledge to override static
@@ -34,11 +34,11 @@ export const LEARNED_OVERRIDE_THRESHOLD = 0.8;
  * Metric recording callbacks (set via registerClassificationMetrics)
  * Enables external packages to instrument without circular dependencies
  */
-type ClassificationMetrics = {
+interface ClassificationMetrics {
   recordSource: (domain: string, source: "learned" | "static" | "seed") => void;
   recordCacheHit: (hit: boolean) => void;
   recordDuration: (method: "sync" | "async", durationMs: number) => void;
-};
+}
 
 let metrics: ClassificationMetrics | null = null;
 
@@ -60,10 +60,10 @@ const CACHE_TTL_MS = 300_000; // 5 minutes
 /**
  * Cached domain association
  */
-type CachedAssociation = {
+interface CachedAssociation {
   domains: DomainResult[];
   expiresAt: number;
-};
+}
 
 /**
  * In-memory cache for learned domain associations
@@ -472,7 +472,7 @@ function classifyDomainStatic(text: string): string[] {
   }
 
   // Sort by score descending
-  const sorted = Array.from(domainScores.entries())
+  const sorted = [...domainScores.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([domain]) => domain);
 
@@ -483,7 +483,7 @@ function classifyDomainStatic(text: string): string[] {
  * Normalize cache key for consistent lookups
  */
 function getCacheKey(text: string): string {
-  return text.toLowerCase().trim().substring(0, 500);
+  return text.toLowerCase().trim().slice(0, 500);
 }
 
 /**
@@ -665,10 +665,10 @@ const DOMAIN_CONFIDENCE_BOOSTS: Record<string, number> = {
   AI: 1.15, // High boost for AI/ML content
   Security: 1.1, // Security is valuable
   Politics: 1.05, // Moderate boost
-  News: 1.0, // No boost, neutral
+  News: 1, // No boost, neutral
   SocialMedia: 0.95, // Slight reduction for noise
-  Music: 1.0, // Neutral
-  Movies: 1.0, // Neutral
+  Music: 1, // Neutral
+  Movies: 1, // Neutral
 };
 
 /**
@@ -688,7 +688,7 @@ const CODE_PATTERNS = [
   /export\s+(default\s+)?(function|class|const)/, // ES exports
   /class\s+\w+(\s+extends\s+\w+)?/, // class declarations
   /async\s+function/, // async functions
-  /=>\s*{/, // arrow functions
+  /[=]>\s*{/, // arrow functions
   /\.\s*(map|filter|reduce|forEach)\s*\(/, // array methods
   /npm\s+(install|i|run|start|test)/, // npm commands
   /bun\s+(install|run|test|add)/, // bun commands
@@ -735,9 +735,9 @@ export function detectTopics(text: string): TopicResult {
   const primaryDomain = topics[0] ?? null;
 
   // Calculate confidence boost based on primary domain
-  let confidenceBoost = 1.0;
+  let confidenceBoost = 1;
   if (primaryDomain) {
-    confidenceBoost = DOMAIN_CONFIDENCE_BOOSTS[primaryDomain] ?? 1.0;
+    confidenceBoost = DOMAIN_CONFIDENCE_BOOSTS[primaryDomain] ?? 1;
   }
 
   // Extra boost for code blocks (compounds with domain boost)
@@ -770,5 +770,5 @@ export function applyTopicBoost(
   topicResult: TopicResult
 ): number {
   const boosted = baseConfidence * topicResult.confidenceBoost;
-  return Math.min(1.0, Math.max(0, boosted));
+  return Math.min(1, Math.max(0, boosted));
 }

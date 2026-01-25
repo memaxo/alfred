@@ -1,7 +1,7 @@
-export type ModelSpec = {
+export interface ModelSpec {
   id: string;
   contextWindow: number;
-};
+}
 
 export const KNOWN_MODELS: Record<string, ModelSpec> = {
   "openai/gpt-4o-mini": { id: "openai/gpt-4o-mini", contextWindow: 128_000 },

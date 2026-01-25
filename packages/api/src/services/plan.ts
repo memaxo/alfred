@@ -121,14 +121,30 @@ export async function generatePlanService(
 
   const parsedIntent = workflowIntentSchema.parse(intent);
   const parsedResearch = researchResultSchema.parse(research);
-  const optionsSchema = z
-    .object({
-      agentTypes: z.array(agentTypeSchema).optional(),
-      maxPhases: z.number().int().min(1).max(10).optional(),
-      preferParallel: z.boolean().optional(),
-    })
-    .optional();
-  const parsedOptions = options ? optionsSchema.parse(options) : undefined;
+
+  const rawOpts = (options ?? undefined) as
+    | {
+        agentTypes?: unknown;
+        maxPhases?: unknown;
+        preferParallel?: unknown;
+      }
+    | undefined;
+
+  const parsedOptions = rawOpts
+    ? {
+        agentTypes: Array.isArray(rawOpts.agentTypes)
+          ? rawOpts.agentTypes.map((t) => agentTypeSchema.parse(t))
+          : undefined,
+        maxPhases:
+          typeof rawOpts.maxPhases === "number"
+            ? z.number().int().min(1).max(10).parse(rawOpts.maxPhases)
+            : undefined,
+        preferParallel:
+          typeof rawOpts.preferParallel === "boolean"
+            ? rawOpts.preferParallel
+            : undefined,
+      }
+    : undefined;
 
   validateIntentUserId(parsedIntent, userId);
   return await generatePlan(parsedIntent, parsedResearch, parsedOptions);

@@ -158,23 +158,27 @@ export type MirrorEntityKind =
   | "workflow_run"
   | "workflow_pattern";
 
-export type MirrorEntitySeed = {
+export interface MirrorEntitySeed {
   kind: MirrorEntityKind;
   id: string;
   label?: string;
   properties?: unknown;
-};
+}
 
 function getMirrorHash(seed: { kind: MirrorEntityKind; id: string }): string {
   switch (seed.kind) {
-    case "note":
+    case "note": {
       return `note:${seed.id}`;
-    case "reminder":
+    }
+    case "reminder": {
       return `reminder:${seed.id}`;
-    case "workflow_run":
+    }
+    case "workflow_run": {
       return `workflowrun:${seed.id}`;
-    case "workflow_pattern":
+    }
+    case "workflow_pattern": {
       return `workflowpattern:${seed.id}`;
+    }
     default: {
       const _exhaustive: never = seed.kind;
       throw new Error(`mirror_entity_kind_invalid:${_exhaustive}`);
@@ -267,7 +271,7 @@ export async function ensureMirrorNodes(
     const existingByHash = new Map(existing.map((row) => [row.hash, row]));
 
     const toInsert: MirrorEntitySeed[] = [];
-    const toUpsertProps: Array<{ seed: MirrorEntitySeed; row: NodeRow }> = [];
+    const toUpsertProps: { seed: MirrorEntitySeed; row: NodeRow }[] = [];
 
     for (const seed of withoutLabel) {
       const hash = getMirrorHash(seed);
@@ -345,7 +349,7 @@ export async function createEdge(
   fromId: string,
   toId: string,
   kind: string,
-  weight = 1.0,
+  weight = 1,
   metadata?: unknown
 ): Promise<EdgeRow> {
   const [row] = await db
@@ -398,7 +402,7 @@ export async function createEdgeWithCycleCheck(
   fromId: string,
   toId: string,
   kind: string,
-  weight = 1.0,
+  weight = 1,
   metadata?: unknown
 ): Promise<{ edge: EdgeRow | null; cycle: boolean }> {
   // For dependency-type edges, check for cycles
@@ -535,14 +539,14 @@ export async function updateNodeConfidence(
 }
 
 export async function updateNodeConfidenceBatch(
-  updates: Array<{ id: string; confidence: number }>
+  updates: { id: string; confidence: number }[]
 ): Promise<number> {
   if (updates.length === 0) {
     return 0;
   }
 
   // Clamp + validate upfront to avoid writing invalid JSON values.
-  const safeUpdates: Array<{ id: string; confidence: number }> = [];
+  const safeUpdates: { id: string; confidence: number }[] = [];
   for (const update of updates) {
     if (!UUID_RE.test(update.id)) {
       continue;

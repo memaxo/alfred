@@ -1,6 +1,7 @@
+import type { PipelineEvent } from "@alfred/pipeline";
+
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import { type PipelineEvent } from "@alfred/pipeline";
 import {
   planPhaseInputSchema,
   planPhaseOutputSchema,
@@ -17,6 +18,7 @@ import {
   getTestCheckpointStorage,
   WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
+import { attachHooksObserver } from "../../../workflow/hooks";
 import { mapWorkflowResourceLocal } from "../../../workflow/resource";
 
 const isTestMode =
@@ -119,6 +121,13 @@ export const workflowPhasePlanProcedure = authedProcedure
         maxParallel: 1,
       });
       registerDefaultStages(runner);
+
+      await attachHooksObserver(runner, {
+        runId,
+        sessionId: session.session.id,
+        signal: new AbortController().signal,
+        workspace,
+      });
 
       const storage = new WorkflowCheckpointStorage(
         isTestMode
@@ -417,6 +426,13 @@ export const workflowPhaseStreamPlanProcedure = authedProcedure
           };
 
           const workspace = input.workspace ?? process.cwd();
+
+          await attachHooksObserver(runner, {
+            runId,
+            sessionId: session.session.id,
+            signal: abortController.signal,
+            workspace,
+          });
 
           // Ensure run exists before persisting checkpoints (FK to workflow_snapshots).
           const existingRun = await workflowRepo.getRun(runId);

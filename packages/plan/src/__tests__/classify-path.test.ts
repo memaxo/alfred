@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Track generateObject calls
-let generateObjectCalls: Array<{ prompt: string }> = [];
+let generateObjectCalls: { prompt: string }[] = [];
 
 // Mock AI SDK generateObject for batch path classification
 mock.module("ai", () => ({
@@ -10,7 +10,7 @@ mock.module("ai", () => ({
 
     // Parse the prompt to extract paths and assign buckets based on content
     const lines = args.prompt.split("\n");
-    const assignments: Array<{ index: number; bucket: string }> = [];
+    const assignments: { index: number; bucket: string }[] = [];
 
     for (const line of lines) {
       const match = line.match(/^(\d+):\s*(.+)$/);

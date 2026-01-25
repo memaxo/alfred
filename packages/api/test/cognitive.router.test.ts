@@ -1,4 +1,5 @@
-import { type Obligation } from "@alfred/type";
+import type { Obligation } from "@alfred/type";
+
 import {
   afterEach,
   beforeEach,

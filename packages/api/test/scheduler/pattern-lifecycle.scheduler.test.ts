@@ -50,7 +50,7 @@ describe("PatternLifecycleScheduler", () => {
 
   it("runs pattern lifecycle tick", async () => {
     process.env.SCHED_PATTERN_LIFECYCLE = "1";
-    managePatternLifecycleMock.mockResolvedValue(undefined);
+    managePatternLifecycleMock.mockResolvedValue();
 
     startPatternLifecycleScheduler({
       logger: loggerMock,

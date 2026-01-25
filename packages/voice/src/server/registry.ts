@@ -94,7 +94,7 @@ export class VoiceRegistry {
   }
 
   clearSessions(): number {
-    const ids = Array.from(this.sessions.keys());
+    const ids = [...this.sessions.keys()];
     for (const sessionId of ids) {
       this.removeSession(sessionId);
     }

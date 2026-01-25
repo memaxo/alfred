@@ -13,7 +13,7 @@ mock.module("@alfred/db/repo/workflow", () => ({
     createdRuns.push(row);
     return row;
   }),
-  updateRun: vi.fn().mockResolvedValue(undefined),
+  updateRun: vi.fn().mockResolvedValue(),
   appendEvent: vi.fn().mockImplementation((evt) => {
     appended.push(evt);
     return evt;

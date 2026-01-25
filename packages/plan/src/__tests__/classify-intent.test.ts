@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Track generateObject calls
-let generateObjectCalls: Array<{ prompt: string }> = [];
+let generateObjectCalls: { prompt: string }[] = [];
 
 // Mock AI SDK generateObject for classification
 mock.module("ai", () => ({

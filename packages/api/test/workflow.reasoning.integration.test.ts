@@ -5,7 +5,8 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.OPENAI_API_KEY ??= "test-key";
 
 import "./utils/mock-metrics";
-import { type Obligation } from "@alfred/type";
+import type { Obligation } from "@alfred/type";
+
 import {
   afterAll,
   afterEach,

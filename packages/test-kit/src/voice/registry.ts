@@ -4,12 +4,12 @@ import type { TTSPool } from "@alfred/voice/process/tts";
 import { VoiceRegistry } from "@alfred/voice/server/registry";
 import { Buffer } from "node:buffer";
 
-export type VoiceTestOptions = {
+export interface VoiceTestOptions {
   transcript?: string;
   chunkText?: string;
   chunkMimeType?: string;
   streamingChunks?: number;
-};
+}
 
 class DeterministicSTTPool {
   public readonly size = 1;

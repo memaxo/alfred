@@ -9,13 +9,13 @@ export function pcm16ViewToInt16(view: ArrayBufferView): Int16Array {
 }
 
 export function int16ToBuffer(view: Int16Array): Buffer {
-  type BufferLike = {
+  interface BufferLike {
     from: (
       arrayBuffer: ArrayBuffer,
       byteOffset: number,
       length: number
     ) => Buffer;
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (!B) {
     throw new Error("buffer_unavailable");

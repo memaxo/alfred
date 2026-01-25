@@ -15,7 +15,8 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { type WorkflowEvent } from "@alfred/type";
+import type { WorkflowEvent } from "@alfred/type";
+
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import path from "node:path";
 
@@ -134,7 +135,7 @@ describe("Obligation Handling Integration", () => {
               // Check for obligation event
               if (event._ === "obligation") {
                 const obligation = event as {
-                  obligations?: Array<{ type: string }>;
+                  obligations?: { type: string }[];
                 };
                 const hasBioObligation = obligation.obligations?.some(
                   (o) => o.type === "biometric"

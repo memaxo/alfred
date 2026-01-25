@@ -14,8 +14,8 @@
 export function normalizeText(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s]/g, "") // Remove punctuation
-    .replace(/\s+/g, " ") // Collapse whitespace
+    .replaceAll(/[^\w\s]/g, "") // Remove punctuation
+    .replaceAll(/\s+/g, " ") // Collapse whitespace
     .trim();
 }
 
@@ -90,7 +90,7 @@ export function calculateSimilarity(
 /**
  * Detailed WER analysis with breakdown of error types.
  */
-export type WerAnalysis = {
+export interface WerAnalysis {
   wer: number;
   similarity: number;
   referenceWords: number;
@@ -98,7 +98,7 @@ export type WerAnalysis = {
   editDistance: number;
   normalizedReference: string;
   normalizedHypothesis: string;
-};
+}
 
 /**
  * Perform detailed WER analysis.

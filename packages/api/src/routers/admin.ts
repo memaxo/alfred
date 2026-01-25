@@ -17,10 +17,10 @@ import { protectedProcedure, router } from "../trpc";
 import { getVoicePools } from "../voice/pools";
 import { collectVoiceTelemetry } from "../voice/telemetry";
 
-type SessionRecord = {
+interface SessionRecord {
   id?: string;
   token?: string;
-};
+}
 
 async function ensureRecentBiometric(session: unknown): Promise<void> {
   const sessionRecord = (
@@ -41,7 +41,7 @@ async function ensureRecentBiometric(session: unknown): Promise<void> {
 }
 
 // In-memory alert storage (would be persisted in production after migration)
-type MetricAlert = {
+interface MetricAlert {
   id: string;
   name: string;
   query: string;
@@ -49,7 +49,7 @@ type MetricAlert = {
   severity: "info" | "warning" | "critical";
   enabled: boolean;
   createdAt: Date;
-};
+}
 const alertsStore = new Map<string, MetricAlert>();
 
 // Default constraint definitions
@@ -91,7 +91,7 @@ export const adminRouter = router({
     try {
       const { voiceRegistry } = getVoicePools();
       return { ...voiceRegistry.getStats(), telemetry };
-    } catch (_error) {
+    } catch {
       // If pools are not initialized (e.g. VOICE_PROVIDER set to cloud/default), return empty stats
       return {
         generatedAt: Date.now(),

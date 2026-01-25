@@ -1,20 +1,20 @@
 import type { Subprocess } from "bun";
 
-export type IPCRequest = {
+export interface IPCRequest {
   id: string;
   type: string;
   payload?: unknown;
-};
+}
 
-export type IPCResponse = {
+export interface IPCResponse {
   id: string;
   type: "status" | "transcript" | "audio" | "error" | "ping" | "shutdown";
   payload?: unknown;
-};
+}
 
-export type IPCBridgeOptions = {
+export interface IPCBridgeOptions {
   requestTimeout?: number;
-};
+}
 
 export class Bridge {
   private readonly pendingRequests = new Map<

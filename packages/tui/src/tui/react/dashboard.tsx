@@ -24,19 +24,19 @@ import {
   WorkflowPanel,
 } from "./panels";
 
-export type DashboardCallbacks = {
+export interface DashboardCallbacks {
   onQuit?: () => boolean | Promise<boolean>;
   onRefresh?: () => void;
   onMode?: (mode: "chat" | "debug" | "plan" | "help") => void | Promise<void>;
   onFocusPanel?: (id: string) => void;
   onToggleFocusMode?: () => void;
-};
+}
 
-type DashboardProps = {
+interface DashboardProps {
   stores: TuiStores;
   callbacks: DashboardCallbacks;
   initialMode?: ModeId;
-};
+}
 
 type PanelId =
   | "focus"
@@ -108,7 +108,7 @@ export function Dashboard({
     },
     focusPanel: (id: string) => {
       const index = PANELS.indexOf(id as PanelId);
-      if (index >= 0) {
+      if (index !== -1) {
         setFocusedIndex(index);
       }
       callbacks.onFocusPanel?.(id);

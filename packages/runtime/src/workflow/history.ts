@@ -13,7 +13,7 @@ function coerceRecord(val: unknown): Record<string, unknown> {
 export async function loadHistory(runId: string): Promise<WorkflowEvent[]> {
   const events = await workflowRepo.listEvents(runId);
   return events
-    .reverse()
+    .toReversed()
     .filter((e) => e.eventType !== "ui-message")
     .map((e) => {
       const unwrapped = unwrapEventEnvelope(e.eventData);

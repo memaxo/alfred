@@ -10,15 +10,15 @@ import path from "node:path";
 
 import { directoryFdPath, ensureFdInheritable, pathFromFd } from "./fd.js";
 
-export type PathResolutionOptions = {
+export interface PathResolutionOptions {
   noFollowSymlinks?: boolean;
-};
+}
 
-export type DirectoryHandle = {
+export interface DirectoryHandle {
   fd: number;
   path: string;
   close(): void;
-};
+}
 
 export type DirectoryAccessErrorCode =
   | "not_found"
@@ -76,7 +76,7 @@ export const DEFAULT_ALLOW_PREFIXES = (() => {
     }
   }
 
-  return Array.from(prefixes);
+  return [...prefixes];
 })();
 
 export function isWithinBase(

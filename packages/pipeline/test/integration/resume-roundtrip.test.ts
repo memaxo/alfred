@@ -67,9 +67,9 @@ describe("Pipeline resume roundtrip", () => {
       for await (const event of runner.resume(snapshot, input)) {
         events.push(event.type);
       }
-    } catch (err) {
+    } catch (error) {
       // Allowed: some environments will fail in execute; but runner must emit events.
-      void err;
+      void error;
     }
 
     expect(events.length).toBeGreaterThan(0);

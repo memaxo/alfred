@@ -12,7 +12,7 @@ export type VCRMode = "record" | "replay" | "passthrough";
 /**
  * A single recorded interaction with an AI provider
  */
-export type VCRInteraction = {
+export interface VCRInteraction {
   id: string;
   timestamp: number;
   provider: AIProvider;
@@ -32,22 +32,22 @@ export type VCRInteraction = {
   requestHash: string;
   /** Duration in ms */
   durationMs: number;
-};
+}
 
 /**
  * A cassette file containing multiple recorded interactions
  */
-export type VCRCassette = {
+export interface VCRCassette {
   version: 2;
   name: string;
   createdAt: string;
   interactions: VCRInteraction[];
-};
+}
 
 /**
  * Options for VCR recording/replay
  */
-export type VCROptions = {
+export interface VCROptions {
   /** Cassette file path (relative to test file or absolute) */
   cassettePath: string;
   /** Mode: record, replay, or passthrough */
@@ -59,16 +59,16 @@ export type VCROptions = {
     request: VCRInteraction["request"],
     recorded: VCRInteraction
   ) => boolean;
-};
+}
 
 /**
  * Request hash options for matching
  */
-export type HashOptions = {
+export interface HashOptions {
   /** Include model in hash */
   includeModel?: boolean;
   /** Include specific headers in hash */
   includeHeaders?: string[];
   /** Fields to exclude from body hash */
   excludeBodyFields?: string[];
-};
+}

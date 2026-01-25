@@ -78,7 +78,7 @@ export async function* runConflictPhase(
           if (!payload || typeof payload !== "object") {
             return;
           }
-          const type = (payload as any).type;
+          const { type } = payload as any;
           if (type === "stdout" || type === "stderr") {
             const text = (payload as any).text ?? "";
             conflictEvents.push({ type, text } as any);
@@ -209,7 +209,7 @@ export async function* runConflictPhase(
         ].join("\n");
 
         await Bun.write(resolutionExecPlanAbsPath, skeleton);
-      } catch (_e) {
+      } catch {
         // Ignore
       }
 

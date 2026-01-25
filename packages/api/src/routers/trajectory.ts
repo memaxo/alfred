@@ -1,6 +1,5 @@
 import * as trajectoryRepo from "@alfred/db/repo/trajectory";
 import * as workflowRepo from "@alfred/db/repo/workflow";
-import { type WorkflowTrajectoryFormat } from "@alfred/db/schema/workflow";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 

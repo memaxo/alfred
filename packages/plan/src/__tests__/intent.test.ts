@@ -4,7 +4,7 @@ import { describe, expect, it, mock } from "bun:test";
 mock.module("ai", () => ({
   generateObject: async (args: any) => {
     await Promise.resolve(); // satisfy lint
-    const prompt = args.prompt;
+    const { prompt } = args;
     if (prompt.includes('User Input: "Fix the bug"')) {
       return {
         object: {

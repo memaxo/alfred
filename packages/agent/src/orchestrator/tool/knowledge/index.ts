@@ -3,8 +3,9 @@
  * Exposes knowledge graph capabilities as agent tools
  */
 
+import type { ToolExecuteArgs } from "../shared/context.js";
+
 import { withPolicyApproval, type AITool } from "../approval.js";
-import { type ToolExecuteArgs } from "../shared/context.js";
 import {
   type KnowledgeConnectInput,
   type KnowledgeCorrectInput,

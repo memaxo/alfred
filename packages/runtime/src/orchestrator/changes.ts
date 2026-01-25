@@ -42,7 +42,7 @@ export async function detectFileChanges(
     }
 
     return { modified, created, deleted };
-  } catch (_error) {
+  } catch {
     return { modified: [], created: [], deleted: [] };
   }
 }

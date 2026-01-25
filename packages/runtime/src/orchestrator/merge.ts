@@ -145,7 +145,7 @@ export async function* runMergePhase(
     if (!o.result.changes || o.result.changes.length === 0) {
       const hints = agentFileHints.get(o.agentId);
       if (hints) {
-        o.result.changes = Array.from(hints);
+        o.result.changes = [...hints];
       }
     }
   }
@@ -207,13 +207,13 @@ export async function* runMergePhase(
         userId,
         auto: input.auto,
       }
-    ).catch((err) => {
-      logger.error("merge_execution_error", { error: String(err) });
+    ).catch((error) => {
+      logger.error("merge_execution_error", { error: String(error) });
       return {
         status: "failed",
         mergedBranches: [],
         targetBranch,
-        error: String(err),
+        error: String(error),
       } as const;
     });
 

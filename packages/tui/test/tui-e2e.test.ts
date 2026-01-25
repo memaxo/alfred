@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import path from "node:path";
 
 function stripAnsi(text: string): string {
-  return text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+  return text.replaceAll(/\u001B\[[0-9;]*[a-zA-Z]/g, "");
 }
 
 describe("TUI E2E", () => {
@@ -104,7 +104,7 @@ describe("TUI E2E", () => {
       const stderrP = new Response(proc.stderr).text();
 
       // Chat mode exits on Esc
-      proc.stdin.write("\x1b");
+      proc.stdin.write("\u001B");
       proc.stdin.end();
       const exitCode = await proc.exited;
       expect(exitCode).toBe(0);
@@ -134,7 +134,7 @@ describe("TUI E2E", () => {
       const stderrP = new Response(proc.stderr).text();
 
       // Open help
-      proc.stdin.write("?\x1bq");
+      proc.stdin.write("?\u001Bq");
       proc.stdin.end();
       const exitCode = await proc.exited;
       expect(exitCode).toBe(0);
@@ -164,7 +164,7 @@ describe("TUI E2E", () => {
       const stderrP = new Response(proc.stderr).text();
 
       // Ctrl+D to open debug mode
-      proc.stdin.write("\x04qq");
+      proc.stdin.write("\u0004qq");
       proc.stdin.end();
 
       const exitCode = await proc.exited;
@@ -195,7 +195,7 @@ describe("TUI E2E", () => {
       const stderrP = new Response(proc.stderr).text();
 
       // Force one transition (dashboard -> debug) which should exceed max=1 on next loop
-      proc.stdin.write("\x04");
+      proc.stdin.write("\u0004");
       proc.stdin.end();
 
       const exitCode = await proc.exited;

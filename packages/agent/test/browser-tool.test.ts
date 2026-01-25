@@ -22,7 +22,7 @@ describe("browser tool internals", () => {
 
   it("sanitizes session names to safe characters", () => {
     expect(__internals.sanitizeSessionName(" hi there ")).toBe("hi-there");
-    expect(__internals.sanitizeSessionName("a/b\\c")).toBe("a-b-c");
+    expect(__internals.sanitizeSessionName(String.raw`a/b\c`)).toBe("a-b-c");
   });
 
   it("builds snapshot args with defaults (interactive+compact, depth 6)", () => {

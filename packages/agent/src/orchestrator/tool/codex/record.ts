@@ -3,7 +3,7 @@ import { logger } from "@alfred/logger";
 import { redactEventData, redactSecrets } from "../../../utils/redaction.js";
 import { truncateToBytes } from "./truncate.js";
 
-type CodexRunRepo = {
+interface CodexRunRepo {
   createRun: (args: {
     userId: string;
     projectId?: string | null;
@@ -30,13 +30,13 @@ type CodexRunRepo = {
   }) => Promise<{ id: string; resumeCount: number } | null>;
   appendEventsBatch: (args: {
     runId: string;
-    events: Array<{
+    events: {
       seq: number;
       eventType: string;
       eventData?: unknown;
       text?: string | null;
       createdAt?: Date;
-    }>;
+    }[];
   }) => Promise<{ inserted: number }>;
   finalizeRun: (
     runId: string,
@@ -53,17 +53,17 @@ type CodexRunRepo = {
       structuredOutputStatus: string | null;
     }>
   ) => Promise<unknown>;
-};
+}
 
-type RecorderEvent = {
+interface RecorderEvent {
   seq: number;
   eventType: string;
   eventData: unknown;
   text: string | null;
   createdAt: Date;
-};
+}
 
-export type CodexRunRecorderOptions = {
+export interface CodexRunRecorderOptions {
   userId: string | undefined;
   projectId?: string | undefined;
   sessionId: string | undefined;
@@ -79,7 +79,7 @@ export type CodexRunRecorderOptions = {
   /** AgentFS run identifier */
   agentfsRunId: string | undefined;
   outputSchema: unknown;
-};
+}
 
 const MAX_EVENT_TEXT_BYTES = 16 * 1024;
 const MAX_RESULT_TEXT_BYTES = 256 * 1024;
@@ -212,13 +212,13 @@ export class CodexRunRecorder {
       return;
     }
 
-    const type = (payload as { type?: unknown }).type;
+    const { type } = payload as { type?: unknown };
     if (typeof type !== "string") {
       return;
     }
 
     if (type === "stdout" || type === "stderr") {
-      const text = (payload as { text?: unknown }).text;
+      const { text } = payload as { text?: unknown };
       this.record(type, payload, typeof text === "string" ? text : null);
       return;
     }
@@ -230,18 +230,18 @@ export class CodexRunRecorder {
     }
 
     if (type === "codex_event") {
-      const event = (payload as { event?: unknown }).event;
+      const { event } = payload as { event?: unknown };
       let text: string | null = null;
       if (event && typeof event === "object") {
         const evtType = (event as { type?: unknown }).type;
         if (evtType === "thought") {
-          const content = (event as { content?: unknown }).content;
+          const { content } = event as { content?: unknown };
           text = typeof content === "string" ? content : null;
         } else if (evtType === "output") {
-          const content = (event as { content?: unknown }).content;
+          const { content } = event as { content?: unknown };
           text = typeof content === "string" ? content : null;
         } else if (evtType === "artifact") {
-          const path = (event as { path?: unknown }).path;
+          const { path } = event as { path?: unknown };
           text = typeof path === "string" ? path : null;
         } else if (evtType === "command") {
           const cmd = (event as { command?: unknown }).command;
@@ -263,7 +263,7 @@ export class CodexRunRecorder {
     const safe = safeText(text ?? undefined, MAX_EVENT_TEXT_BYTES);
 
     this.seq += 1;
-    const seq = this.seq;
+    const { seq } = this;
     this.queue.push({
       seq,
       eventType,
@@ -290,7 +290,7 @@ export class CodexRunRecorder {
       return this.flushing ?? undefined;
     }
 
-    const batch = this.queue.splice(0, this.queue.length);
+    const batch = this.queue.splice(0);
     this.queuedBytes = 0;
 
     const doFlush = async () => {

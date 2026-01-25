@@ -23,7 +23,7 @@ export type EvaluatorAction = "use" | "refine" | "fallback";
 /**
  * Evaluation result with action and reasoning
  */
-export type EvaluatorResult = {
+export interface EvaluatorResult {
   action: EvaluatorAction;
   score: number; // Overall quality score [0, 1]
   reason: string;
@@ -34,21 +34,21 @@ export type EvaluatorResult = {
     diversity: number; // Result diversity [0, 1]
   };
   suggestions?: string[]; // Refinement suggestions if action is "refine"
-};
+}
 
 /**
  * Document to evaluate
  */
-export type EvaluatorDocument = {
+export interface EvaluatorDocument {
   content: string;
   score?: number; // Retrieval score if available
   metadata?: Record<string, unknown>;
-};
+}
 
 /**
  * Evaluation thresholds
  */
-export type EvaluatorThresholds = {
+export interface EvaluatorThresholds {
   /** Minimum score for "use" decision (default: 0.7) */
   useThreshold?: number;
   /** Maximum score for "fallback" decision (default: 0.3) */
@@ -57,7 +57,7 @@ export type EvaluatorThresholds = {
   minCoverage?: number;
   /** Minimum number of relevant documents (default: 1) */
   minRelevantDocs?: number;
-};
+}
 
 const DEFAULT_THRESHOLDS: Required<EvaluatorThresholds> = {
   useThreshold: 0.7,
@@ -149,7 +149,7 @@ function extractQueryTerms(query: string): string[] {
   // Tokenize and filter
   const tokens = query
     .toLowerCase()
-    .replace(/[^\w\s-]/g, " ")
+    .replaceAll(/[^\w\s-]/g, " ")
     .split(/\s+/)
     .filter((t) => t.length > 2 && !stopWords.has(t));
 

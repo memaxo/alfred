@@ -28,7 +28,7 @@ export function stableStringify(value: unknown): string {
       Object.getPrototypeOf(v) === Object.prototype
     ) {
       const out: Record<string, unknown> = {};
-      for (const key of Object.keys(v).toSorted()) {
+      for (const key of Object.keys(v).sort()) {
         out[key] = encode((v as Record<string, unknown>)[key]);
       }
       return out;

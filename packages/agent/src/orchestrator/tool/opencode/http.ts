@@ -1,17 +1,16 @@
-import { logger } from "@alfred/logger";
-import {
-  type GlobalEvent,
-  type Part,
-  type SessionMessageResponse,
+import type {
+  GlobalEvent,
+  Part,
+  SessionMessageResponse,
 } from "@opencode-ai/sdk";
+
+import { logger } from "@alfred/logger";
 import { spawn } from "bun";
 
-import { type ToolExecuteContext } from "../shared/context.js";
+import type { ToolExecuteContext } from "../shared/context.js";
+import type { OpenCodeToolInput, OpenCodeToolOutput } from "./definition.js";
+
 import { resolveExecProfile } from "../shared/server.js";
-import {
-  type OpenCodeToolInput,
-  type OpenCodeToolOutput,
-} from "./definition.js";
 import {
   ensureOpenCodeHttpServer,
   type OpenCodeHttpServerHandle,
@@ -130,7 +129,7 @@ async function* parseSseStream(args: {
       }
       buffer += decoder.decode(value, { stream: true });
       if (buffer.includes("\r\n")) {
-        buffer = buffer.replaceAll(/\r\n/g, "\n");
+        buffer = buffer.replaceAll("\r\n", "\n");
       }
 
       const chunks = buffer.split("\n\n");
@@ -251,7 +250,6 @@ function isGlobalEvent(value: unknown): value is GlobalEvent {
   if (!isRecord(value)) {
     return false;
   }
-
   const dir = (value as { directory?: unknown }).directory;
   const { payload } = value as { payload?: unknown };
   if (typeof dir !== "string" || !isRecord(payload)) {
@@ -268,7 +266,7 @@ async function runPrompt(args: {
   signal: AbortSignal;
 }): Promise<OpenCodeToolOutput> {
   const auto = args.input.auto ?? "read";
-  const messageId = `alfred_${makeId().replaceAll(/-/g, "")}`;
+  const messageId = `alfred_${makeId().replaceAll("-", "")}`;
   const model = mapModel(args.input.model);
 
   await ensureMcp(args.handle, args.input);
@@ -281,156 +279,154 @@ async function runPrompt(args: {
   const artifactSet = new Set<string>();
   let out = "";
 
-  const authHeader =
-    args.handle.username && args.handle.password
-      ? `Basic ${Buffer.from(`${args.handle.username}:${args.handle.password}`, "utf8").toString("base64")}`
-      : undefined;
-
-  const sseProc = args.handle.containerName
-    ? spawnProc(
-        [
-          "docker",
-          "exec",
-          "-i",
-          args.handle.containerName,
-          "curl",
-          "-sS",
-          "-N",
-          "-H",
-          "accept: text/event-stream",
-          ...(authHeader ? ["-H", `authorization: ${authHeader}`] : []),
-          `${args.handle.baseUrl}/event`,
-        ],
-        {
-          env: process.env,
-          stderr: "pipe",
-          stdin: "ignore",
-          stdout: "pipe",
-        }
-      )
-    : null;
-
-  if (!sseProc?.stdout || typeof sseProc.stdout === "number") {
-    throw new Error("opencode_http_sse_unavailable");
-  }
-
   const sseTask = (async () => {
     let sawIdle = false;
-    for await (const evt of parseSseStream({
-      signal: sseAbort.signal,
-      stream: sseProc.stdout as ReadableStream<Uint8Array>,
-    })) {
-      if (!isGlobalEvent(evt)) {
-        continue;
-      }
-      const { payload } = evt;
+    const authHeader =
+      args.handle.username && args.handle.password
+        ? `Basic ${Buffer.from(`${args.handle.username}:${args.handle.password}`, "utf8").toString("base64")}`
+        : undefined;
 
-      if (payload.type === "session.idle") {
-        const sid = payload.properties.sessionID;
-        if (sid === args.sessionId) {
-          sawIdle = true;
-          break;
-        }
-      }
-
-      if (payload.type === "session.error") {
-        const sid = payload.properties.sessionID;
-        if (!sid || sid === args.sessionId) {
-          throw new Error("opencode_http_session_error");
-        }
-      }
-
-      if (payload.type === "message.part.updated") {
-        const props = payload.properties;
-        const { part } = props;
-        if (part.sessionID !== args.sessionId || part.messageID !== messageId) {
-          continue;
-        }
-        const delta = props.delta ?? "";
-
-        if (part.type === "text") {
-          if (delta) {
-            out += delta;
-            emitText(args.writer, delta);
+    const sseProc = args.handle.containerName
+      ? spawnProc(
+          [
+            "docker",
+            "exec",
+            "-i",
+            args.handle.containerName,
+            "curl",
+            "-sS",
+            "-N",
+            "-H",
+            "accept: text/event-stream",
+            ...(authHeader ? ["-H", `authorization: ${authHeader}`] : []),
+            `${args.handle.baseUrl}/global/event`,
+          ],
+          {
+            env: process.env,
+            stderr: "pipe",
+            stdin: "ignore",
+            stdout: "pipe",
           }
-        } else if (part.type === "reasoning") {
-          if (delta) {
-            emitThought(args.writer, delta);
-          }
-        } else if (part.type === "tool") {
-          const title =
-            part.state.status === "completed"
-              ? part.state.title
-              : part.state.status === "running"
-                ? part.state.title
-                : undefined;
-          const tool = title ?? part.tool;
-          const st = part.state.status;
-          const mapped =
-            st === "completed"
-              ? "completed"
-              : st === "error"
-                ? "failed"
-                : "running";
-          emitCommand(args.writer, tool, mapped);
-          if (st === "error") {
-            void Promise.resolve(
-              args.writer?.write?.({
-                message: part.state.error,
-                type: "stderr",
-              })
-            ).catch(() => {});
-          }
-        }
-      }
+        )
+      : null;
 
-      if (payload.type === "permission.updated") {
-        const p = payload.properties;
-        if (p.sessionID !== args.sessionId || p.messageID !== messageId) {
-          continue;
-        }
-        const allow = auto === "medium" || auto === "high";
-        emitCommand(args.writer, p.title || "permission", "running");
-        await args.handle.client.postSessionIdPermissionsPermissionId({
-          body: { response: allow ? "always" : "reject" },
-          path: { id: args.sessionId, permissionID: p.id },
-        });
-      }
+    if (sseProc && (!sseProc.stdout || typeof sseProc.stdout === "number")) {
+      throw new Error("opencode_http_sse_unavailable");
+    }
 
-      if (payload.type === "todo.updated") {
-        const sid = payload.properties.sessionID;
-        if (sid !== args.sessionId) {
-          continue;
-        }
-        void Promise.resolve(
-          args.writer?.write?.({
-            entries: payload.properties.todos,
-            message: "opencode_plan",
-            type: "notice",
+    const rawStream = sseProc?.stdout
+      ? parseSseStream({
+          signal: sseAbort.signal,
+          stream: sseProc.stdout as ReadableStream<Uint8Array>,
+        })
+      : (
+          await args.handle.client.global.event({
+            signal: sseAbort.signal,
+            throwOnError: true,
           })
-        ).catch(() => {});
-      }
+        ).stream;
 
-      if (payload.type === "file.edited") {
-        const { file } = payload.properties;
-        if (
-          typeof file === "string" &&
-          file.trim().length > 0 &&
-          !artifactSet.has(file)
-        ) {
-          artifactSet.add(file);
-          artifacts.push({ kind: "file", path: file });
-          emitArtifact(args.writer, file, "file");
-        }
-      }
-
-      if (payload.type === "session.diff") {
-        const sid = payload.properties.sessionID;
-        if (sid !== args.sessionId) {
+    try {
+      for await (const evt of rawStream) {
+        if (!isGlobalEvent(evt)) {
           continue;
         }
-        for (const d of payload.properties.diff) {
-          const { file } = d;
+        const { payload } = evt;
+
+        if (payload.type === "session.idle") {
+          const sid = payload.properties.sessionID;
+          if (sid === args.sessionId) {
+            sawIdle = true;
+            break;
+          }
+        }
+
+        if (payload.type === "session.error") {
+          const sid = payload.properties.sessionID;
+          if (!sid || sid === args.sessionId) {
+            throw new Error("opencode_http_session_error");
+          }
+        }
+
+        if (payload.type === "message.part.updated") {
+          const props = payload.properties;
+          const { part } = props;
+          if (
+            part.sessionID !== args.sessionId ||
+            part.messageID !== messageId
+          ) {
+            continue;
+          }
+          const delta = props.delta ?? "";
+
+          if (part.type === "text") {
+            if (delta) {
+              out += delta;
+              emitText(args.writer, delta);
+            }
+          } else if (part.type === "reasoning") {
+            if (delta) {
+              emitThought(args.writer, delta);
+            }
+          } else if (part.type === "tool") {
+            const title =
+              part.state.status === "completed"
+                ? part.state.title
+                : (part.state.status === "running"
+                  ? part.state.title
+                  : undefined);
+            const tool = title ?? part.tool;
+            const st = part.state.status;
+            const mapped =
+              st === "completed"
+                ? "completed"
+                : (st === "error"
+                  ? "failed"
+                  : "running");
+            emitCommand(args.writer, tool, mapped);
+            if (st === "error") {
+              void Promise.resolve(
+                args.writer?.write?.({
+                  message: part.state.error,
+                  type: "stderr",
+                })
+              ).catch(() => {});
+            }
+          }
+        }
+
+        if (payload.type === "permission.updated") {
+          const p = payload.properties;
+          if (p.sessionID !== args.sessionId || p.messageID !== messageId) {
+            continue;
+          }
+          const allow = auto === "medium" || auto === "high";
+          emitCommand(args.writer, p.title || "permission", "running");
+          await args.handle.client.postSessionIdPermissionsPermissionId({
+            body: { response: allow ? "always" : "reject" },
+            path: { id: args.sessionId, permissionID: p.id },
+          });
+        }
+
+        if (payload.type === "todo.updated") {
+          const sid = payload.properties.sessionID;
+          if (sid !== args.sessionId) {
+            continue;
+          }
+          void Promise.resolve(
+            args.writer?.write?.({
+              entries: payload.properties.todos,
+              message: "opencode_plan",
+              type: "notice",
+            })
+          ).catch(() => {});
+        }
+
+        if (payload.type === "file.edited") {
+          if (args.handle.profile === "server") {
+            continue;
+          }
+          const { file } = payload.properties;
           if (
             typeof file === "string" &&
             file.trim().length > 0 &&
@@ -441,10 +437,35 @@ async function runPrompt(args: {
             emitArtifact(args.writer, file, "file");
           }
         }
+
+        if (payload.type === "session.diff") {
+          const sid = payload.properties.sessionID;
+          if (sid !== args.sessionId) {
+            continue;
+          }
+          for (const d of payload.properties.diff) {
+            const { file } = d;
+            if (
+              typeof file === "string" &&
+              file.trim().length > 0 &&
+              !artifactSet.has(file)
+            ) {
+              artifactSet.add(file);
+              artifacts.push({ kind: "file", path: file });
+              emitArtifact(args.writer, file, "file");
+            }
+          }
+        }
+      }
+
+      return sawIdle;
+    } finally {
+      try {
+        sseProc?.kill();
+      } catch {
+        // ignore
       }
     }
-
-    return sawIdle;
   })();
 
   try {
@@ -497,11 +518,6 @@ async function runPrompt(args: {
     args.signal.removeEventListener("abort", abortHandler);
     try {
       sseAbort.abort();
-    } catch {
-      // ignore
-    }
-    try {
-      sseProc.kill();
     } catch {
       // ignore
     }

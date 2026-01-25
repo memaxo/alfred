@@ -23,7 +23,7 @@ describe("decayConfidence (standard)", () => {
   const halfLife = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   it("decays confidence by half after one half-life", () => {
-    const node = createFact(1.0);
+    const node = createFact(1);
     const decayed = decayConfidence(node, halfLife, halfLife);
 
     expect(decayed._).toBe("fact");
@@ -33,7 +33,7 @@ describe("decayConfidence (standard)", () => {
   });
 
   it("decays confidence by quarter after two half-lives", () => {
-    const node = createFact(1.0);
+    const node = createFact(1);
     const decayed = decayConfidence(node, halfLife * 2, halfLife);
 
     if (decayed._ === "fact") {
@@ -47,7 +47,7 @@ describe("decayConfidence (standard)", () => {
       from: "node1" as Knowledge & { _: "fact" },
       to: "node2" as Knowledge & { _: "fact" },
       kind: "related_to",
-      weight: 1.0,
+      weight: 1,
     } as Knowledge;
 
     const decayed = decayConfidence(relation, halfLife, halfLife);
@@ -59,7 +59,7 @@ describe("decayConfidenceAdaptive", () => {
   const baseHalfLife = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   it("decays like standard decay when accessCount=0", () => {
-    const node = createFact(1.0);
+    const node = createFact(1);
     const standard = decayConfidence(node, baseHalfLife, baseHalfLife);
     const adaptive = decayConfidenceAdaptive(
       node,
@@ -77,7 +77,7 @@ describe("decayConfidenceAdaptive", () => {
   });
 
   it("decays slower with higher access count", () => {
-    const node = createFact(1.0);
+    const node = createFact(1);
     const elapsed = baseHalfLife;
 
     // No access - standard decay
@@ -99,7 +99,7 @@ describe("decayConfidenceAdaptive", () => {
   });
 
   it("correctly applies access multiplier formula", () => {
-    const node = createFact(1.0);
+    const node = createFact(1);
     const elapsed = baseHalfLife;
     const accessCount = 9;
 
@@ -128,7 +128,7 @@ describe("decayConfidenceAdaptive", () => {
       from: "node1" as Knowledge & { _: "fact" },
       to: "node2" as Knowledge & { _: "fact" },
       kind: "related_to",
-      weight: 1.0,
+      weight: 1,
     } as Knowledge;
 
     const decayed = decayConfidenceAdaptive(
@@ -144,7 +144,7 @@ describe("decayConfidenceAdaptive", () => {
 describe("getAccessMultiplier", () => {
   it("returns 1.0 for accessCount=0", () => {
     const multiplier = getAccessMultiplier(0);
-    expect(multiplier).toBeCloseTo(1.0, 5);
+    expect(multiplier).toBeCloseTo(1, 5);
   });
 
   it("returns ~3.30 for accessCount=9", () => {
@@ -234,7 +234,7 @@ describe("decay behavior scenarios", () => {
   const oneDay = 24 * 60 * 60 * 1000;
 
   it("frequently accessed node retains more confidence after 30 days", () => {
-    const node = createFact(1.0);
+    const node = createFact(1);
     const elapsed = 30 * oneDay; // 30 days
 
     // Never accessed node

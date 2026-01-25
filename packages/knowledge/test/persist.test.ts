@@ -53,7 +53,7 @@ describe("persistHypergraph", () => {
     const _first = graph.add(fact("Alpha", 0.9, "src"));
     graph.add(fact("Beta", 0.5, "src"));
 
-    const persistFn = vi.fn().mockResolvedValue(undefined);
+    const persistFn = vi.fn().mockResolvedValue();
 
     await persistHypergraph(graph, resource, persistFn);
 

@@ -27,12 +27,12 @@ export async function persistHypergraphToDb(
   await persistInKnowledge(graph, resource, persistKnowledge);
 }
 
-export type HypergraphSyncOptions = {
+export interface HypergraphSyncOptions {
   intervalMs?: number;
   computeEmbeddings?: boolean;
   maxPerTick?: number;
   batchSize?: number;
-};
+}
 
 export function startHypergraphSync(
   resource: string,

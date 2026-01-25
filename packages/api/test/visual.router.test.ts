@@ -5,7 +5,8 @@
  * Uses mock DB to test router logic.
  */
 
-import { type VisualConfig } from "@alfred/type";
+import type { VisualConfig } from "@alfred/type";
+
 import {
   beforeAll,
   beforeEach,
@@ -36,7 +37,7 @@ const PRESET_BALANCED: VisualConfig = {
     enabled: true,
     threshold: 0.8,
     intensity: 0.5,
-    blurRadius: 2.0,
+    blurRadius: 2,
   },
   chromaticAberration: {
     enabled: true,
@@ -144,7 +145,7 @@ beforeEach(() => {
   setPreferenceMock.mockImplementation(
     (userId: string, key: string, value: unknown) =>
       Promise.resolve({
-        confidence: 1.0,
+        confidence: 1,
         id: `pref-${Date.now()}`,
         key,
         source: "user",

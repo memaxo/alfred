@@ -1,8 +1,8 @@
-export type Subscriber<T> = {
+export interface Subscriber<T> {
   next?: (v: T) => void;
   error?: (err: unknown) => void;
   complete?: () => void;
-};
+}
 
 // Wraps different subscription return shapes into a common interface
 export function toObservable<T>(candidate: unknown) {
@@ -25,8 +25,8 @@ export function toObservable<T>(candidate: unknown) {
               sub.next?.(ev);
             }
             sub.complete?.();
-          } catch (err) {
-            sub.error?.(err);
+          } catch (error) {
+            sub.error?.(error);
           }
         })();
         return () => {};
@@ -41,3 +41,5 @@ export function toObservable<T>(candidate: unknown) {
     },
   };
 }
+
+export type ToObservable = typeof toObservable;

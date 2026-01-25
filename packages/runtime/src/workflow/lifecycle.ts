@@ -1,8 +1,9 @@
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import type { StructuredPlan } from "@alfred/plan";
+
 import { recordAudit } from "@alfred/agent/utils/audit";
-import { type WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import { type StructuredPlan } from "@alfred/plan";
 
 export interface Lifecycle {
   closeTimer: (status: "ok" | "error" | "cancel") => void;

@@ -17,12 +17,12 @@ import { memoryEdges, memoryNodes } from "../../schema/graph";
 /**
  * Temporal query options
  */
-export type TemporalOptions = {
+export interface TemporalOptions {
   /** Point in time to query (default: now) */
   asOf?: Date;
   /** Include edges that were superseded (soft-deleted) */
   includeSuperseded?: boolean;
-};
+}
 
 /**
  * Get edges that are valid at a specific point in time.

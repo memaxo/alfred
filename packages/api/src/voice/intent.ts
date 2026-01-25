@@ -21,14 +21,14 @@ export type VoiceIntentResult =
   | { type: "status_query"; runId?: string }
   | { type: "conversational" };
 
-export type VoiceIntentMeta = {
+export interface VoiceIntentMeta {
   heuristicFallbackUsed: boolean;
-};
+}
 
-export type VoiceIntentClassified = {
+export interface VoiceIntentClassified {
   result: VoiceIntentResult;
   meta: VoiceIntentMeta;
-};
+}
 
 /**
  * Schema for LLM classification output
@@ -39,6 +39,8 @@ const voiceIntentSchema = z.object({
   approvalAction: z.enum(["approve", "reject"]).optional(),
   workflowRequirement: z.string().optional(),
 });
+
+type VoiceIntentSelection = z.infer<typeof voiceIntentSchema>;
 
 const APPROVE_FALLBACK = new Set(["approve", "approved", "yes", "yep", "yeah"]);
 const REJECT_FALLBACK = new Set(["reject", "rejected", "no", "nope", "cancel"]);
@@ -120,32 +122,47 @@ Provide a confidence score from 0 to 1.`;
 
   const selection = getClassificationModel();
 
-  const result = await classify(voiceIntentSchema, prompt, {
-    model: selection.model,
-    modelKey: selection.modelKey,
-    metricType: "intent",
-    fallback: () => ({
-      intent: "conversational" as const,
-      confidence: 0.5,
-    }),
-  });
+  const result = await classify(
+    voiceIntentSchema as unknown as z.ZodType,
+    prompt,
+    {
+      model: selection.model,
+      modelKey: selection.modelKey,
+      metricType: "intent",
+      fallback: () => ({
+        intent: "conversational" as const,
+        confidence: 0.5,
+      }),
+    }
+  );
+
+  const parsed = voiceIntentSchema.safeParse(result.result);
+  if (!parsed.success) {
+    logger.warn("voice_intent_schema_invalid", {
+      source: result.source,
+      issues: parsed.error.issues.map((issue) => issue.message),
+    });
+    return { type: "conversational" };
+  }
 
   const { intent, confidence, approvalAction, workflowRequirement } =
-    result.result;
+    parsed.data satisfies VoiceIntentSelection;
 
   switch (intent) {
-    case "workflow":
+    case "workflow": {
       return {
         type: "workflow",
         confidence,
         requirement: workflowRequirement ?? transcript,
       };
-    case "approval":
+    }
+    case "approval": {
       return {
         type: "approval",
         action: approvalAction ?? "approve",
       };
-    case "status":
+    }
+    case "status": {
       return {
         type: "status_query",
         runId:
@@ -153,8 +170,10 @@ Provide a confidence score from 0 to 1.`;
             ? sessionContext.state.runId
             : undefined,
       };
-    default:
+    }
+    default: {
       return { type: "conversational" };
+    }
   }
 }
 

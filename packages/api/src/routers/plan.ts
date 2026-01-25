@@ -167,14 +167,23 @@ export const planRouter = router({
       } = await import("@alfred/plan");
       const intent = workflowIntentSchema.parse(input.intent);
       const research = researchResultSchema.parse(input.research);
-      const optionsSchema = z
-        .object({
-          agentTypes: z.array(agentTypeSchema).optional(),
-          maxPhases: z.number().int().min(1).max(10).optional(),
-          preferParallel: z.boolean().optional(),
-        })
-        .optional();
-      const options = optionsSchema.parse(input.options);
+
+      const rawOpts = input.options;
+      const options = rawOpts
+        ? {
+            agentTypes: Array.isArray(rawOpts.agentTypes)
+              ? rawOpts.agentTypes.map((t) => agentTypeSchema.parse(t))
+              : undefined,
+            maxPhases:
+              typeof rawOpts.maxPhases === "number"
+                ? z.number().int().min(1).max(10).parse(rawOpts.maxPhases)
+                : undefined,
+            preferParallel:
+              typeof rawOpts.preferParallel === "boolean"
+                ? rawOpts.preferParallel
+                : undefined,
+          }
+        : undefined;
 
       // Validate that intent.userId matches authenticated user
       validateIntentUserId(intent, userId);

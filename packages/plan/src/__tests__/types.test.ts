@@ -27,7 +27,7 @@ describe("@alfred/plan core types", () => {
       evaluationCriteria: [
         {
           name: "Completeness",
-          weight: 1.0,
+          weight: 1,
           threshold: "0.8",
         },
       ],

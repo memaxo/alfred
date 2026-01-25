@@ -124,15 +124,10 @@ export const workflowRouter = router({
       }
       // Cancel via registry if still active
       const { runRegistry } = await import("@alfred/agent/workflow/registry");
-      const handle = (
-        runRegistry as { runs?: Map<string, { cancel: () => void }> }
-      ).runs?.get(input.runId);
-      if (handle) {
-        try {
-          await handle.cancel();
-        } catch {
-          // Ignore cancel errors - run may have already completed
-        }
+      try {
+        await runRegistry.dispatchCancel(input.runId);
+      } catch {
+        // Ignore cancel errors - run may have already completed
       }
       // Update status in DB
       await workflowRepo.updateRun(input.runId, {
@@ -188,7 +183,7 @@ export const workflowRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -268,10 +263,28 @@ export const workflowRouter = router({
 
   suspend: authedProcedure
     .input(z.object({ runId: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const run = await workflowRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "run_not_found_or_not_suspendable",
+        });
+      }
+      if (run.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "not_owner" });
+      }
+
       const { runRegistry } = await import("@alfred/agent/workflow/registry");
       const delivered = await runRegistry.dispatchSuspend(input.runId);
       if (delivered) {
+        await workflowRepo.updateRun(input.runId, {
+          completedAt: null,
+          errorMessage: null,
+          resumedAt: null,
+          status: "suspended",
+          suspendedAt: new Date(),
+        });
         return { ok: true };
       }
       throw new TRPCError({

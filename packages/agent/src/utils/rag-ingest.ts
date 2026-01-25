@@ -20,13 +20,13 @@ import {
 
 const MAX_BATCH_SIZE = 1000;
 
-export type CodeFile = {
+export interface CodeFile {
   path: string;
   content: string;
   startLine?: number;
   endLine?: number;
   tokens?: number;
-};
+}
 
 export async function ingest(
   source: string,
@@ -58,7 +58,7 @@ export async function ingest(
       allEmbeddings.push(...batchEmbeddings);
       processed += batch.length;
       onProgress?.(processed, pieces.length);
-    } catch (_error) {
+    } catch {
       // Log error but continue with remaining batches
       // Fill with empty embeddings for failed batch to maintain array length
       allEmbeddings.push(...batch.map(() => []));
@@ -90,7 +90,7 @@ export async function ingest(
         source,
         chunks,
       });
-    } catch (_error) {
+    } catch {
       // Fail silently on enrichment
     }
   }
@@ -129,13 +129,13 @@ export async function ingestCodeFiles(
   // Get current model ID to track which model generated these embeddings
   const modelId = getCurrentModelId();
 
-  const chunks: Array<{
+  const chunks: {
     content: string;
     order: number;
     embedding: number[];
     embeddingModelId: string;
     metadata: Record<string, unknown>;
-  }> = [];
+  }[] = [];
 
   let order = 0;
   for (const file of prepared) {
@@ -146,7 +146,9 @@ export async function ingestCodeFiles(
       vector = await embed(chunkContent);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`rag_code_embed_failed:${file.path}:${message}`);
+      throw new Error(`rag_code_embed_failed:${file.path}:${message}`, {
+        cause: error,
+      });
     }
 
     const metadata: Record<string, unknown> = {
@@ -183,12 +185,12 @@ export async function ingestCodeFiles(
 
 // Helper functions for Graph Enrichment
 
-type StoredChunk = {
+interface StoredChunk {
   content: string;
   order: number;
   embedding?: number[];
   metadata?: Record<string, unknown>;
-};
+}
 
 async function enrichGraphFromChunks(args: {
   documentId: string;
@@ -216,7 +218,7 @@ async function enrichGraphFromChunks(args: {
         },
       },
     ]);
-  } catch (_error) {
+  } catch {
     // Ignore
   }
 
@@ -236,15 +238,15 @@ async function enrichGraphFromChunks(args: {
   await persistRagKnowledge(resource, entries);
 }
 
-type NodeSeed = {
+interface NodeSeed {
   resource: string;
   hash: string;
   kind: string;
   label: string;
   properties?: Record<string, unknown>;
-};
+}
 
-type EdgeSeed = {
+interface EdgeSeed {
   resource: string;
   hash: string;
   fromId: string;
@@ -252,7 +254,7 @@ type EdgeSeed = {
   kind: string;
   weight: number;
   metadata?: Record<string, unknown>;
-};
+}
 
 function nodeKey(resource: string, hash: string): string {
   return `${resource}:${hash}`;
@@ -261,7 +263,7 @@ function nodeKey(resource: string, hash: string): string {
 function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
   const { data, hash } = entry;
   switch (data._) {
-    case "fact":
+    case "fact": {
       return {
         resource,
         hash,
@@ -273,7 +275,8 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
           ts: data.ts,
         },
       };
-    case "insight":
+    }
+    case "insight": {
       return {
         resource,
         hash,
@@ -284,7 +287,8 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
           confidence: data.confidence,
         },
       };
-    case "pattern":
+    }
+    case "pattern": {
       return {
         resource,
         hash,
@@ -295,8 +299,10 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
           accuracy: data.accuracy,
         },
       };
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 

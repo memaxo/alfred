@@ -18,12 +18,12 @@
 
 import { z } from "zod";
 
-export type HomeAssistantCfg = {
+export interface HomeAssistantCfg {
   baseUrl: string;
   token: string;
   timeoutMs?: number;
   verifySsl?: boolean;
-};
+}
 
 export type HomeAssistantError =
   | { kind: "auth"; status: 401 | 403; message: string; endpoint: string }
@@ -50,19 +50,19 @@ const entityStateSchema = z.object({
 
 export type EntityState = z.infer<typeof entityStateSchema>;
 
-export type HomeEntity = {
+export interface HomeEntity {
   id: string;
   name: string;
   domain: string;
   state: string;
   attributes: Record<string, unknown>;
-};
+}
 
-export type ServiceCallResult = {
+export interface ServiceCallResult {
   success: boolean;
   entityId: string;
   state?: string;
-};
+}
 
 export class HomeAssistant {
   private readonly cfg: Required<HomeAssistantCfg>;
@@ -207,13 +207,13 @@ export class HomeAssistant {
       });
 
       if (!resp.ok) {
-        const status = resp.status;
+        const { status } = resp;
         throw this.makeError(
           status === 401 || status === 403
             ? "auth"
-            : status === 404
+            : (status === 404
               ? "notfound"
-              : "server",
+              : "server"),
           status,
           resp.statusText || `HTTP ${status}`,
           path
@@ -227,31 +227,31 @@ export class HomeAssistant {
       }
 
       return JSON.parse(text) as T;
-    } catch (err) {
+    } catch (error) {
       // Re-throw our own errors
       if (
-        typeof err === "object" &&
-        err !== null &&
-        "kind" in err &&
-        typeof (err as { kind: unknown }).kind === "string"
+        typeof error === "object" &&
+        error !== null &&
+        "kind" in error &&
+        typeof (error as { kind: unknown }).kind === "string"
       ) {
-        throw err;
+        throw error;
       }
 
       if (
-        err instanceof Error &&
-        (err.name === "TimeoutError" ||
-          err.name === "AbortError" ||
-          err.message.includes("Timeout"))
+        error instanceof Error &&
+        (error.name === "TimeoutError" ||
+          error.name === "AbortError" ||
+          error.message.includes("Timeout"))
       ) {
         throw this.makeError("timeout", 0, "Request timeout", path);
       }
 
-      if (err instanceof Error && err.name === "TypeError") {
-        throw this.makeError("network", 0, err.message, path, err);
+      if (error instanceof Error && error.name === "TypeError") {
+        throw this.makeError("network", 0, error.message, path, error);
       }
 
-      throw err;
+      throw error;
     }
   }
 
@@ -263,18 +263,24 @@ export class HomeAssistant {
     cause?: unknown
   ): HomeAssistantError {
     switch (kind) {
-      case "auth":
+      case "auth": {
         return { kind: "auth", status: status as 401 | 403, message, endpoint };
-      case "notfound":
+      }
+      case "notfound": {
         return { kind: "notfound", status: 404, message, endpoint };
-      case "timeout":
+      }
+      case "timeout": {
         return { kind: "timeout", message, endpoint };
-      case "network":
+      }
+      case "network": {
         return { kind: "network", message, endpoint, cause };
-      case "config":
+      }
+      case "config": {
         return { kind: "config", message };
-      default:
+      }
+      default: {
         return { kind: "server", status, message, endpoint };
+      }
     }
   }
 }

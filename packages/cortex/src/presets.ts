@@ -167,7 +167,7 @@ export const PRESET_BALANCED: VisualConfig = {
     enabled: true,
     threshold: 0.8,
     intensity: 0.5,
-    blurRadius: 2.0,
+    blurRadius: 2,
   },
   chromaticAberration: {
     enabled: true,
@@ -298,13 +298,13 @@ export function getDefaultPreset(): VisualConfig {
 /**
  * Preset metadata for UI display
  */
-export type PresetMetadata = {
+export interface PresetMetadata {
   id: string;
   name: string;
   description: string;
   icon: string;
   recommended?: boolean;
-};
+}
 
 export const PRESET_METADATA: PresetMetadata[] = [
   {

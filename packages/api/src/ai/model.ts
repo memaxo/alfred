@@ -110,7 +110,7 @@ export function resolveModelKey(options: {
   role: ModelRole;
   model?: string | LanguageModel;
 }): string {
-  const model = options.model;
+  const { model } = options;
   if (typeof model === "string" && model.trim().length > 0) {
     return normalizeModelKey(model);
   }

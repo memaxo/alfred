@@ -143,7 +143,7 @@ describe("linear router", () => {
 
       // First get a valid state from getAuthorizeUrl
       const authResult = await caller.linear.getAuthorizeUrl({});
-      const state = authResult.state;
+      const { state } = authResult;
 
       const result = await caller.linear.oauthCallback({
         code: "auth-code",

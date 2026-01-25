@@ -2,18 +2,18 @@ import type { PipelineEvent } from "@alfred/pipeline";
 
 import { mock, vi } from "bun:test";
 
-type PipelineObserver = {
+interface PipelineObserver {
   onEvent: (event: PipelineEvent) => void;
   onComplete?: () => void;
-};
+}
 
-export type PipelineMockOptions = {
+export interface PipelineMockOptions {
   preferenceRefresh?: boolean;
   dbRepo?: boolean;
   sessionRecovery?: boolean;
   linear?: boolean;
   runtimeLinear?: boolean;
-};
+}
 
 export function installPipelineMocks(options: PipelineMockOptions = {}): void {
   mock.module("@alfred/pipeline", () => {
@@ -140,14 +140,15 @@ export function installPipelineMocks(options: PipelineMockOptions = {}): void {
     return {
       PipelineRunner,
       registerDefaultStages: () => {},
+      // Used by workflow.phase.updatePlan and snapshot persistence.
+      toSerializable: (value: unknown) => value as unknown,
     };
   });
 
   mock.module("@alfred/pipeline/observers", () => {
     class PipelineEventQueueObserver {
       private readonly queue: PipelineEvent[] = [];
-      private readonly waiters: Array<(event: PipelineEvent | null) => void> =
-        [];
+      private readonly waiters: ((event: PipelineEvent | null) => void)[] = [];
       private closed = false;
 
       onEvent(event: PipelineEvent) {
@@ -255,14 +256,14 @@ export function installPipelineMocks(options: PipelineMockOptions = {}): void {
       >();
       const eventsByRun = new Map<
         string,
-        Array<{
+        {
           id: string;
           eventId: string;
           runId: string;
           eventType: string;
           eventData: unknown;
           timestamp: string;
-        }>
+        }[]
       >();
 
       const now = () => new Date().toISOString();

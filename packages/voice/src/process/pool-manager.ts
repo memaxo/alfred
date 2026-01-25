@@ -74,8 +74,8 @@ export async function initializeVoicePools() {
       await sttPool.initialize();
       try {
         await ttsPool.initialize();
-      } catch (e) {
-        logger.error("tts_pool_init_failed", { error: e });
+      } catch (error) {
+        logger.error("tts_pool_init_failed", { error: error });
       }
 
       voiceRegistry = new VoiceRegistry(sttPool, ttsPool);

@@ -138,19 +138,19 @@ export type FineTuneConfig = z.infer<typeof fineTuneConfigSchema>;
 export const parseFineTuneConfig = (input: unknown): FineTuneConfig =>
   fineTuneConfigSchema.parse(input);
 
-export type RunPathOptions = {
+export interface RunPathOptions {
   runsRoot?: string;
   runId?: string;
-};
+}
 
-export type FineTuneRunPaths = {
+export interface FineTuneRunPaths {
   runId: string;
   runsRoot: string;
   runDir: string;
   datasetDir: string;
   logDir: string;
   configPath: string;
-};
+}
 
 export const createRunPaths = (
   config: FineTuneConfig,

@@ -18,10 +18,10 @@ import {
 
 const TEST_SESSION_HEADER = "x-alfred-workflow-test-session";
 
-type SessionPatchState = {
+interface SessionPatchState {
   count: number;
   restore: (() => void) | null;
-};
+}
 
 const sessionPatchState: SessionPatchState = {
   count: 0,
@@ -69,10 +69,10 @@ async function resetWorkflowRecords() {
   await db.delete(workflowRuns);
 }
 
-export type WorkflowHarnessOptions = {
+export interface WorkflowHarnessOptions {
   user?: Partial<WorkflowTestUser>;
   obligations?: Obligation[];
-};
+}
 
 export class WorkflowTestHarness {
   readonly user: WorkflowTestUser;
@@ -116,6 +116,8 @@ export class WorkflowTestHarness {
     return Promise.resolve();
   }
 }
+
+export type WorkflowTestHarnessCtor = typeof WorkflowTestHarness;
 
 export async function withWorkflowHarness<T>(
   fn: (harness: WorkflowTestHarness) => Promise<T>,

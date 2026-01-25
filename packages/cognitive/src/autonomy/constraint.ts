@@ -5,10 +5,10 @@
 import type { Physiology } from "../physiology/types.js";
 import type { AutonomyGradient } from "./types.js";
 
-export type ConstraintResult = {
+export interface ConstraintResult {
   allowed: boolean;
   reason?: string;
-};
+}
 
 export const meetsConstraints = (
   auto: AutonomyGradient,
@@ -30,12 +30,13 @@ export const meetsConstraints = (
 
   for (const constraint of auto.constraints) {
     switch (constraint._) {
-      case "temporal":
+      case "temporal": {
         if ((now ?? Date.now()) > constraint.until) {
           return { allowed: false, reason: "temporal_constraint_expired" };
         }
         break;
-      case "scope":
+      }
+      case "scope": {
         if (constraint.forbidden.includes(action)) {
           return { allowed: false, reason: "action_forbidden" };
         }
@@ -46,16 +47,19 @@ export const meetsConstraints = (
           return { allowed: false, reason: "action_not_allowed" };
         }
         break;
-      case "confidence":
+      }
+      case "confidence": {
         if (auto.confidence < constraint.minimum) {
           return { allowed: false, reason: "confidence_below_minimum" };
         }
         break;
-      case "approval":
+      }
+      case "approval": {
         if (constraint.required && auto.level < 0.5) {
           return { allowed: false, reason: "approval_required" };
         }
         break;
+      }
     }
   }
   return { allowed: true };

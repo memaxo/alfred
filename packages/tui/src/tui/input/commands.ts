@@ -8,7 +8,7 @@ import type { KeyEvent } from "@opentui/core";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type Command = {
+export interface Command {
   id: string;
   label: string;
   description?: string;
@@ -16,16 +16,16 @@ export type Command = {
   category?: string;
   action: () => void | Promise<void>;
   enabled?: () => boolean;
-};
+}
 
-export type CommandPaletteState = {
+export interface CommandPaletteState {
   isOpen: boolean;
   query: string;
   selectedIndex: number;
   filteredCommands: Command[];
-};
+}
 
-export type CommandPaletteActions = {
+export interface CommandPaletteActions {
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -34,7 +34,7 @@ export type CommandPaletteActions = {
   selectPrev: () => void;
   executeSelected: () => void;
   executeById: (id: string) => void;
-};
+}
 
 // ─── Fuzzy Search ────────────────────────────────────────────────────────────
 

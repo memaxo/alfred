@@ -4,10 +4,10 @@
  */
 import { createRequire } from "node:module";
 
-export type TokenEstimator = {
+export interface TokenEstimator {
   estimate(text: string): number;
   estimateLines(lines: string[]): number;
-};
+}
 
 const DEFAULT_DIVISOR = 4;
 
@@ -18,10 +18,10 @@ function heuristicCount(text: string) {
   return Math.ceil(text.length / DEFAULT_DIVISOR);
 }
 
-type Encoder = {
+interface Encoder {
   encode: (text: string) => number[];
   free?: () => void;
-};
+}
 
 export function createTokenEstimator(opts?: {
   model?: string;

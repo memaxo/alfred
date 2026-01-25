@@ -53,7 +53,7 @@ export const cacheAgeGauge = safeRegisterGauge({
 // Keyword match stats
 export const keywordCandidatesHistogram = safeRegisterHistogram({
   buckets: [0, 5, 10, 25, 50, 100, 250, 500],
-  help: "Number of candidates from keyword matching",
+  help: "Number of candidates from BM25 recall",
   name: "codeprint_keyword_candidates",
 });
 
@@ -62,4 +62,10 @@ export const rerankScoreShift = safeRegisterHistogram({
   buckets: [-0.5, -0.25, 0, 0.25, 0.5, 0.75, 1],
   help: "Score change from reranking (positive = rerank improved ranking)",
   name: "codeprint_rerank_score_shift",
+});
+
+// BM25 vocabulary size
+export const bm25VocabularyGauge = safeRegisterGauge({
+  help: "Number of unique terms in BM25 vocabulary",
+  name: "codeprint_bm25_vocabulary_terms",
 });

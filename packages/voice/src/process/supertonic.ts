@@ -4,7 +4,7 @@ import * as ort from "onnxruntime-node";
 // Types
 type UnicodeIndexer = number[];
 
-type TTSConfig = {
+interface TTSConfig {
   ae: {
     sample_rate: number;
     base_chunk_size: number;
@@ -13,18 +13,18 @@ type TTSConfig = {
     chunk_compress_factor: number;
     latent_dim: number;
   };
-};
+}
 
-export type SupertonicConfig = {
+export interface SupertonicConfig {
   modelPath: string;
   defaultVoice?: string;
-};
+}
 
-export type SupertonicSynthesisResult = {
+export interface SupertonicSynthesisResult {
   audio: Float32Array;
   duration: number;
   sampleRate: number;
-};
+}
 
 class UnicodeProcessor {
   constructor(private readonly indexer: UnicodeIndexer) {}
@@ -66,9 +66,9 @@ class UnicodeProcessor {
   ): number[][][] {
     const actualMaxLen = maxLen || Math.max(...lengths);
     return lengths.map((len) => {
-      const row = new Array(actualMaxLen).fill(0.0);
+      const row = new Array(actualMaxLen).fill(0);
       for (let j = 0; j < Math.min(len, actualMaxLen); j++) {
-        row[j] = 1.0;
+        row[j] = 1;
       }
       return [row];
     });
@@ -109,8 +109,7 @@ class TextToSpeech {
 
     // Check for failures but don't throw (cleanup should be best-effort)
     const failures = results.filter((r) => r.status === "rejected");
-    if (failures.length > 0) {
-    }
+    if (failures.length > 0) {}
   }
 
   private async _infer(
@@ -161,7 +160,7 @@ class TextToSpeech {
     if (!dpOutputs.duration) {
       throw new Error("Duration prediction failed: output missing");
     }
-    const duration = Array.from(dpOutputs.duration.data as Float32Array);
+    const duration = [...(dpOutputs.duration.data as Float32Array)];
 
     // Apply speed factor to duration
     for (let i = 0; i < duration.length; i++) {
@@ -249,9 +248,9 @@ class TextToSpeech {
         throw new Error("Vector estimation failed: output missing");
       }
 
-      const denoised = Array.from(
-        vectorEstOutputs.denoised_latent.data as Float32Array
-      );
+      const denoised = [
+        ...(vectorEstOutputs.denoised_latent.data as Float32Array),
+      ];
 
       // Reshape to 3D
       const latentDim = xt0.length;
@@ -300,7 +299,7 @@ class TextToSpeech {
       throw new Error("Vocoder failed: output missing");
     }
 
-    const wav = Array.from(vocoderOutputs.wav_tts.data as Float32Array);
+    const wav = [...(vocoderOutputs.wav_tts.data as Float32Array)];
 
     return { wav, duration };
   }
@@ -384,8 +383,7 @@ class TextToSpeech {
           // Box-Muller transform
           const u1 = Math.max(0.0001, Math.random());
           const u2 = Math.random();
-          const val =
-            Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+          const val = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
           row.push(val);
         }
         batch.push(row);
@@ -427,9 +425,9 @@ class TextToSpeech {
   ): number[][][] {
     const actualMaxLen = maxLen || Math.max(...lengths);
     return lengths.map((len) => {
-      const row = new Array(actualMaxLen).fill(0.0);
+      const row = new Array(actualMaxLen).fill(0);
       for (let j = 0; j < Math.min(len, actualMaxLen); j++) {
-        row[j] = 1.0;
+        row[j] = 1;
       }
       return [row];
     });
@@ -543,7 +541,9 @@ export class SupertonicTTS {
 
       this.initialized = true;
     } catch (error) {
-      throw new Error(`Failed to initialize Supertonic TTS: ${error}`);
+      throw new Error(`Failed to initialize Supertonic TTS: ${error}`, {
+        cause: error,
+      });
     }
   }
 
@@ -607,7 +607,9 @@ export class SupertonicTTS {
       this.currentStyle = style;
       this.currentVoice = voiceFilename;
     } catch (error) {
-      throw new Error(`Failed to load voice ${voiceFilename}: ${error}`);
+      throw new Error(`Failed to load voice ${voiceFilename}: ${error}`, {
+        cause: error,
+      });
     }
   }
 
@@ -645,7 +647,7 @@ export class SupertonicTTS {
     if (options.voice && options.voice !== this.currentVoice) {
       try {
         await this.loadVoice(options.voice);
-      } catch (_error) {}
+      } catch {}
     }
 
     if (!this.currentStyle) {

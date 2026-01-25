@@ -36,11 +36,11 @@ type WorkflowToolCallRow = Awaited<
   ReturnType<typeof workflowRepo.getToolCalls>
 >[number];
 
-export type PreferenceInferenceOptions = {
+export interface PreferenceInferenceOptions {
   lookbackDays?: number;
   conversationLimit?: number;
   toolLimit?: number;
-};
+}
 
 export async function runPreferenceInference(
   userId: string,
@@ -90,13 +90,13 @@ export async function runPreferenceInference(
   }
 }
 
-type SchedulerOptions = {
+interface SchedulerOptions {
   intervalMs?: number;
   jitterMs?: number;
   batchSize?: number;
   lookbackDays?: number;
   logger?: Pick<Console, "info" | "warn" | "error">;
-};
+}
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

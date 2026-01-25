@@ -39,10 +39,10 @@ export const planCritiqueResultSchema = z.object({
 });
 export type PlanCritiqueResult = z.infer<typeof planCritiqueResultSchema>;
 
-export type CritiqueOptions = {
+export interface CritiqueOptions {
   maxRevisions?: number;
   abortSignal?: AbortSignal;
-};
+}
 
 /**
  * CheckResult: The result of a single deterministic check
@@ -89,12 +89,12 @@ export const planEvaluationSchema = z.object({
 /**
  * EvaluationRubric: Criteria for tie-breaks
  */
-export type EvaluationRubric = {
-  criteria: Array<{
+export interface EvaluationRubric {
+  criteria: {
     name: string;
     weight: number;
     evaluate: (plan: StructuredPlan) => number | Promise<number>;
-  }>;
-};
+  }[];
+}
 
 export type { PlanEvaluation };

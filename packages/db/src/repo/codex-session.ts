@@ -80,12 +80,12 @@ export async function cleanupExpiredSessions(
   return rows.length;
 }
 
-export type ListSessionsOptions = {
+export interface ListSessionsOptions {
   userId: string;
   status?: "active" | "completed" | "failed";
   limit?: number;
   offset?: number;
-};
+}
 
 export function listSessions(
   options: ListSessionsOptions

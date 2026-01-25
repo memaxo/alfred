@@ -18,10 +18,10 @@ import {
   nodeFromHash,
 } from "@alfred/knowledge/hypergraph";
 
-export type RuntimeKnowledgeContext = {
+export interface RuntimeKnowledgeContext {
   resource: string;
   runId: string;
-};
+}
 
 /**
  * RuntimeKnowledgeBridge

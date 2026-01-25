@@ -206,7 +206,7 @@ describe("tracker internals", () => {
   it("normalises missing timestamps to Date.now", () => {
     const nowSpy = spyOn(Date, "now").mockReturnValue(999);
     const { normaliseTime } = __internals;
-    expect(normaliseTime(undefined)).toBe(999);
+    expect(normaliseTime()).toBe(999);
     nowSpy.mockRestore();
   });
 

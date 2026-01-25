@@ -72,7 +72,7 @@ const collectPerformanceTelemetryMock = vi.fn().mockResolvedValue({
   tools: {
     droidRunsTotal: 3,
     droidDuration: {
-      average: 2.0,
+      average: 2,
       p50: 1.8,
       p95: 3.5,
       count: 3,
@@ -120,12 +120,12 @@ const createPoolMocks = () => {
       clearSessions: vi.fn().mockReturnValue(5),
     },
     sttPool: {
-      shutdown: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(),
+      initialize: vi.fn().mockResolvedValue(),
     },
     ttsPool: {
-      shutdown: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(),
+      initialize: vi.fn().mockResolvedValue(),
     },
   };
 };
@@ -172,7 +172,7 @@ beforeAll(async () => {
 beforeEach(() => {
   pools = createPoolMocks();
   getVoicePoolsMock.mockImplementation(() => pools);
-  requireRecentBiometricMock.mockResolvedValue(undefined);
+  requireRecentBiometricMock.mockResolvedValue();
 });
 
 afterEach(() => {

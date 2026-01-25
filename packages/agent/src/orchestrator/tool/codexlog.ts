@@ -317,16 +317,16 @@ export const toolCodexlog = {
           limit: input.limit ?? 5000,
         });
 
-        const reasoning: Array<{
+        const reasoning: {
           seq: number;
           text: string;
           createdAt: string;
-        }> = [];
+        }[] = [];
         for (const evt of events) {
           if (evt.eventType !== "alfred_event") {
             continue;
           }
-          const eventData = evt.eventData;
+          const { eventData } = evt;
           if (!eventData || typeof eventData !== "object") {
             continue;
           }

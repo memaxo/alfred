@@ -40,7 +40,7 @@ export function jsonToPlan(json: string): StructuredPlan {
     return result.data;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error("Invalid JSON");
+      throw new TypeError("Invalid JSON", { cause: error });
     }
     throw error;
   }

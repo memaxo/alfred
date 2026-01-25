@@ -16,10 +16,10 @@ const DEFAULT_PHASE_TIMEOUTS: Record<string, number> = {
 
 const DEFAULT_PHASE_TIMEOUT_MS = 120_000;
 
-type PipelineRunnerOptions = {
+interface PipelineRunnerOptions {
   phaseTimeouts?: Record<string, number>;
   defaultPhaseTimeoutMs?: number;
-};
+}
 
 function readId(
   ctx: RuntimeContext,
@@ -76,7 +76,7 @@ export class PhaseRunner {
     if (this.phases.has(phase.id)) {
       // Replace existing registration while preserving order semantics
       const existingIndex = this.phaseOrder.indexOf(phase.id);
-      if (existingIndex >= 0) {
+      if (existingIndex !== -1) {
         this.phaseOrder.splice(existingIndex, 1);
       }
     }

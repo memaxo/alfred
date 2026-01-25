@@ -118,18 +118,18 @@ describe("Plan Mode", () => {
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
 
-type PlanTask = {
+interface PlanTask {
   id: string;
   title: string;
   status: "pending" | "running" | "complete" | "error";
   description?: string;
-};
+}
 
-type GeneratedPlan = {
+interface GeneratedPlan {
   summary: string;
   tasks: PlanTask[];
   estimatedTime?: string;
-};
+}
 
 type PlanPhase =
   | "input"
@@ -139,13 +139,13 @@ type PlanPhase =
   | "complete"
   | "error";
 
-type PlanState = {
+interface PlanState {
   phase: PlanPhase;
   requirement: string;
   plan: GeneratedPlan | null;
   runId: string | null;
   error: string | null;
-};
+}
 
 function createInitialPlanState(): PlanState {
   return {

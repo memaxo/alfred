@@ -5,6 +5,16 @@
 
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 
+import {
+  cacheAnalytics,
+  cachePendingCount,
+  cacheRiskSummary,
+  getCachedAnalytics,
+  getCachedPendingCount,
+  getCachedRiskSummary,
+  invalidateTemplateCache,
+  invalidateUserReviewCache,
+} from "../cache/review";
 import { db } from "../client";
 import {
   type AuditAction,
@@ -74,12 +84,20 @@ export async function getReviewQueue(
 }
 
 /**
- * Get count of pending reviews
+ * Get count of pending reviews (with Redis caching)
  */
 export async function getPendingReviewCount(
   userId: string,
   reviewType?: ReviewType | "all"
 ): Promise<number> {
+  // Only cache "all" type counts (most common case)
+  if (!reviewType || reviewType === "all") {
+    const cached = await getCachedPendingCount(userId);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
   const conditions = [
     eq(reviewQueue.userId, userId),
     eq(reviewQueue.status, "pending"),
@@ -94,7 +112,14 @@ export async function getPendingReviewCount(
     .from(reviewQueue)
     .where(and(...conditions));
 
-  return Number(result[0]?.count ?? 0);
+  const count = Number(result[0]?.count ?? 0);
+
+  // Cache "all" type counts
+  if (!reviewType || reviewType === "all") {
+    void cachePendingCount(userId, count);
+  }
+
+  return count;
 }
 
 /**
@@ -142,6 +167,9 @@ export async function createReview(
     throw new Error("Failed to create review");
   }
 
+  // Invalidate cache
+  void invalidateUserReviewCache(data.userId);
+
   return row;
 }
 
@@ -187,9 +215,9 @@ export async function submitReview(
   const status: ReviewStatus =
     verdict === "approve"
       ? "approved"
-      : verdict === "reject"
+      : (verdict === "reject"
         ? "rejected"
-        : "skipped";
+        : "skipped");
 
   const updatedReview = await updateReviewStatus(reviewId, {
     status,
@@ -211,6 +239,9 @@ export async function submitReview(
 
   // Update analytics
   await updateAnalytics(userId, review.reviewType, verdict);
+
+  // Invalidate cache
+  void invalidateUserReviewCache(userId);
 
   return updatedReview;
 }
@@ -408,7 +439,7 @@ async function updateAnalytics(
 }
 
 /**
- * Get analytics for user
+ * Get analytics for user (with Redis caching)
  */
 export async function getAnalytics(
   userId: string,
@@ -430,6 +461,26 @@ export async function getAnalytics(
   autoApprovePatterns: number;
 }> {
   const { days = 7 } = options;
+
+  // Check cache first
+  const cached = await getCachedAnalytics(userId, days);
+  if (cached) {
+    return cached as {
+      total: {
+        reviewed: number;
+        approved: number;
+        rejected: number;
+        skipped: number;
+        approvalRate: number;
+      };
+      byType: Record<
+        ReviewType,
+        { approved: number; rejected: number; approvalRate: number }
+      >;
+      autoApprovePatterns: number;
+    };
+  }
+
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const analyticsRows = await db
@@ -492,7 +543,7 @@ export async function getAnalytics(
       ? Math.round((approved / (approved + rejected)) * 100)
       : 0;
 
-  return {
+  const result = {
     autoApprovePatterns: Number(patternCount[0]?.count ?? 0),
     byType: Object.fromEntries(
       Object.entries(byType).map(([type, data]) => [
@@ -511,6 +562,11 @@ export async function getAnalytics(
       approvalRate: calculateRate(totals.approved, totals.rejected),
     },
   };
+
+  // Cache the result
+  void cacheAnalytics(userId, days, result);
+
+  return result;
 }
 
 /**
@@ -646,9 +702,15 @@ export interface RiskSummary {
 }
 
 /**
- * Get risk counts for pending reviews
+ * Get risk counts for pending reviews (with Redis caching)
  */
 export async function getRiskCounts(userId: string): Promise<RiskSummary> {
+  // Check cache first
+  const cached = await getCachedRiskSummary(userId);
+  if (cached) {
+    return cached;
+  }
+
   const reviews = await db
     .select()
     .from(reviewQueue)
@@ -662,6 +724,9 @@ export async function getRiskCounts(userId: string): Promise<RiskSummary> {
     const risk = calculateRisk(review);
     counts[risk]++;
   }
+
+  // Cache the result
+  void cacheRiskSummary(userId, counts);
 
   return counts;
 }
@@ -712,9 +777,9 @@ export async function getCycleTimeStats(
   const periodMs =
     period === "day"
       ? 24 * 60 * 60 * 1000
-      : period === "week"
+      : (period === "week"
         ? 7 * 24 * 60 * 60 * 1000
-        : 30 * 24 * 60 * 60 * 1000;
+        : 30 * 24 * 60 * 60 * 1000);
 
   const since = new Date(Date.now() - periodMs);
 
@@ -791,7 +856,7 @@ export async function getCycleTimeStats(
       avgMs: avg(times),
       date,
     }))
-    .toSorted((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   return {
     avgCycleTime: avg(cycleTimes.all),
@@ -1344,6 +1409,9 @@ export async function createReviewTemplate(
     .values(template)
     .returning();
 
+  // Invalidate template cache
+  void invalidateTemplateCache(template.userId);
+
   return result!;
 }
 
@@ -1374,6 +1442,11 @@ export async function updateReviewTemplate(
     )
     .returning();
 
+  // Invalidate template cache
+  if (result) {
+    void invalidateTemplateCache(userId);
+  }
+
   return result ?? null;
 }
 
@@ -1394,7 +1467,14 @@ export async function deleteReviewTemplate(
       )
     );
 
-  return (result.rowCount ?? 0) > 0;
+  const deleted = (result.rowCount ?? 0) > 0;
+
+  // Invalidate template cache
+  if (deleted) {
+    void invalidateTemplateCache(userId);
+  }
+
+  return deleted;
 }
 
 /**

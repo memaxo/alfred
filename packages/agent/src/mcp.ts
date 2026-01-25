@@ -7,10 +7,10 @@ import { logger } from "@alfred/logger";
 
 type ToolMap = Record<string, Tool>;
 
-export type McpToolset = {
+export interface McpToolset {
   tools: ToolMap;
   close: () => Promise<void>;
-};
+}
 
 function normalizeTransport(value: string): "http" | "sse" {
   if (value === "sse") {

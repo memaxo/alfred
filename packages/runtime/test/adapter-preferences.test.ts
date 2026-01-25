@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { createRequire } from "node:module";
 
 const streamTextMock = vi.fn(() => ({
-  fullStream: (async function* () {
+  fullStream: (async function* fullStream() {
     yield { type: "text-delta", id: "text-1", delta: "hello" };
     yield { type: "finish", finishReason: "stop" };
   })(),
@@ -45,8 +45,17 @@ const buildHistoryContextMock = vi.fn(
   })
 );
 
+const calculateBudgetMock = vi.fn(() => ({
+  effectiveContextTokens: 1000,
+  historyRatio: 0.9,
+  systemReserveTokens: 0,
+  headroomTokens: 100,
+  toolingReserveTokens: 0,
+}));
+
 mock.module("@alfred/history", () => ({
   buildHistoryContext: buildHistoryContextMock,
+  calculateBudget: calculateBudgetMock,
   getHistoryBudgetDefaults: () => ({}),
 }));
 
@@ -85,6 +94,7 @@ describe("AISDKAdapter preference prompts", () => {
     buildPreferenceSystemPromptMock.mockClear();
     validateUIMessagesMock.mockClear();
     buildHistoryContextMock.mockClear();
+    calculateBudgetMock.mockClear();
   });
 
   afterAll(() => {

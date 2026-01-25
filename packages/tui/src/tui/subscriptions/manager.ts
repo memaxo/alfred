@@ -10,7 +10,7 @@ import { EventEmitter } from "node:events";
 
 export type Unsubscriber = () => void;
 
-export type SubscriptionConfig<T> = {
+export interface SubscriptionConfig<T> {
   id: string;
   start: () => Promise<{
     unsubscribe: Unsubscriber;
@@ -21,25 +21,25 @@ export type SubscriptionConfig<T> = {
   onError?: (error: Error) => void;
   retryDelay?: number;
   maxRetries?: number;
-};
+}
 
-export type PollingConfig<T> = {
+export interface PollingConfig<T> {
   id: string;
   fetch: () => Promise<T>;
   onData: (data: T) => void;
   onError?: (error: Error) => void;
   interval: number;
   immediate?: boolean;
-};
+}
 
-export type SubscriptionState = {
+export interface SubscriptionState {
   id: string;
   type: "subscription" | "polling";
   status: "idle" | "connecting" | "connected" | "error" | "closed";
   error?: Error;
   retries: number;
   lastUpdate?: Date;
-};
+}
 
 // ─── Subscription Manager ────────────────────────────────────────────────────
 
@@ -276,7 +276,7 @@ export class SubscriptionManager extends EventEmitter {
   }
 
   getAllStates(): SubscriptionState[] {
-    return Array.from(this.subscriptions.values()).map((e) => e.state);
+    return [...this.subscriptions.values()].map((e) => e.state);
   }
 
   isConnected(id: string): boolean {
@@ -289,7 +289,7 @@ export class SubscriptionManager extends EventEmitter {
    * Close all subscriptions
    */
   async closeAll(): Promise<void> {
-    const ids = Array.from(this.subscriptions.keys());
+    const ids = [...this.subscriptions.keys()];
     for (const id of ids) {
       const entry = this.subscriptions.get(id);
       if (entry?.state.type === "subscription") {

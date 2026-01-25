@@ -1,6 +1,7 @@
+import type { PipelineEvent } from "@alfred/pipeline";
+
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import { type PipelineEvent } from "@alfred/pipeline";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 
@@ -10,7 +11,9 @@ import { authedProcedure, rateLimit } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
 import { enforceWorkflowPlanPolicy } from "../../workflow/access";
 import { WorkflowCheckpointStorage } from "../../workflow/checkpoint";
+import { attachHooksObserver } from "../../workflow/hooks";
 import { linearInputSchema, workflowInputSchema } from "../../workflow/input";
+import { createPipelineEventPersister } from "../../workflow/persist";
 
 export const workflowStreamPipelineProcedure = authedProcedure
   .use(rateLimit)
@@ -50,6 +53,36 @@ export const workflowStreamPipelineProcedure = authedProcedure
           });
 
           if (obligations.length > 0) {
+            // Ensure run exists so clients can reference it (even if suspended).
+            const existingRun = await workflowRepo.getRun(runId);
+            if (!existingRun) {
+              await workflowRepo.createRun({
+                id: runId,
+                inputData: {
+                  requirement: input.requirement,
+                  runId,
+                  workspace: (input as { workspace?: string }).workspace,
+                },
+                linearIssueId: undefined,
+                linearSessionId: undefined,
+                linearSpace: undefined,
+                requirement: input.requirement,
+                status: "suspended",
+                userId: session.user.id,
+                workflowId: "pipeline",
+              });
+
+              await workflowRepo.updateRun(runId, {
+                suspendedAt: new Date(),
+              });
+            }
+
+            emit.next({
+              requirement: input.requirement,
+              runId,
+              timestamp: Date.now(),
+              type: "pipeline:start",
+            });
             emit.next({
               reason: "policy_obligation",
               timestamp: Date.now(),
@@ -121,6 +154,14 @@ export const workflowStreamPipelineProcedure = authedProcedure
               ? (toolgraph as { maxParallel: number }).maxParallel
               : 4;
 
+          const workspace =
+            typeof rawInput.workspace === "string" &&
+            rawInput.workspace.length > 0
+              ? rawInput.workspace
+              : (typeof rawInput.cw === "string" && rawInput.cw.length > 0
+                ? rawInput.cw
+                : process.cwd());
+
           const runner = new PipelineRunner({
             enableLearning: true,
             enableLinearSync: Boolean(normalizedLinear?.sessionId),
@@ -128,6 +169,13 @@ export const workflowStreamPipelineProcedure = authedProcedure
             maxParallel: input.mode === "parallel" ? maxParallel : 1,
           });
           registerDefaultStages(runner);
+
+          await attachHooksObserver(runner, {
+            runId,
+            sessionId: session.session.id,
+            signal: abortController.signal,
+            workspace,
+          });
 
           const queueObserver = new PipelineEventQueueObserver();
           runner.addObserver(queueObserver);
@@ -181,14 +229,6 @@ export const workflowStreamPipelineProcedure = authedProcedure
             void unregisterRunHandle(runId).catch(() => {});
           };
 
-          const workspace =
-            typeof rawInput.workspace === "string" &&
-            rawInput.workspace.length > 0
-              ? rawInput.workspace
-              : typeof rawInput.cw === "string" && rawInput.cw.length > 0
-                ? rawInput.cw
-                : process.cwd();
-
           // Ensure run exists before persisting checkpoints/compilation (FK).
           const existingRun = await workflowRepo.getRun(runId);
           if (!existingRun) {
@@ -229,186 +269,103 @@ export const workflowStreamPipelineProcedure = authedProcedure
 
           const { wrapEventEnvelope } =
             await import("@alfred/agent/utils/envelope");
-
-          const persistTasks = new Set<Promise<void>>();
-          const persistPipelineEvent = (event: PipelineEvent): void => {
-            // Skip high-volume chatter
-            if (
-              event.type === "stage:progress" ||
-              event.type === "agent:progress"
-            ) {
-              return;
-            }
-
-            const mapped = ((): {
-              eventType: import("@alfred/db/schema/workflow").WorkflowEventType;
-              data: Record<string, unknown>;
-            } | null => {
-              switch (event.type) {
-                case "pipeline:start": {
-                  return {
-                    eventType: "run",
-                    data: {
-                      kind: "pipeline_start",
-                      runId: event.runId,
-                      requirement: event.requirement,
-                    },
-                  };
-                }
-                case "stage:enter": {
-                  return {
-                    eventType: "step-start",
-                    data: { kind: "stage_enter", stage: event.stage },
-                  };
-                }
-                case "stage:exit": {
-                  return {
-                    eventType: "step-complete",
-                    data: {
-                      kind: "stage_exit",
-                      stage: event.stage,
-                      durationMs: event.durationMs,
-                    },
-                  };
-                }
-                case "stage:error": {
-                  return {
-                    eventType: "error",
-                    data: {
-                      kind: "stage_error",
-                      stage: event.stage,
-                      message: event.error,
-                    },
-                  };
-                }
-                case "agent:spawn": {
-                  return {
-                    eventType: "agent-start",
-                    data: {
-                      kind: "agent_spawn",
-                      agentId: event.agentId,
-                      taskId: event.taskId,
-                    },
-                  };
-                }
-                case "agent:complete": {
-                  return {
-                    eventType: "agent-complete",
-                    data: {
-                      kind: "agent_complete",
-                      agentId: event.agentId,
-                      outcome: event.outcome,
-                    },
-                  };
-                }
-                case "agent:escalate-request": {
-                  return {
-                    eventType: "notice",
-                    data: {
-                      kind: "escalation",
-                      agentId: event.agentId,
-                      reason: event.reason,
-                      details: event.details,
-                      suggestions: event.suggestions,
-                      severity: event.severity,
-                      timestamp: event.timestamp,
-                    },
-                  };
-                }
-                case "pipeline:suspend": {
-                  return {
-                    eventType: "suspend",
-                    data: { kind: "pipeline_suspend", reason: event.reason },
-                  };
-                }
-                case "pipeline:resume": {
-                  return {
-                    eventType: "resume",
-                    data: {
-                      kind: "pipeline_resume",
-                      fromStage: event.fromStage,
-                    },
-                  };
-                }
-                case "pipeline:complete": {
-                  return {
-                    eventType: "finish",
-                    data: {
-                      kind: "pipeline_complete",
-                      summary: event.summary,
-                      summaryText: event.summaryText,
-                    },
-                  };
-                }
-                case "pipeline:failed": {
-                  return {
-                    eventType: "error",
-                    data: {
-                      kind: "pipeline_failed",
-                      lastStage: event.lastStage,
-                      message: event.error,
-                    },
-                  };
-                }
-              }
-              return null;
-            })();
-
-            if (!mapped) {
-              return;
-            }
-
-            const p = workflowRepo
-              .appendEvent({
-                eventData: wrapEventEnvelope({
-                  id: crypto.randomUUID(),
-                  type: mapped.eventType,
-                  resource: "user",
-                  data: mapped.data,
-                }),
-                eventType: mapped.eventType,
-                runId,
-                timestamp: new Date(event.timestamp),
-              })
-              .then(() => {})
-              .catch((error) => {
-                logger.warn("workflow_pipeline_event_persist_failed", {
-                  error: error instanceof Error ? error.message : String(error),
-                  eventType: event.type,
-                  runId,
-                });
-              })
-              .finally(() => {
-                persistTasks.delete(p);
-              });
-
-            persistTasks.add(p);
-          };
+          const persister = createPipelineEventPersister({
+            runId,
+            workflowRepo,
+            wrapEventEnvelope,
+          });
 
           void (async () => {
             try {
+              let finalStatus:
+                | "running"
+                | "completed"
+                | "failed"
+                | "suspended" = "running";
+              let finalError: string | null = null;
+
               for await (const _event of runner.run(
                 pipelineInput,
                 abortController.signal
               )) {
-                void _event;
+                if (_event.type === "pipeline:complete") {
+                  finalStatus = "completed";
+                  finalError = null;
+                } else if (_event.type === "pipeline:failed") {
+                  finalStatus = "failed";
+                  finalError = _event.error;
+                } else if (_event.type === "pipeline:suspend") {
+                  finalStatus = "suspended";
+                }
+              }
+
+              // Best-effort: finalize DB run status.
+              try {
+                const existing = await workflowRepo.getRun(runId);
+                if (
+                  existing?.status !== "cancelled" &&
+                  existing?.status !== "suspended"
+                ) {
+                  const now = new Date();
+                  if (finalStatus === "completed") {
+                    await workflowRepo.updateRun(runId, {
+                      completedAt: now,
+                      errorMessage: null,
+                      status: "completed",
+                      suspendedAt: null,
+                    });
+                  } else if (finalStatus === "suspended") {
+                    await workflowRepo.updateRun(runId, {
+                      completedAt: null,
+                      errorMessage: null,
+                      status: "suspended",
+                      suspendedAt: now,
+                    });
+                  } else if (finalStatus === "failed") {
+                    await workflowRepo.updateRun(runId, {
+                      completedAt: now,
+                      errorMessage: finalError ?? "pipeline_failed",
+                      status: "failed",
+                      suspendedAt: null,
+                    });
+                  }
+                }
+              } catch {
+                // Best-effort.
               }
             } catch (error) {
               logger.warn("pipeline_stream_failed", {
                 error: error instanceof Error ? error.message : String(error),
                 runId,
               });
+              try {
+                const existing = await workflowRepo.getRun(runId);
+                if (
+                  existing?.status !== "cancelled" &&
+                  existing?.status !== "suspended"
+                ) {
+                  await workflowRepo.updateRun(runId, {
+                    completedAt: new Date(),
+                    errorMessage:
+                      error instanceof Error ? error.message : String(error),
+                    status: "failed",
+                  });
+                }
+              } catch {
+                // Best-effort.
+              }
             } finally {
               queueObserver.close();
+              await persister.flush();
               await unregisterRunHandle(runId).catch(() => {});
             }
           })();
 
           for await (const event of queueObserver.stream()) {
-            persistPipelineEvent(event);
+            persister.persist(event);
             emit.next(event);
           }
-          await Promise.allSettled([...persistTasks]);
+          await persister.flush();
           emit.complete();
         } catch (error) {
           emit.error(toTRPCError(error, "workflow_pipeline_stream_error"));

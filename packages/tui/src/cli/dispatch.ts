@@ -12,10 +12,10 @@ import type { getRegistry } from "../registry";
 
 type Registry = Awaited<ReturnType<typeof getRegistry>>;
 
-type ParsedArgs = {
+interface ParsedArgs {
   flags: Record<string, string | boolean | number>;
   positional: string[];
-};
+}
 
 /**
  * Parse CLI arguments into flags and positional args.
@@ -146,7 +146,7 @@ export async function dispatchCommand(
  * Get keys from a Zod schema (best effort).
  */
 function getSchemaKeys(schema: z.ZodType): string[] {
-  const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
+  const { shape } = schema as z.ZodObject<z.ZodRawShape>;
   if (shape && typeof shape === "object") {
     return Object.keys(shape);
   }
@@ -172,7 +172,7 @@ export function formatCommandHelp(command: string, registry: Registry): string {
 
   if (cmd.args) {
     lines.push("Options:");
-    const shape = (cmd.args as z.ZodObject<z.ZodRawShape>).shape;
+    const { shape } = cmd.args as z.ZodObject<z.ZodRawShape>;
     if (shape && typeof shape === "object") {
       for (const [key, value] of Object.entries(shape)) {
         const zodValue = value as z.ZodTypeAny;
@@ -243,7 +243,7 @@ export class ValidationError extends Error {
  */
 function findSimilarCommands(name: string, registry: Registry): string[] {
   const commands = registry.getAllCommands();
-  const similar: Array<{ name: string; distance: number }> = [];
+  const similar: { name: string; distance: number }[] = [];
 
   for (const cmd of commands) {
     const distance = levenshteinDistance(name, cmd.name);

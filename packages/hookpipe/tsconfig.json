@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["bun-types"],
+    "strictNullChecks": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist"]
+}

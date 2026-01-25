@@ -1,17 +1,17 @@
 import { exportJWK, importSPKI } from "jose";
 
-export type JWKS = {
+export interface JWKS {
   keys: JWK[];
-};
+}
 
-export type JWK = {
+export interface JWK {
   kty: string;
   use: string;
   kid: string;
   alg: string;
   crv: string;
   x: string;
-};
+}
 
 /**
  * Convert the configured Ed25519 public key into a JWKS document so external

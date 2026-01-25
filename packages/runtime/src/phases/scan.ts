@@ -20,7 +20,7 @@ function assertNotAborted(signal: AbortSignal): void {
     return;
   }
 
-  const reason = signal.reason;
+  const { reason } = signal;
   if (reason instanceof Error) {
     throw reason;
   }
@@ -57,9 +57,9 @@ function normalizeWriterChunk(chunk: unknown): WorkflowEvent | null {
   const kind =
     typeof maybe._ === "string"
       ? maybe._
-      : typeof maybe.type === "string"
+      : (typeof maybe.type === "string"
         ? maybe.type
-        : null;
+        : null);
   if (!kind) {
     return null;
   }
@@ -70,7 +70,7 @@ function drainWriterEvents(queue: WorkflowEvent[]): WorkflowEvent[] {
   if (queue.length === 0) {
     return [];
   }
-  return queue.splice(0, queue.length);
+  return queue.splice(0);
 }
 
 export async function* executeScanPhase(

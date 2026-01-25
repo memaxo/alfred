@@ -82,7 +82,7 @@ function stableId(seed: string): SubTaskId {
   // FNV-1a hash (32-bit)
   let h = 2_166_136_261; // FNV offset basis
   for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
+    h ^= seed.codePointAt(i) ?? 0;
     h = (h * 16_777_619) >>> 0; // FNV prime, ensure unsigned 32-bit
   }
   // Convert to hex and take first 8 characters (matching previous format)
@@ -201,7 +201,7 @@ export function decomposeTask(
           truncateSubtasksIfNeeded(semanticTasks, "semantic")
         );
       }
-    } catch (_e) {
+    } catch {
       // Fallback to legacy bucket heuristic if semantic fails
     }
   }
@@ -214,7 +214,7 @@ export function decomposeTask(
   };
 
   for (const file of files) {
-    const path = file.path;
+    const { path } = file;
     if (!path || typeof path !== "string") {
       continue;
     }
@@ -222,11 +222,11 @@ export function decomposeTask(
     buckets[bucket].add(normalisePrefix(path));
   }
 
-  type PartialTask = {
+  interface PartialTask {
     kind: Bucket;
     title: string;
     acceptance: string[];
-  };
+  }
 
   const partials: PartialTask[] = [];
 
@@ -294,7 +294,7 @@ export function decomposeTask(
     buckets.backend.size > 0 && buckets.frontend.size > 0;
 
   for (const partial of partials) {
-    const prefixes = Array.from(buckets[partial.kind]).sort();
+    const prefixes = [...buckets[partial.kind]].sort();
     const hint = prefixes.length > 0 ? prefixes : ["."];
     const seed = `${baseRequirement}|${partial.kind}|${hint.join(",")}`;
     const id = stableId(seed);
@@ -307,14 +307,18 @@ export function decomposeTask(
 
     const priority = (() => {
       switch (partial.kind) {
-        case "backend":
+        case "backend": {
           return 1;
-        case "frontend":
+        }
+        case "frontend": {
           return 0.9;
-        case "test":
+        }
+        case "test": {
           return 0.8;
-        default:
+        }
+        default: {
           return 0.5;
+        }
       }
     })();
 

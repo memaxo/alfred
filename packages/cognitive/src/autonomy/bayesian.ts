@@ -67,12 +67,14 @@ export const bayesianUpdate = (
 
   if (reliability > 0) {
     switch (evidence._) {
-      case "success":
+      case "success": {
         posterior.alpha += reliability;
         break;
-      case "failure":
+      }
+      case "failure": {
         posterior.beta += reliability;
         break;
+      }
       case "feedback": {
         const magnitude = clamp01(evidence.strength) * reliability;
         if (evidence.positive) {
@@ -82,9 +84,10 @@ export const bayesianUpdate = (
         }
         break;
       }
-      case "override":
+      case "override": {
         posterior.beta += reliability * OVERRIDE_WEIGHT;
         break;
+      }
     }
   }
 

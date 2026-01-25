@@ -4,7 +4,7 @@ import { logger } from "@alfred/logger";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export type Interaction = {
+export interface Interaction {
   id: string;
   timestamp: number;
   input: {
@@ -15,12 +15,12 @@ export type Interaction = {
     text: string;
     toolCalls?: unknown[];
   };
-};
+}
 
-export type Cassette = {
+export interface Cassette {
   version: 1;
   interactions: Interaction[];
-};
+}
 
 export class CognitiveVCR {
   private readonly cassettePath: string;
@@ -45,7 +45,7 @@ export class CognitiveVCR {
     }
 
     try {
-      const content = await readFile(this.cassettePath, "utf-8");
+      const content = await readFile(this.cassettePath, "utf8");
       const cassette = JSON.parse(content) as Cassette;
       this.interactions = cassette.interactions;
       logger.info("vcr_loaded", {

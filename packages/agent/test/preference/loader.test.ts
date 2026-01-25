@@ -47,9 +47,7 @@ const {
 beforeEach(() => {
   resetPreferenceCache();
   getPreferencesMock.mockReset();
-  getPreferencesMock.mockImplementation(() =>
-    Promise.resolve([createPreferenceRow()])
-  );
+  getPreferencesMock.mockResolvedValue([createPreferenceRow()]);
 });
 
 afterEach(() => {
@@ -133,7 +131,7 @@ describe("loadPreferences", () => {
 
 describe("loadPreferencesWithDefaults", () => {
   it("applies domain defaults without mutating the base cache", async () => {
-    getPreferencesMock.mockImplementationOnce(() => Promise.resolve([]));
+    getPreferencesMock.mockResolvedValueOnce([]);
 
     const merged = await loadPreferencesWithDefaults("user-2", "proxmox");
     expect(merged.get("domain.proxmox.config_format")?.value).toBe("yaml");

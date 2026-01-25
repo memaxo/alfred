@@ -43,11 +43,19 @@ const ajvOptions = {
   allowUnionTypes: true,
 };
 
-const schemaValidators = [
-  new Ajv2020(ajvOptions),
-  new Ajv2019(ajvOptions),
-  new Ajv(ajvOptions),
-];
+let schemaValidators: [Ajv2020, Ajv2019, Ajv] | null = null;
+
+function getSchemaValidators(): [Ajv2020, Ajv2019, Ajv] {
+  if (schemaValidators) {
+    return schemaValidators;
+  }
+  schemaValidators = [
+    new Ajv2020(ajvOptions),
+    new Ajv2019(ajvOptions),
+    new Ajv(ajvOptions),
+  ];
+  return schemaValidators;
+}
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -57,14 +65,14 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-type ComplexityState = {
+interface ComplexityState {
   propertyCount: number;
   tooDeep: boolean;
   tooManyProps: boolean;
   externalRef: boolean;
   invalidNode: boolean;
   visited: WeakSet<object>;
-};
+}
 
 function exceedsComplexityLimits(schema: Record<string, unknown>): boolean {
   const state: ComplexityState = {
@@ -157,7 +165,7 @@ function exceedsComplexityLimits(schema: Record<string, unknown>): boolean {
 }
 
 function isStructurallyValidSchema(schema: Record<string, unknown>): boolean {
-  for (const validator of schemaValidators) {
+  for (const validator of getSchemaValidators()) {
     try {
       if (validator.validateSchema(schema)) {
         return true;
@@ -254,6 +262,7 @@ export const codexInputSchema = z.object({
     .optional(),
   context: z
     .object({
+      workflowId: z.string().optional(),
       linearIssueId: z.string().optional(),
       linearSessionId: z.string().optional(),
       linearSpace: z.string().optional(),
@@ -333,10 +342,10 @@ export type AlfredCodexEvent =
       kind: "file" | "image";
     };
 
-export type CodexArtifactSummary = {
+export interface CodexArtifactSummary {
   path: string;
   kind: string;
-};
+}
 
 const usageSchema = z
   .object({
@@ -607,10 +616,10 @@ import type { ToolExecuteContext } from "../shared/context.js";
 
 export type CodexExecuteArgs = ToolExecuteContext<CodexToolInput>;
 
-export type SandboxConfig = {
+export interface SandboxConfig {
   sandbox: "read-only" | "workspace-write";
   approval: "untrusted" | "on-failure" | "on-request" | "never";
-};
+}
 
 export {
   DEFAULT_TIMEOUT_SEC,

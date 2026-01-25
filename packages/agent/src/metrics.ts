@@ -1,38 +1,38 @@
-type CounterLike = {
+interface CounterLike {
   labels: (auto: string, exitCode: string) => { inc: (value?: number) => void };
-};
+}
 
-type HistogramLike = {
+interface HistogramLike {
   startTimer: (labels?: { auto: string }) => () => void;
-};
+}
 
-type EvalRunCounter = {
+interface EvalRunCounter {
   labels: (agent: string, status: string) => { inc: (value?: number) => void };
-};
+}
 
-type EvalRunHistogram = {
+interface EvalRunHistogram {
   startTimer: (labels: { agent: string }) => () => void;
-};
+}
 
-type SingleLabelCounter = {
+interface SingleLabelCounter {
   labels: (label: string) => { inc: (value?: number) => void };
-};
+}
 
-type FailureCounter = {
+interface FailureCounter {
   labels: (scorer: string, reason: string) => { inc: (value?: number) => void };
-};
+}
 
-type DualLabelCounter = {
+interface DualLabelCounter {
   labels: (labelA: string, labelB: string) => { inc: (value?: number) => void };
-};
+}
 
-type CompressionHistogram = {
+interface CompressionHistogram {
   startTimer: () => (labels: { outcome: string }) => void;
-};
+}
 
-type SessionValidationHistogram = {
+interface SessionValidationHistogram {
   startTimer: () => (labels: { outcome: string }) => void;
-};
+}
 
 let droidExecCounter: CounterLike | null = null;
 let droidExecDurationHistogram: HistogramLike | null = null;
@@ -245,29 +245,29 @@ export function recordCompressionNodeUpdate(kind: string, count: number) {
 }
 
 // Memory Tool Metrics
-type MemoryToolCounter = {
+interface MemoryToolCounter {
   labels: (tool: string, status: string) => { inc: (value?: number) => void };
-};
+}
 
-type MemorySearchHistogram = {
+interface MemorySearchHistogram {
   observe: (value: number) => void;
-};
+}
 
-type MemoryResultsHistogram = {
+interface MemoryResultsHistogram {
   observe: (value: number) => void;
-};
+}
 
-type MemoryTraverseHistogram = {
+interface MemoryTraverseHistogram {
   observe: (value: number) => void;
-};
+}
 
-type MemoryBoostCounter = {
+interface MemoryBoostCounter {
   inc: (value?: number) => void;
-};
+}
 
-type MemoryRemovalCounter = {
+interface MemoryRemovalCounter {
   labels: (type: string) => { inc: (value?: number) => void };
-};
+}
 
 let memoryToolCounter: MemoryToolCounter | null = null;
 let memorySearchLatencyHistogram: MemorySearchHistogram | null = null;

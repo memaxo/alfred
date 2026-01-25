@@ -31,7 +31,8 @@ async function runTmux(args: string[]) {
     });
   } catch (error) {
     throw new Error(
-      `tmux_spawn_failed: ${(error as NodeJS.ErrnoException).message}`
+      `tmux_spawn_failed: ${(error as NodeJS.ErrnoException).message}`,
+      { cause: error }
     );
   }
 
@@ -114,7 +115,7 @@ export const toolSession = {
             "#{session_name}",
           ]);
           return { ok: true, sessions: out.split("\n").filter(Boolean) };
-        } catch (_e) {
+        } catch {
           // If no sessions, tmux returns error 1
           return { ok: true, sessions: [] };
         }
@@ -151,8 +152,9 @@ export const toolSession = {
         return { ok: true, output: `Sent input to ${sessionId}` };
       }
 
-      default:
+      default: {
         throw new Error(`Unknown action: ${action}`);
+      }
     }
   },
 };

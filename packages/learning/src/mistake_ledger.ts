@@ -3,27 +3,27 @@ import type {
   KnowledgeInsight,
 } from "@alfred/type/knowledge";
 
-export type MistakeEntry = {
+export interface MistakeEntry {
   id: string;
   cause: string;
   effect: string;
   category: string;
   context?: Record<string, unknown>;
   ts: string;
-};
+}
 
 /**
  * AgentFS-derived mistake entry from learning bridge.
  * Compatible with @alfred/agent/agentfs/learning-bridge MistakeEntry.
  */
-export type AgentFSMistakeEntry = {
+export interface AgentFSMistakeEntry {
   id: string;
   category: string;
   description: string;
   context: Record<string, unknown>;
   severity: "low" | "medium" | "high";
   timestamp: string;
-};
+}
 
 const ledger: MistakeEntry[] = [];
 
@@ -82,13 +82,13 @@ export async function processAgentFSForLearning(
     processForLearning?: (dbPath: string) => Promise<{
       patterns: unknown[];
       mistakes: AgentFSMistakeEntry[];
-      insights: Array<{
+      insights: {
         id: string;
         derived: string[];
         conclusion: string;
         confidence: { value: number };
         rationale: string;
-      }>;
+      }[];
     }>;
   }
 ): Promise<{ mistakesRecorded: number; insights: KnowledgeInsight[] }> {
@@ -116,7 +116,9 @@ export async function processAgentFSForLearning(
     return { mistakesRecorded: recorded, insights: knowledgeInsights };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    throw new Error(`agentfs_learning_integration_failed: ${msg}`);
+    throw new Error(`agentfs_learning_integration_failed: ${msg}`, {
+      cause: error,
+    });
   }
 }
 
@@ -195,12 +197,12 @@ export function getMistakes(options?: {
 /**
  * Accuracy metrics by category.
  */
-export type AccuracyMetrics = {
+export interface AccuracyMetrics {
   category: string;
   total: number;
   errorRate: number;
   trend: "improving" | "stable" | "declining";
-};
+}
 
 /**
  * Compute accuracy metrics by category from the mistake ledger.
@@ -262,7 +264,7 @@ export function getAccuracyMetrics(): AccuracyMetrics[] {
 /**
  * Learning insights based on recent patterns.
  */
-export type LearningInsight = {
+export interface LearningInsight {
   id: string;
   type: "pattern" | "improvement" | "concern";
   title: string;
@@ -270,7 +272,7 @@ export type LearningInsight = {
   confidence: number;
   category?: string;
   actionable: boolean;
-};
+}
 
 /**
  * Generate learning insights from mistake patterns.

@@ -34,8 +34,8 @@ describeFn("assistantRepo", () => {
       );
     }
     const mod = await import("@alfred/db");
-    assistantRepo = mod.assistantRepo;
-    db = mod.db;
+    ({ assistantRepo } = mod);
+    ({ db } = mod);
   });
 
   beforeEach(async () => {

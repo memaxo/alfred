@@ -29,13 +29,13 @@ mock.module(
     }
 );
 
-import { type ServerWebSocket } from "bun";
+import type { ServerWebSocket } from "bun";
 
-import { type VoiceRegistry } from "./registry";
-import {
-  type VoiceSocketData,
-  type VoiceSocketHandler,
-  type VoiceSocketHooks,
+import type { VoiceRegistry } from "./registry";
+import type {
+  VoiceSocketData,
+  VoiceSocketHandler,
+  VoiceSocketHooks,
 } from "./socket";
 
 const { voiceAssistantDurationSeconds, voiceAssistantTotal } =

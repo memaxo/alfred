@@ -16,7 +16,10 @@ import {
 } from "bun:test";
 
 // Track all events written during execution
-type WrittenEvent = { type: string; [key: string]: unknown };
+interface WrittenEvent {
+  type: string;
+  [key: string]: unknown;
+}
 const writtenEvents: WrittenEvent[] = [];
 
 // Mock auth/token for policy enforcement
@@ -27,8 +30,8 @@ mock.module("@alfred/auth/token", () => ({
 
 // Mock codex session manager
 const sessionManagerMock = {
-  getSession: vi.fn().mockResolvedValue(undefined),
-  createSession: vi.fn().mockResolvedValue(undefined),
+  getSession: vi.fn().mockResolvedValue(),
+  createSession: vi.fn().mockResolvedValue(),
 };
 const assessSessionResumeEligibilityMock = vi.fn().mockResolvedValue({
   canResume: false,
@@ -56,11 +59,14 @@ mock.module("@alfred/db/repo/codex-learning", () => ({
 
 // Mock graphstore
 mock.module("../src/assistant/src/graphstore.js", () => ({
-  persistCodexExecution: vi.fn().mockResolvedValue(undefined),
+  persistCodexExecution: vi.fn().mockResolvedValue(),
 }));
 
 // Track thread events for runStreamed mock
-type ThreadEvent = { type: string; [key: string]: unknown };
+interface ThreadEvent {
+  type: string;
+  [key: string]: unknown;
+}
 let mockThreadEvents: ThreadEvent[] = [];
 let _capturedSpawnFn:
   | ((args: {

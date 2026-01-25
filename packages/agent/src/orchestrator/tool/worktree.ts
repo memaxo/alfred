@@ -6,17 +6,17 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { openDirectorySecure } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 
-export type WorktreeHandle = {
+export interface WorktreeHandle {
   path: string;
   branch: string;
   baseRef: string;
-};
+}
 
-type GitResult = {
+interface GitResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-};
+}
 
 const WORKTREE_ROOT = ".agent/worktrees";
 const META_FILENAME = ".alfred-worktree.json";
@@ -121,12 +121,12 @@ async function collectConflictFiles(repoRoot: string, cwd: string) {
     .filter(Boolean);
 }
 
-type PreviewCleanupTicket = {
+interface PreviewCleanupTicket {
   repoRoot: string;
   path: string;
   attempts: number;
   registeredAt: number;
-};
+}
 
 const previewCleanupBacklog = new Map<string, PreviewCleanupTicket>();
 

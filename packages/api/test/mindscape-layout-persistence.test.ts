@@ -17,7 +17,7 @@ describe("Mindscape Layout Persistence", () => {
     const dbUtils = await import("../test/utils/db");
     db = await dbUtils.createTestDb();
     const dbModule = await import("@alfred/db");
-    userRepo = dbModule.userRepo;
+    ({ userRepo } = dbModule);
   });
 
   afterEach(async () => {
@@ -48,7 +48,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         layout,
-        1.0,
+        1,
         "user"
       );
 
@@ -86,7 +86,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         firstLayout,
-        1.0,
+        1,
         "user"
       );
 
@@ -94,7 +94,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         secondLayout,
-        1.0,
+        1,
         "user"
       );
 
@@ -124,7 +124,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         largeLayout,
-        1.0,
+        1,
         "user"
       );
 
@@ -153,7 +153,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         layout,
-        1.0,
+        1,
         "user"
       );
 
@@ -182,7 +182,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         "invalid-json-string" as unknown as object,
-        1.0,
+        1,
         "user"
       );
 
@@ -211,7 +211,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         invalidLayout,
-        1.0,
+        1,
         "user"
       );
 
@@ -239,7 +239,7 @@ describe("Mindscape Layout Persistence", () => {
         TEST_USER_ID,
         "mindscape:layout",
         layoutWithInvalidPositions,
-        1.0,
+        1,
         "user"
       );
 
@@ -273,14 +273,14 @@ describe("Mindscape Layout Persistence", () => {
           TEST_USER_ID,
           "mindscape:layout",
           layout1,
-          1.0,
+          1,
           "user"
         ),
         userRepo.setPreference(
           TEST_USER_ID,
           "mindscape:layout",
           layout2,
-          1.0,
+          1,
           "user"
         ),
       ]);
@@ -318,7 +318,7 @@ describe("Mindscape Layout Persistence", () => {
         USER_1_ID,
         "mindscape:layout",
         layout1,
-        1.0,
+        1,
         "user"
       );
 
@@ -326,7 +326,7 @@ describe("Mindscape Layout Persistence", () => {
         USER_2_ID,
         "mindscape:layout",
         layout2,
-        1.0,
+        1,
         "user"
       );
 

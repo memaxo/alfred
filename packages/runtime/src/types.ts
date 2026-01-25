@@ -5,12 +5,13 @@
  * Runtime is a leaf package - no runtime-specific types should leak to other packages.
  */
 
-import { type WorkflowEvent } from "@alfred/type/plan";
-import { type RuntimeContext } from "@alfred/type/runtime-context";
-import { type LanguageModel } from "ai";
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { LanguageModel } from "ai";
+
 import { z } from "zod";
 
-import { type AiAdapter } from "./adapters/ai";
+import type { AiAdapter } from "./adapters/ai";
 
 /**
  * Resume payload for in-flight authorization

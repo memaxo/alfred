@@ -121,7 +121,7 @@ describe("Bloom Config Schema", () => {
       enabled: true,
       threshold: 0.8,
       intensity: 0.5,
-      blurRadius: 2.0,
+      blurRadius: 2,
     };
     expect(bloomConfigSchema.safeParse(config).success).toBe(true);
   });

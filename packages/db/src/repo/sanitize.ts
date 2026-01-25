@@ -136,7 +136,7 @@ export function sanitizeContextText(text: string): string {
 
   const capped =
     text.length > MAX_INPUT_LENGTH ? text.slice(0, MAX_INPUT_LENGTH) : text;
-  let cleaned = capped.replace(/\r\n?/g, "\n");
+  let cleaned = capped.replaceAll(/\r\n?/g, "\n");
 
   // XSS hardening: strip HTML tags and comments. (See docs/implementation/sanitize.md for rationale.)
   cleaned = stripHtml(cleaned);
@@ -145,7 +145,7 @@ export function sanitizeContextText(text: string): string {
     cleaned = removeAllCaseInsensitive(cleaned, token);
   }
 
-  cleaned = cleaned.replace(/\[/g, "(").replace(/\]/g, ")");
+  cleaned = cleaned.replaceAll("[", "(").replaceAll("]", ")");
 
   // Remove randomized context delimiters produced by codex-learning.
   cleaned = removeAllCaseInsensitive(cleaned, "CONTEXT_START_");
@@ -155,10 +155,10 @@ export function sanitizeContextText(text: string): string {
     cleaned = removeAllCaseInsensitive(cleaned, phrase);
   }
 
-  cleaned = cleaned.replace(/[\t ]+/g, " ");
-  cleaned = cleaned.replace(/\n[ \t]+/g, "\n");
-  cleaned = cleaned.replace(/[ \t]+\n/g, "\n");
-  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  cleaned = cleaned.replaceAll(/[\t ]+/g, " ");
+  cleaned = cleaned.replaceAll(/\n[ \t]+/g, "\n");
+  cleaned = cleaned.replaceAll(/[ \t]+\n/g, "\n");
+  cleaned = cleaned.replaceAll(/\n{3,}/g, "\n\n");
 
   cleaned = cleaned.trim();
 

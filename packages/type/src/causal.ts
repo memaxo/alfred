@@ -45,7 +45,7 @@ export class CausalGraph {
     if (!ids) {
       return [];
     }
-    return Array.from(ids)
+    return [...ids]
       .map((childId) => this.events.get(childId))
       .filter((e): e is EventEnvelope => !!e);
   }

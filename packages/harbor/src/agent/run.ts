@@ -15,13 +15,13 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type RunArgs = {
+interface RunArgs {
   requirement: string;
   workspace: string;
   outTrajectory: string;
   auto: "read" | "low" | "medium" | "high";
   mode: "sequential" | "parallel";
-};
+}
 
 function usage(): string {
   return [
@@ -164,7 +164,7 @@ function normalizeWorkflowEvent(event: WorkflowEvent): WorkflowEvent {
 
 function buildPersistedEvents(args: {
   runId: string;
-  workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }>;
+  workflowEvents: { event: WorkflowEvent; createdAt: string }[];
 }): PersistedWorkflowEvent[] {
   const out: PersistedWorkflowEvent[] = [];
   let seq = 1;
@@ -297,7 +297,7 @@ async function main() {
     },
   };
 
-  const workflowEvents: Array<{ event: WorkflowEvent; createdAt: string }> = [];
+  const workflowEvents: { event: WorkflowEvent; createdAt: string }[] = [];
   const abortController = new AbortController();
 
   let runError: unknown | null = null;
@@ -344,8 +344,8 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
-    const msg = err instanceof Error ? err.message : String(err);
+  main().catch((error) => {
+    const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`alfred_harbor_runner_failed: ${msg}\n`);
     if (msg === "missing_required_args") {
       process.stderr.write(`${usage()}\n`);

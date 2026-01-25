@@ -23,10 +23,10 @@ function mapResource(raw: unknown) {
   };
 }
 
-type HomeProvider = {
+export interface HomeProvider {
   provider: string;
   baseUrl: string | null;
-};
+}
 
 function readProvider(): HomeProvider {
   const provider =

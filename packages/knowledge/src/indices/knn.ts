@@ -10,11 +10,11 @@ export function cosineSim(a: Float32Array, b: Float32Array): number {
   if (a.length === 0 || b.length === 0 || a.length !== b.length) {
     return 0;
   }
-  return cosineSimilarity(Array.from(a), Array.from(b));
+  return cosineSimilarity([...a], [...b]);
 }
 
 export function knn(
-  vectors: Array<{ id: NodeId; vec: Float32Array }>,
+  vectors: { id: NodeId; vec: Float32Array }[],
   query: Float32Array,
   k = 10
 ): NodeId[] {
@@ -22,14 +22,14 @@ export function knn(
     return [];
   }
 
-  const queryArr = Array.from(query);
-  const scores: Array<{ id: NodeId; score: number }> = [];
+  const queryArr = [...query];
+  const scores: { id: NodeId; score: number }[] = [];
 
   for (const entry of vectors) {
     if (entry.vec.length !== query.length) {
       continue;
     }
-    const score = cosineSimilarity(Array.from(entry.vec), queryArr);
+    const score = cosineSimilarity([...entry.vec], queryArr);
     if (Number.isFinite(score) && score > 0) {
       scores.push({ id: entry.id, score });
     }

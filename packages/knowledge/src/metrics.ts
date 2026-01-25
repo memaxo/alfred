@@ -15,8 +15,7 @@ function elapsedMs(start: bigint): number {
 }
 
 function logBudget(_label: string, duration: number, budgetMs: number): void {
-  if (duration > budgetMs) {
-  }
+  if (duration > budgetMs) {}
 }
 
 export function measureSync<T>(
@@ -157,7 +156,7 @@ export const cragEvaluationsTotal = new client.Counter({
 export const cragScoreHistogram = new client.Histogram({
   name: "alfred_crag_score",
   help: "Distribution of CRAG evaluation scores.",
-  buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+  buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
   registers: [metricsRegistry],
 });
 

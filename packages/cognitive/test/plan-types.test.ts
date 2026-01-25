@@ -5,7 +5,7 @@ import { defaultCriteria } from "../src/plan/types";
 describe("defaultCriteria", () => {
   it("returns expected default values", () => {
     const criteria = defaultCriteria();
-    expect(criteria.safety).toBe(1.0);
+    expect(criteria.safety).toBe(1);
     expect(criteria.speed).toBe(0.7);
     expect(criteria.accuracy).toBe(0.9);
     expect(criteria.cost).toBe(0.5);

@@ -55,8 +55,8 @@ function buildCacheKey(
   return JSON.stringify({
     requirement,
     cw,
-    exts: Array.from(exts).sort(),
-    ignore: Array.from(ignore).sort(),
+    exts: [...exts].sort(),
+    ignore: [...ignore].sort(),
     topK,
   });
 }
@@ -64,7 +64,7 @@ function buildCacheKey(
 function cloneReceipt(receipt: SearchReceipt): SearchReceipt {
   return {
     ...receipt,
-    created: receipt.created ? new Date(receipt.created.getTime()) : new Date(),
+    created: receipt.created ? new Date(receipt.created) : new Date(),
     code: receipt.code.map((item) => ({ ...item })),
     web: receipt.web ? receipt.web.map((item) => ({ ...item })) : undefined,
   };
@@ -118,7 +118,7 @@ function compressSnippet(value: string | undefined, limit = WEB_SUMMARY_LIMIT) {
   if (!value) {
     return;
   }
-  const compact = value.replace(/\s+/g, " ").trim();
+  const compact = value.replaceAll(/\s+/g, " ").trim();
   if (compact.length === 0) {
     return;
   }
@@ -173,14 +173,14 @@ async function fallbackScan(
   ignore: Set<string>,
   topK: number
 ): Promise<SearchReceiptItem[]> {
-  const keywords = Array.from(
-    new Set(
+  const keywords = [
+    ...new Set(
       requirement
         .toLowerCase()
         .split(/[^a-z0-9]+/u)
         .filter((token) => token.length >= 3)
-    )
-  );
+    ),
+  ];
 
   const queue: string[] = [cw];
   const collected: SearchReceiptItem[] = [];
@@ -679,13 +679,13 @@ export async function indexCodeEmbeddings({
   items,
   sourceId,
 }: {
-  items: Array<{
+  items: {
     path: string;
     content: string;
     startLine?: number;
     endLine?: number;
     tokens?: number;
-  }>;
+  }[];
   sourceId: string;
 }): Promise<{ documentId: string | null }> {
   if (!Array.isArray(items) || items.length === 0) {
@@ -714,7 +714,7 @@ export async function indexCodeEmbeddings({
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "rag_code_ingest_failed";
-    throw new Error(`context_code_index_failed:${message}`);
+    throw new Error(`context_code_index_failed:${message}`, { cause: error });
   }
 }
 

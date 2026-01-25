@@ -10,13 +10,13 @@
 // ─── Dependency Types ───────────────────────────────────────────────────────────
 
 /** Embedding service interface */
-export type EmbedDeps = {
+export interface EmbedDeps {
   embedMany: (texts: string[]) => Promise<number[][]>;
   cosineSimilarity: (a: number[], b: number[]) => number;
-};
+}
 
 /** Cognitive repository interface - mirrors @alfred/db/repo/cognitive exports */
-export type CognitiveRepoDeps = {
+export interface CognitiveRepoDeps {
   appendEvent: (
     streamId: string,
     type: string,
@@ -31,50 +31,50 @@ export type CognitiveRepoDeps = {
   getLatestSnapshot: (streamId: string) => Promise<unknown | undefined>;
   getEventsSince: (streamId: string, since: Date) => Promise<unknown[]>;
   getAllEvents: (streamId: string) => Promise<unknown[]>;
-};
+}
 
 /** Cognitive domain dependencies */
-export type CognitiveDeps = {
+export interface CognitiveDeps {
   cognitiveRepo: Partial<CognitiveRepoDeps>;
-};
+}
 
 /** Policy evaluation interface */
-export type PolicyDeps = {
+export interface PolicyDeps {
   evaluate: (
     resource: unknown,
     context: unknown
   ) => Promise<{ allow: boolean; obligations: unknown[] }>;
-};
+}
 
 /** Runtime execution interface */
-export type RuntimeDeps = {
+export interface RuntimeDeps {
   runCognitiveLoop?: (
     input: unknown
   ) => AsyncGenerator<{ type: string; payload: unknown }>;
   runAssistantGeneration?: (
     input: unknown
   ) => AsyncGenerator<{ type: string; payload: unknown }>;
-};
+}
 
 /** Workflow repository interface */
-export type WorkflowDeps = {
+export interface WorkflowDeps {
   getRun: (runId: string) => Promise<unknown | null>;
   updateRun: (runId: string, patch: unknown) => Promise<void>;
   appendEvent: (runId: string, event: unknown) => Promise<void>;
-};
+}
 
 /** Plan service interface */
-export type PlanDeps = {
+export interface PlanDeps {
   extractPatternFromRun: (runId: string) => Promise<unknown>;
   extractAntiPatternFromRun: (
     runId: string,
     reason: string
   ) => Promise<unknown>;
   learnProjectConventions: (projectId: string) => Promise<unknown>;
-};
+}
 
 /** Assistant router dependencies */
-export type AssistantDeps = {
+export interface AssistantDeps {
   generateText: (
     input: Parameters<typeof import("./ai/generate").generateText>[0]
   ) => Promise<
@@ -108,7 +108,23 @@ export type AssistantDeps = {
       reason?: string;
     } | null;
   }>;
-};
+}
+
+/** Preference inference/cache interface */
+export interface PreferenceDeps {
+  invalidatePreferenceCache: (
+    userId: string,
+    projectId?: string
+  ) => Promise<void>;
+  inferPreferenceFromCorrection: (
+    original: import("@alfred/type/stream").UIMessage,
+    corrected: import("@alfred/type/stream").UIMessage,
+    correctionType: "verbosity" | "tone" | "format" | "content"
+  ) => Promise<{
+    key: import("@alfred/type/preference").PreferenceKey;
+    value: import("@alfred/type/preference").PreferenceDetail["value"];
+  } | null>;
+}
 
 // ─── Combined Router Dependencies ───────────────────────────────────────────────
 
@@ -116,7 +132,7 @@ export type AssistantDeps = {
  * All injectable dependencies for routers.
  * Pass via context: `ctx.deps`
  */
-export type RouterDeps = {
+export interface RouterDeps {
   embed?: Partial<EmbedDeps>;
   cognitive?: Partial<CognitiveDeps>;
   policy?: Partial<PolicyDeps>;
@@ -124,7 +140,8 @@ export type RouterDeps = {
   workflow?: Partial<WorkflowDeps>;
   plan?: Partial<PlanDeps>;
   assistant?: Partial<AssistantDeps>;
-};
+  preference?: Partial<PreferenceDeps>;
+}
 
 // ─── Default Dependencies ───────────────────────────────────────────────────────
 

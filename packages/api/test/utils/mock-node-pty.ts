@@ -2,15 +2,15 @@ import { mock, vi } from "bun:test";
 
 export const nodePtySpawnMock = vi.fn(
   (_file: string, _args: string[], _options: unknown) => {
-    const dataListeners: Array<(data: string) => void> = [];
-    const exitListeners: Array<() => void> = [];
+    const dataListeners: ((data: string) => void)[] = [];
+    const exitListeners: (() => void)[] = [];
     return {
       onData: (fn: (data: string) => void) => {
         dataListeners.push(fn);
         return {
           dispose: () => {
             const idx = dataListeners.indexOf(fn);
-            if (idx >= 0) {
+            if (idx !== -1) {
               dataListeners.splice(idx, 1);
             }
           },
@@ -21,7 +21,7 @@ export const nodePtySpawnMock = vi.fn(
         return {
           dispose: () => {
             const idx = exitListeners.indexOf(fn);
-            if (idx >= 0) {
+            if (idx !== -1) {
               exitListeners.splice(idx, 1);
             }
           },

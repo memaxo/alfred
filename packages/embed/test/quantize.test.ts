@@ -61,7 +61,7 @@ describe("quantizeToInt8", () => {
   });
 
   test("preserves relative magnitudes", () => {
-    const embedding = [1.0, 0.5, 0.25];
+    const embedding = [1, 0.5, 0.25];
     const quantized = quantizeToInt8(embedding);
 
     // Largest value should map to ~127
@@ -73,7 +73,7 @@ describe("quantizeToInt8", () => {
   });
 
   test("handles negative values", () => {
-    const embedding = [-1.0, -0.5, 0.5, 1.0];
+    const embedding = [-1, -0.5, 0.5, 1];
     const quantized = quantizeToInt8(embedding);
 
     expect(quantized.data[0]).toBeCloseTo(-127, 0);
@@ -157,7 +157,7 @@ describe("quantizedCosineSimilarity", () => {
     const quantized = quantizeToInt8(embedding);
 
     const similarity = quantizedCosineSimilarity(quantized, quantized);
-    expect(similarity).toBeCloseTo(1.0, 2);
+    expect(similarity).toBeCloseTo(1, 2);
   });
 
   test("handles orthogonal embeddings", () => {

@@ -1,5 +1,5 @@
 export function expandWaveIds(
-  waves: Array<{ id: string; dependsOn: string[] }>,
+  waves: { id: string; dependsOn: string[] }[],
   selected: string[]
 ): string[] {
   const waveById = new Map(waves.map((w) => [w.id, w]));

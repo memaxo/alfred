@@ -11,7 +11,7 @@ export function clampHistoryMessages<T>(
   }
 
   if (messages.length <= max) {
-    return messages.slice();
+    return [...messages];
   }
 
   return messages.slice(messages.length - max);
@@ -62,9 +62,9 @@ function findLatestToolChainBounds(
   const start =
     toolCallIndex === -1
       ? toolResultIndex
-      : toolResultIndex === -1
+      : (toolResultIndex === -1
         ? toolCallIndex
-        : Math.min(toolCallIndex, toolResultIndex);
+        : Math.min(toolCallIndex, toolResultIndex));
   const end = Math.max(toolCallIndex, toolResultIndex);
 
   return { start, end };
@@ -79,7 +79,7 @@ export function limitUiMessages(
   }
 
   if (messages.length <= max) {
-    return messages.slice();
+    return [...messages];
   }
 
   const chainBounds = findLatestToolChainBounds(messages);

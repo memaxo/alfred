@@ -1,5 +1,6 @@
+import type { Obligation } from "@alfred/type";
+
 import { createTestSession } from "@alfred/test-kit/auth";
-import { type Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { beforeAll, describe, expect, mock, test } from "bun:test";
 

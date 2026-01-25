@@ -338,7 +338,7 @@ describe("agentfs router", () => {
         return {
           all: vi.fn(async () => [
             {
-              mode: 32768,
+              mode: 32_768,
               mtime: 1,
               path: "/workspace/a.txt",
               size: 5,
@@ -359,13 +359,13 @@ describe("agentfs router", () => {
         return {
           all: vi.fn(async () => [
             {
-              mode: 32768,
+              mode: 32_768,
               mtime: 2,
               path: "/workspace/a.txt",
               size: 6,
             },
             {
-              mode: 32768,
+              mode: 32_768,
               mtime: 2,
               path: "/workspace/b.txt",
               size: 1,
@@ -531,10 +531,10 @@ describe("agentfs router", () => {
             }
             inner.unsubscribe();
             resolve();
-          } catch (e) {
+          } catch (error) {
             clearTimeout(timeout);
             inner.unsubscribe();
-            reject(e);
+            reject(error);
           }
         },
       });
@@ -588,10 +588,10 @@ describe("agentfs router", () => {
             expect(event.toolCalls).toBeUndefined();
             inner.unsubscribe();
             resolve();
-          } catch (e) {
+          } catch (error) {
             clearTimeout(timeout);
             inner.unsubscribe();
-            reject(e);
+            reject(error);
           }
         },
       });

@@ -17,12 +17,12 @@ import type { Command } from "../../input/commands";
 
 import { searchCommands } from "../../input/commands";
 
-export type CommandPaletteProps = {
+export interface CommandPaletteProps {
   commands: Command[];
   isOpen: boolean;
   onClose: () => void;
   onExecute: (command: Command) => void;
-};
+}
 
 export function CommandPalette({
   commands,

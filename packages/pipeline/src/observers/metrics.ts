@@ -34,12 +34,13 @@ export class MetricsObserver implements PipelineObserver {
 
   onEvent(event: PipelineEvent): void {
     switch (event.type) {
-      case "stage:enter":
+      case "stage:enter": {
         this.stageTimers.set(
           event.stage,
           pipelineStageDuration.startTimer({ stage: event.stage })
         );
         break;
+      }
 
       case "stage:exit": {
         const stop = this.stageTimers.get(event.stage);
@@ -49,21 +50,25 @@ export class MetricsObserver implements PipelineObserver {
         break;
       }
 
-      case "stage:error":
+      case "stage:error": {
         pipelineStageTotal.inc({ stage: event.stage, status: "failure" });
         break;
+      }
 
-      case "agent:complete":
+      case "agent:complete": {
         pipelineAgentTotal.inc({ status: event.outcome.status });
         break;
+      }
 
-      case "pipeline:complete":
+      case "pipeline:complete": {
         pipelineTotal.inc({ status: "success" });
         break;
+      }
 
-      case "pipeline:failed":
+      case "pipeline:failed": {
         pipelineTotal.inc({ status: "failure" });
         break;
+      }
     }
   }
 }

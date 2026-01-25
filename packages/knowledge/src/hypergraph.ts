@@ -51,7 +51,7 @@ export const toConfidence = (n: number): Confidence => {
 };
 export const timestamp = (n: number): Timestamp => {
   if (!Number.isFinite(n)) {
-    throw new Error("Timestamp must be a finite number");
+    throw new TypeError("Timestamp must be a finite number");
   }
   if (n < 0) {
     throw new Error("Timestamp cannot be negative");
@@ -64,18 +64,22 @@ export const nodeFromHash = (hash: string): NodeId => nodeId(hash);
 const knowledgeHashInput = (k: Knowledge): string => {
   let s = `${k._}:`;
   switch (k._) {
-    case "fact":
+    case "fact": {
       s += k.content + k.source + k.confidence;
       break;
-    case "relation":
+    }
+    case "relation": {
       s += k.from + k.to + k.kind + k.weight;
       break;
-    case "insight":
+    }
+    case "insight": {
       s += k.derived.join(",") + k.conclusion;
       break;
-    case "pattern":
+    }
+    case "pattern": {
       s += k.examples.join(",") + k.rule;
       break;
+    }
   }
   return s;
 };
@@ -86,7 +90,7 @@ export const knowledgeHash = (k: Knowledge): string =>
 const hashStringLegacy = (input: string): string => {
   let h = 2_166_136_261;
   for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
+    h ^= input.codePointAt(i) ?? 0;
     h = (h * 16_777_619) >>> 0;
   }
   return h.toString(36);
@@ -101,7 +105,7 @@ class HAMT<V> {
 
   set(key: string, value: V): void {
     const hash = this.hash(key);
-    const bucket = hash & 0xff;
+    const bucket = hash & 0xFF;
     if (!this.root.has(bucket)) {
       this.root.set(bucket, new Map());
     }
@@ -110,7 +114,7 @@ class HAMT<V> {
 
   get(key: string): V | undefined {
     const hash = this.hash(key);
-    const bucket = hash & 0xff;
+    const bucket = hash & 0xFF;
     return this.root.get(bucket)?.get(key);
   }
 
@@ -125,7 +129,7 @@ class HAMT<V> {
   private hash(s: string): number {
     let h = 0;
     for (let i = 0; i < s.length; i++) {
-      h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+      h = ((h << 5) - h + (s.codePointAt(i) ?? 0)) | 0;
     }
     return h;
   }
@@ -169,10 +173,11 @@ export class Hypergraph {
     if (isNew) {
       // Index by type
       switch (k._) {
-        case "fact":
+        case "fact": {
           this.temporal.insert({ start: k.ts, end: k.ts, id: nodeRef });
           this.ordered.insert(k.content, nodeRef);
           break;
+        }
         case "relation": {
           if (!this.edges.has(k.from)) {
             this.edges.set(k.from, new Set());
@@ -199,11 +204,13 @@ export class Hypergraph {
           inboundKind.add(k.from);
           break;
         }
-        case "insight":
+        case "insight": {
           break;
-        case "pattern":
+        }
+        case "pattern": {
           // Note: index patterns by accuracy threshold and maintain a match cache.
           break;
+        }
       }
     }
 
@@ -228,10 +235,11 @@ export class Hypergraph {
     const isNew = !existing;
     if (isNew) {
       switch (k._) {
-        case "fact":
+        case "fact": {
           this.temporal.insert({ start: k.ts, end: k.ts, id });
           this.ordered.insert(k.content, id);
           break;
+        }
         case "relation": {
           if (!this.edges.has(k.from)) {
             this.edges.set(k.from, new Set());
@@ -258,10 +266,12 @@ export class Hypergraph {
           inboundKind.add(k.from);
           break;
         }
-        case "insight":
+        case "insight": {
           break;
-        case "pattern":
+        }
+        case "pattern": {
           break;
+        }
       }
     }
 
@@ -279,7 +289,7 @@ export class Hypergraph {
 
   // O(1) relation traversal
   neighbors(id: NodeId): NodeId[] {
-    return Array.from(this.edges.get(id) || []);
+    return [...(this.edges.get(id) || [])];
   }
 
   // Temporal queries
@@ -293,7 +303,7 @@ export class Hypergraph {
   }
 
   predecessors(id: NodeId): NodeId[] {
-    return Array.from(this.inbound.get(id) ?? []);
+    return [...(this.inbound.get(id) ?? [])];
   }
 
   neighborsByKind(id: NodeId, kind?: string): NodeId[] {
@@ -301,7 +311,7 @@ export class Hypergraph {
       return this.neighbors(id);
     }
     const bucket = this.edgesByKind.get(kind)?.get(id);
-    return bucket ? Array.from(bucket) : [];
+    return bucket ? [...bucket] : [];
   }
 
   predecessorsByKind(id: NodeId, kind?: string): NodeId[] {
@@ -309,7 +319,7 @@ export class Hypergraph {
       return this.predecessors(id);
     }
     const bucket = this.inboundByKind.get(kind)?.get(id);
-    return bucket ? Array.from(bucket) : [];
+    return bucket ? [...bucket] : [];
   }
 
   *entries(): IterableIterator<[NodeId, Knowledge]> {
@@ -358,7 +368,7 @@ export class Hypergraph {
   }
 
   getDirty(): NodeId[] {
-    return Array.from(this.dirty);
+    return [...this.dirty];
   }
 
   markClean(ids?: NodeId[]): void {
@@ -374,7 +384,7 @@ export class Hypergraph {
   // Content queries
   search(pattern: string): NodeId[] {
     // For MVP, use BTree range query
-    return this.ordered.range(pattern, `${pattern}\xFF`);
+    return this.ordered.range(pattern, `${pattern}\u00FF`);
   }
 
   private contentAddress(k: Knowledge): string {
@@ -429,7 +439,7 @@ export const relation = (
   from: NodeId,
   to: NodeId,
   kind: string,
-  weight = 1.0
+  weight = 1
 ): Knowledge => ({
   _: "relation",
   from,

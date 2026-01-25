@@ -1,5 +1,6 @@
+import type { UIMessage } from "@alfred/type/stream";
+
 import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
-import { type UIMessage } from "@alfred/type/stream";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 import "./utils/agent-mock";

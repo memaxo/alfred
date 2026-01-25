@@ -30,14 +30,14 @@ export type VoiceWorkflowState =
 /**
  * Context stored in voice session for workflow tracking
  */
-export type VoiceWorkflowContext = {
+export interface VoiceWorkflowContext {
   state: VoiceWorkflowState;
   originalTranscript: string;
   createdAt: Date;
   updatedAt: Date;
   /** Deadline for approval (undefined = no timeout) */
   approvalDeadline?: Date;
-};
+}
 
 /**
  * Create initial idle state

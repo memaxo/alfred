@@ -9,25 +9,25 @@ import { getVoicePools } from "../voice/pools";
  * Handles health checks and roundtrip testing.
  */
 
-type PoolHealth = {
+export interface PoolHealth {
   ok: boolean;
   workers: number;
   activeCount: number;
-};
+}
 
-type RoundtripResult = {
+export interface RoundtripResult {
   ok: boolean;
   latencyMs: number;
   originalText: string;
   transcribedText: string;
-};
+}
 
-type VoiceHealthResult = {
+export interface VoiceHealthResult {
   stt: PoolHealth;
   tts: PoolHealth;
   roundtrip?: RoundtripResult;
   totalLatencyMs: number;
-};
+}
 
 /**
  * Resample PCM audio from one sample rate to another using linear interpolation.
@@ -102,7 +102,7 @@ export async function checkVoiceHealth(options?: {
       const ttsSampleRate = ttsResult.sampleRate ?? 24_000;
       const { decodeToPCM16 } = await import("@alfred/voice/audio/codec");
 
-      let audioBase64 = ttsResult.audioBase64;
+      let { audioBase64 } = ttsResult;
       const mimeType = ttsResult.mimeType ?? "audio/pcm";
 
       if (
@@ -129,7 +129,7 @@ export async function checkVoiceHealth(options?: {
           audioBase64,
           mimeType,
         });
-        audioBase64 = decoded.audioBase64;
+        ({ audioBase64 } = decoded);
       }
 
       const sttResult = await sttPool.transcribe({

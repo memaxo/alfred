@@ -8,18 +8,21 @@ export function openBrowser(url: string): Promise<void> {
   let args: string[];
 
   switch (os) {
-    case "darwin":
+    case "darwin": {
       command = "open";
       args = [url];
       break;
-    case "win32":
+    }
+    case "win32": {
       command = "cmd";
       args = ["/c", "start", url];
       break;
-    default:
+    }
+    default: {
       // Linux and others
       command = "xdg-open";
       args = [url];
+    }
   }
 
   return new Promise((resolve, reject) => {

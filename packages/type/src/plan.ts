@@ -345,7 +345,7 @@ export type SubTaskId = string;
 // NodeId type for plan types (matches @alfred/knowledge/hypergraph)
 export type NodeId = string & { readonly _: unique symbol };
 
-export type SubTask = {
+export interface SubTask {
   id: SubTaskId;
   title: string;
   requirement: string;
@@ -354,26 +354,26 @@ export type SubTask = {
   acceptance: string[];
   filesHint: string[];
   metadata?: Record<string, unknown>;
-};
+}
 
-export type DecomposeContext = {
+export interface DecomposeContext {
   requirement: string;
   bundle: ContextBundle | null;
-};
+}
 
-export type WavePlan = {
+export interface WavePlan {
   id: string;
   agents: string[];
   dependsOn: string[];
   agentType?: string;
   isolation?: "agentfs";
   phaseId?: string;
-};
+}
 
-type WorkflowEventBase = {
+interface WorkflowEventBase {
   /** Optional stable identity for deduplication during replay */
   eventId?: string;
-};
+}
 
 export type WorkflowEvent =
   | (WorkflowEventBase & { _: "run"; id?: string })
@@ -504,7 +504,7 @@ export type WorkflowEvent =
 /**
  * State of a workflow run derived from events.
  */
-export type WorkflowState = {
+export interface WorkflowState {
   status:
     | "idle"
     | "running"
@@ -532,4 +532,4 @@ export type WorkflowState = {
       result?: unknown;
     }
   >;
-};
+}

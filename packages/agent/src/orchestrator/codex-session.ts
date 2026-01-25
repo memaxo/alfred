@@ -13,7 +13,7 @@ import { LRUCache } from "lru-cache";
 
 import { recordCodexSessionViolation } from "../metrics.js";
 
-export type CodexSessionState = {
+export interface CodexSessionState {
   sessionId: string;
   userId: string;
   threadId: string;
@@ -24,7 +24,7 @@ export type CodexSessionState = {
   expiresAt: number;
   status: "active" | "completed" | "failed";
   linearIssueId?: string;
-};
+}
 
 const MILLISECONDS_PER_SECOND = 1000;
 const SECONDS_PER_HOUR = 60 * 60;

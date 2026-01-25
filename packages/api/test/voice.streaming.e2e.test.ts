@@ -123,7 +123,7 @@ function waitForMessage(ws: WebSocket, kind: string): Promise<any> {
           ws.removeEventListener("message", handler);
           resolve(data);
         }
-      } catch (_e) {
+      } catch {
         // Ignore
       }
     };
@@ -170,8 +170,8 @@ describe("voice streaming e2e", () => {
 
     // Import streaming module dynamically
     const streaming = await import("@alfred/api/voice/streaming");
-    startVoiceStreamingPrototype = streaming.startVoiceStreamingPrototype;
-    stopVoiceStreamingPrototype = streaming.stopVoiceStreamingPrototype;
+    ({ startVoiceStreamingPrototype } = streaming);
+    ({ stopVoiceStreamingPrototype } = streaming);
 
     // Start server
     startVoiceStreamingPrototype();
@@ -209,7 +209,7 @@ describe("voice streaming e2e", () => {
 
     const started = await waitForMessage(wsClient, "session_started");
     expect(started.sessionId).toBeDefined();
-    const sessionId = started.sessionId;
+    const { sessionId } = started;
 
     // 3. Send Audio Chunk
     const audioBase64 = Buffer.from(new Float32Array(1600).buffer).toString(

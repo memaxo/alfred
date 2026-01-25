@@ -2,11 +2,11 @@ import type { Obligation as SharedObligation } from "@alfred/type";
 
 export type Obligation = SharedObligation;
 
-export type PolicyRole = {
+export interface PolicyRole {
   scopes: string[];
-};
+}
 
-export type PolicyCondition = {
+export interface PolicyCondition {
   /**
    * Source object for the condition. Currently only `context` is supported.
    */
@@ -24,14 +24,14 @@ export type PolicyCondition = {
   gte?: number;
   lt?: number;
   lte?: number;
-};
+}
 
-export type PolicyResourceMatch = {
+export interface PolicyResourceMatch {
   kind?: string;
   ids?: string[];
-};
+}
 
-export type PolicyRule = {
+export interface PolicyRule {
   id: string;
   effect?: "allow" | "deny";
   actions: string[];
@@ -41,39 +41,39 @@ export type PolicyRule = {
   obligations?: Obligation[];
   description?: string;
   priority?: number;
-};
+}
 
-export type PolicyDocument = {
+export interface PolicyDocument {
   roles: Record<string, PolicyRole>;
   rules: PolicyRule[];
   scopes: string[];
-};
+}
 
-export type PolicySubject = {
+export interface PolicySubject {
   id: string;
   roles: string[];
   scopes?: string[];
-};
+}
 
-export type PolicyResource = {
+export interface PolicyResource {
   kind: string;
   id?: string;
   attrs?: Record<string, unknown>;
-};
+}
 
-export type EvaluateInput = {
+export interface EvaluateInput {
   subject: PolicySubject;
   action: string;
   resource: PolicyResource;
   context?: Record<string, unknown>;
   traceId?: string;
-};
+}
 
-export type Decision = {
+export interface Decision {
   allow: boolean;
   obligations: Obligation[];
   reason?: string;
   ruleIds?: string[];
-};
+}
 
 export const DEFAULT_POLICY_PATH = "config/policy.yaml";

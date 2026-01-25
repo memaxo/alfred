@@ -4,7 +4,7 @@ export type NodeInsert = typeof memoryNodes.$inferInsert;
 export type NodeRow = typeof memoryNodes.$inferSelect;
 export type EdgeRow = typeof memoryEdges.$inferSelect;
 
-export type NodeSeed = {
+export interface NodeSeed {
   resource: string;
   hash: string;
   kind: string;
@@ -12,9 +12,9 @@ export type NodeSeed = {
   projectId?: string;
   properties?: unknown;
   embedding?: number[];
-};
+}
 
-export type EdgeSeed = {
+export interface EdgeSeed {
   resource: string;
   hash: string;
   fromId: string;
@@ -23,4 +23,4 @@ export type EdgeSeed = {
   projectId?: string;
   weight?: number;
   metadata?: unknown;
-};
+}

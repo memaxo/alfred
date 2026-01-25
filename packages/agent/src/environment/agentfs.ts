@@ -27,23 +27,24 @@ import { randomUUID } from "node:crypto";
 import { copyFile, lstat, mkdir, rename, stat } from "node:fs/promises";
 import path from "node:path";
 
+import type {
+  AgentFSChange,
+  AgentFSInterface,
+  AgentFSToolCall,
+  AgentFSToolCallStats,
+  AgentFSWorkspaceConfig,
+} from "../agentfs/types.js";
+import type { ProjectConfig } from "../utils/project-detector.js";
+import type { ExecOptions, ExecResult, Workspace } from "./types.js";
+
 import {
   agentfsCheckpointsTotal,
   agentfsDbSizeBytes,
   agentfsExecutionDurationSeconds,
   agentfsExecutionsTotal,
 } from "../agentfs/metrics.js";
-import {
-  type AgentFSChange,
-  type AgentFSInterface,
-  type AgentFSToolCall,
-  type AgentFSToolCallStats,
-  type AgentFSWorkspaceConfig,
-} from "../agentfs/types.js";
 import { AlfredAgentFS } from "../agentfs/wrapper.js";
 import { toolDocker } from "../orchestrator/tool/docker.js";
-import { type ProjectConfig } from "../utils/project-detector.js";
-import { type ExecOptions, type ExecResult, type Workspace } from "./types.js";
 
 /**
  * Extended config for AgentFS workspace with Docker options.
@@ -331,7 +332,7 @@ export class AgentFSWorkspace implements Workspace {
           devices: ["/dev/fuse"],
           name: this._containerName,
           resources: {
-            cpus: 1.0,
+            cpus: 1,
             memory: "1g",
           },
           tag: this._image,
@@ -501,7 +502,7 @@ export class AgentFSWorkspace implements Workspace {
         return false;
       }
       const maybe = db as { exec?: unknown; run?: unknown };
-      const escapedPath = snapshotPath.replaceAll(/'/g, "''");
+      const escapedPath = snapshotPath.replaceAll("'", "''");
       if (typeof maybe.exec === "function") {
         try {
           await (maybe.exec as (sql: string) => unknown)(
@@ -562,7 +563,7 @@ export class AgentFSWorkspace implements Workspace {
           throw new Error("agentfs_checkpoint_snapshot_db_unsupported");
         }
 
-        const sqlIdent = (value: string) => `"${value.replaceAll(/"/g, '""')}"`;
+        const sqlIdent = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
         const srcSql = src as unknown as {
           exec: (sql: string) => Promise<void>;
@@ -709,7 +710,7 @@ export class AgentFSWorkspace implements Workspace {
         throw new Error("agentfs_restore_snapshot_db_unsupported");
       }
 
-      const sqlIdent = (value: string) => `"${value.replaceAll(/"/g, '""')}"`;
+      const sqlIdent = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
       const dstSql = dst as unknown as {
         exec: (sql: string) => Promise<void>;

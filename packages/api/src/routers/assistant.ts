@@ -276,7 +276,7 @@ export const assistantRouter = router({
       const selected = userId
         ? await getModelForRole("chat", { userId })
         : getModelForRole("chat");
-      const modelKey = selected.modelKey;
+      const { modelKey } = selected;
       const spec = getModelSpec(modelKey);
       return {
         modelId: spec.id,

@@ -1,12 +1,15 @@
 import type { NodeId } from "../hypergraph.js";
 
-export type HyperRect = { min: Float32Array; max: Float32Array };
+export interface HyperRect {
+  min: Float32Array;
+  max: Float32Array;
+}
 
-type NodeEntry = {
+interface NodeEntry {
   rect: HyperRect;
   id?: NodeId;
   child?: RTreeNode;
-};
+}
 
 class RTreeNode {
   readonly entries: NodeEntry[] = [];
@@ -66,7 +69,7 @@ class MinHeap<T> {
   }
 
   private bubbleDown(index: number): void {
-    const length = this.data.length;
+    const { length } = this.data;
     while (true) {
       let smallest = index;
       const left = index * 2 + 1;
@@ -188,10 +191,7 @@ export class RTreeND {
     return hits;
   }
 
-  nearestK(
-    point: Float32Array,
-    k: number
-  ): Array<{ id: NodeId; dist: number }> {
+  nearestK(point: Float32Array, k: number): { id: NodeId; dist: number }[] {
     if (point.length !== this.dim) {
       throw new Error(`rtree_dim_mismatch_${this.dim}`);
     }
@@ -205,7 +205,7 @@ export class RTreeND {
       return a.dist < b.dist ? -1 : 1;
     });
     heap.push({ node: this.root, dist: 0 });
-    const results: Array<{ id: NodeId; dist: number }> = [];
+    const results: { id: NodeId; dist: number }[] = [];
     const worst = (): number => {
       if (results.length < k) {
         return Number.POSITIVE_INFINITY;
@@ -222,7 +222,7 @@ export class RTreeND {
       if (current.dist > worst()) {
         break;
       }
-      const node = current.node;
+      const { node } = current;
       if (node.leaf) {
         for (const entry of node.entries) {
           if (!entry.id) {
@@ -350,7 +350,7 @@ export class RTreeND {
   }
 
   private splitNode(node: RTreeNode): RTreeNode {
-    const entries = node.entries.slice();
+    const entries = [...node.entries];
     const groupA: NodeEntry[] = [];
     const groupB: NodeEntry[] = [];
     const seeds = this.pickSeeds(entries);
@@ -507,7 +507,7 @@ export class RTreeND {
   }
 
   private updateParentRect(node: RTreeNode): void {
-    const parent = node.parent;
+    const { parent } = node;
     if (!parent) {
       return;
     }
@@ -558,7 +558,7 @@ export class RTreeND {
     const reinserts: NodeEntry[] = [];
     while (node) {
       if (node !== this.root && node.entries.length < this.minEntries) {
-        const parent = node.parent;
+        const { parent } = node;
         if (!parent) {
           // If node is root, we can't go up.
           // But the loop condition check was `node !== this.root`
@@ -567,7 +567,7 @@ export class RTreeND {
           throw new Error("Node is not root but has no parent");
         }
         const idx = parent.entries.findIndex((entry) => entry.child === node);
-        if (idx >= 0) {
+        if (idx !== -1) {
           parent.entries.splice(idx, 1);
         }
         reinserts.push(...this.collectLeafEntries(node));
@@ -594,7 +594,7 @@ export class RTreeND {
 
   private collectLeafEntries(node: RTreeNode): NodeEntry[] {
     if (node.leaf) {
-      const entries = node.entries.slice();
+      const entries = [...node.entries];
       for (const entry of entries) {
         if (entry.id) {
           this.leafLookup.delete(entry.id);
@@ -692,7 +692,7 @@ export class RTreeND {
   }
 
   private insertResult(
-    results: Array<{ id: NodeId; dist: number }>,
+    results: { id: NodeId; dist: number }[],
     entry: { id: NodeId; dist: number },
     k: number
   ): void {

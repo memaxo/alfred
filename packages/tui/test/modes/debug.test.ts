@@ -94,10 +94,10 @@ describe("Debug Mode", () => {
 
   describe("Log Entries", () => {
     test("categorizes log levels", () => {
-      const logs: Array<{
+      const logs: {
         level: "info" | "warn" | "error" | "debug";
         message: string;
-      }> = [
+      }[] = [
         { level: "info", message: "System started" },
         { level: "warn", message: "Rate limit approaching" },
         { level: "error", message: "Connection failed" },

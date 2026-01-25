@@ -17,7 +17,7 @@ import { createTestSession } from "@alfred/test-kit/auth";
 // type RouterInputs = inferRouterInputs<TRPCAppRouter>;
 import { RuntimeContext } from "@alfred/type/runtime-context";
 
-type CreateCallerOptions = {
+interface CreateCallerOptions {
   userId?: string;
   roles?: string[];
   scopes?: string[];
@@ -25,13 +25,13 @@ type CreateCallerOptions = {
   obligations?: string[];
   /** Injectable dependencies for testing (replaces mock.module) */
   deps?: RouterDeps;
-};
+}
 
 /**
  * Creates a test tRPC caller with authenticated session.
  * Use this utility in all API router tests for consistent setup.
  */
-type RuntimeBundle = {
+interface RuntimeBundle {
   userId: string | null;
   roles: string[];
   scopes: string[];
@@ -46,7 +46,7 @@ type RuntimeBundle = {
     referer: string | null;
   };
   runtimeContext: RuntimeContext;
-};
+}
 
 function createRuntimeBundle(options: {
   userId: string | null;
@@ -54,7 +54,7 @@ function createRuntimeBundle(options: {
   scopes?: string[];
   requestId?: string;
 }): RuntimeBundle {
-  const userId = options.userId;
+  const { userId } = options;
   const roles = options.roles ?? (userId ? ["owner"] : []);
   const scopes =
     options.scopes ?? (userId ? ["assistant.write", "assistant.stream"] : []);

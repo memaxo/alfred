@@ -1,5 +1,6 @@
+import type { Obligation } from "@alfred/type";
+
 import { createTestSession, type TestSession } from "@alfred/test-kit/auth";
-import { type Obligation } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 
 interface WorkflowRuntime {

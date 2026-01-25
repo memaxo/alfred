@@ -18,18 +18,24 @@ export const isExecuting = (state: CognitiveState): boolean =>
 export const duration = (state: CognitiveState, now?: number): number => {
   const currentTime = now ?? Date.now();
   switch (state._) {
-    case "idle":
+    case "idle": {
       return currentTime - state.since;
-    case "capturing":
+    }
+    case "capturing": {
       return currentTime - state.started;
-    case "thinking":
+    }
+    case "thinking": {
       return currentTime - state.started;
-    case "deciding":
+    }
+    case "deciding": {
       return state.deadline - currentTime;
-    case "executing":
+    }
+    case "executing": {
       return currentTime - state.started;
-    case "reflecting":
+    }
+    case "reflecting": {
       return 0;
+    }
   }
 };
 

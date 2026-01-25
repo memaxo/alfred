@@ -1,4 +1,5 @@
-import { type Event } from "@alfred/cognitive/state";
+import type { Event } from "@alfred/cognitive/state";
+
 import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
 import {

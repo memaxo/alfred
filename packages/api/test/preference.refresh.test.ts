@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 import { metricsStub } from "./utils/mock-metrics";
 
-const invalidatePreferenceCacheMock = vi.fn().mockResolvedValue(undefined);
-const runPreferenceInferenceMock = vi.fn().mockResolvedValue(undefined);
+const invalidatePreferenceCacheMock = vi.fn().mockResolvedValue();
+const runPreferenceInferenceMock = vi.fn().mockResolvedValue();
 
 mock.module("@alfred/agent/preference/loader", () => ({
   invalidatePreferenceCache: invalidatePreferenceCacheMock,
@@ -21,8 +21,8 @@ const {
 
 describe("triggerPreferenceRefresh", () => {
   beforeEach(() => {
-    invalidatePreferenceCacheMock.mockReset().mockResolvedValue(undefined);
-    runPreferenceInferenceMock.mockReset().mockResolvedValue(undefined);
+    invalidatePreferenceCacheMock.mockReset().mockResolvedValue();
+    runPreferenceInferenceMock.mockReset().mockResolvedValue();
     __resetPreferenceRefreshQueueForTests();
     metricsStub.preferenceCacheInvalidationsTotal.inc.mockReset();
     metricsStub.preferenceRefreshTotal.inc.mockReset();
@@ -55,7 +55,7 @@ describe("triggerPreferenceRefresh", () => {
   });
 
   it("ignores falsy user identifiers", async () => {
-    triggerPreferenceRefresh(undefined);
+    triggerPreferenceRefresh();
     triggerPreferenceRefresh(null);
 
     await __flushPreferenceRefreshQueueForTests();

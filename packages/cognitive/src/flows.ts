@@ -85,7 +85,7 @@ const lexicalSimilarity = (a: string, b: string): number => {
 };
 
 /** Convert Float32Array to number[] for cosineSimilarity */
-const toNumberArray = (arr: Float32Array): number[] => Array.from(arr);
+const toNumberArray = (arr: Float32Array): number[] => [...arr];
 
 const embedFact = async (content: string): Promise<Float32Array | null> => {
   const normalized = content.trim();
@@ -103,10 +103,10 @@ const embedFact = async (content: string): Promise<Float32Array | null> => {
   }
 };
 
-type EntityCluster = {
+interface EntityCluster {
   label: string;
   facts: KnowledgeFact[];
-};
+}
 
 const extractEntityMentions = (fact: KnowledgeFact): string[] => {
   const mentions = new Set<string>();
@@ -128,7 +128,7 @@ const extractEntityMentions = (fact: KnowledgeFact): string[] => {
       mentions.add(mention);
     }
   }
-  return Array.from(mentions);
+  return [...mentions];
 };
 
 const groupByEntity = (facts: KnowledgeFact[]): Map<string, EntityCluster> => {
@@ -215,7 +215,7 @@ export async function synthesize(
   const hasEmbeddings =
     typeof graph.embeddingCount === "function" && graph.embeddingCount() > 0;
   const embeddingEntries: [NodeId, Float32Array][] = hasEmbeddings
-    ? Array.from(graph.embeddingEntries())
+    ? [...graph.embeddingEntries()]
     : [];
 
   const relationKeys = new Set<string>();
@@ -328,7 +328,7 @@ export async function synthesize(
  * Capture reasoning traces into cognitive facts
  */
 export async function captureReasoning(
-  traces: Array<{ text: string; timestamp: number }>,
+  traces: { text: string; timestamp: number }[],
   context: { threadId?: string; executionId?: string }
 ): Promise<CaptureResult> {
   if (traces.length === 0) {
@@ -414,7 +414,7 @@ export function execute(
 export function reflect(
   expected: unknown,
   actual: unknown,
-  reasoning?: Array<{ text: string; timestamp: number }>
+  reasoning?: { text: string; timestamp: number }[]
 ): ReflectionResult {
   const mismatch: string[] = expected === actual ? [] : ["outcome_mismatch"];
   const updates: KnowledgeUpdate[] = [];

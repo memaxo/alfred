@@ -5,7 +5,7 @@
  * Adjusts timeouts, cache sizes, and resource allocations.
  */
 
-type TelemetryMetrics = {
+interface TelemetryMetrics {
   queryHistogramValues: (
     metric: string,
     startTime: number,
@@ -27,7 +27,7 @@ type TelemetryMetrics = {
       skipped: number;
     }) => void;
   };
-};
+}
 
 const metrics: TelemetryMetrics = {
   async queryHistogramValues() {
@@ -114,7 +114,9 @@ export class TelemetryAutoTuner {
       startTime,
       endTime
     );
-    if (values.length === 0) return 0;
+    if (values.length === 0) {
+      return 0;
+    }
 
     values.sort((a, b) => a - b);
     const index95 = Math.floor(values.length * 0.95);
@@ -155,9 +157,15 @@ export class TelemetryAutoTuner {
 
   private calculateConfidence(p95: number, current: number): number {
     const ratio = p95 / current;
-    if (ratio > 1.5) return 0.9;
-    if (ratio > 1.2) return 0.7;
-    if (ratio > 1.0) return 0.5;
+    if (ratio > 1.5) {
+      return 0.9;
+    }
+    if (ratio > 1.2) {
+      return 0.7;
+    }
+    if (ratio > 1) {
+      return 0.5;
+    }
     return 0.3;
   }
 

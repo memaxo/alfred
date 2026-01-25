@@ -9,16 +9,16 @@ import { EMBEDDING_DIM } from "./dim.js";
 /**
  * Capabilities supported by an embedding model
  */
-export type EmbeddingCapabilities = {
+export interface EmbeddingCapabilities {
   text: boolean;
   image: boolean;
   video: boolean;
-};
+}
 
 /**
  * Configuration for an embedding model
  */
-export type EmbeddingModelConfig = {
+export interface EmbeddingModelConfig {
   /** Unique model identifier (e.g., "kalm-12b-1024") */
   id: string;
   /** HuggingFace model name */
@@ -31,7 +31,7 @@ export type EmbeddingModelConfig = {
   nativeDimensions?: number;
   /** Context length in tokens */
   contextLength?: number;
-};
+}
 
 /**
  * Input types for embedding generation
@@ -44,16 +44,16 @@ export type EmbeddingInput =
 /**
  * Result of an embedding operation
  */
-export type EmbeddingResult = {
+export interface EmbeddingResult {
   embedding: number[];
   modelId: string;
   inputType: EmbeddingInput["type"];
-};
+}
 
 /**
  * Interface that all embedding providers must implement
  */
-export type EmbeddingProvider = {
+export interface EmbeddingProvider {
   /** Model configuration */
   readonly config: EmbeddingModelConfig;
 
@@ -85,7 +85,7 @@ export type EmbeddingProvider = {
    * Shutdown the provider and release resources
    */
   shutdown(): Promise<void>;
-};
+}
 
 /**
  * Registry for managing multiple embedding providers
@@ -105,7 +105,7 @@ export class EmbeddingRegistry {
    * @param provider - Provider instance to register
    */
   register(provider: EmbeddingProvider): void {
-    const id = provider.config.id;
+    const { id } = provider.config;
     if (this.providers.has(id)) {
       throw new Error(`Provider with ID "${id}" is already registered`);
     }
@@ -218,7 +218,7 @@ export class EmbeddingRegistry {
    * Get all provider IDs
    */
   getIds(): string[] {
-    return Array.from(this.providers.keys());
+    return [...this.providers.keys()];
   }
 
   /**
@@ -232,9 +232,7 @@ export class EmbeddingRegistry {
    * Initialize all registered providers
    */
   async initializeAll(): Promise<void> {
-    const promises = Array.from(this.providers.values()).map((p) =>
-      p.initialize()
-    );
+    const promises = [...this.providers.values()].map((p) => p.initialize());
     await Promise.all(promises);
   }
 
@@ -242,9 +240,7 @@ export class EmbeddingRegistry {
    * Shutdown all registered providers
    */
   async shutdownAll(): Promise<void> {
-    const promises = Array.from(this.providers.values()).map((p) =>
-      p.shutdown()
-    );
+    const promises = [...this.providers.values()].map((p) => p.shutdown());
     await Promise.all(promises);
     this.providers.clear();
     this.defaultId = null;
@@ -259,14 +255,18 @@ function supportsInputType(
   inputType: EmbeddingInput["type"]
 ): boolean {
   switch (inputType) {
-    case "text":
+    case "text": {
       return capabilities.text;
-    case "image":
+    }
+    case "image": {
       return capabilities.image;
-    case "mixed":
+    }
+    case "mixed": {
       return capabilities.text && capabilities.image;
-    default:
+    }
+    default: {
       return false;
+    }
   }
 }
 

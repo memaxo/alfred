@@ -59,7 +59,7 @@ void loadMetrics();
  * Also handles memory maintenance (decay, pruning, cleanup).
  */
 
-export type LearningWorkerConfig = {
+export interface LearningWorkerConfig {
   intervalMs: number;
   enabled: boolean;
   batchSize: number;
@@ -72,7 +72,7 @@ export type LearningWorkerConfig = {
   cleanupAgeMs: number;
   decayLimit: number;
   confidenceFloor: number;
-};
+}
 
 const DEFAULT_CONFIG: LearningWorkerConfig = {
   intervalMs: 10_000, // Poll every 10s
@@ -145,8 +145,8 @@ export function startLearningWorker(
     try {
       await seedOntology();
       await runLoop();
-    } catch (e) {
-      logger.error("learning_worker_init_failed", { error: String(e) });
+    } catch (error) {
+      logger.error("learning_worker_init_failed", { error: String(error) });
     }
   })();
 
@@ -185,7 +185,7 @@ export async function learnDomainCorrection(
     const embedding = embeddings[0];
 
     // Create hash for the domain association
-    const hashInput = `domain:${text.substring(0, 500)}:${correctDomain}`;
+    const hashInput = `domain:${text.slice(0, 500)}:${correctDomain}`;
     const hash = createHash("sha256").update(hashInput).digest("hex");
 
     // Upsert correct domain association with high confidence
@@ -194,7 +194,7 @@ export async function learnDomainCorrection(
         resource: "user",
         hash,
         kind: "domain_association",
-        label: text.substring(0, 200),
+        label: text.slice(0, 200),
         properties: {
           domain: correctDomain,
           confidence: 0.9, // High confidence for user corrections
@@ -210,7 +210,7 @@ export async function learnDomainCorrection(
     if (incorrectDomain) {
       // Find existing association nodes for the incorrect domain
       const incorrectHash = createHash("sha256")
-        .update(`domain:${text.substring(0, 500)}:${incorrectDomain}`)
+        .update(`domain:${text.slice(0, 500)}:${incorrectDomain}`)
         .digest("hex");
 
       // We don't have a direct lookup by hash, but the upsert will handle deduplication
@@ -249,7 +249,7 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
       const updates = staleNodes.map((node) => {
         const props = (node.properties as Record<string, unknown>) || {};
         const currentConfidence =
-          typeof props.confidence === "number" ? props.confidence : 1.0;
+          typeof props.confidence === "number" ? props.confidence : 1;
         // Apply floor to prevent underflow
         const newConfidence = Math.max(
           config.confidenceFloor,
@@ -292,7 +292,7 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
         const archivedUpdates = archivedNodes.map((node) => {
           const props = (node.properties as Record<string, unknown>) || {};
           const currentConfidence =
-            typeof props.confidence === "number" ? props.confidence : 1.0;
+            typeof props.confidence === "number" ? props.confidence : 1;
           const newConfidence = Math.max(
             config.confidenceFloor,
             currentConfidence * config.decayFactor * 0.9
@@ -372,7 +372,7 @@ async function decaySeedNodesWithLearnedOverrides(
     }
 
     // For each seed node, check if there's a learned node with higher confidence
-    const updates: Array<{ id: string; confidence: number }> = [];
+    const updates: { id: string; confidence: number }[] = [];
 
     for (const seedNode of seedNodes) {
       const props = (seedNode.properties as Record<string, unknown>) || {};
@@ -440,9 +440,9 @@ async function seedOntology() {
       label:
         k.data._ === "fact"
           ? k.data.content
-          : k.data._ === "insight"
+          : (k.data._ === "insight"
             ? k.data.conclusion
-            : "unknown",
+            : "unknown"),
       properties: { confidence: SEED_CONFIDENCE, source: "seed" },
     }))
   );
@@ -617,7 +617,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
     knowledgeMap.set(extra.hash, extra);
   }
 
-  const mergedEntries = Array.from(knowledgeMap.values());
+  const mergedEntries = [...knowledgeMap.values()];
 
   if (mergedEntries.length === 0) {
     return;
@@ -644,12 +644,12 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   let embeddings: number[][] = [];
   try {
     embeddings = await embedMany(nodeLabels);
-  } catch (e) {
+  } catch (error) {
     logger.warn("learning_worker_embedding_failed", {
-      error: String(e),
+      error: String(error),
     });
     // Fallback to empty embeddings
-    embeddings = new Array(knowledgeEntries.length).fill(undefined);
+    embeddings = Array.from({ length: nodeLabels.length }, () => []);
   }
 
   // Upsert nodes with topic metadata for domain-aware retrieval
@@ -660,7 +660,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
       kind: entry.data._,
       label: nodeLabels[i] ?? "unknown",
       properties: {
-        confidence: (entry.data as { confidence?: number }).confidence ?? 1.0,
+        confidence: (entry.data as { confidence?: number }).confidence ?? 1,
         source: `run:${run.id}`,
         runId: run.id,
         workflowId: run.workflowId,
@@ -698,7 +698,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
         fromId: fromNode.id,
         toId: toNode.id,
         kind: rel.kind,
-        weight: rel.weight ?? 1.0,
+        weight: rel.weight ?? 1,
         metadata: {
           source: `run:${run.id}`,
         },

@@ -13,11 +13,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 describe("Real Review Gate Integration", () => {
   describe("ReviewGate Requirements", () => {
-    type ReviewRequirement = {
+    interface ReviewRequirement {
       type: "test" | "lint" | "type-check" | "manual";
       satisfied: boolean;
       details?: string;
-    };
+    }
 
     class ReviewGate {
       private requirements: ReviewRequirement[] = [];
@@ -226,11 +226,11 @@ describe("Real Review Gate Integration", () => {
   });
 
   describe("Review Phase Integration", () => {
-    type ReviewPhaseResult = {
+    interface ReviewPhaseResult {
       passed: boolean;
       checks: { name: string; passed: boolean; message: string }[];
       duration: number;
-    };
+    }
 
     const runReviewPhase = async (
       config: {
@@ -325,10 +325,10 @@ describe("Real Review Gate Integration", () => {
   });
 
   describe("Review Gate Workflow Integration", () => {
-    type WorkflowStep = {
+    interface WorkflowStep {
       type: "implement" | "test" | "review" | "deploy";
       status: "pending" | "running" | "completed" | "failed";
-    };
+    }
 
     class WorkflowWithReview {
       private readonly steps: WorkflowStep[] = [];

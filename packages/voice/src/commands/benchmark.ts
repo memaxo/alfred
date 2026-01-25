@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 import type { ProcessConfig } from "../process/tts";
 
-type BenchmarkResult = {
+interface BenchmarkResult {
   stt: {
     avgLatencyMs: number;
     samples: number;
@@ -20,7 +20,7 @@ type BenchmarkResult = {
     samples: number;
     avgAudioLengthMs: number;
   };
-};
+}
 
 /**
  * Run voice pipeline benchmark
@@ -103,7 +103,11 @@ export async function benchmark(): Promise<BenchmarkResult> {
   });
 
   // Summary
-  logger.info("voice_benchmark_summary", results);
+  const summary: Record<string, unknown> = {
+    stt: results.stt,
+    tts: results.tts,
+  };
+  logger.info("voice_benchmark_summary", summary);
 
   return results;
 }

@@ -82,25 +82,25 @@ export type PreferenceSource = z.infer<typeof preferenceSourceSchema>;
 export type PreferenceRecord = z.infer<typeof preferenceSchema>;
 export type PreferenceDetail = Omit<PreferenceRecord, "key">;
 
-export type ConversationHistory = {
+export interface ConversationHistory {
   id: string;
   userId: string;
   title?: string;
   messages: UIMessage[];
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-export type ToolCallHistory = {
+export interface ToolCallHistory {
   eventId: string;
   userId: string;
   toolName: string;
   domain: DomainName | string;
   parameters: Record<string, unknown>;
   timestamp: Date;
-};
+}
 
-export type FeedbackHistory = {
+export interface FeedbackHistory {
   feedbackId: string;
   userId: string;
   messageId?: string;
@@ -108,4 +108,4 @@ export type FeedbackHistory = {
   rating?: number;
   tags?: string[];
   timestamp: Date;
-};
+}

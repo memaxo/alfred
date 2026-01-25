@@ -1,8 +1,8 @@
 import { logger } from "@alfred/logger";
 import { LiteBatcher } from "@alfred/pacer";
 
-import { type PipelineEvent } from "../events";
-import { type PipelineObserver } from "../runner";
+import type { PipelineEvent } from "../events";
+import type { PipelineObserver } from "../runner";
 
 type LinearUpdate =
   | {

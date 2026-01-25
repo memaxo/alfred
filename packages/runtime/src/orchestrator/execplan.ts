@@ -30,10 +30,10 @@ export async function mutateExecPlanFile(
     }
     try {
       await mkdir(path.dirname(filePath), { recursive: true });
-    } catch (mkdirErr) {
+    } catch (error) {
       logger.warn("execplan_dir_failed", {
         path: filePath,
-        error: mkdirErr instanceof Error ? mkdirErr.message : String(mkdirErr),
+        error: error instanceof Error ? error.message : String(error),
       });
       return;
     }

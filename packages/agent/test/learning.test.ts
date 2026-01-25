@@ -7,10 +7,10 @@ import {
 import { installLoggerMock } from "@alfred/test-kit/logger";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
-import {
-  type LearnMistakeInput,
-  type LearnPatternInput,
-  type LearnRecordInput,
+import type {
+  LearnMistakeInput,
+  LearnPatternInput,
+  LearnRecordInput,
 } from "../src/orchestrator/tool/learning/definition";
 
 // Install shared mocks

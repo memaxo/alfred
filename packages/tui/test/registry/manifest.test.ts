@@ -24,7 +24,7 @@ describe("CliManifest", () => {
     });
 
     test("rejects undefined", () => {
-      expect(isValidManifest(undefined)).toBe(false);
+      expect(isValidManifest()).toBe(false);
     });
 
     test("rejects non-object", () => {

@@ -5,10 +5,36 @@
  * so they can learn from each other's failures during execution.
  */
 
-import { type LiveError } from "@alfred/type";
+import { enrichCaps, type LiveError, liveErrorSchema } from "@alfred/type";
 
+import type { AgentFSInterface } from "./types.js";
+
+import { redactObject, redactSecrets } from "../utils/redaction.js";
 import { AGENTFS_KV_KEYS, LIVE_ERROR_PREFIX } from "./keys.js";
-import { type AgentFSInterface } from "./types.js";
+
+function capText(text: string, max: number): string {
+  if (text.length <= max) {
+    return text;
+  }
+  return `${text.slice(0, max)}…<truncated>`;
+}
+
+function capParams(params: unknown): unknown {
+  const redacted = redactObject(params);
+  try {
+    const raw = JSON.stringify(redacted);
+    if (raw.length <= enrichCaps.errParam) {
+      return redacted;
+    }
+    return capText(raw, enrichCaps.errParam);
+  } catch {
+    return undefined;
+  }
+}
+
+function isEnrichmentEnabled(): boolean {
+  return process.env.ALFRED_ENRICHMENT === "1";
+}
 
 /**
  * Emit a live error to AgentFS KV for sibling agent awareness.
@@ -20,7 +46,20 @@ export async function emitLiveError(
   agent: AgentFSInterface,
   error: LiveError
 ): Promise<void> {
-  await agent.kv.set(AGENTFS_KV_KEYS.liveError(error.ts), error);
+  if (!isEnrichmentEnabled()) {
+    return;
+  }
+  const normalized: LiveError = {
+    ...error,
+    createdAt: error.createdAt ?? error.ts,
+    error: capText(redactSecrets(error.error), enrichCaps.liveErr),
+    parameters: error.parameters ? capParams(error.parameters) : undefined,
+    schemaVersion: error.schemaVersion ?? 1,
+  };
+  await agent.kv.set(
+    AGENTFS_KV_KEYS.liveError(error.ts),
+    liveErrorSchema.parse(normalized)
+  );
 }
 
 /**
@@ -33,6 +72,9 @@ export async function getLiveErrors(
   agent: AgentFSInterface,
   sinceTs: number
 ): Promise<LiveError[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const entries = await agent.kv.list(LIVE_ERROR_PREFIX);
 
   return entries
@@ -41,9 +83,14 @@ export async function getLiveErrors(
       const ts = Number.parseInt(keyTs, 10);
       return !Number.isNaN(ts) && ts >= sinceTs;
     })
-    .map((e) => e.value as LiveError)
-    .filter((err) => err && typeof err.tool === "string")
-    .toSorted((a, b) => b.ts - a.ts);
+    .map((e) => {
+      const parsed = liveErrorSchema.safeParse(e.value);
+      return parsed.success ? parsed.data : null;
+    })
+    .filter((err): err is LiveError =>
+      Boolean(err && typeof err.tool === "string")
+    )
+    .sort((a, b) => b.ts - a.ts);
 }
 
 /**
@@ -54,6 +101,9 @@ export async function getLiveErrorsForTool(
   toolName: string,
   sinceTs: number
 ): Promise<LiveError[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const allErrors = await getLiveErrors(agent, sinceTs);
   return allErrors.filter((e) => e.tool === toolName);
 }
@@ -71,6 +121,9 @@ export async function isToolFailing(
     minFailures?: number;
   }
 ): Promise<boolean> {
+  if (!isEnrichmentEnabled()) {
+    return false;
+  }
   const sinceTs = options?.sinceTs ?? Date.now() - 5 * 60 * 1000; // Last 5 minutes
   const minFailures = options?.minFailures ?? 2;
 
@@ -107,6 +160,9 @@ export async function clearOldLiveErrors(
   agent: AgentFSInterface,
   olderThanTs: number
 ): Promise<number> {
+  if (!isEnrichmentEnabled()) {
+    return 0;
+  }
   const entries = await agent.kv.list(LIVE_ERROR_PREFIX);
   let deleted = 0;
 
@@ -131,6 +187,9 @@ export async function buildLiveErrorContext(
   sinceTs: number,
   maxErrors = 5
 ): Promise<string | null> {
+  if (!isEnrichmentEnabled()) {
+    return null;
+  }
   const errors = await getLiveErrors(agent, sinceTs);
 
   if (errors.length === 0) {

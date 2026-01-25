@@ -30,10 +30,10 @@ export const calculateError = (expected: string, actual: string): number => {
 
     for (let i = 1; i <= longer.length; i++) {
       currRow[0] = i;
-      const longChar = longer.charCodeAt(i - 1);
+      const longChar = longer.codePointAt(i - 1);
 
       for (let j = 1; j <= shorter.length; j++) {
-        const cost = longChar === shorter.charCodeAt(j - 1) ? 0 : 1;
+        const cost = longChar === shorter.codePointAt(j - 1) ? 0 : 1;
         const insertion = (currRow[j - 1] ?? 0) + 1;
         const deletion = (prevRow[j] ?? 0) + 1;
         const substitution = (prevRow[j - 1] ?? 0) + cost;
@@ -48,7 +48,6 @@ export const calculateError = (expected: string, actual: string): number => {
     const durationMs = performance.now() - start;
     cognitiveErrorCalculationDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.1) {
-    }
+    if (shouldWarn && durationMs > 0.1) {}
   }
 };

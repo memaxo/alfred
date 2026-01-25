@@ -126,7 +126,7 @@ describe("ReminderScheduler", () => {
       getDueRemindersAllMock.mockResolvedValue(mockReminders);
       advanceReminderMock.mockResolvedValue(1);
 
-      const onFireMock = vi.fn().mockResolvedValue(undefined);
+      const onFireMock = vi.fn().mockResolvedValue();
 
       startReminderScheduler({
         intervalMs: 100,
@@ -174,7 +174,7 @@ describe("ReminderScheduler", () => {
       getProfileMock.mockResolvedValue({ timezone: "UTC" });
       advanceReminderMock.mockResolvedValue(1);
 
-      const onFireMock = vi.fn().mockResolvedValue(undefined);
+      const onFireMock = vi.fn().mockResolvedValue();
 
       startReminderScheduler({
         intervalMs: 100,
@@ -213,7 +213,7 @@ describe("ReminderScheduler", () => {
       getProfileMock.mockResolvedValue({ timezone: "UTC" });
       advanceReminderMock.mockResolvedValue(1);
 
-      const onFireMock = vi.fn().mockResolvedValue(undefined);
+      const onFireMock = vi.fn().mockResolvedValue();
 
       startReminderScheduler({
         intervalMs: 100,
@@ -254,7 +254,7 @@ describe("ReminderScheduler", () => {
       getDueRemindersAllMock.mockResolvedValue([mockReminder]);
       advanceReminderMock.mockResolvedValue(0);
 
-      const onFireMock = vi.fn().mockResolvedValue(undefined);
+      const onFireMock = vi.fn().mockResolvedValue();
 
       startReminderScheduler({
         intervalMs: 100,

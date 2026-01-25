@@ -3,11 +3,11 @@ import { logger } from "@alfred/logger";
 
 import type { Convention } from "./types.js";
 
-type StoredConvention = {
+interface StoredConvention {
   id?: unknown;
   description?: unknown;
   confidence?: unknown;
-};
+}
 
 /**
  * Extract project-specific conventions

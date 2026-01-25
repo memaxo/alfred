@@ -19,13 +19,13 @@ export type AuthSession = Awaited<
 /**
  * Minimal user properties required for test sessions.
  */
-export type TestUser = {
+export interface TestUser {
   id: string;
   email?: string;
   name?: string;
   roles?: string[];
   scopes?: string[];
-};
+}
 
 /**
  * Test session that satisfies AuthSession at runtime.
@@ -44,7 +44,7 @@ export const DEFAULT_TEST_USER: TestUser = {
   scopes: [],
 };
 
-type SessionOverrides = {
+interface SessionOverrides {
   sessionId?: string;
   token?: string;
   expiresAt?: Date;
@@ -52,14 +52,14 @@ type SessionOverrides = {
   updatedAt?: Date;
   ipAddress?: string | null;
   userAgent?: string | null;
-};
+}
 
-type UserOverrides = {
+interface UserOverrides {
   emailVerified?: boolean;
   image?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
-};
+}
 
 /**
  * Creates a type-safe test session that satisfies AuthSession.

@@ -1,6 +1,7 @@
 /** @jsxImportSource @opentui/react */
 
-import { type KeyEvent } from "@opentui/core";
+import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
 

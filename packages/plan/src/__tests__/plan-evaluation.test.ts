@@ -58,7 +58,7 @@ describe("Deterministic Plan Evaluation", () => {
     expect(result.selected).toBe(true);
     expect(result.aggregateScore).toBeGreaterThan(0);
     expect(
-      result.scores.some((s) => s.criterion === "checks" && s.score === 1.0)
+      result.scores.some((s) => s.criterion === "checks" && s.score === 1)
     ).toBe(true);
   });
 
@@ -77,7 +77,7 @@ describe("Deterministic Plan Evaluation", () => {
     expect(result.selected).toBe(false);
     expect(result.aggregateScore).toBe(0);
     expect(
-      result.scores.some((s) => s.criterion === "checks" && s.score === 0.0)
+      result.scores.some((s) => s.criterion === "checks" && s.score === 0)
     ).toBe(true);
   });
 

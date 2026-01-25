@@ -1,22 +1,25 @@
-import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
-import {
-  type AutonomyGradient,
-  type CognitiveState,
-  type Event,
+import type {
+  AutonomyGradient,
+  CognitiveState,
+  Event,
 } from "@alfred/cognitive/state";
+import type { CognitiveEffect } from "@alfred/runtime/cognitive";
+
+import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { idle, initialAutonomy, timestamp } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { getAccuracyMetrics, getInsights, getMistakes } from "@alfred/learning";
 import { logger } from "@alfred/logger";
-import { type CognitiveEffect } from "@alfred/runtime/cognitive";
 import { z } from "zod";
 
-import { type Context } from "../context";
+import type { Context } from "../context";
+
 import { requirePolicy } from "../gate";
 import { cognitiveFeedbackSubmissionsTotal } from "../metrics";
 import { authedProcedure, router } from "../trpc";
+import { ensureHooksRuntime } from "../workflow/hooks";
 
 const feedbackInput = z.object({
   actual: z.string().optional().default(""),
@@ -327,6 +330,13 @@ export const cognitiveRouter = router({
       const expected = input.expected.trim();
       const actual = (input.actual ?? "").trim();
       const similarity = await computeFeedbackSimilarity(expected, actual);
+
+      await ensureHooksRuntime(ctx.runtimeContext, {
+        sessionId: ctx.session?.session.id,
+        signal: new AbortController().signal,
+        workspace: process.cwd(),
+        workflowId: input.streamId,
+      });
 
       const event: Event = {
         _: "feedback",

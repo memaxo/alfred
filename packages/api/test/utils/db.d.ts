@@ -1,9 +1,9 @@
-import { type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Client } from "pg";
-type TestDb = {
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { Client } from "pg";
+interface TestDb {
   client: Client;
   db: NodePgDatabase;
-};
+}
 /**
  * Creates an isolated test database connection.
  * Reusable across packages for consistent test setup.

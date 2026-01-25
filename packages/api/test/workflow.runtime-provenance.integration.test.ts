@@ -31,14 +31,14 @@ let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
 describe("workflow runtime provenance integration (sqlite)", () => {
   beforeAll(async () => {
     const ragModule = await import("@alfred/rag");
-    ingest = ragModule.ingest;
-    setEmbeddingProvider = ragModule.setEmbeddingProvider;
+    ({ ingest } = ragModule);
+    ({ setEmbeddingProvider } = ragModule);
     ({ workflowProvenance } = await import("../src/workflow/provenance"));
     const dbModule = await import("@alfred/db");
-    db = dbModule.db;
+    ({ db } = dbModule);
     const graphSchema = await import("@alfred/db/schema/graph");
-    memoryNodes = graphSchema.memoryNodes;
-    memoryEdges = graphSchema.memoryEdges;
+    ({ memoryNodes } = graphSchema);
+    ({ memoryEdges } = graphSchema);
   });
 
   afterAll(() => {

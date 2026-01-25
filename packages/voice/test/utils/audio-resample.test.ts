@@ -36,7 +36,7 @@ describe("base64ToPcm16", () => {
 
   it("handles negative values (signed 16-bit)", () => {
     // -1 as signed 16-bit little-endian: FF FF
-    const base64 = Buffer.from([0xff, 0xff]).toString("base64");
+    const base64 = Buffer.from([0xFF, 0xFF]).toString("base64");
     const result = base64ToPcm16(base64);
 
     expect(result[0]).toBe(-1);
@@ -159,14 +159,14 @@ describe("getPcmDuration", () => {
     const pcm = new Int16Array(16_000); // 16000 samples
     const duration = getPcmDuration(pcm, 16_000);
 
-    expect(duration).toBe(1.0); // 1 second
+    expect(duration).toBe(1); // 1 second
   });
 
   it("handles different sample rates", () => {
     const pcm = new Int16Array(48_000); // 48000 samples
     const duration = getPcmDuration(pcm, 48_000);
 
-    expect(duration).toBe(1.0); // 1 second
+    expect(duration).toBe(1); // 1 second
   });
 
   it("handles fractional durations", () => {

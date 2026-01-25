@@ -1,11 +1,11 @@
 import { logger } from "@alfred/logger";
 import { spawn } from "bun";
 
-export type SandboxOptions = {
+export interface SandboxOptions {
   image?: string;
   timeout?: number;
   env?: Record<string, string>;
-};
+}
 
 /**
  * Kinetic Layer Sandbox
@@ -102,7 +102,7 @@ export class DockerSandbox {
     }
 
     // Use printf for safer writing than echo
-    const safeContent = content.replace(/'/g, "'\\''");
+    const safeContent = content.replaceAll("'", String.raw`'\''`);
     await this.exec(["sh", "-c", `printf '%s' '${safeContent}' > "${path}"`]);
   }
 

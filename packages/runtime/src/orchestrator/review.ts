@@ -38,24 +38,24 @@ const REVIEW_FIXER_SESSION_COMMAND =
   process.env.ORCH_REVIEW_SESSION_COMMAND?.trim() ||
   "bash";
 
-type SessionController = {
+interface SessionController {
   start(attempt: number): Promise<string | null>;
   stop(sessionId: string | null): Promise<void>;
   cleanup(): Promise<void>;
-};
+}
 
-export type ReviewDeps = {
+export interface ReviewDeps {
   sessionsEnabled?: boolean;
   workspaceCreate?: typeof WorkspaceFactory.create;
   runCommand?: typeof toolRunner.execute;
   smokeVerify?: typeof smokeTester.verify;
   codexExecute?: typeof toolCodex.execute;
-};
+}
 
-type ReviewWorkflowRepo = {
+interface ReviewWorkflowRepo {
   getRun: typeof workflowRepo.getRun;
   updateRun: typeof workflowRepo.updateRun;
-};
+}
 
 // Mutable indirection so tests can patch without relying on module mock order.
 export const reviewWorkflowRepo: ReviewWorkflowRepo = {
@@ -142,7 +142,7 @@ function createSessionController(
 }
 
 function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 async function ensureReviewExecPlan(
@@ -174,7 +174,7 @@ async function updateReviewProgress(
   const pattern = new RegExp(`- \\[[ x]\\] \\[${escapeRegExp(checkId)}\\].*`);
   const stamp = new Date().toISOString();
   const label =
-    status === "passed" ? "PASS" : status === "failed" ? "FAIL" : "RUNNING";
+    status === "passed" ? "PASS" : (status === "failed" ? "FAIL" : "RUNNING");
   const mark = status === "passed" ? "x" : " ";
   const replacement =
     `- [${mark}] [${checkId}] ${label} (${stamp}) ${note}`.trim();
@@ -223,12 +223,12 @@ async function appendReviewDecision(filePath: string, entry: string) {
 async function createDebuggerExecPlan(
   workspace: string,
   runId: string,
-  failures: Array<{
+  failures: {
     command: string;
     output: string;
     error?: string;
     checkId?: string;
-  }>,
+  }[],
   attempts: number
 ) {
   const filePath = plansPath(workspace, runId, "review-debugger.md");
@@ -272,13 +272,13 @@ async function createDebuggerExecPlan(
 }
 
 function buildTestCommandFromPlan(mergePlan: MergePlan): string {
-  const scoped = Array.from(
-    new Set(
+  const scoped = [
+    ...new Set(
       mergePlan.changedPackages.filter(
         (pkg) => pkg.startsWith("packages/") || pkg.startsWith("apps/")
       )
-    )
-  );
+    ),
+  ];
   if (scoped.length === 0) {
     return "bun test";
   }
@@ -302,13 +302,13 @@ export async function* runReviewPhase(
     summary: mergePlan.summary,
   });
 
-  const reviewFocusFiles = Array.from(
-    new Set(
+  const reviewFocusFiles = [
+    ...new Set(
       mergePlan.expectedFiles.filter(
         (file): file is string => typeof file === "string" && file.length > 0
       )
-    )
-  ).slice(0, 50);
+    ),
+  ].slice(0, 50);
 
   const sessionController =
     (deps?.sessionsEnabled ?? reviewSessionsEnabled())
@@ -368,7 +368,7 @@ export async function* runReviewPhase(
         ) {
           const stateData = workflowRun.stateData as Record<string, unknown>;
           if (typeof stateData.fixAttempts === "number") {
-            fixAttempts = stateData.fixAttempts;
+            ({ fixAttempts } = stateData);
           }
         }
       } catch (error) {
@@ -564,24 +564,24 @@ export async function* runReviewPhase(
                 },
               } as unknown as WorkflowEvent;
             }
-          } catch (err) {
+          } catch (error) {
             currentRunPassed = false;
             reviewFailures.push({
               command,
               output: "",
-              error: String(err),
+              error: String(error),
               checkId: check.id,
             });
             logger.error("review_command_error", {
               runId,
               command,
-              error: String(err),
+              error: String(error),
             });
             await updateReviewProgress(
               reviewExecPlanPath,
               check.id,
               "failed",
-              String(err)
+              String(error)
             );
             yield {
               type: "event",
@@ -591,7 +591,7 @@ export async function* runReviewPhase(
                 type: checkType,
                 status: "failed",
                 attempt: attemptIndex,
-                evidence: String(err),
+                evidence: String(error),
               },
             } as unknown as WorkflowEvent;
           }

@@ -6,12 +6,14 @@
 
 /** @jsxImportSource @opentui/react */
 
-import { type KeyEvent } from "@opentui/core";
+import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
 
+import type { Workflow } from "../../subscriptions/workflow";
+
 import { getApiClient } from "../../api/client";
-import { type Workflow } from "../../subscriptions/workflow";
 import { colors, progressChars } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
 import { useWorkflowStore } from "../hooks/stores";

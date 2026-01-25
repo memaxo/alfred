@@ -1,8 +1,9 @@
+import type { SchemaContext, UIComponent } from "@alfred/type/genui";
+import type { ModelRole } from "@alfred/type/model";
+import type { ModelMessage } from "ai";
+
 import { logger } from "@alfred/logger";
-import { type SchemaContext, type UIComponent } from "@alfred/type/genui";
 import { uiComponentSchema } from "@alfred/type/genui.zod";
-import { type ModelRole } from "@alfred/type/model";
-import { type ModelMessage } from "ai";
 
 import {
   genuiSchemaGenerationDurationSeconds,

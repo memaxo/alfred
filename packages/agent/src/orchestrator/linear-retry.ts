@@ -5,12 +5,12 @@ import type { LinearRateLimitCategory } from "./linear-rate-limiter";
 
 import { linearRateLimiter } from "./linear-rate-limiter";
 
-export type WithLinearRetryOptions = {
+export interface WithLinearRetryOptions {
   category: LinearRateLimitCategory;
   requireStartupBuffer?: boolean;
   logPrefix?: string;
   logContext?: Record<string, unknown>;
-};
+}
 
 const RETRY_CONFIG = {
   retries: 3,
@@ -19,11 +19,11 @@ const RETRY_CONFIG = {
   factor: 2,
 } as const;
 
-type ErrorWithStatusCode = {
+interface ErrorWithStatusCode {
   statusCode?: number;
-};
+}
 
-type ErrorWithRetry = {
+interface ErrorWithRetry {
   retryAfterMs?: number;
   retryAfter?: number;
   headers?: Headers | Record<string, string>;
@@ -31,7 +31,7 @@ type ErrorWithRetry = {
     headers?: Headers | Record<string, string>;
     get?: (key: string) => string | null;
   };
-};
+}
 
 export function getStatusCode(error: unknown): number | undefined {
   const err = error as ErrorWithStatusCode;

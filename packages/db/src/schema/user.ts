@@ -48,7 +48,7 @@ export const preferences = pgTable("user_preferences", {
   }),
   key: text("key").notNull(),
   value: jsonb("value").notNull(),
-  confidence: real("confidence").default(1.0), // Extracted preference confidence
+  confidence: real("confidence").default(1), // Extracted preference confidence
   source: text("source").default("user"), // "user" | "inferred" | "learned"
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -69,7 +69,7 @@ export const facts = pgTable("user_facts", {
   embedding: vector("embedding", { dimensions: VECTOR_DIM }),
   embeddingModelId: text("embedding_model_id"), // FK to embedding_models.id
   category: text("category"), // "personal" | "work" | "technical" | etc.
-  confidence: real("confidence").default(1.0),
+  confidence: real("confidence").default(1),
   source: text("source").default("user"), // "user" | "conversation" | "tool"
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),

@@ -66,7 +66,7 @@ describe("droid tool sandbox helpers", () => {
     });
 
     it("returns base env when no overrides provided", () => {
-      const result = pickEnv(undefined);
+      const result = pickEnv();
       expect(result.PATH).toBeDefined();
       expect(Object.keys(result)).toEqual(
         expect.arrayContaining(["PATH", "FACTORY_API_KEY"])

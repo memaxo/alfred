@@ -237,7 +237,7 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Vector Similarity Search", () => {
         SELECT 1 - ('[1,0,0]'::vector <=> '[1,0,0]'::vector) as similarity
       `);
 
-      expect(Number(result.rows[0]?.similarity)).toBeCloseTo(1.0, 5);
+      expect(Number(result.rows[0]?.similarity)).toBeCloseTo(1, 5);
     } catch {
       console.log("pgvector not available for similarity test");
     }

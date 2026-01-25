@@ -31,7 +31,7 @@ describe("Cognitive VCR", () => {
     vcr.record(interaction);
     await vcr.save();
 
-    const content = await fs.readFile(cassettePath, "utf-8");
+    const content = await fs.readFile(cassettePath, "utf8");
     expect(content).toContain("hi there");
   });
 

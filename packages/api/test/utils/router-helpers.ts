@@ -17,11 +17,11 @@ export {
 } from "@alfred/test-kit/redis";
 
 // Shared mock references that can be controlled by any test
-export const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
+export const createAuditLogMock = vi.fn().mockResolvedValue();
 export const policyEvaluateMock = vi
   .fn()
   .mockResolvedValue({ allow: true, obligations: [] as Obligation[] });
-export const consumeRouteRateLimitMock = vi.fn().mockResolvedValue(undefined);
+export const consumeRouteRateLimitMock = vi.fn().mockResolvedValue();
 
 /**
  * Common mock setup for policy audit logging
@@ -48,7 +48,7 @@ export function mockRateLimit() {
 export function mockWorkflowRepo() {
   const createRunMock = vi.fn();
   const updateRunMock = vi.fn();
-  const appendEventMock = vi.fn();
+  const appendEventMock = vi.fn().mockResolvedValue();
   const getRunMock = vi.fn();
   const listEventsMock = vi.fn().mockResolvedValue([]);
   const listEventsByTypeMock = vi.fn().mockResolvedValue([]);
@@ -90,10 +90,11 @@ export function mockWorkflowRepo() {
  * Common mock setup for run registry
  */
 export function mockRunRegistry() {
-  const registerMock = vi.fn().mockResolvedValue(undefined);
-  const unregisterMock = vi.fn().mockResolvedValue(undefined);
+  const registerMock = vi.fn().mockResolvedValue();
+  const unregisterMock = vi.fn().mockResolvedValue();
   const dispatchResumeMock = vi.fn().mockResolvedValue(true);
   const dispatchSuspendMock = vi.fn().mockResolvedValue(true);
+  const dispatchCancelMock = vi.fn().mockResolvedValue(true);
 
   mock.module("@alfred/api/run-registry", () => ({
     runRegistry: {
@@ -101,6 +102,7 @@ export function mockRunRegistry() {
       unregister: unregisterMock,
       dispatchResume: dispatchResumeMock,
       dispatchSuspend: dispatchSuspendMock,
+      dispatchCancel: dispatchCancelMock,
     },
   }));
 
@@ -110,6 +112,7 @@ export function mockRunRegistry() {
       unregister: unregisterMock,
       dispatchResume: dispatchResumeMock,
       dispatchSuspend: dispatchSuspendMock,
+      dispatchCancel: dispatchCancelMock,
     },
   }));
 
@@ -118,6 +121,7 @@ export function mockRunRegistry() {
     unregister: unregisterMock,
     dispatchResume: dispatchResumeMock,
     dispatchSuspend: dispatchSuspendMock,
+    dispatchCancel: dispatchCancelMock,
   };
 }
 

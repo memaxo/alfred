@@ -112,7 +112,7 @@ describe("reflect tool", () => {
 
         const content = readFileSync(
           join(tempDir, ".ruler", "99-learned.md"),
-          "utf-8"
+          "utf8"
         );
         expect(content).toContain("## Learned Rules");
         expect(content).toContain("- Always validate input before processing");
@@ -130,7 +130,7 @@ describe("reflect tool", () => {
 
         const content = readFileSync(
           join(tempDir, ".ruler", "99-learned.md"),
-          "utf-8"
+          "utf8"
         );
         expect(content).toContain("- Learning one");
         expect(content).toContain("- Learning two");
@@ -153,7 +153,7 @@ describe("reflect tool", () => {
 
         const content = readFileSync(
           join(tempDir, ".ruler", "99-learned.md"),
-          "utf-8"
+          "utf8"
         );
         expect(content).toContain("# Existing Rules");
         expect(content).toContain("## Learned Rules");
@@ -181,7 +181,7 @@ describe("reflect tool", () => {
 
         const content = readFileSync(
           join(tempDir, ".ruler", "04-database.md"),
-          "utf-8"
+          "utf8"
         );
         expect(content).toContain("- Always use transactions");
       });
@@ -199,7 +199,7 @@ describe("reflect tool", () => {
           },
         });
         expect(
-          readFileSync(join(tempDir, ".ruler", "04-database.md"), "utf-8")
+          readFileSync(join(tempDir, ".ruler", "04-database.md"), "utf8")
         ).toContain("- DB rule");
 
         // Test 'test' alias
@@ -211,7 +211,7 @@ describe("reflect tool", () => {
           },
         });
         expect(
-          readFileSync(join(tempDir, ".ruler", "05-testing.md"), "utf-8")
+          readFileSync(join(tempDir, ".ruler", "05-testing.md"), "utf8")
         ).toContain("- Test rule");
       });
 
@@ -250,7 +250,7 @@ describe("reflect tool", () => {
 
         const content = readFileSync(
           join(tempDir, ".ruler", "99-learned.md"),
-          "utf-8"
+          "utf8"
         );
         const occurrences = (content.match(/Existing learning/g) || []).length;
         expect(occurrences).toBe(1);

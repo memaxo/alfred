@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Track generateObject calls
-let generateObjectCalls: Array<{ prompt: string }> = [];
+let generateObjectCalls: { prompt: string }[] = [];
 
 // Mock AI SDK generateObject for batch phase assignment
 mock.module("ai", () => ({
@@ -10,7 +10,7 @@ mock.module("ai", () => ({
 
     // Parse the prompt to extract task indices and assign phases based on content
     const lines = args.prompt.split("\n");
-    const assignments: Array<{ index: number; phase: string }> = [];
+    const assignments: { index: number; phase: string }[] = [];
 
     for (const line of lines) {
       const match = line.match(/^(\d+):\s*"([^"]+)"/);

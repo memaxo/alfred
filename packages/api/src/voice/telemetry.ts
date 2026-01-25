@@ -9,22 +9,22 @@ import {
   voiceTtsDurationSeconds,
 } from "@alfred/voice/metrics";
 
-export type HistogramSummary = {
+export interface HistogramSummary {
   count: number;
   average: number | null;
   p50: number | null;
   p95: number | null;
   unit: "seconds" | "milliseconds";
-};
+}
 
-export type VoiceTelemetrySnapshot = {
+export interface VoiceTelemetrySnapshot {
   sttLatency: HistogramSummary;
   ttsLatency: HistogramSummary;
   assistantLatency: HistogramSummary;
   roundTrip: HistogramSummary;
   jitter: HistogramSummary;
   packetLossTotal: number;
-};
+}
 
 type HistogramMetric = client.Histogram<string>;
 type CounterMetric = client.Counter<string>;

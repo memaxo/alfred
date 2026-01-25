@@ -1,6 +1,6 @@
 import type { PolicyResource } from "@alfred/policy";
 
-type AuditArgs = {
+interface AuditArgs {
   userId: string | null;
   projectId?: string | null;
   action: string;
@@ -9,7 +9,7 @@ type AuditArgs = {
   obligations?: string[];
   context?: Record<string, unknown>;
   traceId?: string | null;
-};
+}
 
 export async function recordAudit(args: AuditArgs): Promise<void> {
   try {
@@ -27,7 +27,7 @@ export async function recordAudit(args: AuditArgs): Promise<void> {
       context: args.context ?? {},
       traceId: args.traceId ?? null,
     });
-  } catch (_) {
+  } catch {
     // Audits must never break primary flow
   }
 }

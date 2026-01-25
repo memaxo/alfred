@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
 
-export type BookmarkPaneItem = {
+export interface BookmarkPaneItem {
   id: string;
   title: string | null;
   description?: string | null;
   url: string;
   tags: string[] | null;
   createdAt: string | null;
-};
+}
 
-export type BookmarkPaneProps = {
+export interface BookmarkPaneProps {
   items: BookmarkPaneItem[];
   onDelete: (id: string) => void;
   className?: string;
-};
+}
 
 function extractDomain(url: string): string {
   try {

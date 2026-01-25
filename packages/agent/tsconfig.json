@@ -15,6 +15,7 @@
     { "path": "../policy" },
     { "path": "../protocol" },
     { "path": "../type" },
+    { "path": "../hooks" },
     { "path": "../persona" },
     { "path": "../cognitive" },
     { "path": "../knowledge" },

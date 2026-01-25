@@ -14,7 +14,7 @@ import type { VoiceWorkflowVerbosity } from "./preferences.js";
 /**
  * Options for plan-to-speech conversion
  */
-export type PlanToSpeechOptions = {
+export interface PlanToSpeechOptions {
   /** Include phase details (default: true for plans with <= 5 phases) */
   includePhaseDetails?: boolean;
   /** Include task count per phase (default: true) */
@@ -29,7 +29,7 @@ export type PlanToSpeechOptions = {
   verbosity?: VoiceWorkflowVerbosity;
   /** Honorific preference for addressing the user */
   honorific?: HonorificPreference;
-};
+}
 
 /**
  * Convert a StructuredPlan to a natural language summary for TTS.
@@ -206,9 +206,9 @@ function formatPhaseDetails(
  * Format execution information
  */
 function formatExecutionInfo(plan: StructuredPlan): string {
-  const agentCount = plan.resources.agentCount;
+  const { agentCount } = plan.resources;
   const waveCount = plan.waves?.length ?? 1;
-  const strategy = plan.resources.strategy;
+  const { strategy } = plan.resources;
 
   const parts: string[] = [];
 
@@ -324,13 +324,13 @@ function cleanForSpeech(text: string): string {
   return (
     text
       // Remove markdown formatting
-      .replace(/[*_`#]/g, "")
+      .replaceAll(/[*_`#]/g, "")
       // Replace hyphens/underscores with spaces
-      .replace(/[-_]/g, " ")
+      .replaceAll(/[-_]/g, " ")
       // Collapse multiple spaces
-      .replace(/\s+/g, " ")
+      .replaceAll(/\s+/g, " ")
       // Remove parenthetical content for brevity
-      .replace(/\s*\([^)]*\)/g, "")
+      .replaceAll(/\s*\([^)]*\)/g, "")
       .trim()
   );
 }
@@ -360,7 +360,7 @@ function pluralize(word: string, count: number): string {
  * Format clarification questions for voice
  */
 export function clarificationToSpeech(
-  questions: Array<{ question: string; options?: string[] }>
+  questions: { question: string; options?: string[] }[]
 ): string {
   if (questions.length === 0) {
     return "I need more details to create a plan. Can you tell me more about what you want to build?";

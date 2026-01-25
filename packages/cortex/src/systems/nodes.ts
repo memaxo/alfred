@@ -27,10 +27,10 @@ export const NODE_TYPE_COLORS: Record<
   NodeType,
   { r: number; g: number; b: number }
 > = {
-  [NodeType.Memory]: { r: 0.0, g: 0.9, b: 0.8 }, // Teal
-  [NodeType.Action]: { r: 1.0, g: 0.6, b: 0.2 }, // Amber
-  [NodeType.Insight]: { r: 0.8, g: 0.6, b: 1.0 }, // Purple
-  [NodeType.Artifact]: { r: 0.4, g: 0.8, b: 1.0 }, // Light blue
+  [NodeType.Memory]: { r: 0, g: 0.9, b: 0.8 }, // Teal
+  [NodeType.Action]: { r: 1, g: 0.6, b: 0.2 }, // Amber
+  [NodeType.Insight]: { r: 0.8, g: 0.6, b: 1 }, // Purple
+  [NodeType.Artifact]: { r: 0.4, g: 0.8, b: 1 }, // Light blue
   [NodeType.System]: { r: 0.6, g: 0.6, b: 0.6 }, // Gray
 };
 
@@ -67,8 +67,7 @@ export class NodeSystem implements RenderSystem {
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
-      if (message.type === "error") {
-      }
+      if (message.type === "error") {}
     }
 
     // Create uniform buffer
@@ -218,18 +217,24 @@ export class NodeSystem implements RenderSystem {
 
   private getNodeTypeIndex(type: string): number {
     switch (type) {
-      case "memory":
+      case "memory": {
         return NodeType.Memory;
-      case "action":
+      }
+      case "action": {
         return NodeType.Action;
-      case "insight":
+      }
+      case "insight": {
         return NodeType.Insight;
-      case "artifact":
+      }
+      case "artifact": {
         return NodeType.Artifact;
-      case "system":
+      }
+      case "system": {
         return NodeType.System;
-      default:
+      }
+      default: {
         return NodeType.Memory;
+      }
     }
   }
 
@@ -278,17 +283,23 @@ export function getNodeTypeColor(type: string): {
   b: number;
 } {
   switch (type) {
-    case "memory":
+    case "memory": {
       return NODE_TYPE_COLORS[NodeType.Memory];
-    case "action":
+    }
+    case "action": {
       return NODE_TYPE_COLORS[NodeType.Action];
-    case "insight":
+    }
+    case "insight": {
       return NODE_TYPE_COLORS[NodeType.Insight];
-    case "artifact":
+    }
+    case "artifact": {
       return NODE_TYPE_COLORS[NodeType.Artifact];
-    case "system":
+    }
+    case "system": {
       return NODE_TYPE_COLORS[NodeType.System];
-    default:
+    }
+    default: {
       return NODE_TYPE_COLORS[NodeType.Memory];
+    }
   }
 }

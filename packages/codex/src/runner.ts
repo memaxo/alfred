@@ -13,12 +13,12 @@ export type CodexSandbox =
   | "workspace-write"
   | "danger-full-access";
 
-export type SubprocessLike = {
+export interface SubprocessLike {
   stdout: ReadableStream<Uint8Array> | null;
   stderr: ReadableStream<Uint8Array> | null;
   exited: Promise<number>;
   kill: (signal?: number | string) => void;
-};
+}
 
 export type SpawnFn = (options: {
   cmd: string;
@@ -26,7 +26,7 @@ export type SpawnFn = (options: {
   env: Record<string, string>;
 }) => SubprocessLike;
 
-export type RunStreamedArgs = {
+export interface RunStreamedArgs {
   cmd: string;
   prompt: string;
   env: Record<string, string>;
@@ -39,12 +39,12 @@ export type RunStreamedArgs = {
   resumeThreadId?: string;
   signal?: AbortSignal;
   onStderr?: (text: string) => Promise<void> | void;
-};
+}
 
-type TempFile = {
+interface TempFile {
   path: string;
   cleanup: () => Promise<void>;
-};
+}
 
 async function writeTempSchema(schema: CodexOutputSchema): Promise<TempFile> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "alfred-codex-"));
@@ -79,7 +79,7 @@ async function* readLines(
 
       while (true) {
         const idx = buffer.indexOf("\n");
-        if (idx < 0) {
+        if (idx === -1) {
           break;
         }
         const line = buffer.slice(0, idx);
@@ -202,9 +202,9 @@ export async function* runStreamed(
     const stderrPromise =
       proc.stderr && onStderr
         ? drainText(proc.stderr, onStderr)
-        : proc.stderr
+        : (proc.stderr
           ? drainText(proc.stderr, async () => {})
-          : Promise.resolve();
+          : Promise.resolve());
 
     if (!proc.stdout) {
       throw new Error("codex_missing_stdout");

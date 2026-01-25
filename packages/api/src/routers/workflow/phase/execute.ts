@@ -10,10 +10,12 @@ import { ConciergeObserver } from "../../../services/concierge";
 import { upsertWorkflowPatternFromCompletion } from "../../../services/pattern";
 import { authedProcedure, rateLimit } from "../../../trpc";
 import { toTRPCError } from "../../../utils/error";
+import { getSessionId, getSessionUser } from "../../../utils/session";
 import {
   getTestCheckpointStorage,
   WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
+import { attachHooksObserver } from "../../../workflow/hooks";
 import { linearInputSchema } from "../../../workflow/input";
 import { mapWorkflowRunResourceLocal } from "../../../workflow/resource";
 import { expandWaveIds } from "../../../workflow/wave";
@@ -28,8 +30,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
   )
   .input(executePhaseInputSchema)
   .mutation(async ({ input, ctx }) => {
-    const { session } = ctx;
-    if (!session?.user?.id) {
+    const sessionId = getSessionId(ctx);
+    const user = getSessionUser(ctx.session);
+    if (!sessionId || !user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "session_required",
@@ -91,6 +94,13 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       });
       registerDefaultStages(runner);
 
+      await attachHooksObserver(runner, {
+        runId: input.runId,
+        sessionId,
+        signal: new AbortController().signal,
+        workspace: input.workspace ?? process.cwd(),
+      });
+
       runner.addObserver(new MetricsObserver());
       runner.addObserver(new CostCleanupObserver());
       runner.addObserver(new CheckpointObserver(storage));
@@ -103,13 +113,7 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       runner.addObserver(
         new ConciergeObserver({
           runId: input.runId,
-          userId: session.user.id,
-        })
-      );
-      runner.addObserver(
-        new ConciergeObserver({
-          runId: input.runId,
-          userId: session.user.id,
+          userId: user.id,
         })
       );
 
@@ -137,7 +141,7 @@ export const workflowPhaseExecuteProcedure = authedProcedure
           : undefined,
         requirement: snapshot.requirement,
         runId: input.runId,
-        userId: input.userId ?? session.user.id,
+        userId: input.userId ?? user.id,
         workspace: input.workspace,
       };
 
@@ -224,7 +228,7 @@ export const workflowPhaseExecuteProcedure = authedProcedure
                   evaluationCriteria,
                 },
                 projectId: initOutput?.projectId ?? null,
-                userId: session.user.id,
+                userId: user.id,
               });
             }
           }
@@ -245,9 +249,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
           status:
             status === "completed"
               ? "completed"
-              : status === "suspended"
+              : (status === "suspended"
                 ? "suspended"
-                : "failed",
+                : "failed"),
           suspendedAt: status === "suspended" ? new Date() : null,
         });
       } catch {
@@ -298,8 +302,8 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const { session } = ctx;
-    if (!session?.user?.id) {
+    const user = getSessionUser(ctx.session);
+    if (!getSessionId(ctx) || !user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "session_required",
@@ -444,7 +448,7 @@ export const workflowPhaseExecuteByRunIdProcedure = authedProcedure
         );
       }
 
-      const userId = ctxDecoded.get<string>("userId") ?? session.user.id;
+      const userId = ctxDecoded.get<string>("userId") ?? user.id;
 
       const pipelineInput = {
         authz: input.authz,

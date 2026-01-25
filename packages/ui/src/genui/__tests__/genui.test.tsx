@@ -310,7 +310,7 @@ describe("genui/schema edge cases", () => {
   });
 
   test("validateUIComponent handles undefined input gracefully", () => {
-    const result = validateUIComponent(undefined);
+    const result = validateUIComponent();
     expect(result.valid).toBe(false);
   });
 
@@ -693,7 +693,7 @@ describe("genui/streaming", () => {
   });
 
   test("isPartialSchemaRenderable returns false for undefined", () => {
-    expect(isPartialSchemaRenderable(undefined)).toBe(false);
+    expect(isPartialSchemaRenderable()).toBe(false);
   });
 
   test("isPartialSchemaRenderable returns false for empty object", () => {

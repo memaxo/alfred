@@ -17,7 +17,7 @@ function extractTitle(properties: unknown, label: string): string {
   if (!isPropertiesObject(properties)) {
     return label;
   }
-  const title = properties.title;
+  const { title } = properties;
   return typeof title === "string" && title.length > 0 ? title : label;
 }
 

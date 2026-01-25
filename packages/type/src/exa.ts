@@ -34,7 +34,7 @@ export type ExaLivecrawl = "never" | "fallback" | "always" | "preferred";
 /**
  * Exa subpage result (nested result without further nesting)
  */
-export type ExaSubpage = {
+export interface ExaSubpage {
   id?: string;
   url: string;
   title?: string;
@@ -44,13 +44,13 @@ export type ExaSubpage = {
   summary?: string;
   highlights?: string[];
   highlightScores?: number[];
-};
+}
 
 /**
  * Exa search result item
  * Matches the structure returned by POST /search
  */
-export type ExaSearchResult = {
+export interface ExaSearchResult {
   id?: string;
   url: string;
   title?: string;
@@ -70,12 +70,12 @@ export type ExaSearchResult = {
     links?: string[];
     imageLinks?: string[];
   };
-};
+}
 
 /**
  * Exa cost breakdown for billing tracking
  */
-export type ExaCost = {
+export interface ExaCost {
   total: number;
   search?: number;
   contents?: number;
@@ -86,53 +86,53 @@ export type ExaCost = {
     contentHighlight?: number;
     contentSummary?: number;
   };
-};
+}
 
 /**
  * Exa search response envelope
  * Top-level response from POST /search
  */
-export type ExaSearchResponse = {
+export interface ExaSearchResponse {
   requestId: string;
   results: ExaSearchResult[];
   searchType?: ExaSearchType;
   context?: string; // LLM-optimized combined content string
   costDollars?: ExaCost;
-};
+}
 
 /**
  * Exa contents response envelope
  * Top-level response from POST /contents
  */
-export type ExaContentsResponse = {
+export interface ExaContentsResponse {
   requestId?: string;
-  contents?: Array<{
+  contents?: {
     url: string;
     text?: string;
     summary?: string;
     status?: number;
     contentType?: string;
-  }>;
+  }[];
   costDollars?: ExaCost;
-};
+}
 
 /**
  * Exa research response envelope
  */
-export type ExaResearchResponse = {
+export interface ExaResearchResponse {
   researchId: string;
-};
+}
 
 /**
  * Exa research result envelope (after polling)
  */
-export type ExaResearchResult = {
+export interface ExaResearchResult {
   researchId: string;
   status: "completed" | "failed" | "processing";
   results?: ExaSearchResult[];
   data?: any; // Structured output from outputSchema
   costDollars?: ExaCost;
-};
+}
 
 // Zod Schemas for runtime validation
 

@@ -9,7 +9,7 @@ export async function detectClarification(
   ctx: OrchestratorContext
 ): Promise<ClarificationRequest | null> {
   // Check for explicit clarification metadata in agent result
-  const result = outcome.result;
+  const { result } = outcome;
   if (!result) {
     return null;
   }

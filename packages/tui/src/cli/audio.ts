@@ -3,10 +3,10 @@ import { unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-type Player = {
+interface Player {
   cmd: string;
   args: (filePath: string) => string[];
-};
+}
 
 function isAudioDisabled(): boolean {
   const raw = process.env.ALFRED_TUI_NO_AUDIO;

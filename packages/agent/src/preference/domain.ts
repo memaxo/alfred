@@ -69,7 +69,7 @@ function averageVectors(vectors: number[][]): number[] | null {
 function getDomainCentroids(): Promise<DomainCentroids> {
   if (!centroidPromise) {
     centroidPromise = (async () => {
-      const prototypes: Array<{ domain: DomainName; text: string }> = [];
+      const prototypes: { domain: DomainName; text: string }[] = [];
       for (const domain of EMBED_DOMAINS) {
         const samples = DOMAIN_PROTOTYPES[domain];
         for (const text of samples) {

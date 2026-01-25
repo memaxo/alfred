@@ -4,7 +4,7 @@ import path from "node:path";
 const DEFAULT_CONTAINER_CW = "/workspace";
 
 function sanitizeId(value: string): string {
-  return value.replace(/[^a-zA-Z0-9]/g, "-");
+  return value.replaceAll(/[^a-zA-Z0-9]/g, "-");
 }
 
 async function resolveProjectId(args: {

@@ -40,17 +40,17 @@ export function ensureFfmpegAvailable(): void {
   }
 }
 
-export type DecodeRequest = {
+export interface DecodeRequest {
   audioBase64: string;
   mimeType: string;
-};
+}
 
-export type DecodeResult = {
+export interface DecodeResult {
   audioBase64: string;
   mimeType: typeof PCM_MIME_TYPE;
   sampleRate: number;
   channels: number;
-};
+}
 
 export async function decodeToPCM16({
   audioBase64,
@@ -72,7 +72,7 @@ export async function decodeToPCM16({
         sampleRate: 48_000, // Opus native
         channels: 1,
       };
-    } catch (_e) {
+    } catch {
       // Fallback to ffmpeg if native decode fails (e.g. framed in ogg/webm)
     }
   }
@@ -110,17 +110,17 @@ export async function decodeToPCM16({
   };
 }
 
-export type EncodeRequest = {
+export interface EncodeRequest {
   audioBase64: string;
   format: TargetFormat;
   bitrate?: string;
-};
+}
 
-export type EncodeResult = {
+export interface EncodeResult {
   audioBase64: string;
   mimeType: string;
   format: TargetFormat;
-};
+}
 
 export async function encodeFromPCM16({
   audioBase64,
@@ -144,7 +144,7 @@ export async function encodeFromPCM16({
       // So simple encoding requires 48k input.
       // If input is 16k, we must upsample.
       // Falling back to ffmpeg for safety in this iteration unless we add a resampler.
-    } catch (_e) {}
+    } catch {}
   }
 
   ensureFfmpegAvailable();
@@ -184,7 +184,7 @@ export async function encodeFromPCM16({
 
 function resolveFormatConfig(format: TargetFormat, bitrate?: string) {
   switch (format) {
-    case "mp3":
+    case "mp3": {
       return {
         container: "mp3",
         mimeType: "audio/mpeg",
@@ -195,7 +195,8 @@ function resolveFormatConfig(format: TargetFormat, bitrate?: string) {
           bitrate ?? DEFAULT_BITRATES.mp3,
         ],
       };
-    case "opus":
+    }
+    case "opus": {
       return {
         container: "ogg",
         mimeType: "audio/ogg;codecs=opus",
@@ -206,12 +207,14 @@ function resolveFormatConfig(format: TargetFormat, bitrate?: string) {
           bitrate ?? DEFAULT_BITRATES.opus,
         ],
       };
-    case "wav":
+    }
+    case "wav": {
       return {
         container: "wav",
         mimeType: "audio/wav",
         codecArgs: ["-codec:a", "pcm_s16le"],
       };
+    }
     default: {
       const exhaustive: never = format;
       throw new Error(`unsupported_format: ${exhaustive}`);
@@ -233,7 +236,7 @@ function runFfmpeg(args: string[], stdin?: Buffer): Buffer {
   });
 
   if (proc.exitCode !== 0) {
-    const stderr = bufFrom(proc.stderr ?? []).toString("utf-8");
+    const stderr = bufFrom(proc.stderr ?? []).toString("utf8");
     throw new Error(
       `ffmpeg_failed(exit=${proc.exitCode}): ${stderr || "no stderr"}`
     );
@@ -246,12 +249,12 @@ function bufFrom(
   value: ArrayBuffer | ArrayBufferView | string,
   encoding?: "base64"
 ): Buffer {
-  type BufferLike = {
+  interface BufferLike {
     from: (
       value: ArrayBuffer | ArrayBufferView | string,
       encoding?: "base64"
     ) => Buffer;
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (!B) {
     throw new Error("buffer_unavailable");
@@ -264,7 +267,7 @@ function bufFrom(
 function stripBase64Prefix(raw: string) {
   const trimmed = raw.trim();
   const commaIndex = trimmed.indexOf(",");
-  return commaIndex >= 0 ? trimmed.slice(commaIndex + 1) : trimmed;
+  return commaIndex !== -1 ? trimmed.slice(commaIndex + 1) : trimmed;
 }
 
 export function inferExtension(mimeType: string) {

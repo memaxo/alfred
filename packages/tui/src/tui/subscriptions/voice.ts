@@ -19,35 +19,35 @@ export type VoicePipelineStatus =
   | "processing"
   | "speaking";
 
-export type VoicePoolStats = {
+export interface VoicePoolStats {
   name: string;
   workers: number;
   maxWorkers: number;
   queueDepth: number;
   processing: number;
-};
+}
 
-export type VoiceLatencyStats = {
+export interface VoiceLatencyStats {
   sttP50: number;
   sttP99: number;
   ttsP50: number;
   ttsP99: number;
-};
+}
 
-export type VoiceState = {
+export interface VoiceState {
   status: VoicePipelineStatus;
   sttPool: VoicePoolStats;
   ttsPool: VoicePoolStats;
   latency: VoiceLatencyStats;
   activeSessions: number;
   timestamp: number;
-};
+}
 
-export type VoiceEvent = {
+export interface VoiceEvent {
   type: "status" | "session" | "metrics";
   state: Partial<VoiceState>;
   timestamp: number;
-};
+}
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
@@ -168,12 +168,12 @@ export class VoiceStore {
 
 // ─── Voice Subscription Setup ────────────────────────────────────────────────
 
-export type VoiceSubscriptionOptions = {
+export interface VoiceSubscriptionOptions {
   manager: SubscriptionManager;
   store: VoiceStore;
   pollingInterval?: number;
   mode?: DataMode;
-};
+}
 
 export function setupVoiceSubscription(
   options: VoiceSubscriptionOptions
@@ -201,7 +201,7 @@ export function setupVoiceSubscription(
         throw new Error("tui_voice_fetch_failed");
       }
 
-      const activeSessions = result.data.voice.activeSessions;
+      const { activeSessions } = result.data.voice;
       const status: VoicePipelineStatus =
         activeSessions > 0 ? "processing" : "standby";
       return {

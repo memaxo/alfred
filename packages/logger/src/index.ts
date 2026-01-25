@@ -14,22 +14,22 @@ import { createConsoleTransport, type LogTransport } from "./transport";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
-export type LogIds = {
+export interface LogIds {
   runId?: string;
   workflowId?: string;
   userId?: string;
   requestId?: string;
   traceId?: string;
-};
+}
 
 export type LogContext = LogIds & Record<string, unknown>;
 
-export type LoggerConfig = {
+export interface LoggerConfig {
   service: string;
   level: LogLevel;
   environment?: string;
   transport: LogTransport;
-};
+}
 
 const levelOrder: Record<LogLevel, number> = {
   debug: 10,
@@ -62,11 +62,11 @@ export function configure(newConfig: Partial<LoggerConfig>) {
   config = next;
 }
 
-type LogParams = {
+interface LogParams {
   level: LogLevel;
   message: string;
   context?: LogContext;
-};
+}
 
 function shouldLog(level: LogLevel): boolean {
   return levelOrder[level] >= levelOrder[config.level];
@@ -82,15 +82,15 @@ function colorFor(level: LogLevel): { open: string; close: string } {
   }
   // ANSI 256 colors: blue/info, yellow/warn, red/error, gray/debug.
   if (level === "info") {
-    return { open: "\u001b[38;5;39m", close: "\u001b[0m" };
+    return { open: "\u001B[38;5;39m", close: "\u001B[0m" };
   }
   if (level === "warn") {
-    return { open: "\u001b[38;5;214m", close: "\u001b[0m" };
+    return { open: "\u001B[38;5;214m", close: "\u001B[0m" };
   }
   if (level === "error") {
-    return { open: "\u001b[38;5;196m", close: "\u001b[0m" };
+    return { open: "\u001B[38;5;196m", close: "\u001B[0m" };
   }
-  return { open: "\u001b[38;5;244m", close: "\u001b[0m" };
+  return { open: "\u001B[38;5;244m", close: "\u001B[0m" };
 }
 
 function formatLine({ level, message, context }: LogParams): string {
@@ -127,14 +127,14 @@ function writeLog(params: LogParams): void {
   config.transport.write(line);
 }
 
-type Logger = {
+interface Logger {
   debug: (message: string, context?: LogContext) => void;
   info: (message: string, context?: LogContext) => void;
   warn: (message: string, context?: LogContext) => void;
   error: (message: string, context?: LogContext) => void;
   child: (context: LogContext) => Logger;
   configure: (newConfig: Partial<LoggerConfig>) => void;
-};
+}
 
 function mergeContext(
   base: LogContext,

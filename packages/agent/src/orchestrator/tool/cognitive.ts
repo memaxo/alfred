@@ -3,21 +3,23 @@
  * Exposes cognitive state query capabilities as an agent tool
  */
 
+import type {
+  AutonomyGradient,
+  CognitiveState,
+  Event,
+} from "@alfred/cognitive/state";
+
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import {
-  type AutonomyGradient,
-  type CognitiveState,
-  type Event,
-} from "@alfred/cognitive/state";
 import { idle, initialAutonomy } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { z } from "zod";
 
+import type { ToolExecuteArgs } from "./shared/context.js";
+
 import { withPolicyApproval, type AITool } from "./approval.js";
-import { type ToolExecuteArgs } from "./shared/context.js";
 
 // ============================================================================
 // Schemas

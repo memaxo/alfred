@@ -38,7 +38,7 @@ describe("cognitive performance budgets", () => {
   });
 
   it("updatePhysiology stays under 10µs", async () => {
-    let physiology = idle(Date.now()).physiology;
+    let { physiology } = idle(Date.now());
     const stats = await benchmarkOperation(
       "physiology-update",
       0.01, // 10µs budget

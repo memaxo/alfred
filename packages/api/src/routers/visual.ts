@@ -32,8 +32,8 @@ const VISUAL_PREFIX = "visual.";
  */
 function flattenConfig(
   config: VisualConfig
-): Array<{ key: string; value: unknown }> {
-  const pairs: Array<{ key: string; value: unknown }> = [];
+): { key: string; value: unknown }[] {
+  const pairs: { key: string; value: unknown }[] = [];
 
   // Preset
   pairs.push({ key: `${VISUAL_PREFIX}preset`, value: config.preset });
@@ -57,7 +57,7 @@ function flattenConfig(
  * Reconstruct visual config from preference entries
  */
 function unflattenPreferences(
-  preferences: Array<{ key: string; value: unknown }>
+  preferences: { key: string; value: unknown }[]
 ): Partial<VisualConfig> {
   const config: Record<string, unknown> = {};
 
@@ -105,7 +105,7 @@ export const visualRouter = router({
    * Returns stored preferences merged with defaults
    */
   getConfig: authedProcedure.query(async ({ ctx }): Promise<VisualConfig> => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -156,7 +156,7 @@ export const visualRouter = router({
   setConfig: authedProcedure
     .input(visualConfigSchema)
     .mutation(async ({ ctx, input }): Promise<{ updated: number }> => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -170,7 +170,7 @@ export const visualRouter = router({
       // Save all preferences
       await Promise.all(
         pairs.map(({ key, value }) =>
-          setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1, "user")
         )
       );
 
@@ -184,7 +184,7 @@ export const visualRouter = router({
   updateConfig: authedProcedure
     .input(visualConfigUpdateSchema)
     .mutation(async ({ ctx, input }): Promise<{ updated: number }> => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -193,7 +193,7 @@ export const visualRouter = router({
       }
 
       // Build flattened pairs from partial update
-      const pairs: Array<{ key: string; value: unknown }> = [];
+      const pairs: { key: string; value: unknown }[] = [];
 
       if (input.preset !== undefined) {
         pairs.push({ key: `${VISUAL_PREFIX}preset`, value: input.preset });
@@ -218,7 +218,7 @@ export const visualRouter = router({
       // Save updated preferences
       await Promise.all(
         pairs.map(({ key, value }) =>
-          setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1, "user")
         )
       );
 
@@ -232,7 +232,7 @@ export const visualRouter = router({
   setPreset: authedProcedure
     .input(z.object({ preset: visualPresetSchema }))
     .mutation(async ({ ctx, input }): Promise<{ preset: VisualPreset }> => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -249,7 +249,7 @@ export const visualRouter = router({
       const pairs = flattenConfig(config);
       await Promise.all(
         pairs.map(({ key, value }) =>
-          setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1, "user")
         )
       );
 
@@ -261,7 +261,7 @@ export const visualRouter = router({
    */
   resetToDefault: authedProcedure.mutation(
     async ({ ctx }): Promise<{ reset: boolean }> => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -294,7 +294,7 @@ export const visualRouter = router({
       config: VisualConfig;
       exportedAt: string;
     }> => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -345,7 +345,7 @@ export const visualRouter = router({
       })
     )
     .mutation(async ({ ctx, input }): Promise<{ imported: boolean }> => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -357,7 +357,7 @@ export const visualRouter = router({
       const pairs = flattenConfig(input.config);
       await Promise.all(
         pairs.map(({ key, value }) =>
-          setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1, "user")
         )
       );
 

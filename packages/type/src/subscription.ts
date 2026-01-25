@@ -11,18 +11,18 @@
 /**
  * Base subscription event with cursor for resumability.
  */
-export type SubscriptionEvent<T> = {
+export interface SubscriptionEvent<T> {
   type: "delta" | "snapshot";
   cursor: string;
   seq: number;
   timestamp: string;
   payload: T;
-};
+}
 
 /**
  * Edge resource for graph subscriptions.
  */
-export type EdgeResource = {
+export interface EdgeResource {
   id: string;
   fromId: string;
   toId: string;
@@ -31,7 +31,7 @@ export type EdgeResource = {
   weight?: number | null;
   resource: string;
   created: string;
-};
+}
 
 /**
  * Graph subscription event payloads.
@@ -58,12 +58,12 @@ export type WorkflowRunStatus =
 /**
  * Workflow step event (subset of full workflow event).
  */
-export type WorkflowStepEvent = {
+export interface WorkflowStepEvent {
   id: string;
   type: string;
   data?: unknown;
   timestamp: string;
-};
+}
 
 /**
  * Workflow subscription event payloads.
@@ -79,28 +79,28 @@ export type WorkflowSubscriptionEvent = SubscriptionEvent<WorkflowEventPayload>;
 /**
  * Multiplexed stream message envelope.
  */
-export type StreamEnvelope<T = unknown> = {
+export interface StreamEnvelope<T = unknown> {
   type: "event";
   streamId: string;
   event: SubscriptionEvent<T>;
-};
+}
 
 /**
  * Client subscription request.
  */
-export type SubscribeRequest = {
+export interface SubscribeRequest {
   type: "subscribe";
   streamId: string;
   cursor?: string;
-};
+}
 
 /**
  * Client unsubscribe request.
  */
-export type UnsubscribeRequest = {
+export interface UnsubscribeRequest {
   type: "unsubscribe";
   streamId: string;
-};
+}
 
 /**
  * WebSocket message types (client to server).
@@ -119,9 +119,9 @@ export type ServerMessage<T = unknown> =
 /**
  * Subscription state for client-side tracking.
  */
-export type SubscriptionState = {
+export interface SubscriptionState {
   streamId: string;
   cursor: string | null;
   status: "connecting" | "connected" | "disconnected" | "error";
   lastEventAt: number | null;
-};
+}

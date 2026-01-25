@@ -17,25 +17,25 @@ import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import { CodexError } from "./error.js";
 import { resolveExecutable } from "./policy.js";
 
-type AllowedDirectoryHandle = {
+interface AllowedDirectoryHandle {
   path: string;
   fd: number;
   close: () => void;
-};
+}
 
-type SpawnInput = {
+interface SpawnInput {
   containerName?: string;
   containerCw?: string;
   /** AgentFS database path for audit trail (optional) */
   agentfsDbPath?: string;
-};
+}
 
-type SpawnResult = {
+interface SpawnResult {
   stdout: ReadableStream<Uint8Array> | null;
   stderr: ReadableStream<Uint8Array> | null;
   exited: Promise<number>;
   kill: (signal?: number | string) => void;
-};
+}
 
 function wrapProcess(proc: ReturnType<typeof spawnWithSecureCwd>): SpawnResult {
   return {

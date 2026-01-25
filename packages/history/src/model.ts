@@ -13,10 +13,10 @@
 
 import { getModelSpec, MODEL_REGISTRY, resolveModelId } from "./registry";
 
-export type ModelContextInfo = {
+export interface ModelContextInfo {
   maxContextTokens: number;
   defaultHistoryRatio?: number;
-};
+}
 
 const DEFAULT_MAX_CONTEXT_TOKENS = 128_000;
 const DEFAULT_HISTORY_RATIO = 0.55; // Updated from research
@@ -85,7 +85,7 @@ function loadEnvOverrides(): Record<string, ModelContextInfo> {
     }
     envOverridesCache = overrides;
     return envOverridesCache;
-  } catch (_error) {
+  } catch {
     envOverridesCache = {};
     return envOverridesCache;
   }

@@ -48,7 +48,7 @@ export const privacyRouter = router({
       )
     )
     .mutation(async ({ ctx }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -70,7 +70,7 @@ export const privacyRouter = router({
   facts: authedProcedure
     .input(privacyFactQuerySchema.optional())
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -116,7 +116,7 @@ export const privacyRouter = router({
     )
     .input(privacyFactDeleteSchema)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -137,7 +137,7 @@ export const privacyRouter = router({
   events: authedProcedure
     .input(privacyEventsQuerySchema.optional())
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",

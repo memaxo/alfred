@@ -5,8 +5,6 @@
  * @see .ruler/55-llm-first-classification.md
  */
 
-import type { z } from "zod";
-
 import { logger } from "@alfred/logger";
 import {
   classificationBatchSize,
@@ -15,7 +13,12 @@ import {
   classificationLatencySeconds,
   classificationTotal,
 } from "@alfred/metrics/classification";
-import { generateObject, type LanguageModel } from "ai";
+import {
+  generateObject,
+  type FlexibleSchema,
+  type InferSchema,
+  type LanguageModel,
+} from "ai";
 
 /**
  * Whether to use offline heuristic fallbacks instead of LLM classification.
@@ -26,9 +29,9 @@ export const OFFLINE_MODE = process.env.ALFRED_CLASSIFY_OFFLINE === "1";
 /**
  * Classification options
  */
-export type ClassifyOptions<T extends z.ZodType> = {
+export interface ClassifyOptions<T extends FlexibleSchema<unknown>> {
   /** Fallback function to use when OFFLINE_MODE is enabled or LLM call fails */
-  fallback?: () => z.infer<T>;
+  fallback?: () => InferSchema<T>;
   /** Override the default classification model */
   model?: LanguageModel;
   /** Model identifier for logging (since LanguageModel doesn't expose modelId) */
@@ -37,7 +40,7 @@ export type ClassifyOptions<T extends z.ZodType> = {
   metricType?: ClassificationMetricType;
   /** Maximum retries on failure before using fallback */
   maxRetries?: number;
-};
+}
 
 export type ClassificationMetricType =
   | "intent"
@@ -50,12 +53,12 @@ export type ClassificationMetricType =
 /**
  * Classification result with metadata
  */
-export type ClassifyResult<T> = {
+export interface ClassifyResult<T> {
   result: T;
   source: "llm" | "fallback";
   latencyMs: number;
   model?: string;
-};
+}
 
 /**
  * Classify input using LLM with structured output.
@@ -74,21 +77,21 @@ export type ClassifyResult<T> = {
  * );
  * ```
  */
-export async function classify<T extends z.ZodType>(
+export async function classify<T extends FlexibleSchema<unknown>>(
   schema: T,
   prompt: string,
   options: ClassifyOptions<T> & { model: LanguageModel }
-): Promise<ClassifyResult<z.infer<T>>>;
-export async function classify<T extends z.ZodType>(
+): Promise<ClassifyResult<InferSchema<T>>>;
+export async function classify<T extends FlexibleSchema<unknown>>(
   schema: T,
   prompt: string,
   options?: ClassifyOptions<T>
-): Promise<ClassifyResult<z.infer<T>>>;
-export async function classify<T extends z.ZodType>(
+): Promise<ClassifyResult<InferSchema<T>>>;
+export async function classify<T extends FlexibleSchema<unknown>>(
   schema: T,
   prompt: string,
   options: ClassifyOptions<T> = {}
-): Promise<ClassifyResult<z.infer<T>>> {
+): Promise<ClassifyResult<InferSchema<T>>> {
   const {
     fallback,
     model,
@@ -144,13 +147,13 @@ export async function classify<T extends z.ZodType>(
       classificationTotal.inc({ type: metricType, outcome: "success" });
 
       // Track confidence if present in result
-      const result = response.object as z.infer<T>;
+      const result = response.object as InferSchema<T>;
       if (
         typeof result === "object" &&
         result !== null &&
         "confidence" in result
       ) {
-        const confidence = (result as { confidence?: unknown }).confidence;
+        const { confidence } = result as { confidence?: unknown };
         if (typeof confidence === "number") {
           classificationConfidence.observe({ type: metricType }, confidence);
         }
@@ -218,12 +221,12 @@ export async function classify<T extends z.ZodType>(
  * );
  * ```
  */
-export async function classifyBatch<T extends z.ZodType>(
+export async function classifyBatch<T extends FlexibleSchema<unknown>>(
   schema: T,
   itemsDescription: string,
   systemPrompt: string,
   options: ClassifyOptions<T> & { model: LanguageModel }
-): Promise<ClassifyResult<z.infer<T>>> {
+): Promise<ClassifyResult<InferSchema<T>>> {
   const prompt = `${systemPrompt}\n\n${itemsDescription}`;
 
   // Track batch size if we can parse it from the items description

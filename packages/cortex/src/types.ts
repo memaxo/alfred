@@ -6,69 +6,69 @@
  */
 
 /** 2D vector for screen coordinates and UV */
-export type Vec2 = {
+export interface Vec2 {
   x: number;
   y: number;
-};
+}
 
 /** 3D vector for spatial coordinates with depth */
-export type Vec3 = {
+export interface Vec3 {
   x: number;
   y: number;
   z: number;
-};
+}
 
 /** 4D vector for homogeneous coordinates */
-export type Vec4 = {
+export interface Vec4 {
   x: number;
   y: number;
   z: number;
   w: number;
-};
+}
 
 /** RGBA color with values in [0, 1] */
-export type Color = {
+export interface Color {
   r: number;
   g: number;
   b: number;
   a: number;
-};
+}
 
 /** 4D point in unified coordinate system */
-export type Point4D = {
+export interface Point4D {
   x: number; // Screen X
   y: number; // Screen Y
   z: number; // Depth (0 = closest, 1 = farthest)
   t: number; // Time (epoch-relative)
   s: number[]; // Semantic embedding (N-dimensional)
-};
+}
 
 /** Camera state for viewport transforms */
-export type Camera = {
+export interface Camera {
   center: Vec2;
   zoom: number;
   depthFactor: number;
   semanticBasis: Float32Array; // 2xN matrix for semantic projection
-};
+}
 
 /** Viewport rectangle */
-export type Rect = {
+export interface Rect {
   x: number;
   y: number;
   width: number;
   height: number;
-};
+}
 
 /** Particle data for GPU buffer */
-export type Particle = {
+export interface Particle {
   position: Vec2;
   velocity: Vec2;
   life: number;
   size: number;
-};
+}
 
 /** Edge data for bezier rendering */
-export type EdgeData = {
+export interface EdgeData {
   id: string;
   p0: Vec2; // Start point
   p1: Vec2; // Control point 1
@@ -76,17 +76,17 @@ export type EdgeData = {
   p3: Vec2; // End point
   active: number; // 0 = dormant, 1 = active
   color: Color;
-};
+}
 
 /** Node data for SDF rendering */
-export type NodeData = {
+export interface NodeData {
   id: string;
   position: Vec2;
   radius: number;
   activity: number; // 0 = idle, 1 = focused
   color: Color;
   type: string;
-};
+}
 
 /** Orb state for corona rendering */
 export type OrbState =
@@ -97,7 +97,7 @@ export type OrbState =
   | "processing";
 
 /** Orb configuration */
-export type OrbConfig = {
+export interface OrbConfig {
   center: Vec2;
   innerRadius: number;
   outerRadius: number;
@@ -105,34 +105,34 @@ export type OrbConfig = {
   fiberCount: number;
   segmentsPerFiber: number;
   rotationSpeed: number;
-};
+}
 
 /** LOD level configuration */
-export type LODLevel = {
+export interface LODLevel {
   particles: number;
   fibers: number;
   edgeParticles: number;
-};
+}
 
 /** Render system interface */
-export type RenderSystem = {
+export interface RenderSystem {
   name: string;
   init(device: GPUDevice): Promise<void>;
   update(dt: number, uniforms: Float32Array): void;
   render(encoder: GPUCommandEncoder, target: GPUTextureView): void;
   destroy(): void;
-};
+}
 
 /** Frame graph node for render pass ordering */
-export type FrameGraphNode = {
+export interface FrameGraphNode {
   name: string;
   inputs: string[];
   outputs: string[];
   execute: (encoder: GPUCommandEncoder) => void;
-};
+}
 
 /** Global uniforms passed to all shaders */
-export type GlobalUniforms = {
+export interface GlobalUniforms {
   time: number;
   deltaTime: number;
   resolution: Vec2;
@@ -142,11 +142,11 @@ export type GlobalUniforms = {
   audioLow: number;
   audioMid: number;
   zoom: number;
-};
+}
 
 /** Buffer pool entry for double buffering */
-export type PooledBuffer = {
+export interface PooledBuffer {
   buffer: GPUBuffer;
   size: number;
   lastUsed: number;
-};
+}

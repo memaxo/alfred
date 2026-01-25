@@ -19,7 +19,7 @@ export const workflowPhaseSaveAsTemplateProcedure = authedProcedure
     })
   )
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -75,7 +75,7 @@ export const workflowPhaseSaveAsTemplateProcedure = authedProcedure
 export const workflowPhaseListTemplatesProcedure = authedProcedure
   .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResourceLocal(raw)))
   .query(async ({ ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",

@@ -12,17 +12,17 @@ import { UniformBuffer } from "../buffer";
 import bloomShaderSource from "../shaders/bloom.wgsl?raw";
 
 /** Bloom configuration */
-export type BloomConfig = {
+export interface BloomConfig {
   threshold: number;
   intensity: number;
   blurRadius: number;
-};
+}
 
 /** Default bloom config */
 export const DEFAULT_BLOOM_CONFIG: BloomConfig = {
   threshold: 0.8,
   intensity: 0.5,
-  blurRadius: 2.0,
+  blurRadius: 2,
 };
 
 /**
@@ -65,8 +65,7 @@ export class PostProcessSystem implements RenderSystem {
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
-      if (message.type === "error") {
-      }
+      if (message.type === "error") {}
     }
 
     // Create uniform buffer

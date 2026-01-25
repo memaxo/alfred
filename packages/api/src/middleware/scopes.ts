@@ -13,7 +13,7 @@ import type { Context } from "../context";
 import { t } from "../trpc";
 import { getSessionUser, getSessionUserScopes } from "../utils/session";
 
-type ScopeEnforcementOptions = {
+interface ScopeEnforcementOptions {
   /**
    * The scope(s) required to access this procedure.
    * Can be a single scope string or an array for multiple required scopes.
@@ -30,7 +30,7 @@ type ScopeEnforcementOptions = {
    * Custom error message for forbidden access.
    */
   message?: string;
-};
+}
 
 /**
  * Middleware factory that enforces scope requirements on procedures.

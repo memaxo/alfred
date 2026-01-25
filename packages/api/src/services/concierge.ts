@@ -5,13 +5,13 @@ import { logger } from "@alfred/logger";
 import { upsertAttentionItem, upsertSuspendAttentionItem } from "./attention";
 import { ensureRunDeltaBrief } from "./delta";
 
-type ConciergeObserverOptions = {
+interface ConciergeObserverOptions {
   userId: string;
   runId: string;
   focusSetId?: string | null;
   commitmentId?: string | null;
   fire?: (p: Promise<unknown>, meta: Record<string, unknown>) => void;
-};
+}
 
 function defaultFireAndForget(
   p: Promise<unknown>,

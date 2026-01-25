@@ -18,20 +18,20 @@ function getPolicyPath(raw: unknown): string {
   return typeof maybePath === "string" ? maybePath : "unknown";
 }
 
-export type TreeNode = {
+export interface TreeNode {
   name: string;
   path: string;
   type: "file" | "folder";
   children?: TreeNode[];
-};
+}
 
-export type FileEntry = {
+export interface FileEntry {
   name: string;
   path: string;
   type: "file" | "folder";
   size?: number;
   modified?: string;
-};
+}
 
 export const fsRouter = router({
   read: authedProcedure

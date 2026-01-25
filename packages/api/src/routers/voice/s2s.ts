@@ -27,7 +27,7 @@ export const voiceSpeechToSpeechProcedure = authedProcedure
   .use(requirePolicy("voice.tts", toTtsResource))
   .input(s2sInput)
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session) {
       throw new TRPCError({
         code: "UNAUTHORIZED",

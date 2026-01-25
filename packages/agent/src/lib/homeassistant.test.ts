@@ -124,8 +124,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.getState("light.nonexistent");
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("notfound");
       }
     });
@@ -280,8 +280,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.controlEntity("invalid", "turn_on");
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("config");
         expect(haErr.message).toContain("Invalid entity ID");
       }
@@ -341,8 +341,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.getStates();
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("auth");
         expect(haErr.status).toBe(401);
       }
@@ -364,8 +364,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.getStates();
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("auth");
         expect(haErr.status).toBe(403);
       }
@@ -387,8 +387,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.getStates();
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("server");
         expect(haErr.status).toBe(500);
       }
@@ -412,8 +412,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.getStates();
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("timeout");
       }
     });
@@ -434,8 +434,8 @@ describe("HomeAssistant client", () => {
       try {
         await client.getStates();
         expect(false).toBe(true);
-      } catch (err) {
-        const haErr = err as HomeAssistantError;
+      } catch (error) {
+        const haErr = error as HomeAssistantError;
         expect(haErr.kind).toBe("network");
       }
     });

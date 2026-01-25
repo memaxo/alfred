@@ -32,13 +32,15 @@ function generateEvents(count: number): PipelineEvent[] {
     const stage = STAGE_ORDER[stageIndex]!;
 
     switch (eventType) {
-      case 0:
+      case 0: {
         events.push(createEvent("stage:enter", { stage }));
         break;
-      case 1:
+      }
+      case 1: {
         events.push(createEvent("stage:exit", { stage, durationMs: 100 + i }));
         break;
-      case 2:
+      }
+      case 2: {
         events.push(
           createEvent("stage:progress", {
             stage,
@@ -46,7 +48,8 @@ function generateEvents(count: number): PipelineEvent[] {
           })
         );
         break;
-      case 3:
+      }
+      case 3: {
         events.push({
           type: "context:set",
           key: `key-${i}`,
@@ -54,7 +57,8 @@ function generateEvents(count: number): PipelineEvent[] {
           timestamp: Date.now(),
         });
         break;
-      case 4:
+      }
+      case 4: {
         events.push(
           createEvent("agent:spawn", {
             agentId: `agent-${i}`,
@@ -62,6 +66,7 @@ function generateEvents(count: number): PipelineEvent[] {
           })
         );
         break;
+      }
     }
   }
 

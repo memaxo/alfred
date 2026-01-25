@@ -18,6 +18,8 @@ export { type ToolMemoryStats, toolMemoryStats } from "./stats";
 export { type ToolMemoryTraverse, toolMemoryTraverse } from "./traverse";
 export { type ToolMemoryUpdate, toolMemoryUpdate } from "./update";
 
+import type { ZodTypeAny } from "zod";
+
 import { toolMemoryBoost } from "./boost";
 import { toolMemoryHistory } from "./history";
 import { toolMemoryRemove } from "./remove";
@@ -28,10 +30,19 @@ import { toolMemoryStats } from "./stats";
 import { toolMemoryTraverse } from "./traverse";
 import { toolMemoryUpdate } from "./update";
 
+interface LegacyTool {
+  name: string;
+  description: string;
+  inputSchema: ZodTypeAny;
+  outputSchema?: ZodTypeAny;
+  // oxlint-disable noExplicitAny: legacy tool interface for registration
+  execute: (args: any) => any;
+}
+
 /**
  * All memory tools as an array for batch registration.
  */
-export const memoryTools = [
+export const memoryTools: LegacyTool[] = [
   toolMemorySearch,
   toolMemoryRetrieve,
   toolMemoryUpdate,
@@ -40,12 +51,12 @@ export const memoryTools = [
   toolMemoryTraverse,
   toolMemoryHistory,
   toolMemoryStats,
-] as const;
+];
 
 /**
  * Memory tools as a record keyed by tool name.
  */
-export const memoryToolsByName = {
+export const memoryToolsByName: Record<string, LegacyTool> = {
   memory_search: toolMemorySearch,
   memory_retrieve: toolMemoryRetrieve,
   memory_update: toolMemoryUpdate,
@@ -54,6 +65,6 @@ export const memoryToolsByName = {
   memory_traverse: toolMemoryTraverse,
   memory_history: toolMemoryHistory,
   memory_stats: toolMemoryStats,
-} as const;
+};
 
 export type MemoryToolName = keyof typeof memoryToolsByName;

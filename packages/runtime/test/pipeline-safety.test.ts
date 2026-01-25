@@ -45,8 +45,8 @@ describe("PhaseRunner", () => {
         }
       }
       throw new Error("Should have thrown");
-    } catch (e: any) {
-      expect(e.message).toContain("exceeded maximum transitions");
+    } catch (error: any) {
+      expect(error.message).toContain("exceeded maximum transitions");
     }
   });
 });

@@ -16,10 +16,10 @@ import { classifyBatch, OFFLINE_MODE } from "../classify/index.js";
 /**
  * Phase group result
  */
-export type PhaseGroup = {
+export interface PhaseGroup {
   name: string;
   subtasks: SubTask[];
-};
+}
 
 /**
  * Phase identifiers for grouping
@@ -55,14 +55,14 @@ const phaseAssignmentSchema = z.object({
 /**
  * Options for phase grouping
  */
-export type GroupIntoPhasesOptions = {
+export interface GroupIntoPhasesOptions {
   maxPhases: number;
   preferParallel: boolean;
   /** Model to use for classification (required unless ALFRED_CLASSIFY_OFFLINE=1) */
   model?: LanguageModel;
   /** Model key for logging */
   modelKey?: string;
-};
+}
 
 /**
  * Heuristic fallback for phase assignment.

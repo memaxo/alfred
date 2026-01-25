@@ -6,9 +6,9 @@ const F_SETFD = 2;
 const FD_CLOEXEC = 1;
 const F_GETPATH = 50;
 
-type LibcSymbols = {
+interface LibcSymbols {
   fcntl: (fd: number, cmd: number, value: bigint) => number;
-};
+}
 
 let cachedLibc: { symbols: LibcSymbols } | null = null;
 
@@ -21,9 +21,9 @@ function getLibc(): LibcSymbols | null {
     const libcPath =
       process.platform === "darwin"
         ? "libSystem.B.dylib"
-        : process.platform === "linux"
+        : (process.platform === "linux"
           ? "libc.so.6"
-          : null;
+          : null);
 
     if (!libcPath) {
       return null;
@@ -44,7 +44,7 @@ export function ensureFdInheritable(fd: number) {
   if (!libc) {
     return;
   }
-  const current = libc.fcntl(fd, F_GETFD, BigInt(0));
+  const current = libc.fcntl(fd, F_GETFD, 0n);
   if (current < 0) {
     return;
   }
@@ -55,12 +55,15 @@ export function ensureFdInheritable(fd: number) {
 
 export function directoryFdPath(fd: number): string | null {
   switch (process.platform) {
-    case "linux":
+    case "linux": {
       return `/proc/self/fd/${fd}`;
-    case "darwin":
+    }
+    case "darwin": {
       return `/dev/fd/${fd}`;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -84,7 +87,11 @@ export function pathFromFd(fd: number): string | null {
       return null;
     }
     const terminator = buffer.indexOf(0);
-    return buffer.toString("utf8", 0, terminator >= 0 ? terminator : undefined);
+    return buffer.toString(
+      "utf8",
+      0,
+      terminator !== -1 ? terminator : undefined
+    );
   }
 
   return null;

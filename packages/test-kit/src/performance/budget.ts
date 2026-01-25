@@ -53,12 +53,12 @@ export type BudgetCategory = keyof typeof BUDGET_DEFAULTS;
 /**
  * Result of a budget-tracked operation
  */
-export type BudgetResult<T> = {
+export interface BudgetResult<T> {
   result: T;
   durationMs: number;
   withinBudget: boolean;
   budgetMs: number;
-};
+}
 
 /**
  * Assertion error for budget violations
@@ -104,8 +104,7 @@ export async function withBudget<T>(
   const durationMs = performance.now() - start;
   const withinBudget = durationMs <= budgetMs;
 
-  if (!withinBudget) {
-  }
+  if (!withinBudget) {}
 
   return {
     result,

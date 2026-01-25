@@ -66,15 +66,18 @@ export class KalmProvider implements EmbeddingProvider {
     // KaLM only supports text - extract text content
     const texts = inputs.map((input) => {
       switch (input.type) {
-        case "text":
+        case "text": {
           return input.content;
-        case "image":
+        }
+        case "image": {
           throw new Error(
             "KaLM provider does not support image embeddings. Use Qwen provider instead."
           );
-        case "mixed":
+        }
+        case "mixed": {
           // For mixed inputs, only use the text portion
           return input.text;
+        }
         default: {
           const unknownInput = input as { type: string };
           throw new Error(`Unknown input type: ${unknownInput.type}`);

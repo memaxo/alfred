@@ -19,7 +19,7 @@ export type WorkflowStatus =
   | "failed"
   | "cancelled";
 
-export type Workflow = {
+export interface Workflow {
   id: string;
   name: string;
   status: WorkflowStatus;
@@ -28,16 +28,16 @@ export type Workflow = {
   completedAt?: number;
   error?: string;
   subtasks?: WorkflowSubtask[];
-};
+}
 
-export type WorkflowSubtask = {
+export interface WorkflowSubtask {
   id: string;
   name: string;
   status: WorkflowStatus;
   agentId?: string;
-};
+}
 
-export type WorkflowEvent = {
+export interface WorkflowEvent {
   type:
     | "started"
     | "progress"
@@ -47,7 +47,7 @@ export type WorkflowEvent = {
     | "cancelled";
   workflow: Workflow;
   timestamp: number;
-};
+}
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ export class WorkflowStore {
   > = new Set();
 
   getActive(): Workflow[] {
-    return Array.from(this.workflows.values()).filter(
+    return [...this.workflows.values()].filter(
       (w) =>
         w.status === "pending" ||
         w.status === "planning" ||
@@ -89,9 +89,7 @@ export class WorkflowStore {
   }
 
   getPending(): Workflow[] {
-    return Array.from(this.workflows.values()).filter(
-      (w) => w.status === "pending"
-    );
+    return [...this.workflows.values()].filter((w) => w.status === "pending");
   }
 
   getHistory(): Workflow[] {
@@ -99,7 +97,7 @@ export class WorkflowStore {
   }
 
   getAll(): Workflow[] {
-    return Array.from(this.workflows.values());
+    return [...this.workflows.values()];
   }
 
   get(id: string): Workflow | undefined {
@@ -112,19 +110,21 @@ export class WorkflowStore {
     switch (event.type) {
       case "started":
       case "progress":
-      case "subtask":
+      case "subtask": {
         this.workflows.set(workflow.id, workflow);
         break;
+      }
 
       case "completed":
       case "failed":
-      case "cancelled":
+      case "cancelled": {
         this.workflows.delete(workflow.id);
         this.history.unshift(workflow);
         if (this.history.length > this.maxHistory) {
           this.history = this.history.slice(0, this.maxHistory);
         }
         break;
+      }
     }
 
     this.notify(event);
@@ -160,11 +160,11 @@ export class WorkflowStore {
 
 // ─── Workflow Subscription Setup ─────────────────────────────────────────────
 
-export type WorkflowSubscriptionOptions = {
+export interface WorkflowSubscriptionOptions {
   manager: SubscriptionManager;
   store: WorkflowStore;
   mode?: DataMode;
-};
+}
 
 export function setupWorkflowSubscription(
   options: WorkflowSubscriptionOptions
@@ -267,7 +267,7 @@ export function createWorkflowStore(): WorkflowStore {
 
 // ─── Mock Workflows Factory ───────────────────────────────────────────────────
 
-export type MockWorkflow = {
+export interface MockWorkflow {
   runId: string;
   intent: string;
   status: "pending" | "executing" | "completed" | "failed";
@@ -279,7 +279,7 @@ export type MockWorkflow = {
   error?: string;
   queuedAt?: Date;
   duration?: number;
-};
+}
 
 export function createMockWorkflows(): MockWorkflow[] {
   return [

@@ -52,7 +52,7 @@ export type BudgetSegment = "system" | "user" | "assistant";
 /**
  * Budget usage by segment type.
  */
-export type BudgetUsage = {
+export interface BudgetUsage {
   system: number;
   user: number;
   assistant: number;
@@ -65,7 +65,7 @@ export type BudgetUsage = {
   maxBudget: number;
   usagePercentage: number;
   remaining: number;
-};
+}
 
 /**
  * Estimate token count from text content.
@@ -100,7 +100,7 @@ function extractMessageContent(message: UIMessage): string {
           }
           // Handle tool-result parts
           if ("toolCallId" in part && "output" in part) {
-            const output = (part as { output?: unknown }).output;
+            const { output } = part as { output?: unknown };
             return typeof output === "string" ? output : JSON.stringify(output);
           }
         }
@@ -141,15 +141,18 @@ export function computeBudgetUsage(
     const tokens = estimateTokens(content);
 
     switch (message.role) {
-      case "system":
+      case "system": {
         systemTokens += tokens;
         break;
-      case "user":
+      }
+      case "user": {
         userTokens += tokens;
         break;
-      case "assistant":
+      }
+      case "assistant": {
         assistantTokens += tokens;
         break;
+      }
     }
   }
 

@@ -22,7 +22,7 @@ describe("Usage Tracker", () => {
   describe("UsageTracker.record", () => {
     it("calculates cost correctly for standard models", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-1",
       });
@@ -31,7 +31,7 @@ describe("Usage Tracker", () => {
         inputTokens: 10_000,
         latencyMs: 500,
         modelId: "openai/gpt-4o",
-        outputTokens: 2_000,
+        outputTokens: 2000,
       });
 
       // GPT-4o: $2.5/M input, $10/M output
@@ -43,7 +43,7 @@ describe("Usage Tracker", () => {
 
     it("applies cached token discount", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "anthropic/claude-sonnet-4",
         sessionId: "test-2",
       });
@@ -52,15 +52,15 @@ describe("Usage Tracker", () => {
         inputTokens: 10_000,
         latencyMs: 500,
         modelId: "anthropic/claude-sonnet-4",
-        outputTokens: 2_000,
+        outputTokens: 2000,
       });
 
       const cached = tracker.record({
-        cachedTokens: 8_000,
+        cachedTokens: 8000,
         inputTokens: 10_000,
         latencyMs: 500,
         modelId: "anthropic/claude-sonnet-4",
-        outputTokens: 2_000,
+        outputTokens: 2000,
       });
 
       // Cached should be cheaper
@@ -69,17 +69,17 @@ describe("Usage Tracker", () => {
 
     it("handles reasoning tokens for o1/R1 models", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/o1",
         sessionId: "test-3",
       });
 
       const record = tracker.record({
-        inputTokens: 5_000,
+        inputTokens: 5000,
         latencyMs: 2000,
         modelId: "openai/o1",
-        outputTokens: 1_000,
-        reasoningTokens: 3_000,
+        outputTokens: 1000,
+        reasoningTokens: 3000,
       });
 
       // o1: $15/M input, $60/M output, $60/M reasoning
@@ -90,20 +90,20 @@ describe("Usage Tracker", () => {
 
     it("tracks multiple records per session", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-4",
       });
 
       tracker.record({
-        inputTokens: 5_000,
+        inputTokens: 5000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 1_000,
+        outputTokens: 1000,
       });
 
       tracker.record({
-        inputTokens: 3_000,
+        inputTokens: 3000,
         latencyMs: 200,
         modelId: "openai/gpt-4o",
         outputTokens: 500,
@@ -118,20 +118,20 @@ describe("Usage Tracker", () => {
 
     it("updates model breakdown correctly", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-5",
       });
 
       tracker.record({
-        inputTokens: 5_000,
+        inputTokens: 5000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 1_000,
+        outputTokens: 1000,
       });
 
       tracker.record({
-        inputTokens: 3_000,
+        inputTokens: 3000,
         latencyMs: 200,
         modelId: "anthropic/claude-sonnet-4",
         outputTokens: 500,
@@ -155,7 +155,7 @@ describe("Usage Tracker", () => {
   describe("getBudgetStatus", () => {
     it("returns healthy status initially", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-6",
       });
@@ -169,7 +169,7 @@ describe("Usage Tracker", () => {
 
     it("returns warning status at 75%", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 1.0,
+        budgetUsd: 1,
         modelId: "openai/gpt-4o",
         sessionId: "test-7",
       });
@@ -192,7 +192,7 @@ describe("Usage Tracker", () => {
 
     it("returns critical status at 90%", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 1.0,
+        budgetUsd: 1,
         modelId: "openai/gpt-4o",
         sessionId: "test-8",
       });
@@ -236,7 +236,7 @@ describe("Usage Tracker", () => {
 
     it("estimates turns remaining", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 1.0,
+        budgetUsd: 1,
         modelId: "openai/gpt-4o",
         sessionId: "test-10",
       });
@@ -245,7 +245,7 @@ describe("Usage Tracker", () => {
         inputTokens: 10_000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 2_000,
+        outputTokens: 2000,
       });
 
       const status = tracker.getBudgetStatus();
@@ -295,7 +295,7 @@ describe("Usage Tracker", () => {
 
     it("returns false when budget has room", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-13",
       });
@@ -303,7 +303,7 @@ describe("Usage Tracker", () => {
       const projectedCost = tracker.estimateCost({
         inputTokens: 10_000,
         modelId: "openai/gpt-4o",
-        outputTokens: 2_000,
+        outputTokens: 2000,
       });
 
       const wouldExceed = tracker.wouldExceedBudget(projectedCost);
@@ -314,23 +314,23 @@ describe("Usage Tracker", () => {
   describe("getSummary", () => {
     it("aggregates all usage correctly", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-14",
       });
 
       tracker.record({
-        cachedTokens: 2_000,
-        inputTokens: 5_000,
+        cachedTokens: 2000,
+        inputTokens: 5000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 1_000,
+        outputTokens: 1000,
         reasoningTokens: 0,
       });
 
       tracker.record({
-        cachedTokens: 1_000,
-        inputTokens: 3_000,
+        cachedTokens: 1000,
+        inputTokens: 3000,
         latencyMs: 200,
         modelId: "openai/gpt-4o",
         outputTokens: 500,
@@ -349,7 +349,7 @@ describe("Usage Tracker", () => {
 
     it("includes budget status in summary", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 1.0,
+        budgetUsd: 1,
         modelId: "openai/gpt-4o",
         sessionId: "test-15",
       });
@@ -364,16 +364,16 @@ describe("Usage Tracker", () => {
   describe("formatSummary", () => {
     it("formats summary as readable text", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "test-16",
       });
 
       tracker.record({
-        inputTokens: 5_000,
+        inputTokens: 5000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 1_000,
+        outputTokens: 1000,
       });
 
       const formatted = tracker.formatSummary();
@@ -388,7 +388,7 @@ describe("Usage Tracker", () => {
   describe("Tracker Registry", () => {
     it("getOrCreateTracker creates new tracker", () => {
       const tracker = getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "registry-test-1",
       });
@@ -399,13 +399,13 @@ describe("Usage Tracker", () => {
 
     it("getOrCreateTracker returns existing tracker", () => {
       const tracker1 = getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "registry-test-2",
       });
 
       const tracker2 = getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "registry-test-2",
       });
@@ -415,7 +415,7 @@ describe("Usage Tracker", () => {
 
     it("getTracker returns existing tracker", () => {
       getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "registry-test-3",
       });
@@ -432,7 +432,7 @@ describe("Usage Tracker", () => {
 
     it("removeTracker removes tracker", () => {
       getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "registry-test-4",
       });
@@ -444,13 +444,13 @@ describe("Usage Tracker", () => {
 
     it("getActiveSessions returns all active sessions", () => {
       getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "registry-test-5",
       });
 
       getOrCreateTracker({
-        budgetUsd: 5.0,
+        budgetUsd: 5,
         modelId: "anthropic/claude-sonnet-4",
         sessionId: "registry-test-6",
       });
@@ -464,26 +464,26 @@ describe("Usage Tracker", () => {
   describe("getAggregateStats", () => {
     it("aggregates stats across all sessions", () => {
       const tracker1 = getOrCreateTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "aggregate-test-1",
       });
 
       const tracker2 = getOrCreateTracker({
-        budgetUsd: 5.0,
+        budgetUsd: 5,
         modelId: "anthropic/claude-sonnet-4",
         sessionId: "aggregate-test-2",
       });
 
       tracker1.record({
-        inputTokens: 5_000,
+        inputTokens: 5000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 1_000,
+        outputTokens: 1000,
       });
 
       tracker2.record({
-        inputTokens: 3_000,
+        inputTokens: 3000,
         latencyMs: 200,
         modelId: "anthropic/claude-sonnet-4",
         outputTokens: 500,
@@ -506,17 +506,17 @@ describe("Usage Tracker", () => {
 
     it("tracks metrics on record", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "metrics-test-1",
         verbose: false,
       });
 
       tracker.record({
-        inputTokens: 5_000,
+        inputTokens: 5000,
         latencyMs: 300,
         modelId: "openai/gpt-4o",
-        outputTokens: 1_000,
+        outputTokens: 1000,
       });
 
       // Metrics should be updated (we can't easily test Prometheus internals,
@@ -529,7 +529,7 @@ describe("Usage Tracker", () => {
   describe("Edge Cases", () => {
     it("handles zero tokens gracefully", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "edge-test-1",
       });
@@ -546,7 +546,7 @@ describe("Usage Tracker", () => {
 
     it("handles very large token counts", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 100.0,
+        budgetUsd: 100,
         modelId: "google/gemini-2.5-pro",
         sessionId: "edge-test-2",
       });
@@ -564,23 +564,23 @@ describe("Usage Tracker", () => {
 
     it("handles multiple models in same session", () => {
       const tracker = new UsageTracker({
-        budgetUsd: 10.0,
+        budgetUsd: 10,
         modelId: "openai/gpt-4o",
         sessionId: "edge-test-3",
       });
 
       tracker.record({
-        inputTokens: 1_000,
+        inputTokens: 1000,
         latencyMs: 100,
         modelId: "openai/gpt-4o",
         outputTokens: 500,
       });
 
       tracker.record({
-        inputTokens: 2_000,
+        inputTokens: 2000,
         latencyMs: 200,
         modelId: "anthropic/claude-sonnet-4",
-        outputTokens: 1_000,
+        outputTokens: 1000,
       });
 
       const summary = tracker.getSummary();

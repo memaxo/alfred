@@ -23,17 +23,17 @@ const DEFAULT_STARTUP_BUFFER_MS = 9000;
 
 export type LinearRateLimitCategory = LinearActivityType | "session";
 
-type RateLimiterOptions = {
+interface RateLimiterOptions {
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   maxRequestsPerMinute?: number;
   actionCooldownMs?: number;
   startupBufferMs?: number;
-};
+}
 
-type ThrottleOptions = {
+interface ThrottleOptions {
   requireStartupBuffer?: boolean;
-};
+}
 
 export class LinearRateLimiter {
   private readonly nowFn: () => number;

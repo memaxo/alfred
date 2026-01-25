@@ -3,29 +3,29 @@ import { z } from "zod";
 import { db } from "./client";
 
 // Inline manifest types to avoid tsconfig rootDir issues
-type HealthStatus = {
+interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   latencyMs?: number;
   details?: Record<string, unknown>;
-};
+}
 
-type CommandDef = {
+interface CommandDef {
   name: string;
   description: string;
   args?: z.ZodType<unknown>;
   handler: (args: unknown) => Promise<void>;
   category?: string;
-};
+}
 
-type CliManifest = {
+interface CliManifest {
   name: string;
   version: string;
   description: string;
   commands?: CommandDef[];
   healthCheck?: () => Promise<HealthStatus>;
   dependencies?: string[];
-};
+}
 
 // Database management commands
 const migrateCommand = {

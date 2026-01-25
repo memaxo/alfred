@@ -18,7 +18,7 @@ const sessionRegistryPkg = "@alfred/api/voice/session-registry";
  * Must match VoiceSessionSnapshot from @alfred/api/voice/session-registry.
  * Note: consider extracting to @alfred/type if this becomes shared across packages.
  */
-type VoiceSessionSnapshot = {
+interface VoiceSessionSnapshot {
   id: string;
   userId: string;
   surface: string;
@@ -35,7 +35,7 @@ type VoiceSessionSnapshot = {
   lastTranscript?: string;
   lastAssistantText?: string;
   lastError?: string;
-};
+}
 
 // ============================================================================
 // voice_status Tool
@@ -247,25 +247,30 @@ async function executeVoiceControl(
   let newStatus: string | undefined;
 
   switch (input.action) {
-    case "pause":
+    case "pause": {
       newStatus = await handlePauseAction(input.sessionId, updateVoiceSession);
       break;
-    case "resume":
+    }
+    case "resume": {
       newStatus = await handleResumeAction(input.sessionId, updateVoiceSession);
       break;
-    case "interrupt":
+    }
+    case "interrupt": {
       newStatus = await handleInterruptAction(
         input.sessionId,
         updateVoiceSession
       );
       break;
-    case "stop":
+    }
+    case "stop": {
       newStatus = await handleStopAction(input.sessionId, updateVoiceSession);
       break;
-    default:
+    }
+    default: {
       throw new Error(
         `voice_control_invalid_action: unknown action "${input.action}"`
       );
+    }
   }
 
   return {

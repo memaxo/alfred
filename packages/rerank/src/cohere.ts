@@ -70,7 +70,7 @@ export async function cohereRerank({
     }
 
     const body = (await response.json()) as {
-      results?: Array<{ index: number; relevance_score: number }>;
+      results?: { index: number; relevance_score: number }[];
       error?: { message?: string };
     };
 

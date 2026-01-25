@@ -7,10 +7,10 @@ import {
   __internals as opencodeInternals,
 } from "./exec.js";
 
-type FakeFileSink = {
+interface FakeFileSink {
   write: (chunk: Uint8Array) => void;
   end: (reason?: Error) => Promise<void>;
-};
+}
 
 function makeReadable(text: string): ReadableStream<Uint8Array> {
   const bytes = new TextEncoder().encode(text);
@@ -153,9 +153,9 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
             sessionId: args.sessionId,
             path: "/tmp/should-not-read",
           });
-        } catch (err: any) {
+        } catch (error: any) {
           threw = true;
-          expect(String(err?.message ?? err)).toContain(
+          expect(String(error?.message ?? error)).toContain(
             "opencode_fs_path_disallowed"
           );
         }
@@ -275,7 +275,7 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
   });
 
   it("proxies ACP filesystem ops through docker exec when containerName is set", async () => {
-    const calls: Array<{ argv: string[]; stdin?: string }> = [];
+    const calls: { argv: string[]; stdin?: string }[] = [];
     const catOut = makeFakeProc({ stdoutText: "hi" });
     const teeIn = makeFakeProc({
       onStdinText: (text) => {

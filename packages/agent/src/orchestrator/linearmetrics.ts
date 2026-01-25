@@ -11,11 +11,11 @@ export {
 };
 
 // Keep these types for compatibility if needed, but they are less relevant now that we export directly
-export type LinearMetricsHooks = {
+export interface LinearMetricsHooks {
   linearActivityEmissionsTotal: typeof linearActivityEmissionsTotal;
   linearActivityDurationSeconds: typeof linearActivityDurationSeconds;
   linearSessionOperationsTotal: typeof linearSessionOperationsTotal;
-};
+}
 
 export function configureLinearMetrics(
   _partial: Partial<LinearMetricsHooks>

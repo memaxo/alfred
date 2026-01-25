@@ -85,7 +85,7 @@ describe("codex router", () => {
 
     const streamResult = await caller.codex.stream({ prompt: "stream task" });
     const observable = toObservable(streamResult);
-    const events: Array<{ type: string; message?: string }> = [];
+    const events: { type: string; message?: string }[] = [];
 
     await new Promise<void>((resolve) => {
       const subscription = observable.subscribe({
@@ -131,7 +131,7 @@ describe("codex router", () => {
       sessionId,
     });
     const observable = toObservable(streamResult);
-    const events: Array<{ type: string; message?: string }> = [];
+    const events: { type: string; message?: string }[] = [];
 
     await new Promise<void>((resolve) => {
       const subscription = observable.subscribe({

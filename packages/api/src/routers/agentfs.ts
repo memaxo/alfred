@@ -1,8 +1,9 @@
-import {
-  type AgentFSKVEntry,
-  type AgentFSInterface,
-  type AgentFSToolCall,
+import type {
+  AgentFSKVEntry,
+  AgentFSInterface,
+  AgentFSToolCall,
 } from "@alfred/agent/agentfs/types";
+
 import {
   type AgentFSChange,
   type AgentFSStreamCursor,
@@ -69,7 +70,7 @@ function coerceCheckpointCreatedAtSec(e: AgentFSKVEntry): number {
 
 function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
   const runId = sanitizeRunId(args.runId);
-  const normalized = args.dbPath.replaceAll(/\\/g, "/");
+  const normalized = args.dbPath.replaceAll("\\", "/");
   if (!normalized.startsWith(`.agentfs/${runId}/`)) {
     return false;
   }
@@ -80,7 +81,7 @@ function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
 }
 
 function validateAgentfsFilePath(filePath: string): string {
-  const normalized = filePath.replaceAll(/\\/g, "/");
+  const normalized = filePath.replaceAll("\\", "/");
 
   if (normalized.includes("\u0000")) {
     throw new TRPCError({
@@ -145,6 +146,20 @@ interface AgentfsFileClass {
   sensitivity: AgentfsFileSensitivity;
   source: "cache" | "path" | "content" | "unknown";
   at: number;
+}
+
+export interface WorkspaceListItem {
+  id: string;
+  runId: string;
+  dbPath: string;
+  agentType: string;
+  status: string;
+  createdAt: string;
+  operationCount: number;
+  checkpointCount: number;
+  pinned: boolean;
+  retentionDays: number | null;
+  projectId: string | null;
 }
 
 function classifyAgentfsFilePath(filePath: string): AgentfsFileSensitivity {
@@ -561,11 +576,11 @@ export const agentfsRouter = router({
           : changes;
 
         const { writeFile, unlink, mkdir } = await import("node:fs/promises");
-        const results: Array<{
+        const results: {
           path: string;
           status: "success" | "error";
           message?: string;
-        }> = [];
+        }[] = [];
 
         for (const change of filtered) {
           const hostPath = path.resolve(
@@ -645,7 +660,7 @@ export const agentfsRouter = router({
           projectId: input.projectId,
         });
 
-        const normalizedDbPath = input.dbPath.replace(/\\/g, "/");
+        const normalizedDbPath = input.dbPath.replaceAll("\\", "/");
         const absDbPath = path.resolve(process.cwd(), normalizedDbPath);
         const absRunDir = path.dirname(absDbPath);
         const base = path.posix.basename(normalizedDbPath);
@@ -707,8 +722,8 @@ export const agentfsRouter = router({
         }
 
         return {
-          checkpoints: Array.from(merged.values()).sort((a, b) =>
-            a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+          checkpoints: [...merged.values()].sort((a, b) =>
+            a.createdAt < b.createdAt ? 1 : (a.createdAt > b.createdAt ? -1 : 0)
           ),
         };
       } finally {
@@ -787,7 +802,7 @@ export const agentfsRouter = router({
         });
       }
 
-      const srcDbPath = input.dbPath.replace(/\\/g, "/");
+      const srcDbPath = input.dbPath.replaceAll("\\", "/");
       const srcAbsDbPath = path.resolve(process.cwd(), srcDbPath);
       const srcSnapshotAbs = `${srcAbsDbPath}.checkpoint-${checkpointId}`;
 
@@ -877,7 +892,7 @@ export const agentfsRouter = router({
         });
       }
 
-      const srcDbPath = input.source.dbPath.replace(/\\/g, "/");
+      const srcDbPath = input.source.dbPath.replaceAll("\\", "/");
       const srcAbsDbPath = path.resolve(process.cwd(), srcDbPath);
       const base = path.posix.basename(srcDbPath);
 
@@ -1833,7 +1848,7 @@ export const agentfsRouter = router({
     )
     .input(agentfsStreamInputSchema)
     .subscription(({ input, ctx }) => {
-      let dir = input.dir;
+      let { dir } = input;
       try {
         dir = validateAgentfsFilePath(input.dir);
       } catch (error) {
@@ -1974,11 +1989,10 @@ export const agentfsRouter = router({
             }));
 
             const diffRaw = await currentFsdb.diff().catch(() => []);
-            const changes = diffRaw
-              .slice()
-              .sort((a: AgentFSChange, b: AgentFSChange) =>
+            const changes = [...diffRaw].sort(
+              (a: AgentFSChange, b: AgentFSChange) =>
                 a.path.localeCompare(b.path)
-              );
+            );
             const diffSig = JSON.stringify(
               changes.map((c) => ({
                 path: c.path,
@@ -2029,7 +2043,7 @@ export const agentfsRouter = router({
             if (eventCount >= maxEvents) {
               finish("complete");
             }
-          } catch (_error) {
+          } catch {
             emit.next({
               type: "error",
               ts: Math.floor(Date.now() / 1000),
@@ -2162,20 +2176,6 @@ export const agentfsRouter = router({
           return { workspaces: [] };
         }
 
-        type WorkspaceListItem = {
-          id: string;
-          runId: string;
-          dbPath: string;
-          agentType: string;
-          status: string;
-          createdAt: string;
-          operationCount: number;
-          checkpointCount: number;
-          pinned: boolean;
-          retentionDays: number | null;
-          projectId: string | null;
-        };
-
         // List subdirectories (each is a run)
         const entries = readdirSync(agentfsDir, { withFileTypes: true });
         const workspaces: WorkspaceListItem[] = [];
@@ -2212,7 +2212,7 @@ export const agentfsRouter = router({
           try {
             const dbStats = statSync(path.join(runPath, "agentfs.db"));
             dbExists = dbStats.isFile();
-            mtime = dbStats.mtime;
+            ({ mtime } = dbStats);
           } catch {
             dbExists = false;
           }
@@ -2233,7 +2233,7 @@ export const agentfsRouter = router({
               if (!access.allow && access.reason === "run_not_owned") {
                 continue;
               }
-              projectId = access.projectId;
+              ({ projectId } = access);
             } else {
               const loaded = await loadAgentfs({ runId: e.name, dbPath });
               try {
@@ -2246,7 +2246,7 @@ export const agentfsRouter = router({
                 if (!access.allow && access.reason === "run_not_owned") {
                   continue;
                 }
-                projectId = access.projectId;
+                ({ projectId } = access);
               } finally {
                 await loaded.fsdb.close();
               }

@@ -49,10 +49,10 @@ describeDb("RuntimeKnowledgeBridge sqlite integration", () => {
       import("@alfred/db/schema/graph") as Promise<GraphSchemaModule>,
     ]);
 
-    RuntimeKnowledgeBridge = bridgeMod.RuntimeKnowledgeBridge;
-    db = dbMod.db;
-    isSqliteDriver = dbMod.isSqliteDriver;
-    memoryNodes = graphMod.memoryNodes;
+    ({ RuntimeKnowledgeBridge } = bridgeMod);
+    ({ db } = dbMod);
+    ({ isSqliteDriver } = dbMod);
+    ({ memoryNodes } = graphMod);
   });
 
   it("persists fact nodes into memory_nodes for runtime: resources", async () => {

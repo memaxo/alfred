@@ -6,12 +6,12 @@ import {
   multiAgentWavesTotal,
 } from "./metrics";
 
-type AgentData = {
+interface AgentData {
   role?: string;
   status?: string;
   stuck?: boolean;
   durationSeconds?: number;
-};
+}
 
 export function recordMultiAgentEvent(event: unknown): void {
   const evt = coerceRecord(event);
@@ -73,7 +73,7 @@ export function recordMultiAgentEvent(event: unknown): void {
     const role = coerceNonEmptyString(data.role) ?? "worker";
     const rawStatus = coerceNonEmptyString(data.status);
     const outcome: "ok" | "error" | "stuck" =
-      rawStatus === "stuck" ? "stuck" : rawStatus === "failed" ? "error" : "ok";
+      rawStatus === "stuck" ? "stuck" : (rawStatus === "failed" ? "error" : "ok");
 
     const dur = data.durationSeconds;
     if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
@@ -94,9 +94,9 @@ function recordAgentOutcome(agent: AgentData): void {
   const outcome: "ok" | "error" | "stuck" =
     rawStatus === "stuck" || agent.stuck
       ? "stuck"
-      : rawStatus === "failed"
+      : (rawStatus === "failed"
         ? "error"
-        : "ok";
+        : "ok");
 
   const dur = agent.durationSeconds;
   if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
@@ -110,15 +110,20 @@ function recordAgentOutcome(agent: AgentData): void {
 
 function mapKindToErrorMetric(kind: string): string {
   switch (kind) {
-    case "merge-agent-result":
+    case "merge-agent-result": {
       return "merge_failed";
-    case "review-agent-result":
+    }
+    case "review-agent-result": {
       return "review_failed";
-    case "conflict-agent-result":
+    }
+    case "conflict-agent-result": {
       return "merge_conflict_analysis_failed";
-    case "conflict-resolution-result":
+    }
+    case "conflict-resolution-result": {
       return "merge_conflict_resolution_failed";
-    default:
+    }
+    default: {
       return "review_exec_failed";
+    }
   }
 }

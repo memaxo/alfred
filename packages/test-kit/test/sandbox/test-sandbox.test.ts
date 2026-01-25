@@ -41,7 +41,7 @@ describe("Test Sandbox Utilities", () => {
 
     it("cleanup removes directory", () => {
       sandbox = createTestSandbox("test-cleanup-");
-      const dir = sandbox.dir;
+      const { dir } = sandbox;
       expect(existsSync(dir)).toBe(true);
       sandbox.cleanup();
       expect(existsSync(dir)).toBe(false);
@@ -124,8 +124,8 @@ describe("Test Sandbox Utilities", () => {
 
     it("cleanup removes both directories", () => {
       const fixture = createWorkspaceFixture("test-fixture-cleanup-");
-      const workspace = fixture.workspace;
-      const outside = fixture.outside;
+      const { workspace } = fixture;
+      const { outside } = fixture;
 
       fixture.cleanup();
 

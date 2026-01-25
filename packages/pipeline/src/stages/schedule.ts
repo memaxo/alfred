@@ -1,8 +1,9 @@
 import { logger } from "@alfred/logger";
 
+import type { PipelineContext, PipelineStage } from "../pipeline";
+import type { PlanOutput, ScheduleOutput } from "./types";
+
 import { createEvent } from "../events";
-import { type PipelineContext, type PipelineStage } from "../pipeline";
-import { type PlanOutput, type ScheduleOutput } from "./types";
 
 export class ScheduleStage implements PipelineStage<
   PlanOutput,

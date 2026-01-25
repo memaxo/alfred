@@ -10,12 +10,12 @@ import { detectDomain } from "./domain";
 import { loadPreferencesWithDefaults } from "./loader";
 import { sanitizePreferences } from "./sanitize";
 
-export type DomainContext = {
+export interface DomainContext {
   projectId?: string;
   domain?: DomainName | null;
   toolNames?: string[];
   conversationType?: "workflow" | "chat" | "assistant";
-};
+}
 
 const RESPONSE_VERBOSITY_KEY = "response.verbosity";
 const RESPONSE_TONE_KEY = "response.tone";
@@ -85,7 +85,7 @@ function shouldApplyPreferences(userId: string): boolean {
 function hashUserId(userId: string): number {
   let hash = 0;
   for (let i = 0; i < userId.length; i += 1) {
-    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+    hash = (hash * 31 + (userId.codePointAt(i) ?? 0)) >>> 0;
   }
   return hash;
 }
@@ -159,7 +159,7 @@ function buildDomainSection(
   preferences: Map<PreferenceKey, PreferenceDetail>
 ): string[] {
   const lines: string[] = [];
-  const domainEntries = Array.from(preferences.entries()).filter(([key]) =>
+  const domainEntries = [...preferences.entries()].filter(([key]) =>
     key.startsWith(`domain.${domain}.`)
   );
 
@@ -181,59 +181,78 @@ function buildDomainSection(
 
 function explainVerbosity(value: string): string {
   switch (value) {
-    case "minimal":
+    case "minimal": {
       return "Be extremely concise. Use the fewest words possible.";
-    case "concise":
+    }
+    case "concise": {
       return "Be brief and to the point.";
-    case "detailed":
+    }
+    case "detailed": {
       return "Provide thorough explanations with context.";
-    case "verbose":
+    }
+    case "verbose": {
       return "Provide comprehensive explanations with extensive detail.";
-    default:
+    }
+    default: {
       return "Match the user's requested level of brevity.";
+    }
   }
 }
 
 function explainTone(value: string): string {
   switch (value) {
-    case "formal":
+    case "formal": {
       return "Use formal, professional language.";
-    case "casual":
+    }
+    case "casual": {
       return "Use casual, conversational language.";
-    case "technical":
+    }
+    case "technical": {
       return "Use precise, technical language and terminology.";
-    case "friendly":
+    }
+    case "friendly": {
       return "Use warm, encouraging language.";
-    default:
+    }
+    default: {
       return "Match the user's tone preference.";
+    }
   }
 }
 
 function explainFormat(value: string): string {
   switch (value) {
-    case "bullet":
+    case "bullet": {
       return "Use bullet points for key points.";
-    case "paragraph":
+    }
+    case "paragraph": {
       return "Respond in paragraph form.";
-    case "structured":
+    }
+    case "structured": {
       return "Use structured sections with headings.";
-    case "narrative":
+    }
+    case "narrative": {
       return "Use narrative, story-like flow.";
-    default:
+    }
+    default: {
       return "Choose the clearest formatting for the user.";
+    }
   }
 }
 
 function explainDepth(value: string): string {
   switch (value) {
-    case "surface":
+    case "surface": {
       return "Keep explanations high-level.";
-    case "moderate":
+    }
+    case "moderate": {
       return "Provide balanced detail without overwhelming.";
-    case "deep":
+    }
+    case "deep": {
       return "Dive deep with step-by-step reasoning.";
-    default:
+    }
+    default: {
       return "Match the user's desired level of explanation.";
+    }
   }
 }
 

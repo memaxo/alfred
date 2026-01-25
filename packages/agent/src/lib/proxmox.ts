@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-export type ProxmoxCfg = {
+export interface ProxmoxCfg {
   base: string;
   tokenId: string;
   tokenSecret: string;
   timeoutMs?: number;
-};
+}
 
 const lxcCreateSchema = z
   .object({
@@ -37,13 +37,19 @@ export type ProxmoxError =
   | { kind: "timeout"; message: string; endpoint: string }
   | { kind: "network"; message: string; endpoint: string; cause?: unknown };
 
-type UpidResponse = { upid: string };
-type StatusResponse = {
+interface UpidResponse {
+  upid: string;
+}
+interface StatusResponse {
   status: "running" | "stopped" | "paused";
   pid?: number;
-};
-type TaskResponse = { exitstatus: "OK" | string };
-type PveEnvelope<T> = { data: T };
+}
+interface TaskResponse {
+  exitstatus: "OK" | string;
+}
+interface PveEnvelope<T> {
+  data: T;
+}
 
 export class proxmox {
   private readonly cfg: Required<ProxmoxCfg>;
@@ -184,9 +190,9 @@ export class proxmox {
         throw this.makeError(
           resp.status === 401 || resp.status === 403
             ? "auth"
-            : resp.status === 404
+            : (resp.status === 404
               ? "notfound"
-              : "server",
+              : "server"),
           resp.status,
           resp.statusText,
           path
@@ -195,19 +201,19 @@ export class proxmox {
 
       const json = (await resp.json()) as PveEnvelope<T>;
       return json.data;
-    } catch (err) {
+    } catch (error) {
       if (
-        err instanceof Error &&
-        (err.name === "TimeoutError" ||
-          err.name === "AbortError" ||
-          err.message.includes("Timeout"))
+        error instanceof Error &&
+        (error.name === "TimeoutError" ||
+          error.name === "AbortError" ||
+          error.message.includes("Timeout"))
       ) {
         throw this.makeError("timeout", 0, "Request timeout", path);
       }
-      if (err instanceof Error && err.name === "TypeError") {
-        throw this.makeError("network", 0, err.message, path, err);
+      if (error instanceof Error && error.name === "TypeError") {
+        throw this.makeError("network", 0, error.message, path, error);
       }
-      throw err;
+      throw error;
     }
   }
 
@@ -219,16 +225,21 @@ export class proxmox {
     cause?: unknown
   ): ProxmoxError {
     switch (kind) {
-      case "auth":
+      case "auth": {
         return { kind: "auth", status: status as 401 | 403, message, endpoint };
-      case "notfound":
+      }
+      case "notfound": {
         return { kind: "notfound", status: 404, message, endpoint };
-      case "timeout":
+      }
+      case "timeout": {
         return { kind: "timeout", message, endpoint };
-      case "network":
+      }
+      case "network": {
         return { kind: "network", message, endpoint, cause };
-      default:
+      }
+      default: {
         return { kind: "server", status, message, endpoint };
+      }
     }
   }
 }

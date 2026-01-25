@@ -18,14 +18,14 @@ import { LODManager } from "./lod";
 /**
  * Engine configuration
  */
-export type CortexConfig = {
+export interface CortexConfig {
   /** Canvas element to render to */
   canvas: HTMLCanvasElement;
   /** Enable post-processing effects */
   postProcessing?: boolean;
   /** Custom LOD manager */
   lodManager?: LODManager;
-};
+}
 
 /**
  * Engine state
@@ -151,8 +151,8 @@ export class CortexEngine {
 
       this.state = "ready";
       return true;
-    } catch (err) {
-      this.error = err instanceof Error ? err : new Error(String(err));
+    } catch (error) {
+      this.error = error instanceof Error ? error : new Error(String(error));
       this.state = "error";
       return false;
     }
@@ -166,8 +166,8 @@ export class CortexEngine {
       return;
     }
 
-    const width = this.canvas.width;
-    const height = this.canvas.height;
+    const { width } = this.canvas;
+    const { height } = this.canvas;
 
     // Destroy old textures
     this.sceneTexture?.destroy();

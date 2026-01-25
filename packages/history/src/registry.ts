@@ -54,7 +54,7 @@ export interface ModelSpec {
   deprecated?: boolean;
 }
 
-import { type ModelProvider } from "@alfred/type/model";
+import type { ModelProvider } from "@alfred/type/model";
 
 // Re-export ModelProvider from @alfred/type for convenience
 export type { ModelProvider };
@@ -81,7 +81,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     pricing: {
       inputPer1M: 1.75,
       cachedInputPer1M: 0.175,
-      outputPer1M: 14.0,
+      outputPer1M: 14,
     },
     provider: "openai",
     recommendedHistoryRatio: 0.55,
@@ -101,7 +101,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     pricing: {
       inputPer1M: 2.5,
       cachedInputPer1M: 1.25,
-      outputPer1M: 10.0,
+      outputPer1M: 10,
     },
     provider: "openai",
     recommendedHistoryRatio: 0.55,
@@ -139,9 +139,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "gpt-4.1",
     id: "openai/gpt-4.1",
     pricing: {
-      inputPer1M: 2.0,
+      inputPer1M: 2,
       cachedInputPer1M: 0.5,
-      outputPer1M: 8.0,
+      outputPer1M: 8,
     },
     provider: "openai",
     recommendedHistoryRatio: 0.55,
@@ -201,9 +201,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     },
     pricing: {
       cachedInputPer1M: 7.5,
-      inputPer1M: 15.0,
-      outputPer1M: 60.0,
-      reasoningPer1M: 60.0,
+      inputPer1M: 15,
+      outputPer1M: 60,
+      reasoningPer1M: 60,
     },
     recommendedHistoryRatio: 0.45, // Lower for reasoning models
     releaseDate: "2024-12",
@@ -241,10 +241,10 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "o3",
     id: "openai/o3",
     pricing: {
-      inputPer1M: 10.0,
+      inputPer1M: 10,
       cachedInputPer1M: 2.5,
-      outputPer1M: 40.0,
-      reasoningPer1M: 40.0,
+      outputPer1M: 40,
+      reasoningPer1M: 40,
     },
     provider: "openai",
     recommendedHistoryRatio: 0.45,
@@ -296,7 +296,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "openai/gpt-oss-120b": {
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -315,7 +315,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "openai/gpt-oss-20b": {
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -348,9 +348,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "claude-4.5",
     id: "anthropic/claude-opus-4.5",
     pricing: {
-      inputPer1M: 5.0,
+      inputPer1M: 5,
       cachedInputPer1M: 0.5,
-      outputPer1M: 25.0,
+      outputPer1M: 25,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -369,9 +369,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "claude-4",
     id: "anthropic/claude-opus-4",
     pricing: {
-      inputPer1M: 15.0,
+      inputPer1M: 15,
       cachedInputPer1M: 1.5,
-      outputPer1M: 75.0,
+      outputPer1M: 75,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -390,9 +390,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "claude-4.5",
     id: "anthropic/claude-sonnet-4.5",
     pricing: {
-      inputPer1M: 3.0,
+      inputPer1M: 3,
       cachedInputPer1M: 0.3,
-      outputPer1M: 15.0,
+      outputPer1M: 15,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -411,9 +411,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "claude-4",
     id: "anthropic/claude-sonnet-4",
     pricing: {
-      inputPer1M: 3.0,
+      inputPer1M: 3,
       cachedInputPer1M: 0.3,
-      outputPer1M: 15.0,
+      outputPer1M: 15,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -422,7 +422,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "anthropic/claude-3-5-sonnet": {
     capabilities: {
       maxContextTokens: 200_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -431,9 +431,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "claude-3.5",
     id: "anthropic/claude-3-5-sonnet",
     pricing: {
-      inputPer1M: 3.0,
+      inputPer1M: 3,
       cachedInputPer1M: 0.3,
-      outputPer1M: 15.0,
+      outputPer1M: 15,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -442,7 +442,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "anthropic/claude-3-5-haiku": {
     capabilities: {
       maxContextTokens: 200_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -453,7 +453,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     pricing: {
       inputPer1M: 0.8,
       cachedInputPer1M: 0.08,
-      outputPer1M: 4.0,
+      outputPer1M: 4,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -462,7 +462,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "anthropic/claude-3-opus": {
     capabilities: {
       maxContextTokens: 200_000,
-      maxOutputTokens: 4_096,
+      maxOutputTokens: 4096,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -471,9 +471,9 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "claude-3",
     id: "anthropic/claude-3-opus",
     pricing: {
-      inputPer1M: 15.0,
+      inputPer1M: 15,
       cachedInputPer1M: 1.5,
-      outputPer1M: 75.0,
+      outputPer1M: 75,
     },
     provider: "anthropic",
     recommendedHistoryRatio: 0.55,
@@ -531,7 +531,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "Gemini 2.0 Pro",
     capabilities: {
       maxContextTokens: 2_000_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       structuredOutput: true,
       toolCalling: true,
       vision: true,
@@ -546,7 +546,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "google/gemini-2.0-flash": {
     capabilities: {
       maxContextTokens: 1_000_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -555,8 +555,8 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "gemini-2.0",
     id: "google/gemini-2.0-flash",
     pricing: {
-      inputPer1M: 0.0, // Free during experimental
-      outputPer1M: 0.0,
+      inputPer1M: 0, // Free during experimental
+      outputPer1M: 0,
     },
     provider: "google",
     recommendedHistoryRatio: 0.5,
@@ -565,7 +565,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "google/gemini-1.5-pro": {
     capabilities: {
       maxContextTokens: 2_000_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -576,7 +576,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     pricing: {
       inputPer1M: 1.25,
       cachedInputPer1M: 0.3125,
-      outputPer1M: 5.0,
+      outputPer1M: 5,
     },
     provider: "google",
     recommendedHistoryRatio: 0.45,
@@ -589,7 +589,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "deepseek/deepseek-v3": {
     capabilities: {
       maxContextTokens: 64_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -613,7 +613,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     displayName: "DeepSeek R1 (Reasoner)",
     capabilities: {
       maxContextTokens: 64_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       structuredOutput: true,
       toolCalling: true,
       vision: false,
@@ -634,7 +634,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "mistral/mistral-large": {
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -643,8 +643,8 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "mistral-large",
     id: "mistral/mistral-large",
     pricing: {
-      inputPer1M: 2.0,
-      outputPer1M: 6.0,
+      inputPer1M: 2,
+      outputPer1M: 6,
     },
     provider: "mistral",
     recommendedHistoryRatio: 0.55,
@@ -653,7 +653,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "mistral/mistral-small": {
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -672,7 +672,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "mistral/codestral": {
     capabilities: {
       maxContextTokens: 256_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -695,7 +695,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "xai/grok-3": {
     capabilities: {
       maxContextTokens: 131_072,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: true,
@@ -704,8 +704,8 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
     family: "grok-3",
     id: "xai/grok-3",
     pricing: {
-      inputPer1M: 3.0,
-      outputPer1M: 15.0,
+      inputPer1M: 3,
+      outputPer1M: 15,
     },
     provider: "xai",
     recommendedHistoryRatio: 0.55,
@@ -737,7 +737,7 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = Object.freeze({
   "cerebras/llama-4-scout": {
     capabilities: {
       maxContextTokens: 128_000,
-      maxOutputTokens: 8_192,
+      maxOutputTokens: 8192,
       toolCalling: true,
       structuredOutput: true,
       vision: false,
@@ -890,7 +890,7 @@ export function listModelIds(): string[] {
 export const DEFAULT_MODEL_SPEC: ModelSpec = Object.freeze({
   capabilities: {
     maxContextTokens: 128_000,
-    maxOutputTokens: 8_192,
+    maxOutputTokens: 8192,
     toolCalling: true,
     structuredOutput: true,
     vision: false,
@@ -899,8 +899,8 @@ export const DEFAULT_MODEL_SPEC: ModelSpec = Object.freeze({
   family: "unknown",
   id: "unknown",
   pricing: {
-    inputPer1M: 1.0,
-    outputPer1M: 3.0,
+    inputPer1M: 1,
+    outputPer1M: 3,
   },
   provider: "openai",
   recommendedHistoryRatio: 0.55,

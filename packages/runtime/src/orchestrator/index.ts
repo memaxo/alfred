@@ -1,17 +1,19 @@
+import type { StructuredPlan } from "@alfred/plan";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
 import { planRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { RuntimeMcpServer } from "@alfred/mcp";
-import { type StructuredPlan } from "@alfred/plan";
-import { type WorkflowEvent } from "@alfred/type/plan";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { type ExecutionContext } from "../context";
-import { type RuntimeInput } from "../types";
+import type { ExecutionContext } from "../context";
+import type { RuntimeInput } from "../types";
+import type { OrchestratorContext, ProjectConfig } from "./types";
+
 import { runConflictPhase } from "./conflict";
 import { runMergeAnalysis, runMergePhase } from "./merge";
 import { runReviewPhase } from "./review";
-import { type OrchestratorContext, type ProjectConfig } from "./types";
 import { runWaves, type WavesResult } from "./waves";
 
 export { assignAgentTypes } from "./agents.js";

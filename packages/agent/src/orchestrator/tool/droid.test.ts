@@ -73,7 +73,7 @@ describe("extractDroidReasoning", () => {
 
   it("returns null for invalid input", () => {
     expect(extractDroidReasoning(null)).toBeNull();
-    expect(extractDroidReasoning(undefined)).toBeNull();
+    expect(extractDroidReasoning()).toBeNull();
     expect(extractDroidReasoning("string")).toBeNull();
   });
 });

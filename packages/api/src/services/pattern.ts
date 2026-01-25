@@ -1,12 +1,12 @@
 import { logger } from "@alfred/logger";
 
-type UpsertWorkflowPatternArgs = {
+interface UpsertWorkflowPatternArgs {
   userId: string;
   projectId?: string | null;
   intent: string;
   planTemplate: unknown;
   durationMs: number;
-};
+}
 
 function toKebabCase(input: string): string {
   const cleaned = input

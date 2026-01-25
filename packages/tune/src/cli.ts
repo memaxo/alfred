@@ -8,13 +8,13 @@ import type { FineTuneJobOptions, FineTuneLogEvent } from "./run-types";
 import { parseFineTuneConfig } from "./config";
 import { runFineTuneJob } from "./job";
 
-type CliArgs = {
+interface CliArgs {
   configPath: string | null;
   workspaceRoot?: string;
   runsRoot?: string;
   pythonBin?: string;
   env: Record<string, string>;
-};
+}
 
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
@@ -51,7 +51,7 @@ const main = async () => {
       completedAt: result.completedAt.toISOString(),
     };
     void _summary; // Suppress unused variable warning
-  } catch (_error) {
+  } catch {
     process.exit(1);
   }
 };
@@ -65,18 +65,22 @@ const parseArgs = (argv: string[]): CliArgs => {
     const arg = argv[i];
     switch (arg) {
       case "--config":
-      case "-c":
+      case "-c": {
         args.configPath = argv[++i] ?? null;
         break;
-      case "--workspace-root":
+      }
+      case "--workspace-root": {
         args.workspaceRoot = argv[++i];
         break;
-      case "--runs-root":
+      }
+      case "--runs-root": {
         args.runsRoot = argv[++i];
         break;
-      case "--python":
+      }
+      case "--python": {
         args.pythonBin = argv[++i];
         break;
+      }
       case "--env": {
         const pair = argv[++i];
         if (pair) {
@@ -95,7 +99,7 @@ const parseArgs = (argv: string[]): CliArgs => {
 
 const loadConfigFile = async (configPath: string) => {
   const absolutePath = path.resolve(configPath);
-  const contents = await readFile(absolutePath, "utf-8");
+  const contents = await readFile(absolutePath, "utf8");
   const ext = path.extname(absolutePath).toLowerCase();
   if (ext === ".yaml" || ext === ".yml") {
     return YAML.parse(contents);

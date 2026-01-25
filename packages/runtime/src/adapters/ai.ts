@@ -5,15 +5,16 @@
  * All property names verified against AI SDK v6 specification.
  */
 
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { UIMessage } from "@alfred/type/stream";
+import type { LanguageModel, Tool } from "ai";
+
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import { llmConcurrency, llmRateLimit } from "@alfred/agent/utils/rate-limiter";
 import { buildHistoryContext } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { classifyAiSdkError, isAbortError } from "@alfred/type/aierror";
 import { parseModelKey } from "@alfred/type/model";
-import { type WorkflowEvent } from "@alfred/type/plan";
-import { type UIMessage } from "@alfred/type/stream";
-import { type LanguageModel, type Tool } from "ai";
 import { stepCountIs, streamText, validateUIMessages } from "ai";
 
 import {
@@ -278,10 +279,10 @@ export class AISDKAdapter {
     const raw =
       typeof model === "string"
         ? model
-        : typeof model === "object" && model !== null
+        : (typeof model === "object" && model !== null
           ? ((model as { id?: unknown }).id ??
             (model as { modelId?: unknown }).modelId)
-          : undefined;
+          : undefined);
 
     if (typeof raw !== "string" || raw.trim().length === 0) {
       return "unknown";

@@ -19,36 +19,36 @@ export type CognitivePhase =
   | "executing"
   | "reflecting";
 
-export type PhysiologyState = {
+export interface PhysiologyState {
   energy: number;
   boredom: number;
   frustration: number;
-};
+}
 
-export type AutonomyState = {
+export interface AutonomyState {
   level: number;
   confidence: number;
   threshold: number;
-};
+}
 
-export type CognitiveState = {
+export interface CognitiveState {
   phase: CognitivePhase;
   physiology: PhysiologyState;
   autonomy: AutonomyState;
   timestamp: number;
-};
+}
 
-export type CognitiveTransition = {
+export interface CognitiveTransition {
   from: CognitivePhase;
   to: CognitivePhase;
   timestamp: number;
   reason?: string;
-};
+}
 
-export type CognitiveHistory = {
+export interface CognitiveHistory {
   transitions: CognitiveTransition[];
   maxLength: number;
-};
+}
 
 // ─── Mock Data (until API endpoints exist) ───────────────────────────────────
 
@@ -146,12 +146,12 @@ export class CognitiveStateStore {
 
 // ─── Cognitive Subscription Setup ────────────────────────────────────────────
 
-export type CognitiveSubscriptionOptions = {
+export interface CognitiveSubscriptionOptions {
   manager: SubscriptionManager;
   store: CognitiveStateStore;
   pollingInterval?: number;
   mode?: DataMode;
-};
+}
 
 export function setupCognitiveSubscription(
   options: CognitiveSubscriptionOptions
@@ -193,7 +193,7 @@ export function setupCognitiveSubscription(
       const stateObj = result.data.state as unknown as {
         physiology?: Partial<PhysiologyState>;
       };
-      const physiology = stateObj.physiology;
+      const { physiology } = stateObj;
 
       return {
         phase,
@@ -223,12 +223,12 @@ export function createCognitiveStore(): CognitiveStateStore {
 
 // ─── Mock State Factory ───────────────────────────────────────────────────────
 
-export type MockCognitiveState = {
+export interface MockCognitiveState {
   phase: CognitivePhase;
   autonomy: number;
   physiology: PhysiologyState;
   timestamp: number;
-};
+}
 
 export function createMockCognitiveState(): MockCognitiveState {
   return {

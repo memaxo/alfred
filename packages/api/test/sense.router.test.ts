@@ -17,6 +17,9 @@ const getInboxItemMock = vi.fn();
 const getBundleByCaptureMock = vi.fn();
 const getReceiptByCaptureMock = vi.fn();
 const setWorkingSetMock = vi.fn();
+const updateCaptureStatusMock = vi.fn();
+const createNoteMock = vi.fn();
+const createReminderMock = vi.fn();
 
 mock.module("@alfred/db/repo/sense", () => ({
   createCapture: createCaptureMock,
@@ -28,15 +31,15 @@ mock.module("@alfred/db/repo/sense", () => ({
   getBundleByCapture: getBundleByCaptureMock,
   getReceiptByCapture: getReceiptByCaptureMock,
   setWorkingSet: setWorkingSetMock,
-  updateCaptureStatus: vi.fn(),
+  updateCaptureStatus: updateCaptureStatusMock,
 }));
 
 mock.module("@alfred/db/repo/assistant", () => ({
-  createNote: vi.fn(),
+  createNote: createNoteMock,
   getNotes: vi.fn(),
   updateNote: vi.fn(),
   deleteNote: vi.fn(),
-  createReminder: vi.fn(),
+  createReminder: createReminderMock,
   getReminders: vi.fn(),
   getDueReminders: vi.fn(),
   markReminderFired: vi.fn(),
@@ -58,7 +61,7 @@ mock.module("@alfred/db/repo/graph/write", () => ({
 }));
 
 mock.module("@alfred/rag", () => ({
-  ingest: vi.fn().mockResolvedValue(undefined),
+  ingest: vi.fn().mockResolvedValue(),
   embed: vi.fn().mockResolvedValue([]),
   embedMany: vi.fn().mockResolvedValue([]),
   retrieve: vi.fn().mockResolvedValue([]),
@@ -81,6 +84,9 @@ describe("sense routers", () => {
     getBundleByCaptureMock.mockReset();
     getReceiptByCaptureMock.mockReset();
     setWorkingSetMock.mockReset();
+    updateCaptureStatusMock.mockReset();
+    createNoteMock.mockReset();
+    createReminderMock.mockReset();
   });
 
   it("rejects unauthenticated capture.create", async () => {
@@ -235,5 +241,94 @@ describe("sense routers", () => {
 
     expect(result.id).toBe(receipt.id);
     expect(upsertReceiptMock).toHaveBeenCalled();
+  });
+
+  it("triages capture to note and updates receipt", async () => {
+    const captureId = "123e4567-e89b-12d3-a456-426614174000";
+    const userId = "test-user";
+
+    const initialBundle: Bundle = {
+      id: "223e4567-e89b-12d3-a456-426614174000",
+      captureId,
+      text: "hello",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const initialReceipt: Receipt = {
+      id: "323e4567-e89b-12d3-a456-426614174000",
+      captureId,
+      decision: "route",
+      summary: "Suggested note as a durable capture.",
+      evidence: [{ key: "payload.text", label: "Derived text available" }],
+      outcome: { kind: "note" },
+      alternatives: [{ kind: "reminder" }],
+      confidence: 0.6,
+      corrections: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    getInboxItemMock
+      .mockResolvedValueOnce({
+        bundle: initialBundle,
+        capture: {
+          id: captureId,
+          userId,
+          kind: "text",
+          status: "new",
+          evidence: { capturedAt: new Date() },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } satisfies Capture,
+        receipt: initialReceipt,
+      })
+      .mockResolvedValueOnce({
+        bundle: initialBundle,
+        capture: {
+          id: captureId,
+          userId,
+          kind: "text",
+          status: "converted",
+          evidence: { capturedAt: new Date() },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } satisfies Capture,
+        receipt: {
+          ...initialReceipt,
+          outcome: { kind: "note", targetId: "note-1" },
+        } satisfies Receipt,
+      });
+
+    createNoteMock.mockResolvedValue({
+      id: "note-1",
+      title: "Note title",
+      content: "hello",
+      userId,
+      created: new Date(),
+      updated: new Date(),
+    });
+
+    upsertReceiptMock.mockResolvedValue(initialReceipt);
+
+    const caller = await createTestCaller({ userId });
+    const result = await caller.capture.triage({
+      captureId,
+      destination: "note",
+    });
+
+    expect(createNoteMock).toHaveBeenCalledWith(
+      userId,
+      "hello",
+      undefined,
+      undefined,
+      undefined
+    );
+    expect(updateCaptureStatusMock).toHaveBeenCalledWith({
+      id: captureId,
+      status: "converted",
+      userId,
+    });
+    expect(result).toEqual({ id: "note-1", kind: "note" });
   });
 });

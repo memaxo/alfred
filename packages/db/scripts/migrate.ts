@@ -15,12 +15,12 @@ import { Client } from "pg";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, "../src/migrations");
 
-type Migration = {
+interface Migration {
   file: string;
   number: number;
   name: string;
   path: string;
-};
+}
 
 async function loadMigrations(): Promise<Migration[]> {
   const entries = await readdir(MIGRATIONS_DIR);
@@ -118,8 +118,8 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
-    console.error("Migration failed:", err);
+  main().catch((error) => {
+    console.error("Migration failed:", error);
     process.exit(1);
   });
 }

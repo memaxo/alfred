@@ -3,13 +3,13 @@ import * as fs from "node:fs/promises";
 
 export type ProjectType = "node" | "rust" | "python" | "go" | "unknown";
 
-export type ProjectConfig = {
+export interface ProjectConfig {
   type: ProjectType;
   testCommand: string;
   runCommand: string;
   installCommand: string;
   buildCommand: string;
-};
+}
 
 const DEFAULT_CONFIG: ProjectConfig = {
   type: "unknown",

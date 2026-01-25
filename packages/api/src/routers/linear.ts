@@ -35,7 +35,7 @@ export const linearRouter = router({
         .optional()
     )
     .mutation(({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -76,7 +76,7 @@ export const linearRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -153,7 +153,7 @@ export const linearRouter = router({
   getStatus: authedProcedure
     .use(requirePolicy("linear.getStatus"))
     .query(async ({ ctx }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -193,7 +193,7 @@ export const linearRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -249,7 +249,7 @@ export const linearRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -317,7 +317,7 @@ export const linearRouter = router({
     .use(requirePolicy("linear.getStatus"))
     .input(z.object({ issueId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -347,7 +347,7 @@ export const linearRouter = router({
         { id: input.issueId }
       );
 
-      const issue = result.issue;
+      const { issue } = result;
       if (!issue) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -390,7 +390,7 @@ export const linearRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -438,7 +438,7 @@ export const linearRouter = router({
   teams: authedProcedure
     .use(requirePolicy("linear.getStatus"))
     .query(async ({ ctx }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -459,7 +459,7 @@ export const linearRouter = router({
       await ensureValidToken(installation);
 
       const result = await linearGraphQL<{
-        teams?: { nodes: Array<{ id: string; name: string; key: string }> };
+        teams?: { nodes: { id: string; name: string; key: string }[] };
       }>(
         installation.token,
         `query Teams {
@@ -476,7 +476,7 @@ export const linearRouter = router({
     .use(requirePolicy("linear.getStatus"))
     .input(z.object({ teamId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -515,7 +515,7 @@ export const linearRouter = router({
     .use(requirePolicy("linear.getStatus"))
     .input(z.object({ teamId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",

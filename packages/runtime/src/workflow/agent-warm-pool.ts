@@ -7,13 +7,13 @@
 
 export type AgentType = "codex" | "research" | "review";
 
-export type ContainerConfig = {
+export interface ContainerConfig {
   agentType: AgentType;
   containerId: string;
   createdAt: Date;
   lastUsedAt: Date;
   isReady: boolean;
-};
+}
 
 export class AgentWarmPool {
   pool: Map<AgentType, ContainerConfig> = new Map();
@@ -65,7 +65,8 @@ export class AgentWarmPool {
       this.pool.set(agentType, config);
     } catch (error) {
       throw new Error(
-        `Failed to spawn warm container for ${agentType}: ${error}`
+        `Failed to spawn warm container for ${agentType}: ${error}`,
+        { cause: error }
       );
     }
 

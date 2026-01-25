@@ -67,7 +67,7 @@ export const knowledgeRouter = router({
         relations: edgeCountResult[0]?.count ?? 0,
         insights: kindCounts.get("insight") ?? 0,
         patterns: kindCounts.get("pattern") ?? 0,
-        totalNodes: Array.from(kindCounts.values()).reduce((a, b) => a + b, 0),
+        totalNodes: [...kindCounts.values()].reduce((a, b) => a + b, 0),
         resource,
       };
     }),
@@ -225,7 +225,7 @@ export const knowledgeRouter = router({
           ? await db
               .select()
               .from(memoryNodes)
-              .where(inArray(memoryNodes.id, Array.from(relationNodeIds)))
+              .where(inArray(memoryNodes.id, [...relationNodeIds]))
           : [];
       const relationMap = new Map(relationNodes.map((n) => [n.id, n]));
 
@@ -296,13 +296,13 @@ export const knowledgeRouter = router({
       const nodeMap = new Map(topNodes.map((n) => [n.id, n.label]));
 
       // Generate insights
-      const insights: Array<{
+      const insights: {
         id: string;
         type: "pattern" | "trend" | "suggestion";
         title: string;
         description: string;
         confidence: number;
-      }> = [];
+      }[] = [];
 
       // Cluster insight
       if (topConnected.length > 0) {
@@ -324,7 +324,7 @@ export const knowledgeRouter = router({
         type: "trend",
         title: "Knowledge graph size",
         description: `Graph contains ${nodeCount?.count ?? 0} entities and ${edgeCount?.count ?? 0} relations.`,
-        confidence: 1.0,
+        confidence: 1,
       });
 
       // Suggestion insight (based on isolated nodes if any)

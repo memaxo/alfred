@@ -25,19 +25,19 @@ const statsInputSchema = z.object({
 
 type StatsInput = z.infer<typeof statsInputSchema>;
 
-type KindBreakdown = {
+interface KindBreakdown {
   kind: string;
   count: number;
   avgConfidence: number | null;
   avgAccessCount: number;
-};
+}
 
-type ConfidenceDistribution = {
+interface ConfidenceDistribution {
   high: number; // >= 0.8
   medium: number; // 0.5 - 0.8
   low: number; // 0.3 - 0.5
   veryLow: number; // < 0.3
-};
+}
 
 export const toolMemoryStats = {
   name: "memory_stats",

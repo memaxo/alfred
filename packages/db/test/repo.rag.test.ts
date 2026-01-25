@@ -30,8 +30,8 @@ describeFn("ragRepo", () => {
       "ragRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    ragRepo = mod.ragRepo;
-    db = mod.db;
+    ({ ragRepo } = mod);
+    ({ db } = mod);
   });
 
   beforeEach(async () => {

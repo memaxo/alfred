@@ -92,14 +92,14 @@ describeFn("assistant routers", () => {
       import("./utils/db"),
       import("@alfred/api/routers/index"),
     ]);
-    createTestSession = testKitAuth.createTestSession;
-    RuntimeContext = runtimeContextModule.RuntimeContext;
-    sql = drizzleOrm.sql;
-    shutdownApiServices = initModule.shutdownApiServices;
-    shutdownVoicePools = poolsModule.shutdownVoicePools;
-    resetAgentMocks = agentMockModule.resetAgentMocks;
-    closeTestDb = dbModule.closeTestDb;
-    createTestDb = dbModule.createTestDb;
+    ({ createTestSession } = testKitAuth);
+    ({ RuntimeContext } = runtimeContextModule);
+    ({ sql } = drizzleOrm);
+    ({ shutdownApiServices } = initModule);
+    ({ shutdownVoicePools } = poolsModule);
+    ({ resetAgentMocks } = agentMockModule);
+    ({ closeTestDb } = dbModule);
+    ({ createTestDb } = dbModule);
 
     appRouter = router;
     testDbHarness = await createTestDb();

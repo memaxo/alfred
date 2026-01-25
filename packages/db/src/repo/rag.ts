@@ -119,13 +119,13 @@ export function listDocumentsForProject(
 // Chunk operations
 export function addChunks(
   documentId: string,
-  chunks: Array<{
+  chunks: {
     content: string;
     order?: number;
     embedding?: number[];
     embeddingModelId?: string;
     metadata?: unknown;
-  }>
+  }[]
 ): Promise<ChunkRow[]> {
   if (chunks.length === 0) {
     return Promise.resolve([] as ChunkRow[]);
@@ -155,7 +155,7 @@ export type ChunkSearchResult = typeof ragChunks.$inferSelect & {
   score: number;
 };
 
-export type SearchChunksOptions = {
+export interface SearchChunksOptions {
   embedding: number[];
   limit?: number;
   threshold?: number;
@@ -163,7 +163,7 @@ export type SearchChunksOptions = {
   efSearch?: number;
   /** Filter by embedding model ID (only return chunks embedded with this model) */
   modelId?: string;
-};
+}
 
 export async function searchChunks(
   embedding: number[],
@@ -215,7 +215,7 @@ export async function searchChunks(
   });
 }
 
-export type HybridSearchOptions = {
+export interface HybridSearchOptions {
   embedding: number[];
   query: string;
   limit?: number;
@@ -227,7 +227,7 @@ export type HybridSearchOptions = {
   boostConcepts?: string[]; // Concepts to boost (e.g. "Coding", "Security")
   /** Filter by embedding model ID (only return chunks embedded with this model) */
   modelId?: string;
-};
+}
 
 export async function searchChunksHybrid({
   embedding,
@@ -397,7 +397,7 @@ export async function updateChunkEmbedding(
  * Used for migration progress monitoring
  */
 export async function countChunksByModel(): Promise<
-  Array<{ modelId: string | null; count: number }>
+  { modelId: string | null; count: number }[]
 > {
   const rows = await db
     .select({

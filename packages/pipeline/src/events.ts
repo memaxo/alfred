@@ -7,37 +7,37 @@ import type { SerializableValue } from "./snapshot";
 export type { AgentEscalationReason };
 
 // Agent execution outcome
-export type AgentOutcome = {
+export interface AgentOutcome {
   status: "success" | "failure" | "escalated" | "timeout" | "stuck";
   durationMs: number;
   handoff?: string;
   error?: string;
-};
+}
 
 // Knowledge insight from learning
-export type KnowledgeInsight = {
+export interface KnowledgeInsight {
   type: "heuristic" | "mistake" | "pattern";
   content: string;
   confidence: number;
-};
+}
 
 // Review check result
-export type ReviewCheck = {
+export interface ReviewCheck {
   name: string;
   passed: boolean;
   message?: string;
-};
+}
 
 // Execution summary
-export type ExecutionSummary = {
+export interface ExecutionSummary {
   runId: string;
   requirement: string;
-  stages: Array<{ name: StageName; durationMs: number; status: string }>;
+  stages: { name: StageName; durationMs: number; status: string }[];
   totalDurationMs: number;
   agentsSpawned: number;
   filesChanged: number;
   learningInsights: number;
-};
+}
 
 // Union of all pipeline events
 export type PipelineEvent =

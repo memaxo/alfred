@@ -1,8 +1,8 @@
-export type VoiceIceServer = {
+export interface VoiceIceServer {
   urls: string | string[];
   username?: string;
   credential?: string;
-};
+}
 
 export function isVoiceWebrtcEnabled(
   env: NodeJS.ProcessEnv = process.env
@@ -29,7 +29,7 @@ export function getVoiceIceServers(
         continue;
       }
       const record = item as Record<string, unknown>;
-      const urls = record.urls;
+      const { urls } = record;
       if (
         !(
           typeof urls === "string" ||

@@ -15,7 +15,7 @@ import {
   inferResponsePreferencesSemantic,
 } from "./semantic";
 
-const FORMAT_MATCHERS: Array<{ format: ResponseFormat; matcher: RegExp }> = [
+const FORMAT_MATCHERS: { format: ResponseFormat; matcher: RegExp }[] = [
   { format: "bullet", matcher: /(^|\n)(?:[-*]|\d+\.)/ },
   { format: "structured", matcher: /(^|\n)#+\s/m },
 ];

@@ -43,7 +43,7 @@ export const authTokenMocks = {
   }),
   issueAccessToken: vi.fn().mockResolvedValue("mock-access-token"),
   verifyAccessToken: vi.fn().mockResolvedValue(DEFAULT_TOKEN_CLAIMS),
-  cacheJTI: vi.fn().mockResolvedValue(undefined),
+  cacheJTI: vi.fn().mockImplementation(async () => {}),
 };
 
 /**
@@ -71,9 +71,10 @@ export function resetAuthTokenMocks() {
   });
   authTokenMocks.issueAccessToken.mockClear();
   authTokenMocks.issueAccessToken.mockResolvedValue("mock-access-token");
+  authTokenMocks.cacheJTI.mockClear();
+  authTokenMocks.cacheJTI.mockImplementation(async () => {});
   authTokenMocks.verifyAccessToken.mockClear();
   authTokenMocks.verifyAccessToken.mockResolvedValue(DEFAULT_TOKEN_CLAIMS);
-  authTokenMocks.cacheJTI.mockClear();
 }
 
 /**

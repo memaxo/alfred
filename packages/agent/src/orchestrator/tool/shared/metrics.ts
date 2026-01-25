@@ -5,8 +5,7 @@
  * without introducing new abstractions - just wraps existing metric functions.
  */
 
-import { metricsRegistry } from "@alfred/metrics/registry";
-import client from "prom-client";
+import { safeRegisterCounter } from "@alfred/metrics/registry";
 
 import {
   recordCodexError,
@@ -93,16 +92,14 @@ export function recordToolReasoning(
   // For now, this is a placeholder for consistent API
 }
 
-export const executorServerRegistryTotal = new client.Counter({
+export const executorServerRegistryTotal = safeRegisterCounter({
   name: "executor_server_registry_total",
   help: "Count of long-lived executor server registry outcomes (start/reuse/restart).",
-  labelNames: ["executor", "profile", "outcome"] as const,
-  registers: [metricsRegistry],
+  labelNames: ["executor", "profile", "outcome"],
 });
 
-export const executorServerFallbackTotal = new client.Counter({
+export const executorServerFallbackTotal = safeRegisterCounter({
   name: "executor_server_fallback_total",
   help: "Count of executor server profile fallbacks to default execution.",
-  labelNames: ["executor"] as const,
-  registers: [metricsRegistry],
+  labelNames: ["executor"],
 });

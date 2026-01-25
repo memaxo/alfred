@@ -12,8 +12,8 @@ beforeAll(async () => {
   ({ WorkflowTestHarness } = await import("./workflow-server"));
   ({ auth } = await import("@alfred/auth"));
   const dbModule = await import("@alfred/db");
-  db = dbModule.db;
-  workflowRuns = dbModule.workflowSchema.workflowRuns;
+  ({ db } = dbModule);
+  ({ workflowRuns } = dbModule.workflowSchema);
 });
 
 describe("WorkflowTestHarness", () => {

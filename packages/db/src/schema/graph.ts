@@ -80,7 +80,7 @@ export const memoryEdges = pgTable("memory_edges", {
     .notNull()
     .references(() => memoryNodes.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(), // "relates_to" | "blocks" | "assigned_to" | "runs_on" | "implements"
-  weight: real("weight").default(1.0), // Edge weight for importance/strength
+  weight: real("weight").default(1), // Edge weight for importance/strength
   metadata: jsonb("metadata"), // Arbitrary edge properties
   resource: text("resource").notNull(), // Scope identifier
   hash: text("hash").notNull(), // Unique edge identifier

@@ -128,17 +128,17 @@ describe("Conflict Resolution Integration", () => {
   });
 
   describe("Arbiter Spawning", () => {
-    type Conflict = {
+    interface Conflict {
       resourceId: string;
       baseVersion: number;
       agent1Change: string;
       agent2Change: string;
-    };
+    }
 
-    type Resolution = {
+    interface Resolution {
       resolvedContent: string;
       strategy: "merge" | "agent1_wins" | "agent2_wins";
-    };
+    }
 
     const arbiterResolve = (conflict: Conflict): Resolution => {
       // Simple arbiter logic: if changes are compatible, merge
@@ -223,12 +223,12 @@ describe("Conflict Resolution Integration", () => {
   });
 
   describe("Multi-Agent Write Conflicts", () => {
-    type WriteOperation = {
+    interface WriteOperation {
       agentId: string;
       resourceId: string;
       content: string;
       timestamp: number;
-    };
+    }
 
     class ConflictDetector {
       private readonly pendingWrites: Map<string, WriteOperation[]> = new Map();
@@ -357,17 +357,22 @@ describe("Conflict Resolution Integration", () => {
       const sorted = [...writes].sort((a, b) => a.timestamp - b.timestamp);
 
       switch (strategy) {
-        case "first_write_wins":
+        case "first_write_wins": {
           return sorted[0]?.content;
-        case "last_write_wins":
+        }
+        case "last_write_wins": {
           return sorted.at(-1)?.content;
-        case "merge":
+        }
+        case "merge": {
           return sorted.map((w) => w.content).join("\n");
-        case "arbiter":
+        }
+        case "arbiter": {
           // Arbiter would make a decision; simulate with last-write
           return sorted.at(-1)?.content;
-        default:
+        }
+        default: {
           throw new Error(`Unknown strategy: ${strategy}`);
+        }
       }
     };
 

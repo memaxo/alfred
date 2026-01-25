@@ -7,6 +7,8 @@ export interface EvalCase {
   description?: string;
 }
 
+export type EvalMethod = "keyword" | "rerank" | "symbol" | "dependency";
+
 export interface EvalResult {
   caseId: string;
   query: string;
@@ -15,7 +17,7 @@ export interface EvalResult {
   mrr: number;
   ndcg: number;
   latencyMs: number;
-  method: "keyword" | "rerank";
+  method: EvalMethod;
   returnedFiles: string[];
   relevantReturned: string[];
   relevantMissed: string[];

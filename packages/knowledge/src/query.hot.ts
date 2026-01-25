@@ -9,7 +9,7 @@ const REFLECTION_KIND = "insight";
 
 type MemoryNodeRow = typeof memoryNodes.$inferSelect;
 
-export type FastReflection = {
+export interface FastReflection {
   id: string;
   hash: string;
   resource: string;
@@ -17,12 +17,12 @@ export type FastReflection = {
   derived: string[];
   confidence: number;
   createdAt: Date | null;
-};
+}
 
-export type FastGetReflectionsOptions = {
+export interface FastGetReflectionsOptions {
   limit?: number;
   resource?: string;
-};
+}
 
 /**
  * Performance-critical reflection retrieval.
@@ -88,7 +88,7 @@ function resolveResourceCandidates(
     candidates.add(`runtime:${trimmed}`);
   }
 
-  return Array.from(candidates);
+  return [...candidates];
 }
 
 function fetchReflectionRows(
@@ -111,7 +111,7 @@ function buildWhereClause(resources: string[]) {
     return basePredicate;
   }
 
-  const uniqueResources = Array.from(new Set(resources.filter(Boolean)));
+  const uniqueResources = [...new Set(resources.filter(Boolean))];
   if (uniqueResources.length === 0) {
     return basePredicate;
   }

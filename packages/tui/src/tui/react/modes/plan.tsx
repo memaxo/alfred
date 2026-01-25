@@ -16,11 +16,11 @@ import { useCallback, useState } from "react";
 
 import { createCliContext } from "../../../cli/context";
 
-export type PlanModeProps = {
+export interface PlanModeProps {
   isOpen: boolean;
   onClose: () => void;
   onExecute?: (runId: string) => void;
-};
+}
 
 type PlanState =
   | { status: "idle" }

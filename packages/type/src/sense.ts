@@ -4,14 +4,14 @@ export type CaptureStatus = "new" | "triaged" | "converted" | "archived";
 
 export type CaptureSurface = "native" | "web" | "unknown";
 
-export type CaptureEvidence = {
+export interface CaptureEvidence {
   capturedAt: Date;
   tags?: string[];
   device?: string;
   surface?: CaptureSurface;
-};
+}
 
-export type Capture = {
+export interface Capture {
   id: string;
   userId: string;
   kind: CapturePayloadKind;
@@ -19,40 +19,40 @@ export type Capture = {
   evidence: CaptureEvidence;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-export type Bundle = {
+export interface Bundle {
   id: string;
   captureId: string;
   text: string;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 export type ReceiptDecision = "route" | "schedule" | "link" | "suggest";
 
-export type ReceiptEvidenceItem = {
+export interface ReceiptEvidenceItem {
   key: string;
   label: string;
   value?: string;
   weight?: number;
-};
+}
 
 export type ReceiptOutcomeKind = "inbox" | "note" | "reminder" | "task";
 
-export type ReceiptOutcome = {
+export interface ReceiptOutcome {
   kind: ReceiptOutcomeKind;
   targetId?: string;
   projectId?: string;
-};
+}
 
-export type ReceiptCorrection = {
+export interface ReceiptCorrection {
   correctedAt: Date;
   outcome: ReceiptOutcome;
   note?: string;
-};
+}
 
-export type Receipt = {
+export interface Receipt {
   id: string;
   captureId: string;
   decision: ReceiptDecision;
@@ -64,7 +64,7 @@ export type Receipt = {
   corrections: ReceiptCorrection[];
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 export type WorkingSetItemKind =
   | "project"
@@ -73,15 +73,15 @@ export type WorkingSetItemKind =
   | "reminder"
   | "task";
 
-export type WorkingSetItem = {
+export interface WorkingSetItem {
   kind: WorkingSetItemKind;
   id: string;
   label?: string;
-};
+}
 
-export type WorkingSet = {
+export interface WorkingSet {
   userId: string;
   items: WorkingSetItem[];
   focus?: WorkingSetItem;
   updatedAt: Date;
-};
+}

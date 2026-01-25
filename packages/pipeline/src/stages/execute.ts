@@ -1,23 +1,25 @@
-import { type Workspace } from "@alfred/agent/environment/types";
+import type { Workspace } from "@alfred/agent/environment/types";
+import type { WorkflowEvent } from "@alfred/type";
+
 import {
   AGENT_ESCALATION_REASONS,
   type AgentEscalationReason,
 } from "@alfred/agent/orchestrator/tool/shared/context";
 import { logger } from "@alfred/logger";
 import { RuntimeMcpServer } from "@alfred/mcp";
-import { type WorkflowEvent } from "@alfred/type";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { createEvent } from "../events";
-import { type PipelineContext, type PipelineStage } from "../pipeline";
-import {
-  type AgentOutcome,
-  type ExecuteOutput,
-  type FileChange,
-  type PlanOutput,
-  type ScheduleOutput,
+import type { PipelineContext, PipelineStage } from "../pipeline";
+import type {
+  AgentOutcome,
+  ExecuteOutput,
+  FileChange,
+  PlanOutput,
+  ScheduleOutput,
 } from "./types";
+
+import { createEvent } from "../events";
 
 /**
  * Execute Stage

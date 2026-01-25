@@ -11,19 +11,19 @@ import { createCliRenderer } from "@opentui/core";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type TerminalSize = {
+export interface TerminalSize {
   width: number;
   height: number;
-};
+}
 
 export type ResizeHandler = (size: TerminalSize) => void;
 
-export type RendererContext = {
+export interface RendererContext {
   renderer: CliRenderer;
   size: TerminalSize;
   onResize: (handler: ResizeHandler) => () => void;
   destroy: () => void;
-};
+}
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -117,42 +117,42 @@ export function getCurrentSize(): TerminalSize {
  * Clear the terminal screen
  */
 export function clearScreen(): void {
-  process.stdout.write("\x1b[2J\x1b[H");
+  process.stdout.write("\u001B[2J\u001B[H");
 }
 
 /**
  * Move cursor to position
  */
 export function moveCursor(x: number, y: number): void {
-  process.stdout.write(`\x1b[${y + 1};${x + 1}H`);
+  process.stdout.write(`\u001B[${y + 1};${x + 1}H`);
 }
 
 /**
  * Hide cursor
  */
 export function hideCursor(): void {
-  process.stdout.write("\x1b[?25l");
+  process.stdout.write("\u001B[?25l");
 }
 
 /**
  * Show cursor
  */
 export function showCursor(): void {
-  process.stdout.write("\x1b[?25h");
+  process.stdout.write("\u001B[?25h");
 }
 
 /**
  * Enable alternate screen buffer (preserves main terminal content)
  */
 export function enterAlternateScreen(): void {
-  process.stdout.write("\x1b[?1049h");
+  process.stdout.write("\u001B[?1049h");
 }
 
 /**
  * Disable alternate screen buffer (restores main terminal content)
  */
 export function exitAlternateScreen(): void {
-  process.stdout.write("\x1b[?1049l");
+  process.stdout.write("\u001B[?1049l");
 }
 
 /**

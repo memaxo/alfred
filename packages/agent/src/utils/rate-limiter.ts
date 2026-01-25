@@ -57,7 +57,7 @@ export class TokenBucket {
  */
 export class Semaphore {
   private active = 0;
-  private readonly queue: Array<() => void> = [];
+  private readonly queue: (() => void)[] = [];
 
   constructor(private readonly max: number) {}
 

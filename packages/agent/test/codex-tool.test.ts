@@ -35,7 +35,7 @@ import {
 mock.module("@alfred/db/src/repo/graph", () => ({
   getGraphClient: vi.fn().mockReturnValue({}),
   upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue(undefined),
+  upsertEdges: vi.fn().mockResolvedValue(),
 }));
 
 import { logger } from "@alfred/metrics";

@@ -2,26 +2,26 @@
  * Linear API mock handler
  */
 
-export type LinearIssue = {
+export interface LinearIssue {
   id: string;
   title: string;
   description?: string;
   state: { id: string; name: string };
   team: { id: string; name: string };
   url: string;
-};
+}
 
-export type LinearTeam = {
+export interface LinearTeam {
   id: string;
   name: string;
   key: string;
-};
+}
 
-export type LinearConfig = {
+export interface LinearConfig {
   issues?: LinearIssue[];
   teams?: LinearTeam[];
   autoRespond?: boolean;
-};
+}
 
 /**
  * Create a Linear API handler
@@ -34,7 +34,10 @@ export function createLinearHandler(config?: LinearConfig) {
     (config?.teams ?? []).map((t) => [t.id, t])
   );
 
-  return (_req: Request, body: Record<string, unknown>): Promise<Response> => {
+  return async (
+    _req: Request,
+    body: Record<string, unknown>
+  ): Promise<Response> => {
     const action = body.action as string | undefined;
 
     // Handle different action types
@@ -50,7 +53,7 @@ export function createLinearHandler(config?: LinearConfig) {
       case "list-issues": {
         return Response.json({
           ok: true,
-          issues: Array.from(issues.values()),
+          issues: [...issues.values()],
         });
       }
 
@@ -108,7 +111,7 @@ export function createLinearHandler(config?: LinearConfig) {
       case "list-teams": {
         return Response.json({
           ok: true,
-          teams: Array.from(teams.values()),
+          teams: [...teams.values()],
         });
       }
 

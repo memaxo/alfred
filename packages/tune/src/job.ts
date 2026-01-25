@@ -11,12 +11,14 @@ type BackendRunner = (
 
 const getBackendRunner = (backend: FineTuneBackend): BackendRunner => {
   switch (backend) {
-    case "mlx":
+    case "mlx": {
       return runMlxFineTune;
-    default:
+    }
+    default: {
       return async () => {
         throw new Error(`Fine-tune backend ${backend} is not implemented yet.`);
       };
+    }
   }
 };
 

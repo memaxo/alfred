@@ -5,8 +5,8 @@
  * enabling downstream tasks to avoid known failure patterns.
  */
 
-import { type FailureContext, type UpstreamFailure } from "@alfred/type";
-import { type SubTask, type SubTaskId } from "@alfred/type/plan";
+import type { FailureContext, UpstreamFailure } from "@alfred/type";
+import type { SubTask, SubTaskId } from "@alfred/type/plan";
 
 /**
  * Build a dependency graph from tasks.

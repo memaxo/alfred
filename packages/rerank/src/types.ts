@@ -6,7 +6,7 @@
  * A document that can be reranked.
  * Supports text, images, and video for multimodal reranking.
  */
-export type RerankDocument = {
+export interface RerankDocument {
   /** Unique identifier for the document */
   id: string;
   /** Text content of the document */
@@ -15,12 +15,12 @@ export type RerankDocument = {
   imageUrl?: string;
   /** URL to a video file */
   videoUrl?: string;
-};
+}
 
 /**
  * Options for reranking documents
  */
-export type RerankOptions = {
+export interface RerankOptions {
   /** The query text to rank documents against */
   query: string;
   /** Optional image URL for multimodal queries */
@@ -35,24 +35,24 @@ export type RerankOptions = {
   debug?: boolean;
   /** Telemetry hooks */
   telemetry?: RerankTelemetry;
-};
+}
 
 /**
  * Result of reranking a document
  */
-export type RerankResult = {
+export interface RerankResult {
   /** Document ID */
   id: string;
   /** Relevance score (0-1) */
   score: number;
   /** Original index in the input array */
   index: number;
-};
+}
 
 /**
  * Telemetry hooks for reranking operations
  */
-export type RerankTelemetry = {
+export interface RerankTelemetry {
   onError?: (ctx: {
     query: string;
     backend: string;
@@ -65,7 +65,7 @@ export type RerankTelemetry = {
     docCount: number;
     durationMs: number;
   }) => void;
-};
+}
 
 /**
  * Available rerank backends
@@ -75,28 +75,28 @@ export type RerankBackend = "cohere" | "qwen3vl" | "none";
 /**
  * Cohere-specific options (for backwards compatibility)
  */
-export type CohereRerankOptions = {
+export interface CohereRerankOptions {
   query: string;
-  documents: Array<{ id: string; text: string }>;
+  documents: { id: string; text: string }[];
   topN?: number;
   model?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
   telemetry?: RerankTelemetry;
-};
+}
 
 /**
  * Qwen3-VL server request format
  */
-export type Qwen3VLRerankRequest = {
+export interface Qwen3VLRerankRequest {
   query: {
     text?: string;
     image?: string | null;
   };
-  documents: Array<{
+  documents: {
     id: string;
     text?: string;
     image?: string | null;
     video?: string | null;
-  }>;
+  }[];
   instruction?: string;
   top_n?: number;
   fps?: number;
@@ -104,17 +104,17 @@ export type Qwen3VLRerankRequest = {
   debug?: boolean;
   /** Trigger a one-off cProfile capture on the server (written to RERANK_PROFILE_DIR) */
   profile?: boolean;
-};
+}
 
 /**
  * Qwen3-VL server response format
  */
-export type Qwen3VLRerankResponse = {
-  results: Array<{
+export interface Qwen3VLRerankResponse {
+  results: {
     id: string;
     score: number;
     index: number;
-  }>;
+  }[];
   debug?: {
     total_ms: number;
     build_query_ms: number;
@@ -122,23 +122,23 @@ export type Qwen3VLRerankResponse = {
     text_only_ms: number;
     multimodal_ms: number;
     sort_ms: number;
-    text_batches: Array<{
+    text_batches: {
       start_index: number;
       size: number;
       ms: number;
       seq_len?: number;
-    }>;
-    multimodal_docs: Array<{
+    }[];
+    multimodal_docs: {
       id: string;
       index: number;
       ms: number;
       seq_len?: number;
       has_image: boolean;
       has_video: boolean;
-    }>;
+    }[];
     profile_path?: string;
   };
-};
+}
 
 export type Qwen3VLRerankDebugBatch = NonNullable<
   Qwen3VLRerankResponse["debug"]
@@ -155,7 +155,7 @@ export type Qwen3VLRerankDebugInfo = NonNullable<
 /**
  * Health check response from Qwen3-VL server
  */
-export type Qwen3VLHealthResponse = {
+export interface Qwen3VLHealthResponse {
   status: "ok" | "error";
   model: string;
   device: string;
@@ -172,4 +172,4 @@ export type Qwen3VLHealthResponse = {
   /** Peak memory usage in GB (CUDA only) */
   peak_memory_gb?: number;
   error?: string;
-};
+}

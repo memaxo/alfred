@@ -16,7 +16,7 @@ export { cosineSimilarity };
 /**
  * Semantic embedding configuration
  */
-export type SemanticConfig = {
+export interface SemanticConfig {
   /** Embedding dimensionality (e.g., 768 for BERT, 1536 for OpenAI) */
   dimensions: number;
   /** Projection method */
@@ -25,7 +25,7 @@ export type SemanticConfig = {
   scale: number;
   /** Whether semantic positioning is active */
   enabled: boolean;
-};
+}
 
 export const DEFAULT_SEMANTIC_CONFIG: SemanticConfig = {
   dimensions: 1024, // ALFRED embedding dimension
@@ -37,7 +37,7 @@ export const DEFAULT_SEMANTIC_CONFIG: SemanticConfig = {
 /**
  * Semantic projection state
  */
-export type SemanticState = {
+export interface SemanticState {
   /** Projection basis matrix (2 x N) stored row-major */
   basis: Float32Array;
   /** Center point for embedding space */
@@ -46,7 +46,7 @@ export type SemanticState = {
   projections: Map<string, Vec2>;
   /** Configuration */
   config: SemanticConfig;
-};
+}
 
 /**
  * Create initial semantic state
@@ -79,8 +79,8 @@ function createRandomBasis(dimensions: number): Float32Array {
   // Use a fixed seed for reproducibility
   let seed = 42;
   const random = () => {
-    seed = (seed * 1_103_515_245 + 12_345) & 0x7f_ff_ff_ff;
-    return seed / 0x7f_ff_ff_ff;
+    seed = (seed * 1_103_515_245 + 12_345) & 0x7F_FF_FF_FF;
+    return seed / 0x7F_FF_FF_FF;
   };
 
   // Generate random vectors
@@ -227,8 +227,8 @@ export function findNearestNeighbors(
   target: number[],
   embeddings: Map<string, number[]>,
   k: number
-): Array<{ id: string; similarity: number }> {
-  const similarities: Array<{ id: string; similarity: number }> = [];
+): { id: string; similarity: number }[] {
+  const similarities: { id: string; similarity: number }[] = [];
 
   for (const [id, embedding] of embeddings) {
     const similarity = cosineSimilarity(target, embedding);

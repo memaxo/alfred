@@ -5,20 +5,20 @@ import type { Phase, StructuredPlan } from "../types.js";
 /**
  * Configuration for wave generation
  */
-export type WaveGenerationOptions = {
+export interface WaveGenerationOptions {
   /** Max agents per wave for parallelism */
   maxConcurrency?: number;
   /** Force sequential execution */
   forceSequential?: boolean;
-};
+}
 
 /**
  * Helper: Group phases by agent type with concurrency limit
  */
-type PhaseGroup = {
+interface PhaseGroup {
   agentType: Phase["agentType"];
   phases: Phase[];
-};
+}
 
 /**
  * Convert a StructuredPlan to WavePlan array for execution
@@ -31,16 +31,21 @@ export function planToWaves(
   const maxConcurrency = options?.maxConcurrency ?? 3;
 
   switch (plan.resources.strategy) {
-    case "sequential":
+    case "sequential": {
       return generateSequentialWaves(plan);
-    case "parallel":
+    }
+    case "parallel": {
       return generateParallelWaves(plan, maxConcurrency);
-    case "topological":
+    }
+    case "topological": {
       return generateTopologicalWaves(plan);
-    case "mixed":
+    }
+    case "mixed": {
       return generateMixedWaves(plan, maxConcurrency);
-    default:
+    }
+    default: {
       throw new Error(`Unknown strategy: ${plan.resources.strategy}`);
+    }
   }
 }
 
@@ -88,7 +93,7 @@ function generateParallelWaves(
     );
 
     if (readyPhases.length === 0) {
-      const next = Array.from(remaining)[0];
+      const next = [...remaining][0];
       const phase = plan.phases.find((p) => p.id === next);
       if (phase) {
         const waveId = `wave-${phase.id}`;
@@ -137,7 +142,7 @@ function generateParallelWaves(
       waves.push({
         id: waveId,
         agents: taskIds,
-        dependsOn: Array.from(depWaveIds),
+        dependsOn: [...depWaveIds],
         agentType: group.agentType,
         isolation: plan.resources.isolation,
         phaseId: primaryPhase.id,

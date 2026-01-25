@@ -14,7 +14,7 @@ setupTestEnv();
 mock.module("@alfred/db/src/repo/graph", () => ({
   getGraphClient: vi.fn().mockReturnValue({}),
   upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue(undefined),
+  upsertEdges: vi.fn().mockResolvedValue(),
 }));
 
 // Mock policy evaluate to attach an obligation
@@ -25,14 +25,14 @@ mock.module("@alfred/policy", () => ({
 
 // No-op audit
 mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: vi.fn().mockResolvedValue(undefined),
+  createAuditLog: vi.fn().mockResolvedValue(),
 }));
 
 // Stub workflow repo persistence
 mock.module("@alfred/db/repo/workflow", () => ({
-  createRun: vi.fn().mockResolvedValue(undefined),
-  updateRun: vi.fn().mockResolvedValue(undefined),
-  appendEvent: vi.fn().mockResolvedValue(undefined),
+  createRun: vi.fn().mockResolvedValue(),
+  updateRun: vi.fn().mockResolvedValue(),
+  appendEvent: vi.fn().mockResolvedValue(),
   getRun: vi.fn().mockResolvedValue(null),
   listEvents: vi.fn().mockResolvedValue([]),
 }));
@@ -71,7 +71,7 @@ describe("workflow router policy obligations", () => {
     runPlanV6Mock.mockReturnValue({
       runId: "run-1",
       summary: "stub",
-      stream: (async function* () {})(),
+      stream: (async function* stream() {})(),
       resume: async () => {},
       cancel: () => {},
     });
@@ -89,7 +89,7 @@ describe("workflow router policy obligations", () => {
     runPlanV6Mock.mockReturnValue({
       runId: "run-1",
       summary: "stub",
-      stream: (async function* () {})(),
+      stream: (async function* stream() {})(),
       resume: async () => {},
       cancel: () => {},
     });

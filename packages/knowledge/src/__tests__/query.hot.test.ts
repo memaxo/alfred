@@ -11,7 +11,7 @@ beforeAll(async () => {
   process.env.DATABASE_URL = "sqlite::memory:";
   ({ fast_getReflections } = await import("../query.hot"));
   const dbModule = await import("@alfred/db");
-  db = dbModule.db;
+  ({ db } = dbModule);
   ({ memoryNodes } = await import("@alfred/db/schema/graph"));
 });
 

@@ -1,13 +1,23 @@
+import { redactSecrets } from "@alfred/agent/utils/redaction";
 import {
   type DecisionRecord,
   type StructuredHandoff,
   type ToolAvoidance,
+  enrichCaps,
 } from "@alfred/type";
 
-import { type AgentOutcome } from "./agent.js";
+import type { AgentOutcome } from "./agent.js";
+import type { AgentHandoff } from "./types.js";
+
 import { detectFileChanges, getGitDiffSummary } from "./changes.js";
 import { generateWaveSummary } from "./summary.js";
-import { type AgentHandoff } from "./types.js";
+
+function capText(text: string, max: number): string {
+  if (text.length <= max) {
+    return text;
+  }
+  return `${text.slice(0, max)}…<truncated>`;
+}
 
 /**
  * Generate a handoff object from one wave to another.
@@ -74,8 +84,14 @@ function extractDecisions(outcomes: AgentOutcome[]): DecisionRecord[] {
           if (parts.length >= 2) {
             decisions.push({
               confidence: "medium",
-              decision: parts[0]?.trim() ?? "",
-              rationale: parts[1]?.trim() ?? "",
+              decision: capText(
+                redactSecrets(parts[0]?.trim() ?? ""),
+                enrichCaps.decision
+              ),
+              rationale: capText(
+                redactSecrets(parts[1]?.trim() ?? ""),
+                enrichCaps.rationale
+              ),
             });
           }
         }
@@ -99,7 +115,13 @@ function extractToolsToAvoid(outcomes: AgentOutcome[]): ToolAvoidance[] {
         if (err.count >= 2 && !seen.has(err.tool)) {
           seen.add(err.tool);
           toolsToAvoid.push({
-            reason: `Failed ${err.count} times: ${err.error.slice(0, 100)}`,
+            reason: capText(
+              `Failed ${err.count} times: ${capText(
+                redactSecrets(err.error),
+                enrichCaps.errMsg
+              )}`,
+              enrichCaps.avoidReason
+            ),
             tool: err.tool,
           });
         }
@@ -120,11 +142,23 @@ function extractBlockers(outcomes: AgentOutcome[]): string[] {
     if (outcome.status !== "success") {
       const taskId = outcome.agentId.split(":").pop() ?? outcome.agentId;
       if (outcome.escalation) {
-        blockers.push(`Task ${taskId}: ${outcome.escalation}`);
+        blockers.push(
+          capText(
+            redactSecrets(`Task ${taskId}: ${outcome.escalation}`),
+            enrichCaps.blocker
+          )
+        );
       } else if (outcome.stuck) {
         blockers.push(`Task ${taskId}: Agent stuck (loop or stall detected)`);
       } else if (outcome.failureContext?.stuckReason) {
-        blockers.push(`Task ${taskId}: ${outcome.failureContext.stuckReason}`);
+        blockers.push(
+          capText(
+            redactSecrets(
+              `Task ${taskId}: ${outcome.failureContext.stuckReason}`
+            ),
+            enrichCaps.blocker
+          )
+        );
       } else {
         blockers.push(`Task ${taskId}: Failed with status ${outcome.status}`);
       }
@@ -150,7 +184,12 @@ export async function buildStructuredHandoff(
   workspace: string
 ): Promise<StructuredHandoff> {
   const changes = await detectFileChanges(workspace);
-  const summary = await generateWaveSummary(outcomes, changes);
+  const summary = capText(
+    redactSecrets(await generateWaveSummary(outcomes, changes)),
+    enrichCaps.summary
+  );
+
+  const ts = Date.now();
 
   const decisions = extractDecisions(outcomes);
   const toolsAvoided = extractToolsToAvoid(outcomes);
@@ -162,6 +201,7 @@ export async function buildStructuredHandoff(
   });
 
   return {
+    createdAt: ts,
     summary,
     fromWaveId,
     fromTaskIds,
@@ -172,7 +212,8 @@ export async function buildStructuredHandoff(
     toolsAvoided,
     openQuestions: [], // TODO: Extract from agent outputs if they surface questions
     blockers,
-    ts: Date.now(),
+    schemaVersion: 1,
+    ts,
   };
 }
 

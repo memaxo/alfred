@@ -38,7 +38,7 @@ export const classificationConfidence = new client.Histogram({
   name: "alfred_classification_confidence",
   help: "Confidence scores from LLM classifications",
   labelNames: ["type"] as const,
-  buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+  buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
   registers: [metricsRegistry],
 });
 

@@ -3,11 +3,9 @@
  * Swipe-based AI action validation endpoints
  */
 
+import type { ReviewQueueRow, VerdictData } from "@alfred/db/schema/review";
+
 import { graphRepo, reviewRepo } from "@alfred/db";
-import {
-  type ReviewQueueRow,
-  type VerdictData,
-} from "@alfred/db/schema/review";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -250,11 +248,62 @@ export const reviewRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
+      const isRecord = (value: unknown): value is Record<string, unknown> =>
+        value !== null && typeof value === "object" && !Array.isArray(value);
+
+      let { subjectData } = input;
+      let { bugCount } = input;
+
+      if (input.reviewType === "code") {
+        const rawDiff =
+          isRecord(subjectData) && typeof subjectData.rawDiff === "string"
+            ? subjectData.rawDiff.trim()
+            : "";
+
+        if (rawDiff.length > 0) {
+          try {
+            const { analyzeDiff } = await import("@alfred/code-analysis");
+            const analysis = await analyzeDiff({
+              type: "raw_diff",
+              rawDiff,
+            });
+
+            const MAX_BUGS = 50;
+            const bugs = analysis.bugs.slice(0, MAX_BUGS);
+            const files = analysis.files.map((file) => ({
+              additions: file.additions,
+              deletions: file.deletions,
+              isBinary: file.isBinary,
+              isDeleted: file.isDeleted,
+              isNew: file.isNew,
+              isRenamed: file.isRenamed,
+              path: file.path,
+            }));
+
+            const next =
+              bugCount > 0
+                ? bugCount
+                : (analysis.summary.bugCount ?? analysis.bugs.length);
+            bugCount = Number.isFinite(next) ? Math.max(0, next) : bugCount;
+
+            subjectData = {
+              ...(isRecord(subjectData) ? subjectData : { rawDiff }),
+              bugs,
+              files,
+              summary: analysis.summary,
+              truncated: analysis.bugs.length > bugs.length,
+            };
+          } catch {
+            // Ignore analysis failures; the review still provides value.
+          }
+        }
+      }
+
       // Check if should auto-approve
       const shouldAutoApprove = await reviewRepo.shouldAutoApprove(
         userId,
         input.reviewType,
-        input.subjectData as unknown as Parameters<
+        subjectData as unknown as Parameters<
           typeof reviewRepo.shouldAutoApprove
         >[2],
         input.confidence
@@ -270,7 +319,7 @@ export const reviewRouter = router({
 
       // Create review
       const review = await reviewRepo.createReview({
-        bugCount: input.bugCount,
+        bugCount,
         codeSource: input.codeSource,
         confidence: input.confidence,
         conversationId: input.conversationId,
@@ -282,7 +331,7 @@ export const reviewRouter = router({
         qualityScore: input.qualityScore,
         repository: input.repository,
         reviewType: input.reviewType,
-        subjectData: input.subjectData as unknown as Parameters<
+        subjectData: subjectData as unknown as Parameters<
           typeof reviewRepo.createReview
         >[0]["subjectData"],
         subjectId: input.subjectId,
@@ -344,7 +393,7 @@ export const reviewRouter = router({
               "approve"
             );
             if (review) {
-              await triggerLearningActions(review, "approve");
+              await triggerLearningActions(review, "approve", null);
             }
             return { reviewId, success: !!review };
           } catch {
@@ -1088,9 +1137,9 @@ export const reviewRouter = router({
           userId,
           input.period === "all"
             ? "month"
-            : input.period === "day"
+            : (input.period === "day"
               ? "day"
-              : input.period
+              : input.period)
         ),
         reviewRepo.getRiskCounts(userId),
       ]);

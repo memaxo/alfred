@@ -195,7 +195,7 @@ describe.skipIf(!shouldRun)("Voice Pipeline Roundtrip E2E", () => {
 
     // Step 4: Analyze results
     const analysis = analyzeWer(originalText, sttResult.text);
-    const similarity = analysis.similarity;
+    const { similarity } = analysis;
 
     if (verbose) {
       console.log(`  STT: ${sttMs}ms`);
@@ -296,11 +296,11 @@ describe.skipIf(!shouldRun)("Voice Pipeline Roundtrip E2E", () => {
       "Send an email to Alice.",
     ];
 
-    const results: Array<{
+    const results: {
       text: string;
       similarity: number;
       wer: number;
-    }> = [];
+    }[] = [];
 
     for (const text of testCases) {
       const result = await runRoundtrip(text, {

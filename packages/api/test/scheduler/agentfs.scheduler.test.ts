@@ -58,9 +58,9 @@ describe("agentfs cleanup scheduler", () => {
         hasFailureContext: async (runId: string) => runId === "fail-run",
       },
       logger: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
       maxDeletes: 25,
       now: () => now,
@@ -103,9 +103,9 @@ describe("agentfs cleanup scheduler", () => {
         hasFailureContext: async () => false,
       },
       logger: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
       maxDeletes: 25,
       now: () => now,
@@ -135,9 +135,9 @@ describe("agentfs cleanup scheduler", () => {
 
     await runAgentfsIntegrityTick({
       logger: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
       maxChecks: 10,
       minAgeMs: 0,
@@ -174,9 +174,9 @@ describe("agentfs cleanup scheduler", () => {
 
     await runAgentfsCompactTick({
       logger: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
       maxRuns: 5,
       minAgeDays: 1,
@@ -225,9 +225,9 @@ describe("agentfs cleanup scheduler", () => {
       casMaxDeletes: 10,
       casRetentionDays: 1,
       logger: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
       now: () => now,
       retentionDays: 999,
@@ -247,9 +247,9 @@ describe("agentfs cleanup scheduler", () => {
       casMaxDeletes: 10,
       casRetentionDays: 1,
       logger: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
       now: () => now,
       retentionDays: 999,

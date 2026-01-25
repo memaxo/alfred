@@ -47,16 +47,16 @@ const droidRunInputSchema = z.object({
 type DroidRunInput = z.infer<typeof droidRunInputSchema>;
 type StoredDroidInput = Omit<DroidRunInput, "authz">;
 
-type DroidRunResult = {
+export interface DroidRunResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-};
+}
 
-type StreamSession = {
+interface StreamSession {
   start: (input: DroidRunInput) => Promise<void>;
   cancel: () => void;
-};
+}
 
 type PendingResumeEntry =
   | { type: "run"; input: StoredDroidInput }
@@ -73,21 +73,21 @@ const PENDING_ENTRY_TTL_SEC = 30 * 60;
 const KEY_RESUME_RESULT = (runId: string) => `droid:resume:${runId}:result`;
 const KEY_PENDING_ENTRY = (runId: string) => `droid:pending:${runId}`;
 
-type LocalResultEntry = {
+interface LocalResultEntry {
   payload: ResumeCompletion;
   expiresAt: number;
-};
+}
 
-type PendingRunRecord = {
+interface PendingRunRecord {
   type: PendingResumeEntry["type"];
   input: StoredDroidInput;
   createdAt: number;
-};
+}
 
-type LocalPendingEntry = {
+interface LocalPendingEntry {
   record: PendingRunRecord;
   expiresAt: number;
-};
+}
 
 const localResumeResults = new Map<string, LocalResultEntry>();
 const localPendingRecords = new Map<string, LocalPendingEntry>();

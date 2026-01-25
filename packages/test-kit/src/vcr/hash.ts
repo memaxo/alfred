@@ -14,7 +14,7 @@ import type { HashOptions, VCRInteraction } from "./types";
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
+    const char = str.codePointAt(i) ?? 0;
     hash = (hash << 5) - hash + char;
     hash &= hash; // Convert to 32bit integer
   }
@@ -39,10 +39,10 @@ function normalizeBody(body: unknown, excludeFields: string[] = []): unknown {
 
     // Default volatile fields to exclude
     const defaultExcludes = ["stream", "stream_options", "seed", "user"];
-    const allExcludes = [...defaultExcludes, ...excludeFields];
+    const allExcludes = new Set([...defaultExcludes, ...excludeFields]);
 
     for (const [key, value] of Object.entries(obj)) {
-      if (!allExcludes.includes(key)) {
+      if (!allExcludes.has(key)) {
         normalized[key] = normalizeBody(value, excludeFields);
       }
     }

@@ -6,15 +6,15 @@ import {
 } from "@alfred/knowledge/extractor";
 import { createHash } from "node:crypto";
 
-type NodeSeed = {
+interface NodeSeed {
   resource: string;
   hash: string;
   kind: string;
   label: string;
   projectId?: string;
   properties?: Record<string, unknown>;
-};
-type EdgeSeed = {
+}
+interface EdgeSeed {
   resource: string;
   hash: string;
   fromId: string;
@@ -23,7 +23,7 @@ type EdgeSeed = {
   projectId?: string;
   weight: number;
   metadata?: Record<string, unknown>;
-};
+}
 
 function scopeResource(resource: string, projectId?: string): string {
   if (!projectId) {
@@ -85,7 +85,7 @@ function makeNode(
 ): NodeSeed | null {
   const { data, hash } = entry;
   switch (data._) {
-    case "fact":
+    case "fact": {
       return {
         resource,
         hash,
@@ -98,7 +98,8 @@ function makeNode(
           ts: data.ts,
         },
       };
-    case "insight":
+    }
+    case "insight": {
       return {
         resource,
         hash,
@@ -110,7 +111,8 @@ function makeNode(
           confidence: data.confidence,
         },
       };
-    case "pattern":
+    }
+    case "pattern": {
       return {
         resource,
         hash,
@@ -122,8 +124,10 @@ function makeNode(
           accuracy: data.accuracy,
         },
       };
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -210,7 +214,7 @@ export async function linkRagProvenanceToReasoning(opts: {
     }
 
     await upsertEdges(edgeSeeds);
-  } catch (_error) {}
+  } catch {}
 }
 
 function makeEdge(
@@ -299,7 +303,7 @@ export async function persistKnowledge(
     }
 
     await upsertEdges(edges);
-  } catch (_err) {}
+  } catch {}
 }
 
 export async function persistExecPlans(opts: {
@@ -391,7 +395,7 @@ export async function persistExecPlans(opts: {
     if (edgeSeeds.length > 0) {
       await upsertEdges(edgeSeeds);
     }
-  } catch (_error) {}
+  } catch {}
 }
 
 /**
@@ -400,7 +404,7 @@ export async function persistExecPlans(opts: {
  */
 export async function persistReasoning(
   resource: string,
-  traces: Array<{ text: string; timestamp: number }>,
+  traces: { text: string; timestamp: number }[],
   context?: {
     threadId?: string;
     executionId?: string;
@@ -462,7 +466,7 @@ export async function persistReasoning(
         resource: scoped,
         hash,
         kind: "reasoning",
-        label: trace.text.substring(0, 100),
+        label: trace.text.slice(0, 100),
         projectId,
         properties: {
           timestamp: trace.timestamp,
@@ -544,13 +548,13 @@ export async function persistReasoning(
         await upsertEdges(edgeSeeds);
       }
     }
-  } catch (_err) {}
+  } catch {}
 }
 
-type CodexArtifact = {
+interface CodexArtifact {
   path: string;
   kind: string;
-};
+}
 
 function codexExecutionHash(
   resource: string,
@@ -707,5 +711,5 @@ export async function persistCodexExecution(
     if (edgeSeeds.length > 0) {
       await upsertEdges(edgeSeeds);
     }
-  } catch (_err) {}
+  } catch {}
 }

@@ -10,11 +10,6 @@
  *
  * Uses SQLite in-memory database for fast, isolated tests.
  */
-
-process.env.DATABASE_URL = "sqlite::memory:";
-process.env.DISABLE_TRPC_METRICS = "1";
-process.env.DISABLE_METRICS_HOOKS = "1";
-
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import path from "node:path";
 
@@ -24,10 +19,16 @@ const cassettePath = path.join(
   "preference-decay-scheduler.json"
 );
 
-// Lazy-loaded modules
-let VCRRecorder: typeof import("@alfred/test-kit/vcr").VCRRecorder;
-let createVCR: typeof import("@alfred/test-kit/vcr").createVCR;
-let vcr: InstanceType<typeof VCRRecorder>;
+interface Vcr {
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+}
+
+let createVCR:
+  | ((args: { cassettePath: string; strictReplay: boolean }) => Vcr)
+  | undefined;
+
+let vcr: Vcr | undefined;
 
 // Table cleanup
 async function resetTables() {
@@ -40,10 +41,17 @@ async function resetTables() {
   }
 }
 
-const _isUsingSqlite = process.env.DATABASE_URL?.includes("sqlite") ?? false;
-
 beforeAll(async () => {
-  ({ VCRRecorder, createVCR } = await import("@alfred/test-kit/vcr"));
+  process.env.DATABASE_URL = "sqlite::memory:";
+  process.env.DISABLE_TRPC_METRICS = "1";
+  process.env.DISABLE_METRICS_HOOKS = "1";
+
+  ({ createVCR } = (await import("@alfred/test-kit/vcr")) as unknown as {
+    createVCR: (args: { cassettePath: string; strictReplay: boolean }) => Vcr;
+  });
+  if (!createVCR) {
+    throw new Error("createVCR unavailable");
+  }
   vcr = createVCR({
     cassettePath,
     strictReplay: false,

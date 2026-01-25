@@ -1,4 +1,5 @@
-import { type ToolExecuteContext } from "../shared/context.js";
+import type { ToolExecuteContext } from "../shared/context.js";
+
 import {
   type OpenCodeToolInput,
   opencodeInputSchema,

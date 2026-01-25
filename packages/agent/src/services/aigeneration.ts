@@ -1,20 +1,20 @@
 import type { AIAdapter } from "@alfred/type/ai-adapter";
 import type { ModelRole } from "@alfred/type/model";
 import type {
+  FlexibleSchema,
   GenerateObjectResult,
   GenerateTextResult,
   ModelMessage,
   ToolSet,
 } from "ai";
-import type { z } from "zod";
 
 import { generateObject, generateText } from "ai";
 
-export type DefaultAIAdapterOpts = {
+export interface DefaultAIAdapterOpts {
   userId?: string;
   projectId?: string;
   role?: ModelRole;
-};
+}
 
 export class DefaultAIAdapter implements AIAdapter {
   private readonly userId?: string;
@@ -72,12 +72,12 @@ export class DefaultAIAdapter implements AIAdapter {
     });
   }
 
-  async generateObject<T>(params: {
+  async generateObject(params: {
     messages: ModelMessage[];
     system?: string;
-    schema: z.ZodType<T>;
+    schema: FlexibleSchema<unknown>;
     prompt?: string;
-  }): Promise<GenerateObjectResult<T>> {
+  }): Promise<GenerateObjectResult<unknown>> {
     const model = await this.resolveModel();
     const telemetry =
       process.env.AI_TELEMETRY === "1"

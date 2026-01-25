@@ -28,21 +28,21 @@ import { coloredLogo, logoAnimationFrames } from "./logo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type IntroOptions = {
+export interface IntroOptions {
   skipAnimation?: boolean;
   skipChecks?: boolean;
   customChecks?: CheckDefinition[];
   onComplete?: () => void;
   onSkip?: () => void;
-};
+}
 
-export type IntroState = {
+export interface IntroState {
   phase: "logo" | "checks" | "greeting" | "complete";
   logoFrame: number;
   checks: SystemCheck[];
   greetingFrame: number;
   skipped: boolean;
-};
+}
 
 // ─── Animation Timing ────────────────────────────────────────────────────────
 

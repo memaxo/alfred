@@ -1,13 +1,16 @@
 {
   "name": "@alfred/codeprint",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./discover": "./src/discover.ts",
     "./metrics": "./src/metrics.ts",
     "./eval": "./src/eval/index.ts",
+    "./pool": "./src/pool.ts",
     "./profile": "./src/profile.ts",
-    "./profiled": "./src/profiled.ts"
+    "./profiled": "./src/profiled.ts",
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "typecheck": "tsgo -b",

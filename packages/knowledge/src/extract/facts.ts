@@ -33,10 +33,10 @@ import { asTextView } from "./types.js";
  * Removed: Regex Taxonomy dependency.
  */
 
-export type KnowledgeEntry = {
+export interface KnowledgeEntry {
   hash: string;
   data: Knowledge;
-};
+}
 
 const computeSentenceConfidence = (sentenceDoc: TextView): number => {
   let confidence = 0.8;
@@ -139,12 +139,12 @@ export const extract = (text: string, source: string): ExtractionResult => {
     });
   });
 
-  const contradictions: Array<{
+  const contradictions: {
     pair: [string, string];
     reason: "negation" | "antonym" | "numeric";
     focus?: string;
     confidence: number;
-  }> = [];
+  }[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < facts.length; i++) {
     for (let j = i + 1; j < facts.length; j++) {

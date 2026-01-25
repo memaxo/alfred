@@ -1,20 +1,20 @@
-export type NotePaneItem = {
+export interface NotePaneItem {
   id: string;
   title?: string | null;
   content: string;
   createdAt?: string | null;
-};
+}
 
-export type NotePaneProps = {
+export interface NotePaneProps {
   items: NotePaneItem[];
   onDelete?: (id: string) => void;
   className?: string;
-};
+}
 
-type RenderItem = {
+interface RenderItem {
   item: NotePaneItem;
   formattedTimestamp: string | null;
-};
+}
 
 function buildRenderItems(items: NotePaneItem[]): RenderItem[] {
   return items.map((item) => {

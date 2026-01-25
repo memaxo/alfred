@@ -195,7 +195,7 @@ export class KnowledgeEngine {
 
           // Limit to topK
           results = results.slice(0, topK);
-        } catch (_error) {
+        } catch {
           // Continue without reranking on error
           results = results.slice(0, topK);
         }
@@ -223,13 +223,13 @@ export class KnowledgeEngine {
       });
 
       // Active Recall: Reinforce document nodes for retrieved chunks
-      const documentIds = Array.from(
-        new Set(
+      const documentIds = [
+        ...new Set(
           chunks
             .map((c) => c.metadata?.documentId)
             .filter((id): id is string => typeof id === "string")
-        )
-      );
+        ),
+      ];
 
       if (documentIds.length > 0) {
         // Fire-and-forget to avoid latency
@@ -282,13 +282,13 @@ export class KnowledgeEngine {
     });
 
     // Active Recall: Reinforce document nodes for retrieved chunks
-    const documentIds = Array.from(
-      new Set(
+    const documentIds = [
+      ...new Set(
         chunks
           .map((c) => c.metadata?.documentId)
           .filter((id): id is string => typeof id === "string")
-      )
-    );
+      ),
+    ];
 
     if (documentIds.length > 0) {
       // Fire-and-forget to avoid latency

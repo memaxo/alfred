@@ -24,12 +24,12 @@ import {
 
 const MAX_BATCH_SIZE = 1000;
 
-export type EmbeddingProvider = {
+export interface EmbeddingProvider {
   embed: (text: string) => Promise<number[]>;
   embedMany: (texts: string[]) => Promise<number[][]>;
   /** Model ID for tracking which model generated embeddings */
   modelId?: string;
-};
+}
 
 const defaultEmbeddingProvider: EmbeddingProvider = {
   embed: embedLocal,
@@ -66,12 +66,12 @@ export function getCurrentModelId(): string {
   return embeddingProvider.modelId ?? MODEL_IDS.KALM_12B;
 }
 
-export type Chunk = {
+export interface Chunk {
   content: string;
   embedding?: number[];
   order: number;
   metadata?: Record<string, unknown>;
-};
+}
 
 function splitSentences(paragraph: string): string[] {
   const sentences = paragraph
@@ -91,7 +91,7 @@ function pushBuffer(buffers: string[], buffer: string): void {
   }
 }
 
-export type IngestOptions = {
+export interface IngestOptions {
   /** Source identifier for the document */
   source: string;
   /** Text content to ingest */
@@ -100,7 +100,7 @@ export type IngestOptions = {
   imageUrl?: string;
   /** Progress callback */
   onProgress?: (processed: number, total: number) => void;
-};
+}
 
 export async function ingest(
   source: string,
@@ -149,13 +149,12 @@ export async function ingestWithOptions(
       allEmbeddings.push(...batchEmbeddings);
       processed += batch.length;
       onProgress?.(processed, pieces.length);
-    } catch (_error) {
+    } catch {
       // Log error but continue with remaining batches
       if (
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
-      ) {
-      }
+      ) {}
       // Fill with empty embeddings for failed batch to maintain array length
       allEmbeddings.push(...batch.map(() => []));
     }
@@ -185,19 +184,18 @@ export async function ingestWithOptions(
         source,
         chunks,
       });
-    } catch (_error) {
+    } catch {
       if (
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
-      ) {
-      }
+      ) {}
     }
   }
 
   return document.id;
 }
 
-export type RetrieveOptions = {
+export interface RetrieveOptions {
   /** Search query */
   query: string;
   /** Number of results to return */
@@ -208,7 +206,7 @@ export type RetrieveOptions = {
   documentId?: string;
   /** Filter by embedding model ID (defaults to current model) */
   modelId?: string;
-};
+}
 
 export async function retrieve(
   query: string,
@@ -257,9 +255,9 @@ export async function retrieveWithOptions(
       const metadata =
         rawMetadata && typeof rawMetadata === "object"
           ? (rawMetadata as Record<string, unknown>)
-          : rawMetadata !== undefined
+          : (rawMetadata !== undefined
             ? { value: rawMetadata }
-            : undefined;
+            : undefined);
 
       return {
         content: row.content,
@@ -274,13 +272,13 @@ export async function retrieveWithOptions(
     });
 
   // Active Recall: Reinforce document nodes for retrieved chunks
-  const documentIds = Array.from(
-    new Set(
+  const documentIds = [
+    ...new Set(
       chunks
         .map((c: Chunk) => c.metadata?.documentId)
         .filter((id: unknown): id is string => typeof id === "string")
-    )
-  );
+    ),
+  ];
 
   if (documentIds.length > 0) {
     // Fire-and-forget to avoid latency
@@ -297,7 +295,7 @@ export async function retrieveWithOptions(
         if (nodeIds.length > 0) {
           await touchNodes(nodeIds);
         }
-      } catch (_err) {
+      } catch {
         // Non-blocking: failures don't affect retrieval
       }
     })();
@@ -401,12 +399,12 @@ export async function chunk(
   return chunks;
 }
 
-type StoredChunk = {
+interface StoredChunk {
   content: string;
   order: number;
   embedding?: number[];
   metadata?: Record<string, unknown>;
-};
+}
 
 async function enrichGraphFromChunks(args: {
   documentId: string;
@@ -434,12 +432,11 @@ async function enrichGraphFromChunks(args: {
         },
       },
     ] as any);
-  } catch (_error) {
+  } catch {
     if (
       typeof process !== "undefined" &&
       process.env.NODE_ENV !== "production"
-    ) {
-    }
+    ) {}
   }
 
   for (const chunk of args.chunks) {
@@ -458,15 +455,15 @@ async function enrichGraphFromChunks(args: {
   await persistRagKnowledge(resource, entries);
 }
 
-type NodeSeed = {
+interface NodeSeed {
   resource: string;
   hash: string;
   kind: string;
   label: string;
   properties?: Record<string, unknown>;
-};
+}
 
-type EdgeSeed = {
+interface EdgeSeed {
   resource: string;
   hash: string;
   fromId: string;
@@ -474,7 +471,7 @@ type EdgeSeed = {
   kind: string;
   weight: number;
   metadata?: Record<string, unknown>;
-};
+}
 
 function nodeKey(resource: string, hash: string): string {
   return `${resource}:${hash}`;
@@ -483,7 +480,7 @@ function nodeKey(resource: string, hash: string): string {
 function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
   const { data, hash } = entry;
   switch (data._) {
-    case "fact":
+    case "fact": {
       return {
         resource,
         hash,
@@ -495,7 +492,8 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
           ts: data.ts,
         },
       };
-    case "insight":
+    }
+    case "insight": {
       return {
         resource,
         hash,
@@ -506,7 +504,8 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
           confidence: data.confidence,
         },
       };
-    case "pattern":
+    }
+    case "pattern": {
       return {
         resource,
         hash,
@@ -517,8 +516,10 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
           accuracy: data.accuracy,
         },
       };
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 

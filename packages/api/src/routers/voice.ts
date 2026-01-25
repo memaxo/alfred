@@ -104,7 +104,7 @@ export const voiceRouter = router({
   sessions: authedProcedure
     .input(voiceSessionStatusInput)
     .query(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -124,7 +124,7 @@ export const voiceRouter = router({
   endSession: authedProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -169,7 +169,7 @@ export const voiceRouter = router({
     .use(requirePolicy("voice.tts", toWebrtcResource))
     .input(webrtcCreateInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -223,7 +223,7 @@ export const voiceRouter = router({
     .use(requirePolicy("voice.tts", toWebrtcResource))
     .input(webrtcOfferInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -269,7 +269,7 @@ export const voiceRouter = router({
     .use(requirePolicy("voice.tts", toWebrtcResource))
     .input(webrtcIceInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -309,7 +309,7 @@ export const voiceRouter = router({
     .use(requirePolicy("voice.tts", toWebrtcResource))
     .input(webrtcSessionInput)
     .query(({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -340,7 +340,7 @@ export const voiceRouter = router({
     .use(requirePolicy("voice.tts", toWebrtcResource))
     .input(webrtcSessionInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -359,7 +359,7 @@ export const voiceRouter = router({
     .input(voiceStreamInput)
     .subscription(({ input, ctx }) =>
       observable<VoiceStreamEvent>((emit) => {
-        const session = ctx.session;
+        const { session } = ctx;
         if (!session) {
           emit.error(
             new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
@@ -419,57 +419,59 @@ export const voiceRouter = router({
    * Clients subscribe to receive proactive updates about workflow execution
    * based on user notification preferences.
    */
-  workflowNotification: authedProcedure.subscription(async function* ({ ctx }) {
-    const { subscribeToNotifications } = await import("../voice/notifier.js");
+  workflowNotification: authedProcedure.subscription(
+    async function* workflowNotification({ ctx }) {
+      const { subscribeToNotifications } = await import("../voice/notifier.js");
 
-    const userId = ctx.session.user.id;
-    const notifications: Array<{
-      type: "completion" | "progress" | "phase_complete";
-      runId: string;
-      message: string;
-      notificationMode: string;
-      audioBase64?: string;
-      mimeType?: string;
-    }> = [];
+      const userId = ctx.session.user.id;
+      const notifications: {
+        type: "completion" | "progress" | "phase_complete";
+        runId: string;
+        message: string;
+        notificationMode: string;
+        audioBase64?: string;
+        mimeType?: string;
+      }[] = [];
 
-    let resolveNext: (() => void) | undefined;
+      let resolveNext: (() => void) | undefined;
 
-    const unsubscribe = subscribeToNotifications(userId, (event) => {
-      notifications.push({
-        type: event.type,
-        runId: event.runId,
-        message: event.message,
-        notificationMode: event.notificationMode,
-        audioBase64: event.audioBase64,
-        mimeType: event.mimeType,
-      });
-      if (resolveNext) {
-        resolveNext();
-        resolveNext = undefined;
-      }
-    });
-
-    try {
-      while (true) {
-        // Wait for notifications or timeout
-        if (notifications.length === 0) {
-          await new Promise<void>((resolve) => {
-            resolveNext = resolve;
-            // Heartbeat timeout - emit empty to keep connection alive
-            setTimeout(resolve, 30_000);
-          });
+      const unsubscribe = subscribeToNotifications(userId, (event) => {
+        notifications.push({
+          type: event.type,
+          runId: event.runId,
+          message: event.message,
+          notificationMode: event.notificationMode,
+          audioBase64: event.audioBase64,
+          mimeType: event.mimeType,
+        });
+        if (resolveNext) {
+          resolveNext();
+          resolveNext = undefined;
         }
+      });
 
-        // Yield all pending notifications
-        while (notifications.length > 0) {
-          const notification = notifications.shift();
-          if (notification) {
-            yield notification;
+      try {
+        while (true) {
+          // Wait for notifications or timeout
+          if (notifications.length === 0) {
+            await new Promise<void>((resolve) => {
+              resolveNext = resolve;
+              // Heartbeat timeout - emit empty to keep connection alive
+              setTimeout(resolve, 30_000);
+            });
+          }
+
+          // Yield all pending notifications
+          while (notifications.length > 0) {
+            const notification = notifications.shift();
+            if (notification) {
+              yield notification;
+            }
           }
         }
+      } finally {
+        unsubscribe();
       }
-    } finally {
-      unsubscribe();
     }
-  }),
+  ),
 });

@@ -55,10 +55,10 @@ export class BTreeIndex<K = string, V = NodeId> {
   }
 
   delete(key: K, value?: V): boolean {
-    const all: Array<{ key: K; value: V }> = [];
+    const all: { key: K; value: V }[] = [];
     this.collectAll(this.root, all);
     let removed = false;
-    const filtered: Array<{ key: K; value: V }> = [];
+    const filtered: { key: K; value: V }[] = [];
     for (const entry of all) {
       if (this.compare(entry.key, key) === 0) {
         if (value === undefined) {
@@ -242,7 +242,7 @@ export class BTreeIndex<K = string, V = NodeId> {
     return;
   }
 
-  private collectAll(node: BTreeNode<K, V>, acc: Array<{ key: K; value: V }>) {
+  private collectAll(node: BTreeNode<K, V>, acc: { key: K; value: V }[]) {
     if (node.leaf) {
       for (let i = 0; i < node.keys.length; i++) {
         const key = node.keys[i];

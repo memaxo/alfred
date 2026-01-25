@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 const workflowRepoMocks = {
   listRunsByStatuses: vi.fn().mockResolvedValue([]),
-  updateRun: vi.fn().mockResolvedValue(undefined),
+  updateRun: vi.fn().mockResolvedValue(),
 };
 
 mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
 
 const runRegistryMocks = {
-  register: vi.fn().mockResolvedValue(undefined),
-  unregister: vi.fn().mockResolvedValue(undefined),
+  register: vi.fn().mockResolvedValue(),
+  unregister: vi.fn().mockResolvedValue(),
 };
 
 mock.module("../../src/workflow/registry", () => ({
@@ -21,9 +21,9 @@ describe("workflow session recovery", () => {
 
   beforeEach(() => {
     workflowRepoMocks.listRunsByStatuses.mockReset().mockResolvedValue([]);
-    workflowRepoMocks.updateRun.mockReset().mockResolvedValue(undefined);
-    runRegistryMocks.register.mockReset().mockResolvedValue(undefined);
-    runRegistryMocks.unregister.mockReset().mockResolvedValue(undefined);
+    workflowRepoMocks.updateRun.mockReset().mockResolvedValue();
+    runRegistryMocks.register.mockReset().mockResolvedValue();
+    runRegistryMocks.unregister.mockReset().mockResolvedValue();
     process.env.RUN_REGISTRY_BACKEND = originalRunRegistryBackend;
   });
 
@@ -79,8 +79,8 @@ describe("workflow session recovery", () => {
 
     const delegateHandle = {
       abortController: new AbortController(),
-      resume: vi.fn().mockResolvedValue(undefined),
-      cancel: vi.fn().mockResolvedValue(undefined),
+      resume: vi.fn().mockResolvedValue(),
+      cancel: vi.fn().mockResolvedValue(),
     };
 
     await registerRunHandle("run-real", delegateHandle);

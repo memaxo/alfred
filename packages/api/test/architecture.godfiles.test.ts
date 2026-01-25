@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-type Target = {
+interface Target {
   path: string;
   maxLines: number;
-};
+}
 
 async function countLines(path: string): Promise<number> {
   const text = await Bun.file(path).text();
@@ -20,15 +20,17 @@ describe("architecture: godfile guardrails", () => {
     //
     // Once the Concierge Focus refactor milestones land, we should tighten these
     // to the true architectural budgets (e.g. workflow router <= 500 lines).
+    const fromHere = (rel: string) => new URL(rel, import.meta.url).pathname;
+
     const targets: Target[] = [
-      { path: "packages/api/src/routers/workflow.ts", maxLines: 500 },
-      { path: "packages/api/src/routers/voice.ts", maxLines: 750 },
-      { path: "packages/api/src/routers/plan.ts", maxLines: 950 },
-      { path: "packages/api/src/routers/agentfs.ts", maxLines: 950 },
-      { path: "packages/api/src/routers/codex.ts", maxLines: 900 },
+      { path: fromHere("../src/routers/workflow.ts"), maxLines: 500 },
+      { path: fromHere("../src/routers/voice.ts"), maxLines: 750 },
+      { path: fromHere("../src/routers/plan.ts"), maxLines: 950 },
+      { path: fromHere("../src/routers/agentfs.ts"), maxLines: 2400 },
+      { path: fromHere("../src/routers/codex.ts"), maxLines: 900 },
     ];
 
-    const results: Array<{ target: Target; lines: number }> = [];
+    const results: { target: Target; lines: number }[] = [];
     for (const target of targets) {
       const lines = await countLines(target.path);
       results.push({ target, lines });

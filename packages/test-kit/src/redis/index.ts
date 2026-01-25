@@ -21,16 +21,16 @@ process.env.REDIS_URL = "false";
 process.env.REDIS_RETRY_ENABLED = "false";
 process.env.RUN_REGISTRY_BACKEND = "memory";
 
-type ResumePayload = {
+interface ResumePayload {
   event: string;
   authz: string;
-};
+}
 
-type RunHandle = {
+interface RunHandle {
   resume(args: { resumeData: ResumePayload }): Promise<unknown>;
   cancel(): Promise<unknown>;
   abortController: AbortController;
-};
+}
 
 const handles = new Map<string, RunHandle>();
 

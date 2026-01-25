@@ -306,24 +306,29 @@ function shouldNotifyProgress(
   _totalTasks: number
 ): boolean {
   switch (updatePref) {
-    case "request":
+    case "request": {
       // Never proactively notify
       return false;
+    }
 
-    case "25percent":
+    case "25percent": {
       // Notify at 25%, 50%, 75% milestones
       return percentage === 25 || percentage === 50 || percentage === 75;
+    }
 
-    case "phase":
+    case "phase": {
       // Phase notifications handled separately
       return false;
+    }
 
-    case "continuous":
+    case "continuous": {
       // Notify on every task (but not too frequently)
       return true;
+    }
 
-    default:
+    default: {
       return false;
+    }
   }
 }
 

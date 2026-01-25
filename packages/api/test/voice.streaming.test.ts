@@ -38,8 +38,8 @@ describe("authorizeVoiceStreamRequest", () => {
 
     // Import after mocks are set up
     const streaming = await import("../src/voice/streaming");
-    authorizeVoiceStreamRequest = streaming.authorizeVoiceStreamRequest;
-    VoiceStreamAuthError = streaming.VoiceStreamAuthError;
+    ({ authorizeVoiceStreamRequest } = streaming);
+    ({ VoiceStreamAuthError } = streaming);
   });
 
   afterEach(() => {

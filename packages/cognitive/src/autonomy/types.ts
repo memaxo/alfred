@@ -4,10 +4,10 @@
 
 import type { Autonomy, Confidence, Timestamp } from "../util/math.js";
 
-export type BetaPrior = {
+export interface BetaPrior {
   alpha: number;
   beta: number;
-};
+}
 
 export type Evidence =
   | { _: "success"; task: string; duration: number; reliability?: number }
@@ -26,14 +26,14 @@ export type Constraint =
   | { _: "confidence"; minimum: Confidence }
   | { _: "approval"; required: boolean };
 
-export type AutonomyGradient = {
+export interface AutonomyGradient {
   level: Autonomy;
   confidence: Confidence;
   prior: BetaPrior;
   evidence: Evidence[];
   constraints: Constraint[];
   lastUpdate: Timestamp;
-};
+}
 
 export const DEFAULT_BETA_PRIOR: BetaPrior = Object.freeze({
   alpha: 2,

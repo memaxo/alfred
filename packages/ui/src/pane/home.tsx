@@ -1,19 +1,19 @@
-export type HomePaneEntity = {
+export interface HomePaneEntity {
   id: string;
   type: string;
   state?: unknown;
-};
+}
 
-export type HomePaneProps = {
+export interface HomePaneProps {
   entities: HomePaneEntity[];
   onToggle?: (id: string, state: unknown) => void;
   className?: string;
-};
+}
 
-type RenderEntity = {
+interface RenderEntity {
   entity: HomePaneEntity;
   formattedState: string;
-};
+}
 
 function formatState(state: unknown): string {
   if (state === null || state === undefined) {

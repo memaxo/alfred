@@ -33,7 +33,7 @@ type SpawnStreamOption =
   | number
   | ReadableStream;
 
-export type SecureSpawnOptions = {
+export interface SecureSpawnOptions {
   cwdHandle: DirectoryHandle;
   cmd: string;
   args?: string[];
@@ -41,7 +41,7 @@ export type SecureSpawnOptions = {
   stdin?: SpawnStreamOption;
   stdout?: SpawnStreamOption;
   stderr?: SpawnStreamOption;
-};
+}
 
 /**
  * Spawns a process with a secure working directory.

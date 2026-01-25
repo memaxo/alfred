@@ -29,9 +29,9 @@ export const WRITE_SANDBOX: SandboxConfig = {
   approval: "on-request",
 };
 
-type DirectoryAssertOptions = {
+interface DirectoryAssertOptions {
   noFollowSymlinks?: boolean;
-};
+}
 
 function resolveCodexApproval(): SandboxConfig["approval"] {
   const raw = process.env.ORCH_CODEX_APPROVAL?.trim();
@@ -65,16 +65,16 @@ export function assertAllowedDirectory(
     const isFsNotDir =
       (error as NodeJS.ErrnoException | undefined)?.code === "ENOTDIR";
     if (isDirectoryError || isFsNotDir) {
-      throw new Error("codex_invalid_cwd_not_directory");
+      throw new Error("codex_invalid_cwd_not_directory", { cause: error });
     }
     try {
       if (lstatSync(candidate).isFile()) {
-        throw new Error("codex_invalid_cwd_not_directory");
+        throw new Error("codex_invalid_cwd_not_directory", { cause: error });
       }
     } catch {
       // ignore classification errors
     }
-    throw new Error("codex_invalid_cwd");
+    throw new Error("codex_invalid_cwd", { cause: error });
   }
 }
 

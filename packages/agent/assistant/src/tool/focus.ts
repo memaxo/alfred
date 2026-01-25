@@ -47,7 +47,7 @@ function parseFocusState(entry: FocusPreferenceRow): FocusState | null {
   if (!entry) {
     return null;
   }
-  const value = entry.value;
+  const { value } = entry;
   if (!value || typeof value !== "object") {
     return null;
   }
@@ -114,16 +114,16 @@ async function computeSuggestedTasks(userId: string) {
 }
 
 async function loadFocusPreference(userId: string) {
-  const preferences = (await getPreferences(userId)) as unknown as Array<{
+  const preferences = (await getPreferences(userId)) as unknown as {
     key: string;
     value: unknown;
-  }>;
+  }[];
   const entry = preferences.find((pref) => pref.key === "focus") ?? null;
   return parseFocusState(entry);
 }
 
 async function persistFocus(userId: string, state: FocusState) {
-  await setPreference(userId, "focus", state, 1.0, "assistant");
+  await setPreference(userId, "focus", state, 1, "assistant");
 }
 
 export const toolFocus = {

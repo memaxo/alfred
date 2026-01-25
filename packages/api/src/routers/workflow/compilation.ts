@@ -15,7 +15,7 @@ export const workflowCompilationRouter = router({
     )
     .input(z.object({ runId: z.string().min(1) }))
     .query(async ({ input, ctx }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -37,7 +37,7 @@ export const workflowCompilationRouter = router({
         run.stateData !== null
           ? (run.stateData as Record<string, unknown>)
           : {};
-      const compilation = stateData.compilation;
+      const { compilation } = stateData;
       const parsed = workflowCompilationSchema.safeParse(compilation);
       return parsed.success ? parsed.data : null;
     }),

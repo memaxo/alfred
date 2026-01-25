@@ -1,6 +1,6 @@
 import { mock } from "bun:test";
 
-export type TicketCall = {
+export interface TicketCall {
   input: {
     space: string;
     action: string;
@@ -10,7 +10,7 @@ export type TicketCall = {
     authz: string;
     [key: string]: unknown;
   };
-};
+}
 
 type Mode = "ok" | "fail";
 

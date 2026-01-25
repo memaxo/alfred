@@ -1,17 +1,19 @@
+import type { UIMessage } from "@alfred/type/stream";
+
 import { withBudget } from "@alfred/metrics/performance";
 import { createTokenEstimator } from "@alfred/metrics/token";
-import { type UIMessage } from "@alfred/type/stream";
 import { convertToModelMessages, pruneMessages } from "ai";
+
+import type {
+  BuildHistoryContextOptions,
+  BuildHistoryContextResult,
+  HistoryBudget,
+  HistorySelection,
+  HistoryTier,
+} from "./types";
 
 import { BUDGET_RATIOS } from "./calculator";
 import { getModelContextInfo } from "./model";
-import {
-  type BuildHistoryContextOptions,
-  type BuildHistoryContextResult,
-  type HistoryBudget,
-  type HistorySelection,
-  type HistoryTier,
-} from "./types";
 
 /**
  * Research-backed budget constants (January 2025)
@@ -282,9 +284,9 @@ export async function buildHistoryContext(
     const modelMessagesRaw =
       uiMessages.length === 0
         ? []
-        : options.tools
+        : (options.tools
           ? convertToModelMessages(uiMessages, { tools: options.tools })
-          : convertToModelMessages(uiMessages);
+          : convertToModelMessages(uiMessages));
 
     const modelMessages =
       modelMessagesRaw.length === 0

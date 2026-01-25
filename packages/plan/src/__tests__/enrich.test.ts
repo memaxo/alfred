@@ -4,16 +4,41 @@
  * Tests queryTaskEnrichment, applyEnrichmentToTask, and generateResolutionDelta.
  */
 
-import {
-  type FailureContext,
-  type RelevantHeuristic,
-  type SimilarExecution,
-  type StructuredHandoff,
-  type TaskEnrichment,
-  type UpstreamFailure,
+import type {
+  FailureContext,
+  RelevantHeuristic,
+  SimilarExecution,
+  StructuredHandoff,
+  TaskEnrichment,
+  UpstreamFailure,
 } from "@alfred/type";
-import { type SubTask } from "@alfred/type/plan";
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import type { SubTask } from "@alfred/type/plan";
+
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+
+let prevEnrichmentEnv: string | undefined;
+
+beforeAll(() => {
+  prevEnrichmentEnv = process.env.ALFRED_ENRICHMENT;
+  process.env.ALFRED_ENRICHMENT = "1";
+});
+
+afterAll(() => {
+  if (prevEnrichmentEnv === undefined) {
+    delete process.env.ALFRED_ENRICHMENT;
+  } else {
+    process.env.ALFRED_ENRICHMENT = prevEnrichmentEnv;
+  }
+});
 
 // Mock @alfred/db to avoid DB dependency
 mock.module("@alfred/db/repo/codex-learning", () => ({
@@ -47,7 +72,7 @@ const {
 } = await import("../enrich/index.js");
 
 // Import type separately
-import { type EnrichmentSource } from "../enrich/index.js";
+import type { EnrichmentSource } from "../enrich/index.js";
 
 // Test fixtures
 function createSubTask(overrides: Partial<SubTask> = {}): SubTask {

@@ -18,15 +18,15 @@ import {
  * Mirrors the shape from @alfred/runtime/context without direct import
  * to avoid circular dependencies.
  */
-export type PipelineExecutionContext = {
+export interface PipelineExecutionContext {
   bundle: ContextBundle | null;
   ragDocumentIds: string[];
   totalTokens: number;
   receipts: {
-    code?: Array<{ id: string; path?: string; score: number }>;
-    web?: Array<{ id: string; url?: string; title?: string }>;
+    code?: { id: string; path?: string; score: number }[];
+    web?: { id: string; url?: string; title?: string }[];
   };
-};
+}
 
 /**
  * Discriminated union representing each stage of the orchestrator pipeline.
@@ -77,7 +77,7 @@ export type PipelineStage =
 /**
  * Summary of pipeline execution for completed workflows.
  */
-export type PipelineSummary = {
+export interface PipelineSummary {
   totalSubTasks: number;
   completedAgents: number;
   failedAgents: number;
@@ -87,7 +87,7 @@ export type PipelineSummary = {
   reviewPassed: boolean;
   fixAttempts: number;
   durationMs: number;
-};
+}
 
 /**
  * Re-export TrackerContext as PipelineTrackerState for semantic clarity.
@@ -98,7 +98,7 @@ export type PipelineTrackerState = TrackerContext;
 /**
  * Wave execution context accumulated during the waves phase.
  */
-export type WaveExecutionContext = {
+export interface WaveExecutionContext {
   waves: WavePlan[];
   tracker: TrackerContext;
   agentSpecs: Map<AgentId, AgentSpec>;
@@ -112,12 +112,12 @@ export type WaveExecutionContext = {
   hasInterrupted: boolean;
   hasEscalated: boolean;
   escalationReason: string | null;
-};
+}
 
 /**
  * Merge phase context accumulated during merging.
  */
-export type MergeContext = {
+export interface MergeContext {
   plan: MergePlan;
   conflictScan: {
     files: string[];
@@ -132,32 +132,32 @@ export type MergeContext = {
     conflictFiles?: string[];
     error?: string;
   } | null;
-};
+}
 
 /**
  * Review phase context accumulated during review.
  */
-export type ReviewContext = {
+export interface ReviewContext {
   plan: ReviewPlan;
   fixAttempts: number;
   failures: ReviewFailureDetail[];
   passed: boolean;
   debuggerPlanPath: string | null;
-};
+}
 
 /**
  * ExecPlan tracking for the workflow.
  */
-export type ExecPlanTracking = {
+export interface ExecPlanTracking {
   rootPath: string;
   subtaskPaths: Map<SubTaskId, string>;
   snapshots: Map<string, ExecPlanSnapshot>;
-};
+}
 
 /**
  * Timing metrics for pipeline phases.
  */
-export type PipelineMetrics = {
+export interface PipelineMetrics {
   startedAt: number;
   endedAt: number | null;
   phaseTimings: Map<
@@ -165,7 +165,7 @@ export type PipelineMetrics = {
     { start: number; end: number | null }
   >;
   agentDurations: Map<AgentId, number>;
-};
+}
 
 /**
  * The complete orchestrator pipeline state.
@@ -176,7 +176,7 @@ export type PipelineMetrics = {
  *                 ↘         ↘          ↘          ↘
  *                  escalated/aborted (from any active stage)
  */
-export type OrchestratorPipeline = {
+export interface OrchestratorPipeline {
   runId: string;
   stage: PipelineStage;
 
@@ -215,7 +215,7 @@ export type OrchestratorPipeline = {
 
   // Timing and metrics
   metrics: PipelineMetrics;
-};
+}
 
 /**
  * Valid transitions between pipeline stages.
@@ -369,7 +369,7 @@ export function transitionPipeline(
 
     case "waves": {
       const t = transition as Extract<PipelineTransition, { to: "waves" }>;
-      const subTasks = pipeline.planning.subTasks;
+      const { subTasks } = pipeline.planning;
       return {
         ...baseUpdate,
         stage: {

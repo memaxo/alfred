@@ -231,17 +231,17 @@ describe("Cognitive State Machine", () => {
       const autonomy = initialAutonomy(Date.now());
 
       // idle -> capturing
-      state = apply(state, createInputEvent("Plan lunch"), autonomy).state;
+      ({ state } = apply(state, createInputEvent("Plan lunch"), autonomy));
 
       // capturing -> thinking
-      state = apply(state, createInputEvent("Processed"), autonomy).state;
+      ({ state } = apply(state, createInputEvent("Processed"), autonomy));
 
       // thinking -> reflecting
       const outcome = { _: "success", result: "done", duration: 100 };
-      state = apply(state, createCompleteEvent(outcome), autonomy).state;
+      ({ state } = apply(state, createCompleteEvent(outcome), autonomy));
 
       // reflecting -> idle
-      state = apply(state, createInputEvent("Next"), autonomy).state;
+      ({ state } = apply(state, createInputEvent("Next"), autonomy));
 
       expect(state._).toBe("idle");
     });
@@ -251,17 +251,17 @@ describe("Cognitive State Machine", () => {
       const autonomy = initialAutonomy(Date.now());
 
       // idle -> capturing
-      state = apply(state, createInputEvent("Do work"), autonomy).state;
+      ({ state } = apply(state, createInputEvent("Do work"), autonomy));
 
       // capturing -> thinking
-      state = apply(state, createInputEvent("Thinking"), autonomy).state;
+      ({ state } = apply(state, createInputEvent("Thinking"), autonomy));
 
       // thinking -> reflecting (with failure)
       const outcome = { _: "failure", error: "error", recoverable: true };
-      state = apply(state, createCompleteEvent(outcome), autonomy).state;
+      ({ state } = apply(state, createCompleteEvent(outcome), autonomy));
 
       // reflecting -> idle
-      state = apply(state, createInputEvent("Continue"), autonomy).state;
+      ({ state } = apply(state, createInputEvent("Continue"), autonomy));
 
       expect(state._).toBe("idle");
       // Physiology should reflect failure

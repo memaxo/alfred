@@ -113,30 +113,34 @@ const outputSchema = z.discriminatedUnion("action", [
 ]);
 
 type ToolOutput = z.infer<typeof outputSchema>;
-type ToolError = {
+interface ToolError {
   ok: false;
   code: string;
   message: string;
   detail?: string;
-};
+}
 
 function scopesForAction(action: string): string[] {
   switch (action) {
     case "lxc_status":
     case "vm_status":
-    case "task_wait":
+    case "task_wait": {
       return ["proxmox.read"];
+    }
     case "lxc_start":
     case "lxc_stop":
-    case "vm_power":
+    case "vm_power": {
       return ["proxmox.power"];
+    }
     case "lxc_create":
     case "lxc_destroy":
     case "lxc_snapshot":
-    case "lxc_rollback":
+    case "lxc_rollback": {
       return ["proxmox.admin"];
-    default:
+    }
+    default: {
       return [];
+    }
   }
 }
 
@@ -358,15 +362,16 @@ export const toolProxmox = {
             exitstatus: result.exitstatus,
           };
         }
-        default:
+        default: {
           return {
             ok: false,
             code: "validation",
             message: `Unknown action: ${input.action}`,
           };
+        }
       }
-    } catch (err) {
-      return errorToResponse(input.action, err);
+    } catch (error) {
+      return errorToResponse(input.action, error);
     }
   },
 };

@@ -10,7 +10,7 @@ import {
 
 describe("Cognitive Physiology", () => {
   it("updates physiology correctly", () => {
-    let phy: Physiology = { energy: 1.0, boredom: 0.0, frustration: 0.0 };
+    let phy: Physiology = { energy: 1, boredom: 0, frustration: 0 };
 
     // Step consumes energy
     phy = updatePhysiology(phy, "step");
@@ -68,7 +68,7 @@ describe("Cognitive Physiology", () => {
     const highBoredomPhy: Physiology = {
       energy: 0.7,
       boredom: 0.95, // Very high boredom (>0.9 threshold)
-      frustration: 0.0,
+      frustration: 0,
     };
 
     // Boredom > 0.9 blocks execution entirely (checked in meetsConstraints)
@@ -89,8 +89,8 @@ describe("Cognitive Physiology", () => {
 
     const lowEnergyPhy: Physiology = {
       energy: 0.15, // Very low energy (< 0.2 threshold)
-      boredom: 0.0,
-      frustration: 0.0,
+      boredom: 0,
+      frustration: 0,
     };
 
     // Use neutral/negative evidence to see multiplier effect
@@ -121,7 +121,7 @@ describe("Cognitive Physiology", () => {
     // Then apply high frustration physiology
     const highFrustrationPhy: Physiology = {
       energy: 0.5,
-      boredom: 0.0,
+      boredom: 0,
       frustration: 0.9, // Very high frustration
     };
 

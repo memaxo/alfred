@@ -3,12 +3,12 @@ import { Decoder, Encoder } from "@evan/opus";
 import { Buffer } from "node:buffer";
 import { RTCPeerConnection, RtpHeader, RtpPacket } from "werift";
 
-type SpikeResult = {
+interface SpikeResult {
   ok: boolean;
   message?: string;
   audioOk?: boolean;
   error?: string;
-};
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -50,7 +50,9 @@ export async function runWebrtcSpike(): Promise<SpikeResult> {
     pc2 = pcB;
 
     // ICE candidate exchange
-    type IceCandidateEventLike = { candidate?: unknown };
+    interface IceCandidateEventLike {
+      candidate?: unknown;
+    }
     pcA.onicecandidate = async (event: unknown) => {
       const candidate =
         typeof event === "object" && event && "candidate" in event
@@ -78,10 +80,10 @@ export async function runWebrtcSpike(): Promise<SpikeResult> {
 
     let received: string | null = null;
 
-    type DataChannelLike = {
+    interface DataChannelLike {
       onmessage?: ((msg: unknown) => void) | null;
       send?: (data: string) => void;
-    };
+    }
     pcB.ondatachannel = (event: unknown) => {
       const maybe =
         typeof event === "object" && event && "channel" in event
@@ -119,10 +121,12 @@ export async function runWebrtcSpike(): Promise<SpikeResult> {
     pcB.addTransceiver("audio", { direction: "sendrecv" });
 
     let audioReceived: Buffer | null = null;
-    type RtpObservableLike = {
+    interface RtpObservableLike {
       subscribe: (fn: (packet: unknown) => void) => void;
-    };
-    type TrackLike = { onReceiveRtp?: RtpObservableLike };
+    }
+    interface TrackLike {
+      onReceiveRtp?: RtpObservableLike;
+    }
     pcB.ontrack = (event: unknown) => {
       const track =
         typeof event === "object" && event && "track" in event
@@ -131,7 +135,7 @@ export async function runWebrtcSpike(): Promise<SpikeResult> {
       if (!track) {
         return;
       }
-      const onReceiveRtp = (track as TrackLike).onReceiveRtp;
+      const { onReceiveRtp } = track as TrackLike;
       if (!onReceiveRtp || typeof onReceiveRtp.subscribe !== "function") {
         return;
       }
@@ -166,7 +170,11 @@ export async function runWebrtcSpike(): Promise<SpikeResult> {
     });
 
     // Send a single 20ms silent Opus packet.
-    type SenderLike = { kind?: unknown; ssrc?: unknown; sendRtp?: unknown };
+    interface SenderLike {
+      kind?: unknown;
+      ssrc?: unknown;
+      sendRtp?: unknown;
+    }
     const sender = pcA.getSenders().find((s) => {
       const kind = (s as SenderLike)?.kind;
       return kind === "audio";
@@ -189,7 +197,7 @@ export async function runWebrtcSpike(): Promise<SpikeResult> {
 
       let pt = 111;
       const audioTransceiver = pcA.getTransceivers().find((t) => {
-        const kind = (t as { kind?: unknown }).kind;
+        const { kind } = t as { kind?: unknown };
         return kind === "audio";
       });
       const getPayloadType =

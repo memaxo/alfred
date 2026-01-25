@@ -10,10 +10,10 @@ import {
   __internals as opencodeInternals,
 } from "./exec.js";
 
-type FakeFileSink = {
+interface FakeFileSink {
   write: (chunk: Uint8Array) => void;
   end: (reason?: Error) => Promise<void>;
-};
+}
 
 function makeFakeProc(): {
   proc: {
@@ -82,9 +82,9 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
         writer,
         signal: new AbortController().signal,
       });
-    } catch (err: any) {
+    } catch (error: any) {
       threw = true;
-      expect(String(err?.message ?? err)).toContain(
+      expect(String(error?.message ?? error)).toContain(
         "opencode_server_requires_container"
       );
     }
@@ -109,9 +109,9 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
         writer,
         signal: new AbortController().signal,
       });
-    } catch (err: any) {
+    } catch (error: any) {
       threw = true;
-      expect(String(err?.message ?? err)).toContain(
+      expect(String(error?.message ?? error)).toContain(
         "opencode_container_cwd_invalid"
       );
     }
@@ -358,9 +358,9 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
     let threw = false;
     try {
       await promise;
-    } catch (err: any) {
+    } catch (error: any) {
       threw = true;
-      expect(String(err?.name ?? err)).toContain("Abort");
+      expect(String(error?.name ?? error)).toContain("Abort");
     }
     expect(threw).toBe(true);
     expect(cancelCalls).toBeGreaterThan(0);

@@ -1,9 +1,10 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 
+import type { EdgeRow, NodeRow } from "./types";
+
 import { db, isSqliteDriver } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import { DEFAULT_MIN_SCORE, DEFAULT_TOP_K } from "./scoring";
-import { type EdgeRow, type NodeRow } from "./types";
 import {
   normalizeEdge,
   normalizeNode,
@@ -612,7 +613,7 @@ export async function getReasoningChain(args: {
         );
         return ts >= (args.since ?? Number.NEGATIVE_INFINITY);
       })
-      .toSorted((a, b) => {
+      .sort((a, b) => {
         const aIndex = numberFromProps(
           a.properties as Record<string, unknown>,
           "sequenceIndex",
@@ -655,7 +656,7 @@ export async function getReasoningChain(args: {
         )
       );
 
-    const normalizedEdges = rawEdges.map(normalizeEdge).toSorted((a, b) => {
+    const normalizedEdges = rawEdges.map(normalizeEdge).sort((a, b) => {
       const aIndex = numberFromProps(
         a.metadata as Record<string, unknown>,
         "fromIndex",

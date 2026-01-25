@@ -315,7 +315,7 @@ describe.skipIf(!SHOULD_RUN)("Cross-Schema Joins", () => {
           metadata: {},
           resource,
           toId: nodeIds[(i + 1) % nodeIds.length]!,
-          weight: 1.0,
+          weight: 1,
         }))
       );
 

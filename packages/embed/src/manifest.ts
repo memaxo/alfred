@@ -3,29 +3,29 @@ import { z } from "zod";
 import { EMBEDDING_DIM, getHealth } from "./index";
 
 // Inline manifest types to avoid tsconfig rootDir issues
-type HealthStatus = {
+interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   latencyMs?: number;
   details?: Record<string, unknown>;
-};
+}
 
-type CommandDef = {
+interface CommandDef {
   name: string;
   description: string;
   args?: z.ZodType<unknown>;
   handler: (args: unknown) => Promise<void>;
   category?: string;
-};
+}
 
-type CliManifest = {
+interface CliManifest {
   name: string;
   version: string;
   description: string;
   commands?: CommandDef[];
   healthCheck?: () => Promise<HealthStatus>;
   dependencies?: string[];
-};
+}
 
 // Embedding commands
 const downloadCommand = {
@@ -101,14 +101,14 @@ export const manifest: CliManifest = {
       return Promise.resolve({
         status: allHealthy
           ? "healthy"
-          : health.length === 0
+          : (health.length === 0
             ? "degraded"
-            : "unhealthy",
+            : "unhealthy"),
         message: allHealthy
           ? `Embedding pool healthy (${health.length} workers)`
-          : health.length === 0
+          : (health.length === 0
             ? "Embedding pool not initialized"
-            : "Some embedding workers unhealthy",
+            : "Some embedding workers unhealthy"),
         latencyMs: latency,
       });
     } catch (error) {

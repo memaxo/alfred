@@ -13,7 +13,7 @@ import { requireScopes, SCOPE_REQUIREMENTS } from "../../src/middleware/scopes";
 // Create a test tRPC instance
 const t = initTRPC.context<TestContext>().create();
 
-type TestContext = {
+interface TestContext {
   session: {
     user: {
       id: string;
@@ -22,9 +22,9 @@ type TestContext = {
     session: { id: string };
   } | null;
   policy: {
-    obligations: Array<{ type: string; satisfied: boolean }>;
+    obligations: { type: string; satisfied: boolean }[];
   };
-};
+}
 
 // Helper to create a mock context with scopes
 function createMockContext(scopes: string[] = []): TestContext {

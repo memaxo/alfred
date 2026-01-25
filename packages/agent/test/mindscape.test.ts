@@ -3,16 +3,16 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 const memoryNodes = Symbol("memoryNodes");
 const memoryEdges = Symbol("memoryEdges");
 
-type Call = {
+interface Call {
   table: unknown | null;
   whereCalls: number;
   limit: number | null;
-};
+}
 
 const calls: Call[] = [];
 
-let nodeRows: Array<{ id: string; label: string; kind: string }> = [];
-let edgeRows: Array<{ from: string; to: string; kind: string }> = [];
+let nodeRows: { id: string; label: string; kind: string }[] = [];
+let edgeRows: { from: string; to: string; kind: string }[] = [];
 
 function builder(call: Call) {
   return {

@@ -1,4 +1,4 @@
-import { type UIMessage } from "@alfred/type/stream";
+import type { UIMessage } from "@alfred/type/stream";
 
 import { playAudioBase64 } from "../cli/audio";
 import { createCliContext } from "../cli/context";

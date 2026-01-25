@@ -12,9 +12,9 @@ import { user } from "./auth";
 export type McpTransport = "http" | "sse" | "streamable-http";
 export type McpAuthType = "none" | "bearer" | "oauth";
 
-export type McpAuth = {
+export interface McpAuth {
   bearerEnv?: string | null;
-};
+}
 
 export const mcpServers = pgTable("mcp_servers", {
   id: uuid("id").defaultRandom().primaryKey(),

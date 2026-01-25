@@ -113,7 +113,7 @@ describe("Cost Tracking", () => {
   describe("checkBudget", () => {
     it("detects when budget is approaching (90%)", () => {
       const runId = "test-run-approaching";
-      const budget = 1.0; // $1 budget
+      const budget = 1; // $1 budget
 
       // Record $0.95 in costs (95%)
       recordCost("openai", "gpt-4o", 380_000, 0, runId); // ~$0.95
@@ -140,7 +140,7 @@ describe("Cost Tracking", () => {
 
     it("returns false when well under budget", () => {
       const runId = "test-run-under";
-      const budget = 10.0; // $10 budget
+      const budget = 10; // $10 budget
 
       recordCost("openai", "gpt-4o-mini", 10_000, 5000, runId); // ~$0.004
 
@@ -160,7 +160,7 @@ describe("Cost Tracking", () => {
     });
 
     it("handles no costs recorded", () => {
-      const status = checkBudget("no-costs-run", 1.0);
+      const status = checkBudget("no-costs-run", 1);
 
       expect(status.approaching).toBe(false);
       expect(status.exceeded).toBe(false);

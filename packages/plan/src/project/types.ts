@@ -13,10 +13,10 @@ export type ProjectFramework =
 
 export type PackageManager = "bun" | "npm" | "yarn" | "pnpm";
 
-export type ProjectConfig = {
+export interface ProjectConfig {
   framework?: ProjectFramework;
   packageManager?: PackageManager;
   isMonorepo?: boolean;
   hasTypeScript?: boolean;
   [key: string]: unknown;
-};
+}

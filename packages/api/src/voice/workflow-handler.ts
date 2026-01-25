@@ -5,20 +5,20 @@
  * returning TTS-optimized responses.
  */
 
+import type { StructuredPlan } from "@alfred/plan";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { UIMessage } from "@alfred/type/stream";
+import type { VoiceAssistantRaw } from "@alfred/type/voice";
+
 import * as planRepo from "@alfred/db/repo/plan";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
-import { type StructuredPlan } from "@alfred/plan";
-import { type RuntimeContext } from "@alfred/type/runtime-context";
-import { type UIMessage } from "@alfred/type/stream";
-import { type VoiceAssistantRaw } from "@alfred/type/voice";
+
+import type { VoiceAssistantInput, VoiceAssistantResult } from "./assistant.js";
 
 import { getHonorificPreference } from "../persona/honorific";
 import { SchemaGenerator } from "../services/schema.js";
-import {
-  type VoiceAssistantInput,
-  type VoiceAssistantResult,
-} from "./assistant.js";
+import { attachHooksObserver } from "../workflow/hooks";
 import {
   clarificationToSpeech,
   planCompletionSummary,
@@ -215,7 +215,7 @@ export async function handleApprovalIntent(
 
   try {
     const prefs = await getVoiceWorkflowPreferences(input.userId).catch(
-      () => {}
+      (): VoiceWorkflowPreferences | undefined => undefined
     );
     if (action === "approve") {
       // Approve the plan
@@ -316,7 +316,7 @@ export async function handleStatusQuery(
   try {
     const status = await getWorkflowStatus(targetRunId);
     const prefs = await getVoiceWorkflowPreferences(input.userId).catch(
-      () => {}
+      (): VoiceWorkflowPreferences | undefined => undefined
     );
 
     if (status.status === "completed") {
@@ -422,13 +422,13 @@ function toWorkflowTimeline(
   const approvalPhase = {
     id: "approval",
     name: "Approval",
-    progress: mode === "awaiting_approval" ? 50 : mode === "rejected" ? 0 : 100,
+    progress: mode === "awaiting_approval" ? 50 : (mode === "rejected" ? 0 : 100),
     status:
       mode === "awaiting_approval"
         ? ("running" as const)
-        : mode === "rejected"
+        : (mode === "rejected"
           ? ("error" as const)
-          : ("completed" as const),
+          : ("completed" as const)),
     tasks: [
       {
         id: "approve_plan",
@@ -436,9 +436,9 @@ function toWorkflowTimeline(
         status:
           mode === "awaiting_approval"
             ? ("running" as const)
-            : mode === "rejected"
+            : (mode === "rejected"
               ? ("error" as const)
-              : ("completed" as const),
+              : ("completed" as const)),
       },
     ],
   };
@@ -456,7 +456,7 @@ function toWorkflowTimeline(
     id: phase.id,
     name: phase.name,
     progress:
-      execStatus === "completed" ? 100 : execStatus === "running" ? 10 : 0,
+      execStatus === "completed" ? 100 : (execStatus === "running" ? 10 : 0),
     status:
       idx === 0 && mode === "executing" ? ("running" as const) : execStatus,
     tasks: phase.tasks.map((task) => ({
@@ -609,6 +609,13 @@ async function generatePlanViaPipeline(
     enableLinearSync: false,
   });
   registerDefaultStages(runner);
+
+  await attachHooksObserver(runner, {
+    runId,
+    sessionId: userId,
+    signal: new AbortController().signal,
+    workspace,
+  });
 
   // PostgresCheckpointStorage implements CheckpointStorage interface
   const storage = new PostgresCheckpointStorage();

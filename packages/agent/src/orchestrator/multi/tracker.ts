@@ -10,7 +10,7 @@ import type { AgentId, WaveId } from "./spawn";
  * This is the single source of truth for stuck detection configuration.
  * Previously duplicated in @alfred/resilience and @alfred/pipeline.
  */
-export type StuckDetectionConfig = {
+export interface StuckDetectionConfig {
   /** Time in milliseconds without events before agent is considered stuck (default: 60000) */
   noProgressMs?: number;
   /** Maximum transitions before agent is considered stuck (default: 200) */
@@ -21,7 +21,7 @@ export type StuckDetectionConfig = {
   maxTimeMs?: number;
   /** Max repeated errors before escalating (default: 5) */
   maxRepeatedErrors?: number;
-};
+}
 
 /**
  * @deprecated Use StuckDetectionConfig instead. Will be removed in next major version.
@@ -85,26 +85,26 @@ export type AgentEvent =
     }
   | { type: "notice"; agentId: AgentId; message: string; ts: number };
 
-export type TrackerAgentState = {
+export interface TrackerAgentState {
   subTaskId: SubTaskId;
   status: AgentStatus;
   lastEventTs: number;
-};
+}
 
-export type TrackerWaveState = {
+export interface TrackerWaveState {
   status: "pending" | "running" | "completed" | "failed";
-};
+}
 
-export type TrackerState = {
+export interface TrackerState {
   agents: Record<AgentId, TrackerAgentState>;
   waves: Record<WaveId, TrackerWaveState>;
-};
+}
 
 /**
  * Encapsulated tracker context for a single workflow.
  * Contains all state needed for tracking agent progress and dependencies.
  */
-export type TrackerContext = {
+export interface TrackerContext {
   state: TrackerState;
   /** Reverse dependency index: task ID → tasks that depend on it */
   blockedBy: Map<SubTaskId, Set<SubTaskId>>;
@@ -114,7 +114,7 @@ export type TrackerContext = {
   detectors: Map<AgentId, LoopDetector>;
   /** Stuck detection configuration */
   options: Required<StuckDetectionConfig>;
-};
+}
 
 /**
  * Create a new tracker context for a workflow.
@@ -161,10 +161,10 @@ export function cloneTrackerContext(ctx: TrackerContext): TrackerContext {
   return {
     state: cloneState(ctx.state),
     blockedBy: new Map(
-      Array.from(ctx.blockedBy.entries()).map(([k, v]) => [k, new Set(v)])
+      [...ctx.blockedBy.entries()].map(([k, v]) => [k, new Set(v)])
     ),
     dependsOn: new Map(
-      Array.from(ctx.dependsOn.entries()).map(([k, v]) => [k, new Set(v)])
+      [...ctx.dependsOn.entries()].map(([k, v]) => [k, new Set(v)])
     ),
     detectors: ctx.detectors, // Detectors are mutable singletons, shared intentionally
     options: { ...ctx.options },
@@ -363,7 +363,7 @@ export function getBlockedTasksWithContext(
   ctx: TrackerContext,
   taskId: SubTaskId
 ): SubTaskId[] {
-  return Array.from(ctx.blockedBy.get(taskId) ?? []);
+  return [...(ctx.blockedBy.get(taskId) ?? [])];
 }
 
 /**

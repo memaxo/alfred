@@ -30,7 +30,7 @@ const inboxListInput = z.object({
 
 export const inboxRouter = router({
   list: authedProcedure.input(inboxListInput).query(({ ctx, input }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -46,7 +46,7 @@ export const inboxRouter = router({
 
   subscribe: authedProcedure.subscription(({ ctx }) =>
     observable<InboxEvent>((emit) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         emit.error(
           new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })

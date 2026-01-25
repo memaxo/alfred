@@ -102,7 +102,8 @@ export async function downloadModel(voiceId: string) {
     throw new Error(
       `failed_to_download_model: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }

@@ -18,17 +18,17 @@ import {
 } from "@alfred/embed";
 import { getCurrentModelId } from "@alfred/rag";
 
-export type ReembedProgress = {
+export interface ReembedProgress {
   processed: number;
   remaining: number;
   modelId: string;
-  byModel: Array<{ modelId: string | null; count: number }>;
-};
+  byModel: { modelId: string | null; count: number }[];
+}
 
-export type ReembedOptions = {
+export interface ReembedOptions {
   batchSize?: number;
   targetModelId?: string;
-};
+}
 
 /**
  * Re-embed a batch of stale chunks
@@ -106,14 +106,14 @@ export async function reembedStaleChunks(
 }
 
 // Scheduler state
-type SchedulerOptions = {
+interface SchedulerOptions {
   intervalMs?: number;
   jitterMs?: number;
   batchSize?: number;
   targetModelId?: string;
   logger?: Pick<Console, "info" | "warn" | "error">;
   onProgress?: (progress: ReembedProgress) => void;
-};
+}
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

@@ -23,7 +23,7 @@ describe("audio pcm helpers", () => {
 
     // "RIFF"
     expect(
-      String.fromCharCode(
+      String.fromCodePoint(
         view.getUint8(0),
         view.getUint8(1),
         view.getUint8(2),
@@ -32,7 +32,7 @@ describe("audio pcm helpers", () => {
     ).toBe("RIFF");
     // "WAVE"
     expect(
-      String.fromCharCode(
+      String.fromCodePoint(
         view.getUint8(8),
         view.getUint8(9),
         view.getUint8(10),

@@ -66,10 +66,10 @@ function createCaller() {
 describe("knowledge.visualize (sqlite)", () => {
   beforeAll(async () => {
     const dbModule = await import("@alfred/db");
-    db = dbModule.db;
+    ({ db } = dbModule);
     const schema = await import("@alfred/db/schema/graph");
-    memoryNodes = schema.memoryNodes;
-    memoryEdges = schema.memoryEdges;
+    ({ memoryNodes } = schema);
+    ({ memoryEdges } = schema);
     ({ knowledgeRouter } = await import("@alfred/api/routers/knowledge"));
   });
 

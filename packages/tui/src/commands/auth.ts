@@ -5,22 +5,28 @@ export async function authCommands(args: string[]): Promise<void> {
   const command = args[0];
 
   switch (command) {
-    case "login":
+    case "login": {
       await deviceLogin();
       break;
-    case "local":
+    }
+    case "local": {
       await setupLocalDevAuth();
       break;
-    case "logout":
+    }
+    case "logout": {
       await logout();
       break;
-    case "status":
+    }
+    case "status": {
       await status();
       break;
-    case "elevate":
+    }
+    case "elevate": {
       await elevate();
       break;
-    default:
+    }
+    default: {
       throw new Error("tui_auth_command_invalid");
+    }
   }
 }

@@ -11,7 +11,7 @@ import { approvals, auditLogs } from "../schema/policy";
 type AuditLogInsert = typeof auditLogs.$inferInsert;
 type ApprovalInsert = typeof approvals.$inferInsert;
 
-type AuditLogParams = {
+interface AuditLogParams {
   userId: string;
   projectId?: string;
   action: string;
@@ -20,7 +20,7 @@ type AuditLogParams = {
   traceId?: string | null;
   obligations?: unknown[];
   context?: unknown;
-};
+}
 
 // Audit log operations
 export async function createAuditLog({

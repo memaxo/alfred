@@ -14,38 +14,38 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getApiClient } from "../../api/client";
 
-export type DebugModeProps = {
+export interface DebugModeProps {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
 type DebugPanel = "cognitive" | "metrics" | "active" | "logs";
 
-type CognitiveData = {
+interface CognitiveData {
   phase: string;
   autonomy: number;
   since?: number;
-};
+}
 
-type MetricsData = {
+interface MetricsData {
   requestsPerMin: number;
   latencyP50: number;
   latencyP99: number;
   errorRate: number;
   latencyHistory: number[];
-};
+}
 
-type ActiveData = {
+interface ActiveData {
   workflows: number;
   voiceSessions: number;
   subscriptions: number;
-};
+}
 
-type LogEntry = {
+interface LogEntry {
   level: "info" | "warn" | "error" | "debug";
   message: string;
   timestamp: Date;
-};
+}
 
 function truncate(text: string, max: number): string {
   if (text.length <= max) {
@@ -128,8 +128,8 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
       } else if (logs.length === 0) {
         setLogs([]);
       }
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (error) {
+      setError((error as Error).message);
     } finally {
       setIsRefreshing(false);
     }
@@ -316,9 +316,9 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
                         fg:
                           log.level === "error"
                             ? "#E06C75"
-                            : log.level === "warn"
+                            : (log.level === "warn"
                               ? "#E5C07B"
-                              : "#8A9199",
+                              : "#8A9199"),
                       }}
                     />
                   ))

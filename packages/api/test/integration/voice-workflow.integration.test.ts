@@ -18,7 +18,8 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
-import { type WorkflowEvent } from "@alfred/type";
+import type { WorkflowEvent } from "@alfred/type";
+
 import {
   afterAll,
   afterEach,

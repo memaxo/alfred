@@ -38,7 +38,7 @@ Summary (max 200 characters):`;
     } as any);
 
     return text.trim();
-  } catch (_error) {
+  } catch {
     return outcomes
       .map((o) => o.result?.summary)
       .filter(Boolean)

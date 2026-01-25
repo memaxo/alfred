@@ -1,3 +1,8 @@
+import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { UIMessage } from "@alfred/type/stream";
+import type { VoiceAssistantRaw } from "@alfred/type/voice";
+
 import { type Event, type Outcome, timestamp } from "@alfred/cognitive/state";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
@@ -9,18 +14,12 @@ import {
   formatGreeting,
   timeOfDayFromHour,
 } from "@alfred/persona";
-import {
-  type CognitiveEffect,
-  type CognitiveLoopResult,
-} from "@alfred/runtime";
-import { type RuntimeContext } from "@alfred/type/runtime-context";
-import { type UIMessage } from "@alfred/type/stream";
-import { type VoiceAssistantRaw } from "@alfred/type/voice";
 
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { getHonorificPreference } from "../persona/honorific";
 import { sanitizeResult } from "../utils/generate";
+import { ensureHooksRuntime } from "../workflow/hooks";
 import { classifyVoiceIntent } from "./intent.js";
 import { getVoiceWorkflowContext } from "./session-context.js";
 import {
@@ -296,7 +295,7 @@ export async function runAssistantForVoice(
   const honorific = await getHonorificPreference(input.userId);
   const focusState = await getUserFocusState(input.userId);
   const focusMode = focusState?._ === "active";
-  const sessionStart = !ctx.has("voiceAssistantLastRunAt");
+  const sessionStart = !ctx.has?.("voiceAssistantLastRunAt");
 
   // Voice workflow routing (enabled by default, can be disabled via preferences)
   const workflowEnabled = await isVoiceWorkflowEnabled(input.userId);
@@ -516,7 +515,7 @@ async function runConversationalAssistant(
   // Track token usage and cost
   try {
     const tracker = getOrCreateTracker({
-      budgetUsd: 1.0,
+      budgetUsd: 1,
       modelId: modelIdStr,
       sessionId: threadId, // Default $1 budget for voice sessions
     });
@@ -565,6 +564,13 @@ async function runConversationalAssistant(
 
   // Cognitive Integration: Feed input into the loop
   try {
+    await ensureHooksRuntime(ctx, {
+      sessionId: String(ctx.get("requestId") ?? input.userId),
+      signal: new AbortController().signal,
+      workspace: process.cwd(),
+      workflowId: threadId,
+    });
+
     const { runCognitiveLoop } = await import("@alfred/runtime");
     const result = await runCognitiveLoop(ctx, threadId, {
       _: "input",

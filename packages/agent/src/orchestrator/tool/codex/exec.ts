@@ -17,13 +17,14 @@ import {
   setTimeout as setNodeTimeout,
 } from "node:timers";
 
+import type { CodexSessionState } from "../../codex-session.js";
+
 import { persistCodexExecution } from "../../../../assistant/src/graphstore.js";
 import { persistArtifact } from "../../../artifact/persist.js";
 import {
   recordCodexWriterError,
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
-import { type CodexSessionState } from "../../codex-session.js";
 import {
   assessSessionResumeEligibility,
   sessionManager,
@@ -67,9 +68,7 @@ import { CodexRunRecorder } from "./record.js";
 import { executeWithCodexServer } from "./server.js";
 import { createCodexSpawn } from "./spawn-process.js";
 
-interface WriterPayload {
-  [key: string]: unknown;
-}
+type WriterPayload = Record<string, unknown>;
 type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
 
 const WRITER_FAILURE_WARN_THRESHOLD = 10;

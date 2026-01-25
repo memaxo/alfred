@@ -5,17 +5,18 @@
  * it to tasks before decomposition/spawn.
  */
 
-import { logger } from "@alfred/logger";
-import {
-  type EnrichmentMetadata,
-  type FailureContext,
-  type RelevantHeuristic,
-  type SimilarExecution,
-  type StructuredHandoff,
-  type TaskEnrichment,
-  type UpstreamFailure,
+import type {
+  EnrichmentMetadata,
+  FailureContext,
+  RelevantHeuristic,
+  SimilarExecution,
+  StructuredHandoff,
+  TaskEnrichment,
+  UpstreamFailure,
 } from "@alfred/type";
-import { type SubTask } from "@alfred/type/plan";
+import type { SubTask } from "@alfred/type/plan";
+
+import { logger } from "@alfred/logger";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -39,6 +40,28 @@ export interface EnrichmentSource {
     requirement: string,
     limit: number
   ) => Promise<RelevantHeuristic[]>;
+}
+
+function isEnrichmentEnabled(): boolean {
+  return process.env.ALFRED_ENRICHMENT === "1";
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`enrichment_timeout:${ms}ms`));
+    }, ms);
+
+    promise
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((error) => {
+        clearTimeout(t);
+        reject(error);
+      });
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,6 +116,19 @@ export async function queryTaskEnrichment(
   opts: EnrichmentOptions,
   source?: EnrichmentSource
 ): Promise<TaskEnrichment> {
+  if (!isEnrichmentEnabled()) {
+    const ts = Date.now();
+    return {
+      createdAt: ts,
+      relevantHeuristics: [],
+      schemaVersion: 1,
+      similarExecutions: [],
+      taskId: task.id,
+      ts,
+      upstreamFailures: [],
+    };
+  }
+
   const enrichmentSource = source ?? (await getDefaultSource());
 
   let similarExecutions: SimilarExecution[] = [];
@@ -100,17 +136,20 @@ export async function queryTaskEnrichment(
 
   if (enrichmentSource) {
     try {
-      const [executions, heuristics] = await Promise.all([
-        enrichmentSource.queryExecutions(
-          opts.resource,
-          task.requirement,
-          opts.maxSimilarExecutions ?? 3
-        ),
-        enrichmentSource.queryHeuristics(
-          task.requirement,
-          opts.maxHeuristics ?? 5
-        ),
-      ]);
+      const [executions, heuristics] = await withTimeout(
+        Promise.all([
+          enrichmentSource.queryExecutions(
+            opts.resource,
+            task.requirement,
+            opts.maxSimilarExecutions ?? 3
+          ),
+          enrichmentSource.queryHeuristics(
+            task.requirement,
+            opts.maxHeuristics ?? 5
+          ),
+        ]),
+        500
+      );
 
       similarExecutions = executions;
       relevantHeuristics = heuristics;
@@ -122,11 +161,14 @@ export async function queryTaskEnrichment(
     }
   }
 
+  const ts = Date.now();
   return {
+    createdAt: ts,
     relevantHeuristics,
+    schemaVersion: 1,
     similarExecutions,
     taskId: task.id,
-    ts: Date.now(),
+    ts,
     upstreamFailures: [],
   };
 }
@@ -155,7 +197,7 @@ function formatEnrichmentBlock(enrichment: TaskEnrichment): string {
     sections.push("## Learned Heuristics");
     for (const h of enrichment.relevantHeuristics) {
       const severityIcon =
-        h.severity === "high" ? "⚠" : h.severity === "medium" ? "!" : "i";
+        h.severity === "high" ? "⚠" : (h.severity === "medium" ? "!" : "i");
       sections.push(`- [${severityIcon}/${h.domain}] ${h.rule}`);
     }
   }
@@ -254,6 +296,10 @@ export async function enrichTasks(
   opts: EnrichmentOptions,
   source?: EnrichmentSource
 ): Promise<SubTask[]> {
+  if (!isEnrichmentEnabled()) {
+    return tasks;
+  }
+
   const enrichmentSource = source ?? (await getDefaultSource());
 
   if (!enrichmentSource) {

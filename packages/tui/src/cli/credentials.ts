@@ -18,7 +18,7 @@ const CREDENTIALS_PATH = join(ALFRED_DIR, "credentials.json");
 const SECRET_SERVICE = "com.alfred.cli";
 const SECRET_NAME = "session";
 
-export type StoredCredentials = {
+export interface StoredCredentials {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
@@ -26,7 +26,7 @@ export type StoredCredentials = {
   user: User;
   session: Session;
   isLocal?: boolean;
-};
+}
 
 /**
  * Loads credentials from OS keychain (via Bun.secrets) with fallback/migration from local file.
@@ -68,7 +68,7 @@ export async function loadCredentials(): Promise<StoredCredentials | null> {
     }
 
     return null;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
@@ -114,7 +114,7 @@ export async function clearCredentials(): Promise<void> {
     if (await file.exists()) {
       await rm(CREDENTIALS_PATH, { force: true });
     }
-  } catch (_error) {
+  } catch {
     // Ignore errors
   }
 }
@@ -134,20 +134,18 @@ export async function refreshIfNeeded(
     baseURL: process.env.ALFRED_API_URL || "http://localhost:3000",
   });
 
-  const oauth2 = (
-    authClient as unknown as {
-      oauth2: {
-        refreshToken: (input: { refresh_token: string }) => Promise<{
-          data: {
-            access_token: string;
-            refresh_token?: string;
-            expires_in: number;
-          };
-          error?: unknown;
-        }>;
-      };
-    }
-  ).oauth2;
+  const { oauth2 } = authClient as unknown as {
+    oauth2: {
+      refreshToken: (input: { refresh_token: string }) => Promise<{
+        data: {
+          access_token: string;
+          refresh_token?: string;
+          expires_in: number;
+        };
+        error?: unknown;
+      }>;
+    };
+  };
 
   // Note: better-auth client might have different method names depending on version
   // This follows the plan's recommendation

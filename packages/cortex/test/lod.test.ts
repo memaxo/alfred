@@ -30,7 +30,7 @@ describe("computeLOD", () => {
     const lod1 = computeLOD(0.2);
     const lod2 = computeLOD(0.5);
     const lod3 = computeLOD(1.5);
-    const lod4 = computeLOD(3.0);
+    const lod4 = computeLOD(3);
 
     expect(lod2.particles).toBeGreaterThanOrEqual(lod1.particles);
     expect(lod3.particles).toBeGreaterThanOrEqual(lod2.particles);
@@ -38,7 +38,7 @@ describe("computeLOD", () => {
   });
 
   it("returns highest LOD at high zoom", () => {
-    const lod = computeLOD(5.0);
+    const lod = computeLOD(5);
     expect(lod.particles).toBe(8000);
     expect(lod.fibers).toBe(3000);
     expect(lod.edgeParticles).toBe(400);
@@ -50,11 +50,11 @@ describe("computeLOD", () => {
     expect(at30.particles).toBe(1500);
 
     // At exactly 1.0, should be level 3
-    const at100 = computeLOD(1.0);
+    const at100 = computeLOD(1);
     expect(at100.particles).toBe(5000);
 
     // At exactly 2.0, should be level 4
-    const at200 = computeLOD(2.0);
+    const at200 = computeLOD(2);
     expect(at200.particles).toBe(8000);
   });
 });
@@ -75,7 +75,7 @@ describe("getFiberSegments", () => {
   });
 
   it("returns highest segments at high zoom", () => {
-    const segments = getFiberSegments(5.0);
+    const segments = getFiberSegments(5);
     expect(segments).toBe(75);
   });
 });
@@ -99,7 +99,7 @@ describe("LODManager", () => {
   });
 
   it("setZoom returns false when LOD unchanged", () => {
-    manager.setZoom(1.0);
+    manager.setZoom(1);
     const _changed = manager.setZoom(1.1); // Still in same threshold
     // May or may not change depending on thresholds
   });
@@ -124,7 +124,7 @@ describe("LODManager", () => {
     expect(count).toBe(1);
 
     unsubscribe();
-    manager.setZoom(5.0);
+    manager.setZoom(5);
     expect(count).toBe(1); // Still 1
   });
 
@@ -139,7 +139,10 @@ describe("LODManager", () => {
 });
 
 describe("SpatialIndex", () => {
-  type TestItem = { position: Vec2; id: string };
+  interface TestItem {
+    position: Vec2;
+    id: string;
+  }
 
   let index: SpatialIndex<TestItem>;
 
@@ -358,7 +361,7 @@ describe("isEdgeInViewport", () => {
 describe("LOD Performance Characteristics", () => {
   it("LOD levels increase rendering budget appropriately", () => {
     const low = computeLOD(0.1);
-    const high = computeLOD(5.0);
+    const high = computeLOD(5);
 
     // High LOD should have ~16x more particles than low
     const particleRatio = high.particles / low.particles;

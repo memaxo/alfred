@@ -111,7 +111,7 @@ export async function setPreference(
   userId: string,
   key: string,
   value: unknown,
-  confidence = 1.0,
+  confidence = 1,
   source = "user",
   projectId?: string
 ): Promise<PreferenceRow> {
@@ -169,7 +169,7 @@ export async function addFact(
   content: string,
   embedding?: number[],
   category?: string,
-  confidence = 1.0,
+  confidence = 1,
   source = "user",
   projectId?: string
 ): Promise<FactRow> {

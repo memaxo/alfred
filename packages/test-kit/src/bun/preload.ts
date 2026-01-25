@@ -2,7 +2,7 @@ import { afterAll, afterEach, mock } from "bun:test";
 
 const g = globalThis as unknown as {
   __alfredWatchdogInstalled?: boolean;
-  __alfredMockResetRegistry?: Array<() => void>;
+  __alfredMockResetRegistry?: (() => void)[];
 };
 
 /**
@@ -10,7 +10,7 @@ const g = globalThis as unknown as {
  * Test-kit modules register their reset functions here to be called in afterEach.
  * This ensures all mock state is cleaned up between tests automatically.
  */
-export function getMockResetRegistry(): Array<() => void> {
+export function getMockResetRegistry(): (() => void)[] {
   if (!g.__alfredMockResetRegistry) {
     g.__alfredMockResetRegistry = [];
   }

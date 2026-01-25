@@ -2,23 +2,23 @@ import type { FineTuneBackend, FineTuneRunPaths } from "./config";
 
 export type FineTuneRunStatus = "success" | "failed" | "cancelled";
 
-export type FineTuneRunSummary = {
+export interface FineTuneRunSummary {
   epochsCompleted?: number;
   stepsCompleted?: number;
   tokensProcessed?: number;
   samplesProcessed?: number;
   loss?: number;
   learningRate?: number;
-};
+}
 
-export type FineTuneArtifacts = {
+export interface FineTuneArtifacts {
   outputDir: string;
   adaptersPath?: string;
   fusedModelDir?: string;
   metricsPath?: string;
-};
+}
 
-export type FineTuneRunResult = {
+export interface FineTuneRunResult {
   backend: FineTuneBackend;
   runId: string;
   status: FineTuneRunStatus;
@@ -28,21 +28,21 @@ export type FineTuneRunResult = {
   paths: FineTuneRunPaths;
   artifacts: FineTuneArtifacts;
   summary?: FineTuneRunSummary;
-};
+}
 
-export type FineTuneLogEvent = {
+export interface FineTuneLogEvent {
   source: "stdout" | "stderr" | "system";
   timestamp: number;
   raw: string;
   level?: "info" | "warn" | "error";
   data?: Record<string, unknown>;
-};
+}
 
-export type FineTuneJobOptions = {
+export interface FineTuneJobOptions {
   runsRoot?: string;
   workspaceRoot?: string;
   pythonBin?: string;
   env?: Record<string, string>;
   abortSignal?: AbortSignal;
   onLog?: (event: FineTuneLogEvent) => void;
-};
+}

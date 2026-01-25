@@ -22,7 +22,7 @@ export const planMetrics = {
   tokenCost: new Histogram({
     name: "plan_generation_cost_usd",
     help: "AI API cost per plan generation in USD",
-    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1.0],
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1],
     registers: [register],
   }),
 
@@ -205,7 +205,9 @@ export const queryHelper = {
   },
 
   getQuantile(values: number[], percentile: number): number {
-    if (values.length === 0) return 0;
+    if (values.length === 0) {
+      return 0;
+    }
     const index = Math.floor(values.length * percentile);
     return values[Math.max(0, index)] || 0;
   },

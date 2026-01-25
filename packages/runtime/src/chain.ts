@@ -23,7 +23,9 @@ const toolRefSchema = z
   .strict();
 
 type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
-type JsonObject = { [key: string]: JsonValue };
+interface JsonObject {
+  [key: string]: JsonValue;
+}
 
 const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([
@@ -102,13 +104,13 @@ export type ToolNodeResult =
       error: string;
     };
 
-export type ToolGraphResult = {
+export interface ToolGraphResult {
   status: "succeeded" | "failed";
   nodes: Record<string, ToolNodeResult>;
   outputs: Record<string, unknown>;
-};
+}
 
-export type ExecuteToolGraphOptions = {
+export interface ExecuteToolGraphOptions {
   graph: ToolGraph;
   tools: Record<string, ToolDef>;
   signal?: AbortSignal;
@@ -116,22 +118,22 @@ export type ExecuteToolGraphOptions = {
   backoffMs?: number;
   maxParallel?: number;
   makeToolCallId?: () => string;
-};
+}
 
-type PreparedGraph = {
+interface PreparedGraph {
   nodesById: Map<string, ToolNode>;
   order: string[];
   depsById: Map<string, string[]>;
-};
+}
 
 type ToolAttemptResult =
   | { ok: true; output: unknown }
   | { ok: false; error: string };
 
-type NodeExecution = {
+interface NodeExecution {
   events: WorkflowEvent[];
   result: ToolNodeResult;
-};
+}
 
 export async function* executeToolGraph(
   options: ExecuteToolGraphOptions
@@ -291,9 +293,9 @@ function prepareGraph(
   const depsById = new Map<string, string[]>();
   for (const node of graph.nodes) {
     const explicit = node.dependsOn ?? [];
-    const implicit = Array.from(collectRefSteps(node.input));
+    const implicit = [...collectRefSteps(node.input)];
     const fallbackImplicit = node.fallback
-      ? Array.from(collectRefSteps(node.fallback.input))
+      ? [...collectRefSteps(node.fallback.input)]
       : [];
 
     const deps = stableUnique([...explicit, ...implicit, ...fallbackImplicit]);
@@ -395,7 +397,7 @@ function getReadyNodes(
   return ready;
 }
 
-type RunNodeOptions = {
+interface RunNodeOptions {
   nodeId: string;
   prepared: PreparedGraph;
   outputs: Map<string, unknown>;
@@ -404,7 +406,7 @@ type RunNodeOptions = {
   toolCallMessages: ModelMessage[];
   backoffMs: number;
   makeToolCallId: () => string;
-};
+}
 
 async function runNode(options: RunNodeOptions): Promise<NodeExecution> {
   const node = options.prepared.nodesById.get(options.nodeId);
@@ -504,7 +506,7 @@ async function runNode(options: RunNodeOptions): Promise<NodeExecution> {
   });
 }
 
-type AttemptToolOptions = {
+interface AttemptToolOptions {
   nodeId: string;
   toolName: string;
   input: unknown;
@@ -513,7 +515,7 @@ type AttemptToolOptions = {
   signal?: AbortSignal;
   toolCallMessages: ModelMessage[];
   makeToolCallId: () => string;
-};
+}
 
 async function attemptTool(options: AttemptToolOptions): Promise<{
   events: WorkflowEvent[];
@@ -742,7 +744,7 @@ function readRef(ref: ToolRef["$ref"], outputs: Map<string, unknown>): unknown {
   return value;
 }
 
-function readPathValue(value: unknown, parts: Array<string | number>): unknown {
+function readPathValue(value: unknown, parts: (string | number)[]): unknown {
   let current: unknown = value;
   for (const part of parts) {
     if (current === null || current === undefined) {
@@ -767,8 +769,8 @@ function readPathValue(value: unknown, parts: Array<string | number>): unknown {
   return current;
 }
 
-function parsePath(path: string): Array<string | number> {
-  const out: Array<string | number> = [];
+function parsePath(path: string): (string | number)[] {
+  const out: (string | number)[] = [];
   let i = 0;
 
   while (i < path.length) {
@@ -842,8 +844,8 @@ function isRef(value: unknown): value is ToolRef {
   if (!ref || typeof ref !== "object" || Array.isArray(ref)) {
     return false;
   }
-  const step = (ref as Record<string, unknown>).step;
-  const path = (ref as Record<string, unknown>).path;
+  const { step } = ref as Record<string, unknown>;
+  const { path } = ref as Record<string, unknown>;
   if (typeof step !== "string" || step.length === 0) {
     return false;
   }

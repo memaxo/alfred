@@ -3,16 +3,16 @@
  * Provides queueing, batching, backpressure, and retry logic for embedding requests
  */
 
-export type QueuedRequest = {
+export interface QueuedRequest {
   id: string;
   texts: string[];
   resolve: (embeddings: number[][]) => void;
   reject: (error: Error) => void;
   queuedAt: number;
   priority: number;
-};
+}
 
-export type QueueConfig = {
+export interface QueueConfig {
   /** Maximum queue size before rejecting requests (default: 1000) */
   maxQueueSize?: number;
   /** Maximum batch size for combining requests (default: 32) */
@@ -27,9 +27,9 @@ export type QueueConfig = {
   retryCount?: number;
   /** Initial retry delay in ms, doubles each retry (default: 100) */
   retryDelayMs?: number;
-};
+}
 
-export type QueueStats = {
+export interface QueueStats {
   queueLength: number;
   totalQueued: number;
   totalProcessed: number;
@@ -38,7 +38,7 @@ export type QueueStats = {
   totalRetries: number;
   avgBatchSize: number;
   avgQueueTimeMs: number;
-};
+}
 
 export class EmbedQueue {
   private readonly queue: QueuedRequest[] = [];

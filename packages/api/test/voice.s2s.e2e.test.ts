@@ -20,7 +20,7 @@ describe("End-to-End Voice Session (S2S)", () => {
       transcript: "Hello computer",
       chunkText: "chunk",
     });
-    registry = setup.registry;
+    ({ registry } = setup);
   });
 
   afterAll(() => {

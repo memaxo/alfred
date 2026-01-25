@@ -21,7 +21,7 @@ function asError(err: unknown): Error {
   return new Error(typeof err === "string" ? err : "tui_unknown_error");
 }
 
-export type FallbackPollingOptions<T> = {
+export interface FallbackPollingOptions<T> {
   manager: SubscriptionManager;
   id: string;
   interval: number;
@@ -33,7 +33,7 @@ export type FallbackPollingOptions<T> = {
   fetchMock: () => Promise<T>;
   onData: (data: T) => void;
   onError?: (error: Error) => void;
-};
+}
 
 export function addPollingWithFallback<T>(
   options: FallbackPollingOptions<T>
@@ -74,11 +74,11 @@ export function addPollingWithFallback<T>(
         hasLive = true;
         lastLive = next;
         return next;
-      } catch (err) {
-        const error = asError(err);
+      } catch (error) {
+        const err = asError(error);
 
-        if (!shouldFallback(error)) {
-          throw error;
+        if (!shouldFallback(err)) {
+          throw err;
         }
 
         failures += 1;
@@ -93,7 +93,7 @@ export function addPollingWithFallback<T>(
           if (lastLive) {
             return lastLive;
           }
-          throw error;
+          throw err;
         }
 
         mode = "mock";

@@ -136,8 +136,9 @@ export const toolNote = {
           ok: count > 0,
         };
       }
-      default:
+      default: {
         throw new Error("note_action_not_supported");
+      }
     }
   },
 };

@@ -48,14 +48,14 @@ async function defaultOnFire(
   }
 }
 
-export type ReminderSchedulerOptions = {
+export interface ReminderSchedulerOptions {
   intervalMs?: number;
   jitterMs?: number;
   batchSize?: number;
   logger?: Pick<Console, "info" | "error" | "warn">;
   onFire?: (reminder: Reminder) => Promise<void> | void;
   now?: () => Date;
-};
+}
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

@@ -11,10 +11,10 @@ import {
   workflowCompilationVersion,
 } from "@alfred/type/compilation";
 
-type CompilationObserverOptions = {
+interface CompilationObserverOptions {
   runId: string;
   requirement: string;
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -38,7 +38,7 @@ function toAgentList(executeOutput: unknown): WorkflowCompilation["agents"] {
 
   const outcomes = (() => {
     if (outcomesRaw instanceof Map) {
-      return Array.from(outcomesRaw.values());
+      return [...outcomesRaw.values()];
     }
     if (isRecord(outcomesRaw) && Array.isArray(outcomesRaw.entries)) {
       // Extremely defensive: allow a Map-like encoding that didn't get decoded.
@@ -117,7 +117,7 @@ function toFileChanges(
 
 function toSummaryText(summarizeOutput: unknown): string | undefined {
   const rec = coerceRecord(summarizeOutput);
-  const summary = rec.summary;
+  const { summary } = rec;
   return typeof summary === "string" && summary.trim().length > 0
     ? summary.trim()
     : undefined;

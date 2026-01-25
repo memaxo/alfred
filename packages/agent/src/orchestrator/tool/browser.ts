@@ -5,14 +5,15 @@ import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 
-import { type DirectoryHandle } from "../../security/filesystem.js";
+import type { DirectoryHandle } from "../../security/filesystem.js";
+import type { ToolWriter } from "./shared/context.js";
+
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
   openDirectorySecure,
 } from "../../security/filesystem.js";
 import { withPolicyApproval, type AITool } from "./approval.js";
-import { type ToolWriter } from "./shared/context.js";
 import { resolveExecutable } from "./shared/subprocess.js";
 
 const MIN_TIMEOUT_SEC = 5;
@@ -613,9 +614,9 @@ export const toolBrowser = {
           timeoutSec,
           writer,
         });
-        stdout = result.stdout;
-        stderr = result.stderr;
-        exitCode = result.exitCode;
+        ({ stdout } = result);
+        ({ stderr } = result);
+        ({ exitCode } = result);
       } catch (error) {
         const artifacts = await captureFailureArtifacts({
           cwdHandle,

@@ -16,23 +16,23 @@ const authClient = createAuthClient({
   plugins: [deviceAuthorizationClient()],
 });
 
-type DeviceCode = {
+interface DeviceCode {
   verificationUri: string;
   verificationUriComplete?: string;
   deviceCode: string;
   interval: number;
   expiresIn: number;
-};
+}
 
-type DeviceToken = {
+interface DeviceToken {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
   user: unknown;
   session: { id: string };
-};
+}
 
-type DeviceAuthClient = {
+interface DeviceAuthClient {
   oauth2: {
     requestDeviceCode: (input: {
       scope: string[];
@@ -43,10 +43,10 @@ type DeviceAuthClient = {
       expiresIn: number;
     }) => Promise<{ data?: DeviceToken; error?: unknown }>;
   };
-};
+}
 
 export async function deviceLogin(): Promise<void> {
-  const oauth2 = (authClient as unknown as DeviceAuthClient).oauth2;
+  const { oauth2 } = authClient as unknown as DeviceAuthClient;
 
   // 1. Request device code
   const { data: deviceCode, error } = await oauth2.requestDeviceCode({
@@ -63,7 +63,7 @@ export async function deviceLogin(): Promise<void> {
       await openBrowser(
         deviceCode.verificationUriComplete || deviceCode.verificationUri
       );
-    } catch (_err) {}
+    } catch {}
   }
   process.stdout.write("  Waiting for authorization");
 

@@ -21,7 +21,7 @@ export const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 // Brand constructors
 export const timestamp = (n: number): Timestamp => {
   if (!Number.isFinite(n)) {
-    throw new Error("Timestamp must be a finite number");
+    throw new TypeError("Timestamp must be a finite number");
   }
   if (n < 0) {
     throw new Error("Timestamp cannot be negative");

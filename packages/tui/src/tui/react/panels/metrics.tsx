@@ -51,13 +51,13 @@ function sparkline(values: number[], width: number): string {
     .join("");
 }
 
-type MetricsPanelProps = {
+interface MetricsPanelProps {
   width: number;
   height: number;
   focused: boolean;
   x?: number;
   y?: number;
-};
+}
 
 export function MetricsPanel({
   width,
@@ -198,8 +198,7 @@ export function MetricsPanel({
 
     lines.push(bold(dim("Router          p50   avg   p99   req  err")));
     const maxRows = Math.max(3, height - lines.length - 4);
-    const rows = routers
-      .slice()
+    const rows = [...routers]
       .sort((a, b) => b.requests - a.requests)
       .slice(0, maxRows);
     for (const r of rows) {
@@ -276,9 +275,9 @@ export function MetricsPanel({
   const content =
     viewMode === "latency"
       ? renderLatencyView()
-      : viewMode === "throughput"
+      : (viewMode === "throughput"
         ? renderThroughputView()
-        : renderOverview();
+        : renderOverview());
 
   return (
     <box

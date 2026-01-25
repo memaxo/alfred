@@ -6,7 +6,8 @@
 
 /** @jsxImportSource @opentui/react */
 
-import { type KeyEvent } from "@opentui/core";
+import type { KeyEvent } from "@opentui/core";
+
 import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -35,17 +36,17 @@ interface EntityDetail {
   name: string;
   type: string;
   description: string | null;
-  facts: Array<{
+  facts: {
     id: string;
     predicate: string;
     object: string;
     confidence: number;
-  }>;
-  relations: Array<{
+  }[];
+  relations: {
     id: string;
     target: string;
     type: string;
-  }>;
+  }[];
 }
 
 function renderSearchInput(query: string, focused: boolean): string {

@@ -17,7 +17,7 @@ const getSessionRepoMock = vi.fn();
 mock.module("@alfred/agent/orchestrator/codex-session", () => ({
   sessionManager: {
     getSession: getSessionMock,
-    terminateSession: vi.fn().mockResolvedValue(undefined),
+    terminateSession: vi.fn().mockResolvedValue(),
   },
 }));
 

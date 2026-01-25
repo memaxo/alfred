@@ -1,8 +1,9 @@
 import { logger } from "@alfred/logger";
 
+import type { PipelineContext, PipelineStage } from "../pipeline";
+import type { LearnOutput, ReviewOutput } from "./types";
+
 import { createEvent } from "../events";
-import { type PipelineContext, type PipelineStage } from "../pipeline";
-import { type LearnOutput, type ReviewOutput } from "./types";
 
 export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
   readonly name = "learn" as const;

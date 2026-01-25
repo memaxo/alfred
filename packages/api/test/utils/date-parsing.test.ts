@@ -4,7 +4,7 @@ import { parseOptionalDate } from "../../src/utils/date-parsing";
 
 describe("parseOptionalDate", () => {
   test("returns undefined for undefined input", () => {
-    expect(parseOptionalDate(undefined)).toBeUndefined();
+    expect(parseOptionalDate()).toBeUndefined();
   });
 
   test("returns null for null input", () => {

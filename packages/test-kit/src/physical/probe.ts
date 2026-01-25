@@ -1,11 +1,11 @@
 import { logger } from "@alfred/logger";
 import { spawn } from "bun";
 
-export type HardwareCapabilities = {
+export interface HardwareCapabilities {
   gpu: boolean;
   vendor?: "nvidia" | "apple" | "amd" | "unknown";
   voiceServer: boolean; // Is python/stt running?
-};
+}
 
 export const HardwareProbe = {
   async check(): Promise<HardwareCapabilities> {
@@ -61,7 +61,10 @@ export const HardwareProbe = {
       // Python not available or failed to run
     }
 
-    logger.info("hardware_probe_result", caps);
+    logger.info(
+      "hardware_probe_result",
+      caps as unknown as Record<string, unknown>
+    );
     return caps;
   },
 };

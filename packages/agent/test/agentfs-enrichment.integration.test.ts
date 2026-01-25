@@ -3,8 +3,9 @@ import { installAuthTokenMock } from "@alfred/test-kit";
 
 installAuthTokenMock();
 
-import { type StructuredHandoff } from "@alfred/type";
-import { afterEach, describe, expect, it } from "bun:test";
+import type { StructuredHandoff } from "@alfred/type";
+
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import path from "node:path";
 
 import {
@@ -26,6 +27,21 @@ const AUTHZ = "test-authz";
 
 const dockerOk = isDockerAvailable();
 const imageOk = dockerOk && isImageAvailable(IMAGE);
+
+let prevEnrichmentEnv: string | undefined;
+
+beforeAll(() => {
+  prevEnrichmentEnv = process.env.ALFRED_ENRICHMENT;
+  process.env.ALFRED_ENRICHMENT = "1";
+});
+
+afterAll(() => {
+  if (prevEnrichmentEnv === undefined) {
+    delete process.env.ALFRED_ENRICHMENT;
+  } else {
+    process.env.ALFRED_ENRICHMENT = prevEnrichmentEnv;
+  }
+});
 
 describe("AgentFS enrichment (docker + sdk)", () => {
   const repoRoot = process.cwd();

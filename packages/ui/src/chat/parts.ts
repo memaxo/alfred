@@ -29,19 +29,19 @@ type UIPart = UIMessage["parts"][number];
  * for full documentation of ALFRED's custom UIMessage format.
  */
 
-export type ToolCallPart = {
+export interface ToolCallPart {
   type: "tool-call";
   toolCallId: string;
   toolName: string;
   input: unknown;
-};
+}
 
-export type ToolResultPart = {
+export interface ToolResultPart {
   type: "tool-result";
   toolCallId: string;
   toolName: string;
   output: unknown;
-};
+}
 
 export type ToolInvocationState =
   | "input-streaming"
@@ -52,7 +52,7 @@ export type ToolInvocationState =
   | "output-error"
   | "output-denied";
 
-export type ToolInvocationPart = {
+export interface ToolInvocationPart {
   type: `tool-${string}` | "dynamic-tool";
   toolCallId: string;
   toolName?: string;
@@ -65,7 +65,7 @@ export type ToolInvocationPart = {
     approved?: boolean;
     reason?: string;
   };
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -131,7 +131,7 @@ export function isToolInvocationPart(
     return false;
   }
 
-  const type = part.type;
+  const { type } = part;
   if (typeof type !== "string") {
     return false;
   }
@@ -176,10 +176,10 @@ export function getToolInvocationState(
     return part.state as ToolInvocationState;
   }
 
-  const approval = part.approval;
+  const { approval } = part;
   if (approval && typeof approval === "object") {
-    const id = (approval as { id?: unknown }).id;
-    const approved = (approval as { approved?: unknown }).approved;
+    const { id } = approval as { id?: unknown };
+    const { approved } = approval as { approved?: unknown };
 
     if (typeof id === "string" && id.length > 0) {
       if (approved === undefined) {
@@ -231,7 +231,7 @@ export function isDataPart(
   if (typeof part !== "object" || part === null) {
     return false;
   }
-  const type = (part as { type?: unknown }).type;
+  const { type } = part as { type?: unknown };
   return typeof type === "string" && type.startsWith("data-");
 }
 
@@ -293,7 +293,7 @@ export function extractGenUISchema(part: UIPart): UIComponent | null {
     return part.ui;
   }
   if (isToolResultPart(part)) {
-    const output = (part as { output?: unknown }).output;
+    const { output } = part as { output?: unknown };
     if (isGenUIToolResult(output)) {
       return output.ui;
     }
@@ -315,14 +315,18 @@ export function getAgentLabel(message: UIMessage): string {
     return agent;
   }
   switch (message.role) {
-    case "system":
+    case "system": {
       return "System";
-    case "assistant":
+    }
+    case "assistant": {
       return "Assistant";
-    case "user":
+    }
+    case "user": {
       return "User";
-    default:
+    }
+    default: {
       return String(message.role);
+    }
   }
 }
 

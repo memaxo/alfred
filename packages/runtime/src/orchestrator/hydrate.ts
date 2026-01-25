@@ -23,7 +23,7 @@ export function hydrateTrackerContext(
 
   const waveResults = history.filter((e) => (e as any).kind === "wave-result");
   for (const res of waveResults) {
-    const data = (res as any).data;
+    const { data } = res as any;
     if (data?.waveId) {
       ctx.state.waves[data.waveId] = {
         status: data.status === "partial" ? "failed" : "completed",

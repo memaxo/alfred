@@ -32,6 +32,8 @@ export * from "./genui";
 export * from "./genui.zod";
 export * from "./guards";
 export * from "./history";
+// Hooks system types (lifecycle, cognitive, agent, memory, voice, etc.)
+export * from "./hooks";
 // Identity and ID generation
 export * from "./id";
 // Knowledge graph types

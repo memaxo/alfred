@@ -91,10 +91,10 @@ describe("parseThreadEvent", () => {
   });
 
   it("calls onWarning for invalid events", () => {
-    const warnings: Array<{
+    const warnings: {
       message: string;
       context: Record<string, unknown>;
-    }> = [];
+    }[] = [];
     const invalid = { type: "bad_event", foo: "bar" };
 
     parseThreadEvent(invalid, {

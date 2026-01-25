@@ -33,12 +33,12 @@ const pathClassificationSchema = z.object({
 /**
  * Options for path classification
  */
-export type ClassifyPathOptions = {
+export interface ClassifyPathOptions {
   /** Model to use for batch classification */
   model?: LanguageModel;
   /** Model key for logging */
   modelKey?: string;
-};
+}
 
 /**
  * Heuristic fallback for path classification.

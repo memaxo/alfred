@@ -14,21 +14,21 @@ const CODEX_ERROR_MESSAGES: Record<
   },
 };
 
-export type CodexRuntimeErrorInfo = {
+export interface CodexRuntimeErrorInfo {
   code: string | null;
   rawMessage: string;
   userMessage: string;
   needsElevation: boolean;
   limitExceeded: boolean;
-};
+}
 
 export function formatCodexRuntimeError(error: unknown): CodexRuntimeErrorInfo {
   const rawMessage =
     error instanceof Error
       ? (error.message ?? "codex_unknown_error")
-      : typeof error === "string"
+      : (typeof error === "string"
         ? error
-        : "codex_unknown_error";
+        : "codex_unknown_error");
 
   const mapped = CODEX_ERROR_MESSAGES[rawMessage];
   if (mapped) {

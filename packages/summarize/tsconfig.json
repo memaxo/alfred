@@ -8,6 +8,7 @@
     "declarationMap": false,
     "composite": true,
     "paths": {
+      "zod": ["../../node_modules/zod/index.d.cts"],
       "*": ["./*"]
     },
     "strictNullChecks": true

@@ -6,6 +6,7 @@ import type {
   Physiology,
   Plan,
 } from "@alfred/cognitive/state";
+import type { HookContext, HookRegistry } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { ModelMessage } from "ai";
 
@@ -30,13 +31,59 @@ export type CognitiveEffect =
   | { type: "execute_plan"; plan: Plan }
   | { type: "log_reflection"; outcome: Outcome };
 
-export type CognitiveLoopResult = {
+export interface CognitiveLoopResult {
   state: CognitiveState;
   effects: CognitiveEffect[];
-};
+}
 
 // Type guard for snapshot state with optional autonomy
 type SnapshotState = CognitiveState & { autonomy?: AutonomyGradient };
+
+interface HooksRuntime {
+  readonly registry: HookRegistry;
+  readonly ctx: HookContext;
+}
+
+function getHooksRuntime(value: unknown): HooksRuntime | null {
+  const ctx = value as { get?: (key: string) => unknown } | null;
+  const hooks = ctx?.get?.("hooks") as unknown;
+  if (!hooks || typeof hooks !== "object") {
+    return null;
+  }
+  const rec = hooks as Record<string, unknown>;
+  const registry = rec.registry as Record<string, unknown> | undefined;
+  const baseCtx = rec.ctx as Record<string, unknown> | undefined;
+  if (!registry || typeof registry.emit !== "function") {
+    return null;
+  }
+  if (!baseCtx || typeof baseCtx.sessionId !== "string") {
+    return null;
+  }
+  return hooks as HooksRuntime;
+}
+
+function createHookContext(
+  base: HookContext,
+  state: CognitiveState,
+  autonomy: AutonomyGradient
+): HookContext {
+  const a = Number(autonomy.level);
+  return {
+    ...base,
+    autonomy: a,
+    cognitive: {
+      state: state._,
+      autonomy: a,
+      physiology: state.physiology,
+    },
+  };
+}
+
+const physiologyThresholds = {
+  energy: 0.2,
+  boredom: 0.8,
+  frustration: 0.8,
+} as const;
 
 /**
  * The Cognitive Runtime Loop
@@ -52,6 +99,8 @@ export async function runCognitiveLoop(
   streamId: string,
   incomingEvent: Event
 ): Promise<CognitiveLoopResult> {
+  const hooks = getHooksRuntime(_ctx as unknown);
+
   const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value);
   const isEventLike = (value: unknown): value is { _: string } =>
@@ -84,29 +133,216 @@ export async function runCognitiveLoop(
     }
     const historicalEvent = unwrapped.data as Event;
     const result = applyTransition(state, autonomy, historicalEvent);
-    state = result.state;
-    autonomy = result.autonomy;
+    ({ state } = result);
+    ({ autonomy } = result);
     // Don't record metrics during replay - they inflate counters
   }
 
+  let eventToApply: Event = incomingEvent;
+  if (hooks && incomingEvent._ === "input") {
+    try {
+      const ctxForHook = createHookContext(hooks.ctx, state, autonomy);
+      const out = await hooks.registry.emit(
+        {
+          type: "cognitive:input",
+          input: incomingEvent.content,
+        },
+        ctxForHook
+      );
+
+      const { transformed } = out;
+      if (transformed && transformed.input !== incomingEvent.content) {
+        eventToApply = {
+          ...incomingEvent,
+          content: transformed.input,
+        };
+      }
+    } catch (error) {
+      hooks.ctx.log.warn("hooks_cognitive_input_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const beforeState = state;
+  const beforeAutonomy = autonomy;
+
   // 2. Apply New Event
-  const transition = applyTransition(state, autonomy, incomingEvent);
+  const transition = applyTransition(state, autonomy, eventToApply);
   const newState = transition.state;
   const newAutonomy = transition.autonomy;
   recordPhysiologyMetrics(newState.physiology);
-  maybeRecordEntropyEvent(incomingEvent);
+  maybeRecordEntropyEvent(eventToApply);
 
   // Update Autonomy based on event type
   const now = Date.now();
-  if (incomingEvent._ === "feedback") {
-    const evidence = calculateEvidence(incomingEvent);
+  if (eventToApply._ === "feedback") {
+    const evidence = calculateEvidence(eventToApply);
     autonomy = updateAutonomy(now, newAutonomy, evidence, newState.physiology);
-  } else if (incomingEvent._ === "complete") {
+  } else if (eventToApply._ === "complete") {
     // Update autonomy based on execution outcome
-    const evidence = calculateOutcomeEvidence(incomingEvent.outcome);
+    const evidence = calculateOutcomeEvidence(eventToApply.outcome);
     autonomy = updateAutonomy(now, newAutonomy, evidence, newState.physiology);
   } else {
     autonomy = newAutonomy;
+  }
+
+  if (hooks) {
+    const ctxForHook = createHookContext(hooks.ctx, newState, autonomy);
+
+    try {
+      if (beforeState._ !== newState._) {
+        await hooks.registry.emit(
+          {
+            type: "cognitive:transition",
+            fromState: beforeState._,
+            toState: newState._,
+            trigger: eventToApply._,
+          },
+          ctxForHook
+        );
+      }
+
+      switch (newState._) {
+        case "thinking": {
+          if (beforeState._ !== "thinking") {
+            await hooks.registry.emit(
+              { type: "cognitive:thinking", context: newState.about },
+              ctxForHook
+            );
+          }
+          break;
+        }
+        case "deciding": {
+          if (beforeState._ !== "deciding") {
+            const best = [...newState.options].sort(
+              (a, b) => b.score - a.score
+            )[0];
+            const riskMax = best?.risks
+              .map((r) => r.severity)
+              .reduce<"low" | "medium" | "high">((acc, cur) => {
+                if (acc === "high" || cur === "high") {
+                  return "high";
+                }
+                if (acc === "medium" || cur === "medium") {
+                  return "medium";
+                }
+                return "low";
+              }, "low");
+
+            await hooks.registry.emit(
+              {
+                type: "cognitive:deciding",
+                action: {
+                  type: "decision",
+                  risk: riskMax ?? "low",
+                  description: best?.description ?? "deciding",
+                },
+              },
+              ctxForHook
+            );
+          }
+          break;
+        }
+        case "executing": {
+          if (beforeState._ !== "executing") {
+            const step = newState.plan.steps[newState.step];
+            await hooks.registry.emit(
+              {
+                type: "cognitive:acting",
+                action: step?.action ?? "execute",
+              },
+              ctxForHook
+            );
+          }
+          break;
+        }
+        case "reflecting": {
+          if (beforeState._ !== "reflecting") {
+            const out = newState.outcome;
+            const outcome: "success" | "failure" =
+              out._ === "success"
+                ? "success"
+                : out._ === "partial"
+                  ? out.completed.length >= out.failed.length
+                    ? "success"
+                    : "failure"
+                  : "failure";
+            await hooks.registry.emit(
+              {
+                type: "cognitive:learning",
+                outcome,
+                context: out._,
+              },
+              ctxForHook
+            );
+          }
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+
+      const beforeLevel = Number(beforeAutonomy.level);
+      const afterLevel = Number(autonomy.level);
+      if (Number.isFinite(beforeLevel) && Number.isFinite(afterLevel)) {
+        if (Math.abs(beforeLevel - afterLevel) > 1e-6) {
+          await hooks.registry.emit(
+            {
+              type: "cognitive:autonomy:change",
+              fromLevel: beforeLevel,
+              toLevel: afterLevel,
+              reason: eventToApply._,
+            },
+            ctxForHook
+          );
+        }
+      }
+
+      const prevPhys = beforeState.physiology;
+      const nextPhys = newState.physiology;
+      const energyTh = physiologyThresholds.energy;
+      if (prevPhys.energy > energyTh && nextPhys.energy <= energyTh) {
+        await hooks.registry.emit(
+          {
+            type: "cognitive:physiology:alert",
+            metric: "energy",
+            threshold: energyTh,
+            value: nextPhys.energy,
+          },
+          ctxForHook
+        );
+      }
+      const boredomTh = physiologyThresholds.boredom;
+      if (prevPhys.boredom < boredomTh && nextPhys.boredom >= boredomTh) {
+        await hooks.registry.emit(
+          {
+            type: "cognitive:physiology:alert",
+            metric: "boredom",
+            threshold: boredomTh,
+            value: nextPhys.boredom,
+          },
+          ctxForHook
+        );
+      }
+      const frTh = physiologyThresholds.frustration;
+      if (prevPhys.frustration < frTh && nextPhys.frustration >= frTh) {
+        await hooks.registry.emit(
+          {
+            type: "cognitive:physiology:alert",
+            metric: "frustration",
+            threshold: frTh,
+            value: nextPhys.frustration,
+          },
+          ctxForHook
+        );
+      }
+    } catch (error) {
+      hooks.ctx.log.warn("hooks_cognitive_emit_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   const stateWithAutonomy: SnapshotState = {
@@ -117,11 +353,11 @@ export async function runCognitiveLoop(
   // 3. Persist
   const envelope = wrapEventEnvelope({
     id: crypto.randomUUID(),
-    type: incomingEvent._,
+    type: eventToApply._,
     resource: "user",
-    data: incomingEvent,
+    data: eventToApply,
   });
-  await cognitiveRepo.appendEvent(streamId, incomingEvent._, {
+  await cognitiveRepo.appendEvent(streamId, eventToApply._, {
     v: envelope.v,
     id: envelope.id,
     type: envelope.type,

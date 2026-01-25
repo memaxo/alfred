@@ -23,12 +23,12 @@ import { createVCR, type VCRRecorder } from "../vcr";
  *     }
  *   });
  */
-export type VCRConfig = {
+export interface VCRConfig {
   cassettePath: string;
   strictReplay?: boolean;
-};
+}
 
-type WorkflowRunRecord = {
+interface WorkflowRunRecord {
   id: string;
   userId: string;
   workflowId: string;
@@ -40,25 +40,25 @@ type WorkflowRunRecord = {
   linearSpace?: string | null;
   linearIssueId?: string | null;
   linearIssueUrl?: string | null;
-};
+}
 
-type WorkflowEventRecord = {
+interface WorkflowEventRecord {
   runId: string;
   eventId: string;
   eventType: string;
   eventData?: unknown;
   stepId?: string | null;
   timestamp: Date;
-};
+}
 
-type LinearRequest = {
+interface LinearRequest {
   action?: string;
   input: Record<string, unknown>;
-};
+}
 
 type StreamMode = "normal" | "error";
 
-export type WorkflowRuntimeFixtureHandle = {
+export interface WorkflowRuntimeFixtureHandle {
   repo: {
     createRun: ReturnType<typeof vi.fn>;
     updateRun: ReturnType<typeof vi.fn>;
@@ -80,7 +80,7 @@ export type WorkflowRuntimeFixtureHandle = {
   stop(): Promise<void>;
   /** VCR instance when VCR mode is enabled (null when using stubs) */
   vcr: InstanceType<typeof VCRRecorder> | null;
-};
+}
 
 /**
  * Module-level state for workflow runtime fixture.
@@ -178,14 +178,14 @@ mock.module("@alfred/agent/workflow/metrics", () => workflowMetricsStub);
 export const aiStreamTextMock = vi.fn(() => {
   if (aiStreamState.mode === "error") {
     return {
-      fullStream: (async function* () {
+      fullStream: (async function* fullStream() {
         yield* [];
         throw new Error("ai_stub_failure");
       })(),
     };
   }
   return {
-    fullStream: (async function* () {
+    fullStream: (async function* fullStream() {
       yield { type: "text-delta", id: "text-1", delta: "hello" };
       yield { type: "finish", finishReason: "stop" };
     })(),
@@ -232,7 +232,7 @@ mock.module("@alfred/history", () => ({
 }));
 
 mock.module("@alfred/agent/preference/prompt", () => ({
-  buildPreferenceSystemPrompt: vi.fn().mockResolvedValue(undefined),
+  buildPreferenceSystemPrompt: vi.fn().mockImplementation(async () => {}),
 }));
 
 mock.module("@alfred/agent/orchestrator/flow/context", () => ({
@@ -311,9 +311,9 @@ mock.module("@alfred/db/repo/rag", () => ({
 }));
 
 mock.module("@alfred/agent/assistant/graphstore", () => ({
-  persistExecPlans: vi.fn().mockResolvedValue(undefined),
-  persistKnowledge: vi.fn().mockResolvedValue(undefined),
-  linkRagProvenanceToReasoning: vi.fn().mockResolvedValue(undefined),
+  persistExecPlans: vi.fn().mockImplementation(async () => {}),
+  persistKnowledge: vi.fn().mockImplementation(async () => {}),
+  linkRagProvenanceToReasoning: vi.fn().mockImplementation(async () => {}),
 }));
 
 mock.module("@alfred/agent/workflow/review-gate", () => {
@@ -357,9 +357,9 @@ mock.module(runtimeReviewPath, () => ({
   },
 }));
 
-export type WorkflowRuntimeFixtureOptions = {
+export interface WorkflowRuntimeFixtureOptions {
   vcr?: VCRConfig;
-};
+}
 
 export async function installWorkflowRuntimeFixture(
   options?: WorkflowRuntimeFixtureOptions
@@ -572,10 +572,10 @@ export async function installWorkflowRuntimeFixture(
     },
     clearRepo() {
       runs.clear();
-      events.splice(0, events.length);
+      events.splice(0);
     },
     clearLinearRequests() {
-      linearRequests.splice(0, linearRequests.length);
+      linearRequests.splice(0);
     },
     async stop() {
       server.stop();

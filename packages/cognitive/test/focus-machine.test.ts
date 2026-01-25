@@ -18,7 +18,7 @@ describe("statusFocus", () => {
   });
 
   it("returns idle state for undefined input", () => {
-    expect(statusFocus(undefined)).toEqual({ _: "idle" });
+    expect(statusFocus()).toEqual({ _: "idle" });
   });
 
   it("copies all fields from existing state", () => {

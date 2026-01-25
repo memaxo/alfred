@@ -39,7 +39,7 @@ const nearestMentions = (
   pivot: number,
   direction: "left" | "right",
   limit: number
-): Array<{ record: MentionRecord; distance: number }> => {
+): { record: MentionRecord; distance: number }[] => {
   const filtered = mentions
     .map((record) => {
       const distance =
@@ -100,7 +100,7 @@ export const extractRelations = (
       const pivot = verbTerm.index[1];
       let subjects =
         nearestMentions(mentionList, pivot, "left", 2) ??
-        ([] as Array<{ record: MentionRecord; distance: number }>);
+        ([] as { record: MentionRecord; distance: number }[]);
       subjects = subjects.filter(({ record }) => {
         const between = intermediateTerms(record.end, pivot);
         const hasConjunction = between.some((term) =>
@@ -157,5 +157,5 @@ export const extractRelations = (
     }
   }
 
-  return Array.from(deduped.values());
+  return [...deduped.values()];
 };

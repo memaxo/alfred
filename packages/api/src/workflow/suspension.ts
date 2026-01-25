@@ -28,7 +28,7 @@ type SuspensionEventEmitter = (payload: {
   resumeEvents: ResumePayload["event"][];
 }) => void | Promise<void>;
 
-type SuspensionOptions = {
+interface SuspensionOptions {
   sessionUserId: string;
   workflowId?: string;
   input: WorkflowInputPayload;
@@ -49,9 +49,9 @@ type SuspensionOptions = {
   ) => void | Promise<void>;
   onResumed?: (runId: string) => void | Promise<void>;
   onCancelled?: (runId: string) => void | Promise<void>;
-};
+}
 
-type SuspensionState = {
+interface SuspensionState {
   runId: string;
   abortController: AbortController;
   status: "suspended" | "resuming" | "completed";
@@ -59,7 +59,7 @@ type SuspensionState = {
   primary: Obligation | null;
   resumeEvents: ResumePayload["event"][];
   timeoutHandle: ReturnType<typeof setTimeout> | null;
-};
+}
 
 type SuspensionResult = "resumed" | "cancelled" | "timeout" | "error";
 
@@ -70,7 +70,7 @@ function computeResumeEvents(
   if (resolver) {
     const resolved = resolver(obligations).filter(Boolean);
     if (resolved.length > 0) {
-      return Array.from(new Set(resolved));
+      return [...new Set(resolved)];
     }
   }
   const defaults = resolveObligationResumeEvents(

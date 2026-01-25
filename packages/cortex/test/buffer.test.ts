@@ -213,8 +213,8 @@ describe("DoubleBuffer", () => {
       1024,
       GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
     );
-    const read = db.read;
-    const write = db.write;
+    const { read } = db;
+    const { write } = db;
 
     db.destroy();
 
@@ -378,9 +378,9 @@ describe("Buffer Management Patterns", () => {
     const ub = new UniformBuffer(device, 32);
 
     // Batch multiple updates
-    ub.setFloat(0, 1.0); // time
+    ub.setFloat(0, 1); // time
     ub.setVec2(4, 800, 600); // resolution
-    ub.setVec4(8, 0.5, 0.5, 0.5, 0.0); // center position
+    ub.setVec4(8, 0.5, 0.5, 0.5, 0); // center position
 
     // Single upload
     ub.upload();

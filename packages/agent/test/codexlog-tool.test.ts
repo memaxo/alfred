@@ -111,7 +111,7 @@ describe("codexlog tool", () => {
     expect(out).toMatchObject({ action: "reasoning" });
     const result = out as {
       action: "reasoning";
-      reasoning: Array<{ text: string }>;
+      reasoning: { text: string }[];
     };
     expect(result.reasoning).toHaveLength(1);
     expect(result.reasoning[0]?.text).not.toContain(

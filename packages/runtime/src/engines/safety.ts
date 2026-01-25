@@ -103,11 +103,11 @@ async function getRiskCentroids(): Promise<Map<RiskLevel, Float32Array>> {
   return await centroidPromise;
 }
 
-type StepLike = {
+interface StepLike {
   action: string;
   params?: Record<string, unknown>;
   description?: string;
-};
+}
 
 type PlanLike = Pick<ExecutionPlan, "steps" | "duration" | "confidence"> & {
   steps: StepLike[];

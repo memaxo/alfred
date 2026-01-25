@@ -21,18 +21,18 @@ import { cosineSimilarity } from "./scoring";
 /**
  * Priority queue node for DSA-BFS traversal
  */
-type TraversalNode = {
+interface TraversalNode {
   node: NodeRow;
   priority: number;
   depth: number;
   path: string[];
   similarity: number;
-};
+}
 
 /**
  * DSA-BFS configuration options
  */
-export type DsaBfsOptions = {
+export interface DsaBfsOptions {
   /** Maximum traversal depth (default: 5) */
   maxDepth?: number;
   /** Maximum node expansions before terminating (default: 100) */
@@ -43,18 +43,18 @@ export type DsaBfsOptions = {
   depthWeight?: number;
   /** Early termination threshold - stop if similarity exceeds (default: 0.9) */
   earlyTerminationThreshold?: number;
-};
+}
 
 /**
  * DSA-BFS result
  */
-export type DsaBfsResult = {
+export interface DsaBfsResult {
   node: NodeRow;
   path: string[];
   depth: number;
   similarity: number;
   expansions: number;
-};
+}
 
 /**
  * Simple priority queue implementation using a binary heap
@@ -112,7 +112,7 @@ class PriorityQueue<T extends { priority: number }> {
   }
 
   private bubbleDown(index: number): void {
-    const length = this.heap.length;
+    const { length } = this.heap;
     const item = this.heap[index];
     if (!item) {
       return;

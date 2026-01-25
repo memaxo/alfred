@@ -10,9 +10,9 @@ import type {
   VoiceClient,
 } from "../types";
 
-type MutationAdapter = {
+interface MutationAdapter {
   mutation<TInput, TOutput>(path: string, input: TInput): Promise<TOutput>;
-};
+}
 
 export function createVoiceClient({
   trpc,

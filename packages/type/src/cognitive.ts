@@ -14,11 +14,11 @@ export type Timestamp = string & { readonly _: unique symbol };
 export type CognitiveConfidence = number & { readonly _: unique symbol };
 export type Autonomy = number & { readonly _: unique symbol };
 
-export type FocusSessionRecord = {
+export interface FocusSessionRecord {
   started: Timestamp;
   stopped: Timestamp;
   duration: number;
-};
+}
 
 export type FocusState =
   | {
@@ -37,57 +37,57 @@ export type FocusState =
       last?: FocusSessionRecord;
     };
 
-export type CaptureInput = {
+export interface CaptureInput {
   content: string;
   context?: Record<string, unknown>;
-};
+}
 
-export type CaptureResult = {
+export interface CaptureResult {
   facts: KnowledgeFact[];
   confidence: CognitiveConfidence;
   ambiguities: string[];
-};
+}
 
-export type SynthesisContradiction = {
+export interface SynthesisContradiction {
   newFact: string;
   existingFact: string;
   reason: "negation" | "antonym" | "numeric";
   focus?: string;
   confidence: KnowledgeConfidence;
   pair: [string, string];
-};
+}
 
-export type SynthesisResult = {
+export interface SynthesisResult {
   insights: KnowledgeInsight[];
   relations: KnowledgeRelation[];
   contradictions: SynthesisContradiction[];
-};
+}
 
-export type ExecutionStep = {
+export interface ExecutionStep {
   description: string;
   etaMs?: number;
   metadata?: Record<string, unknown>;
-};
+}
 
-export type ExecutionPlan = {
+export interface ExecutionPlan {
   steps: ExecutionStep[];
   goal?: string;
   autonomy?: Autonomy;
   metadata?: Record<string, unknown>;
-};
+}
 
-export type ExecutionResult = {
-  actions: Array<{
+export interface ExecutionResult {
+  actions: {
     id: string;
     status: "completed" | "skipped" | "failed";
     detail?: string;
-  }>;
+  }[];
   effects: Record<string, unknown>[];
   deviations: string[];
-};
+}
 
-export type ReflectionResult = {
+export interface ReflectionResult {
   errors: string[];
   lessons: string[];
   updates: KnowledgeUpdate[];
-};
+}

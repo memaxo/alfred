@@ -6,13 +6,13 @@ import type { MetricsStore } from "../../subscriptions/metrics";
 import type { VoiceStore } from "../../subscriptions/voice";
 import type { WorkflowStore } from "../../subscriptions/workflow";
 
-export type TuiStores = {
+export interface TuiStores {
   cognitive: CognitiveStateStore;
   workflow: WorkflowStore;
   voice: VoiceStore;
   metrics: MetricsStore;
   focus: FocusStore;
-};
+}
 
 export const StoresContext = createContext<TuiStores | null>(null);
 

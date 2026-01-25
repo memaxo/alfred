@@ -27,7 +27,7 @@ export type AgentEscalationReason =
  * Escalation event emitted by agents via writer.write().
  * This enables real-time escalation detection by the orchestrator.
  */
-export type AgentEscalationEvent = {
+export interface AgentEscalationEvent {
   type: "escalate";
   /** The reason category for the escalation */
   reason: AgentEscalationReason;
@@ -37,7 +37,7 @@ export type AgentEscalationEvent = {
   suggestions?: string[];
   /** Severity: warning allows continuation, blocking requires immediate response */
   severity: "warning" | "blocking";
-};
+}
 
 /**
  * Type guard to check if a writer chunk is an escalation event.
@@ -69,7 +69,7 @@ export type ToolWriter =
  * Universal execution context for all tools
  * @template TInput The tool's validated input type
  */
-export type ToolExecuteContext<TInput> = {
+export interface ToolExecuteContext<TInput> {
   /** Validated input from tool schema */
   input: TInput;
 
@@ -78,12 +78,12 @@ export type ToolExecuteContext<TInput> = {
 
   /** Optional abort signal for cancellation */
   signal?: AbortSignal;
-};
+}
 
 /**
  * Helper type for tools with simpler signatures
  * Equivalent to Pick<ToolExecuteContext<TInput>, 'input'>
  */
-export type ToolExecuteArgs<TInput> = {
+export interface ToolExecuteArgs<TInput> {
   input: TInput;
-};
+}

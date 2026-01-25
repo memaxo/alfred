@@ -4,8 +4,19 @@
  * Tests real-time error emission and aggregation for sibling agent awareness.
  */
 
-import { type LiveError } from "@alfred/type";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+import type { LiveError } from "@alfred/type";
+
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "bun:test";
+
+import type { AgentFSInterface } from "../../src/agentfs/types";
 
 import {
   buildLiveErrorContext,
@@ -16,7 +27,21 @@ import {
   getToolFailureSummary,
   isToolFailing,
 } from "../../src/agentfs/stream";
-import { type AgentFSInterface } from "../../src/agentfs/types";
+
+let prevEnrichmentEnv: string | undefined;
+
+beforeAll(() => {
+  prevEnrichmentEnv = process.env.ALFRED_ENRICHMENT;
+  process.env.ALFRED_ENRICHMENT = "1";
+});
+
+afterAll(() => {
+  if (prevEnrichmentEnv === undefined) {
+    delete process.env.ALFRED_ENRICHMENT;
+  } else {
+    process.env.ALFRED_ENRICHMENT = prevEnrichmentEnv;
+  }
+});
 
 // Mock AgentFS interface
 function createMockAgent(): AgentFSInterface & {
@@ -38,7 +63,7 @@ function createMockAgent(): AgentFSInterface & {
         kvStore.delete(key);
       }),
       list: vi.fn(async (prefix: string) => {
-        const entries: Array<{ key: string; value: unknown }> = [];
+        const entries: { key: string; value: unknown }[] = [];
         for (const [key, value] of kvStore.entries()) {
           if (key.startsWith(prefix)) {
             entries.push({ key, value });
@@ -59,12 +84,15 @@ function createMockAgent(): AgentFSInterface & {
 }
 
 function createLiveError(overrides: Partial<LiveError> = {}): LiveError {
+  const ts = Date.now();
   return {
     tool: "shell",
     error: "Command failed with exit code 1",
     agentId: "agent-1",
     taskId: "task-1",
-    ts: Date.now(),
+    createdAt: ts,
+    schemaVersion: 1,
+    ts,
     ...overrides,
   };
 }
@@ -186,7 +214,7 @@ describe("AgentFS Live Error Streaming", () => {
 
       const failing = await isToolFailing(mockAgent, "shell", {
         minFailures: 2,
-        sinceTs: now - 60000,
+        sinceTs: now - 60_000,
       });
 
       expect(failing).toBe(true);
@@ -201,7 +229,7 @@ describe("AgentFS Live Error Streaming", () => {
 
       const failing = await isToolFailing(mockAgent, "shell", {
         minFailures: 3,
-        sinceTs: now - 60000,
+        sinceTs: now - 60_000,
       });
 
       expect(failing).toBe(false);
@@ -361,7 +389,7 @@ describe("AgentFS Live Error Streaming", () => {
         mockAgent,
         createLiveError({
           tool: "shell",
-          error: "A".repeat(200), // Long error message
+          error: "Z".repeat(200), // Long error message
           ts: 1000,
         })
       );

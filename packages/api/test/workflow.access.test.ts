@@ -1,4 +1,5 @@
-import { type Obligation } from "@alfred/type";
+import type { Obligation } from "@alfred/type";
+
 import { beforeEach, describe, expect, it, vi } from "bun:test";
 
 // Create fresh mocks for this test file

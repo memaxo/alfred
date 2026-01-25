@@ -47,21 +47,21 @@ const historyInputSchema = z.object({
 
 type HistoryInput = z.infer<typeof historyInputSchema>;
 
-type MessageSummary = {
+interface MessageSummary {
   id: string;
   role: string;
   preview: string;
   createdAt: string | null;
-};
+}
 
-type ConversationSummary = {
+interface ConversationSummary {
   id: string;
   title: string | null;
   messageCount: number;
   lastMessage: MessageSummary | null;
   createdAt: string | null;
   updatedAt: string | null;
-};
+}
 
 export const toolMemoryHistory = {
   name: "memory_history",

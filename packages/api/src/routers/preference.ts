@@ -1,5 +1,7 @@
-import { userRepo, type userSchema } from "@alfred/db";
+import type { userSchema } from "@alfred/db";
+
 import * as conversationRepo from "@alfred/db/repo/conversation";
+import * as userRepo from "@alfred/db/repo/user";
 
 type PreferenceRow = typeof userSchema.preferences.$inferSelect;
 
@@ -17,7 +19,8 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { type Context } from "../context";
+import type { Context } from "../context";
+
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
@@ -116,11 +119,14 @@ function normalizePreferenceValue(key: string, value: unknown): unknown {
 }
 
 async function invalidateUserPreferenceCache(
+  ctx: Context,
   userId: string,
   projectId?: string
 ): Promise<void> {
-  const { invalidatePreferenceCache } =
-    await import("@alfred/agent/preference/loader");
+  const invalidatePreferenceCache =
+    ctx.deps?.preference?.invalidatePreferenceCache ??
+    (await import("@alfred/agent/preference/loader")).invalidatePreferenceCache;
+
   if (projectId) {
     await invalidatePreferenceCache(userId, projectId);
     return;
@@ -187,7 +193,11 @@ export const preferenceRouter = router({
             input.source ?? "user"
           );
 
-      await invalidateUserPreferenceCache(session.user.id, input.projectId);
+      await invalidateUserPreferenceCache(
+        ctx,
+        session.user.id,
+        input.projectId
+      );
 
       recordMemoryUpdate("preference", input.source ?? "user");
       return preference as unknown as PreferenceRow;
@@ -222,7 +232,11 @@ export const preferenceRouter = router({
         : Number(await userRepo.deletePreference(session.user.id, input.key)) ||
           0;
 
-      await invalidateUserPreferenceCache(session.user.id, input.projectId);
+      await invalidateUserPreferenceCache(
+        ctx,
+        session.user.id,
+        input.projectId
+      );
       if (removed > 0) {
         recordMemoryForget("preference");
       }
@@ -314,7 +328,11 @@ export const preferenceRouter = router({
       }
 
       if (updated > 0) {
-        await invalidateUserPreferenceCache(session.user.id, input.projectId);
+        await invalidateUserPreferenceCache(
+          ctx,
+          session.user.id,
+          input.projectId
+        );
         recordMemoryUpdate("preference", "learned");
       }
 
@@ -382,8 +400,11 @@ export const preferenceRouter = router({
         }),
       ]);
 
-      const { inferPreferenceFromCorrection } =
-        await import("@alfred/agent/preference/inference");
+      const inferPreferenceFromCorrection =
+        ctx.deps?.preference?.inferPreferenceFromCorrection ??
+        (await import("@alfred/agent/preference/inference"))
+          .inferPreferenceFromCorrection;
+
       const inferred = await inferPreferenceFromCorrection(
         conversationRepo.messageRowToUIMessage(original),
         conversationRepo.messageRowToUIMessage(corrected),
@@ -412,7 +433,11 @@ export const preferenceRouter = router({
           "inferred"
         );
       }
-      await invalidateUserPreferenceCache(session.user.id, input.projectId);
+      await invalidateUserPreferenceCache(
+        ctx,
+        session.user.id,
+        input.projectId
+      );
       recordMemoryUpdate("preference", "inferred");
 
       return { inferred: 1 };

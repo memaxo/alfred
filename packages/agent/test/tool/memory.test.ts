@@ -101,9 +101,9 @@ describe("Memory Tools", () => {
     mockGetMessages.mockReset();
 
     // Set default return values
-    mockEmbedMany.mockReturnValue(Promise.resolve([[0.1, 0.2, 0.3]]));
-    mockRecordAccess.mockReturnValue(Promise.resolve());
-    mockRecordAccessBatch.mockReturnValue(Promise.resolve());
+    mockEmbedMany.mockResolvedValue([[0.1, 0.2, 0.3]]);
+    mockRecordAccess.mockResolvedValue();
+    mockRecordAccessBatch.mockResolvedValue();
   });
 
   describe("Embedding Utilities", () => {
@@ -130,12 +130,10 @@ describe("Memory Tools", () => {
 
     describe("embedTexts", () => {
       it("embeds multiple texts", async () => {
-        mockEmbedMany.mockReturnValue(
-          Promise.resolve([
-            [0.1, 0.2],
-            [0.3, 0.4],
-          ])
-        );
+        mockEmbedMany.mockResolvedValue([
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ]);
         const result = await embedTexts(["text1", "text2"]);
         expect(result).toEqual([
           [0.1, 0.2],
@@ -158,7 +156,7 @@ describe("Memory Tools", () => {
     describe("normalizeEmbedding", () => {
       it("returns null for null/undefined", () => {
         expect(normalizeEmbedding(null)).toBeNull();
-        expect(normalizeEmbedding(undefined)).toBeNull();
+        expect(normalizeEmbedding()).toBeNull();
       });
 
       it("normalizes array of numbers", () => {
@@ -199,7 +197,7 @@ describe("Memory Tools", () => {
     };
 
     it("returns not found for missing node", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(null));
+      mockGetNode.mockResolvedValue(null);
 
       const result = await toolMemoryRetrieve.execute({
         input: { id: "00000000-0000-0000-0000-000000000000" },
@@ -210,7 +208,7 @@ describe("Memory Tools", () => {
     });
 
     it("retrieves a node successfully", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
 
       const result = await toolMemoryRetrieve.execute({
         input: { id: "test-id-1234-5678-9012" },
@@ -223,7 +221,7 @@ describe("Memory Tools", () => {
     });
 
     it("records access on retrieval", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
 
       await toolMemoryRetrieve.execute({
         input: { id: "test-id-1234-5678-9012" },
@@ -233,20 +231,18 @@ describe("Memory Tools", () => {
     });
 
     it("includes neighbors when requested", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockGetNeighbors.mockReturnValue(
-        Promise.resolve([
-          {
-            edge: {
-              id: "edge-1",
-              fromId: "test-id-1234-5678-9012",
-              toId: "neighbor-1",
-              kind: "related",
-            },
-            otherNodeId: "neighbor-1",
+      mockGetNode.mockResolvedValue(mockNode);
+      mockGetNeighbors.mockResolvedValue([
+        {
+          edge: {
+            id: "edge-1",
+            fromId: "test-id-1234-5678-9012",
+            toId: "neighbor-1",
+            kind: "related",
           },
-        ])
-      );
+          otherNodeId: "neighbor-1",
+        },
+      ]);
 
       const result = await toolMemoryRetrieve.execute({
         input: { id: "test-id-1234-5678-9012", includeNeighbors: true },
@@ -267,7 +263,7 @@ describe("Memory Tools", () => {
     };
 
     it("returns failure for non-existent node", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(null));
+      mockGetNode.mockResolvedValue(null);
 
       const result = await toolMemoryUpdate.execute({
         input: { id: "00000000-0000-0000-0000-000000000000" },
@@ -278,8 +274,8 @@ describe("Memory Tools", () => {
     });
 
     it("updates confidence successfully", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockUpdateNodeConfidence.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockUpdateNodeConfidence.mockResolvedValue(mockNode);
 
       const result = await toolMemoryUpdate.execute({
         input: { id: "test-id-1234-5678-9012", confidence: 0.9 },
@@ -294,8 +290,8 @@ describe("Memory Tools", () => {
     });
 
     it("updates label successfully", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockUpdateNode.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockUpdateNode.mockResolvedValue(mockNode);
 
       const result = await toolMemoryUpdate.execute({
         input: { id: "test-id-1234-5678-9012", label: "New Label" },
@@ -306,8 +302,8 @@ describe("Memory Tools", () => {
     });
 
     it("merges properties with existing", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockUpdateNode.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockUpdateNode.mockResolvedValue(mockNode);
 
       const result = await toolMemoryUpdate.execute({
         input: {
@@ -331,7 +327,7 @@ describe("Memory Tools", () => {
     };
 
     it("returns failure for non-existent node", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(null));
+      mockGetNode.mockResolvedValue(null);
 
       const result = await toolMemoryRemove.execute({
         input: { id: "00000000-0000-0000-0000-000000000000" },
@@ -342,8 +338,8 @@ describe("Memory Tools", () => {
     });
 
     it("archives node by default (soft delete)", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockArchiveNodes.mockReturnValue(Promise.resolve(1));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockArchiveNodes.mockResolvedValue(1);
 
       const result = await toolMemoryRemove.execute({
         input: { id: "test-id-1234-5678-9012" },
@@ -356,8 +352,8 @@ describe("Memory Tools", () => {
     });
 
     it("archives with custom reason", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockArchiveNodes.mockReturnValue(Promise.resolve(1));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockArchiveNodes.mockResolvedValue(1);
 
       const result = await toolMemoryRemove.execute({
         input: { id: "test-id-1234-5678-9012", reason: "outdated" },
@@ -368,8 +364,8 @@ describe("Memory Tools", () => {
     });
 
     it("permanently deletes when permanent=true", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockDeleteNode.mockReturnValue(Promise.resolve(1));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockDeleteNode.mockResolvedValue(1);
 
       const result = await toolMemoryRemove.execute({
         input: { id: "test-id-1234-5678-9012", permanent: true },
@@ -381,12 +377,10 @@ describe("Memory Tools", () => {
     });
 
     it("reports already archived node", async () => {
-      mockGetNode.mockReturnValue(
-        Promise.resolve({
-          ...mockNode,
-          properties: { archived: true },
-        })
-      );
+      mockGetNode.mockResolvedValue({
+        ...mockNode,
+        properties: { archived: true },
+      });
 
       const result = await toolMemoryRemove.execute({
         input: { id: "test-id-1234-5678-9012" },
@@ -407,7 +401,7 @@ describe("Memory Tools", () => {
     };
 
     it("returns failure for non-existent node", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(null));
+      mockGetNode.mockResolvedValue(null);
 
       const result = await toolMemoryBoost.execute({
         input: { id: "00000000-0000-0000-0000-000000000000" },
@@ -418,8 +412,8 @@ describe("Memory Tools", () => {
     });
 
     it("boosts confidence by default amount (0.1)", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockUpdateNodeConfidence.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockUpdateNodeConfidence.mockResolvedValue(mockNode);
 
       const result = await toolMemoryBoost.execute({
         input: { id: "test-id-1234-5678-9012" },
@@ -435,8 +429,8 @@ describe("Memory Tools", () => {
     });
 
     it("boosts by custom amount", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockUpdateNodeConfidence.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockUpdateNodeConfidence.mockResolvedValue(mockNode);
 
       const result = await toolMemoryBoost.execute({
         input: { id: "test-id-1234-5678-9012", amount: 0.3 },
@@ -446,13 +440,11 @@ describe("Memory Tools", () => {
     });
 
     it("caps confidence at 1.0", async () => {
-      mockGetNode.mockReturnValue(
-        Promise.resolve({
-          ...mockNode,
-          properties: { confidence: 0.95 },
-        })
-      );
-      mockUpdateNodeConfidence.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue({
+        ...mockNode,
+        properties: { confidence: 0.95 },
+      });
+      mockUpdateNodeConfidence.mockResolvedValue(mockNode);
 
       const result = await toolMemoryBoost.execute({
         input: { id: "test-id-1234-5678-9012", amount: 0.2 },
@@ -462,8 +454,8 @@ describe("Memory Tools", () => {
     });
 
     it("includes reason in message", async () => {
-      mockGetNode.mockReturnValue(Promise.resolve(mockNode));
-      mockUpdateNodeConfidence.mockReturnValue(Promise.resolve(mockNode));
+      mockGetNode.mockResolvedValue(mockNode);
+      mockUpdateNodeConfidence.mockResolvedValue(mockNode);
 
       const result = await toolMemoryBoost.execute({
         input: {
@@ -478,7 +470,7 @@ describe("Memory Tools", () => {
 
   describe("memory_history", () => {
     it("returns failure for non-existent conversation", async () => {
-      mockGetConversationHistory.mockReturnValue(Promise.resolve(null));
+      mockGetConversationHistory.mockResolvedValue(null);
 
       const result = await toolMemoryHistory.execute({
         input: {
@@ -492,28 +484,36 @@ describe("Memory Tools", () => {
     });
 
     it("retrieves conversation messages", async () => {
-      mockGetConversationHistory.mockReturnValue(
-        Promise.resolve({
-          conversation: {
-            id: "conv-1",
-            title: "Test Conversation",
-            created: new Date(),
-            updated: new Date(),
+      mockGetConversationHistory.mockResolvedValue({
+        conversation: {
+          id: "conv-1",
+          title: "Test Conversation",
+          created: new Date(),
+          updated: new Date(),
+        },
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [
+              {
+                type: "text",
+                text: "Hello",
+              },
+            ],
           },
-          messages: [
-            {
-              id: "msg-1",
-              role: "user",
-              parts: [{ type: "text", text: "Hello" }],
-            },
-            {
-              id: "msg-2",
-              role: "assistant",
-              parts: [{ type: "text", text: "Hi there!" }],
-            },
-          ],
-        })
-      );
+          {
+            id: "msg-2",
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                text: "Hi there!",
+              },
+            ],
+          },
+        ],
+      });
 
       const result = await toolMemoryHistory.execute({
         input: { userId: "user-1", conversationId: "conv-1" },
@@ -525,28 +525,36 @@ describe("Memory Tools", () => {
     });
 
     it("filters messages by search term", async () => {
-      mockGetConversationHistory.mockReturnValue(
-        Promise.resolve({
-          conversation: {
-            id: "conv-1",
-            title: "Test",
-            created: new Date(),
-            updated: new Date(),
+      mockGetConversationHistory.mockResolvedValue({
+        conversation: {
+          id: "conv-1",
+          title: "Test",
+          created: new Date(),
+          updated: new Date(),
+        },
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [
+              {
+                type: "text",
+                text: "Hello world",
+              },
+            ],
           },
-          messages: [
-            {
-              id: "msg-1",
-              role: "user",
-              parts: [{ type: "text", text: "Hello world" }],
-            },
-            {
-              id: "msg-2",
-              role: "assistant",
-              parts: [{ type: "text", text: "Goodbye" }],
-            },
-          ],
-        })
-      );
+          {
+            id: "msg-2",
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                text: "Goodbye",
+              },
+            ],
+          },
+        ],
+      });
 
       const result = await toolMemoryHistory.execute({
         input: { userId: "user-1", conversationId: "conv-1", search: "world" },
@@ -557,25 +565,23 @@ describe("Memory Tools", () => {
     });
 
     it("lists recent conversations when no conversationId", async () => {
-      mockGetConversations.mockReturnValue(
-        Promise.resolve([
-          {
-            id: "conv-1",
-            title: "First",
-            userId: "user-1",
-            created: new Date(),
-            updated: new Date(),
-          },
-          {
-            id: "conv-2",
-            title: "Second",
-            userId: "user-1",
-            created: new Date(),
-            updated: new Date(),
-          },
-        ])
-      );
-      mockGetMessages.mockReturnValue(Promise.resolve([]));
+      mockGetConversations.mockResolvedValue([
+        {
+          id: "conv-1",
+          title: "First",
+          userId: "user-1",
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "conv-2",
+          title: "Second",
+          userId: "user-1",
+          created: new Date(),
+          updated: new Date(),
+        },
+      ]);
+      mockGetMessages.mockResolvedValue([]);
 
       const result = await toolMemoryHistory.execute({
         input: { userId: "user-1" },
@@ -637,7 +643,7 @@ describe("Memory Tools", () => {
       expect(() =>
         schema.parse({
           id: "00000000-0000-0000-0000-000000000000",
-          amount: 1.0,
+          amount: 1,
         })
       ).toThrow();
 

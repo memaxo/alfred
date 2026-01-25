@@ -28,11 +28,11 @@ import {
 /**
  * Context build input
  */
-type ContextWriter = {
+interface ContextWriter {
   write: (chunk: unknown) => Promise<void> | void;
-};
+}
 
-export type ContextBuildInput = {
+export interface ContextBuildInput {
   requirement: string;
   workspace?: string;
   repoBase?: string;
@@ -44,27 +44,27 @@ export type ContextBuildInput = {
   seeds?: string[];
   authz?: string;
   userId?: string;
-};
+}
 
 /**
  * Execution context
  */
-export type ExecutionContext = {
+export interface ExecutionContext {
   requirement: string;
   receipts: SearchReceipt;
   bundle: ContextBundle | null;
   totalTokens: number;
   ragChunks?: import("@alfred/rag").Chunk[];
   ragDocumentIds?: string[];
-};
+}
 
 /**
  * Cached context entry
  */
-type CachedContext = {
+interface CachedContext {
   context: ExecutionContext;
   expires: number;
-};
+}
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_ENTRIES = 100; // LRU eviction threshold
@@ -255,7 +255,7 @@ export class ContextBuilder {
           }
         }
         if (ids.size > 0) {
-          ragDocumentIds = Array.from(ids);
+          ragDocumentIds = [...ids];
         }
       }
 

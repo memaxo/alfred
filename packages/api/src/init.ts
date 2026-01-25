@@ -19,6 +19,7 @@ let worktreeCleanupInterval: ReturnType<typeof setInterval> | null = null;
 let stopCompressionWorkerFn: (() => void) | null = null;
 let stopLearningWorkerFn: (() => void) | null = null;
 let stopCodexSessionCleanupWorkerFn: (() => void) | null = null;
+let stopEnrichCleanupSchedulerFn: (() => void) | null = null;
 
 function isViteModuleRunnerClosed(error: unknown): boolean {
   return (
@@ -145,6 +146,21 @@ export function initApiServices(): void {
           return;
         }
         logger.error("codex_session_cleanup_worker_failed", {
+          error: toErrorMessage(error),
+        });
+      });
+
+      // Start enrichment retention cleanup (gated by SCHED_ENRICH_CLEANUP=1)
+      void (async () => {
+        const { startEnrichCleanupScheduler, stopEnrichCleanupScheduler } =
+          await import("./scheduler/enrich");
+        stopEnrichCleanupSchedulerFn = stopEnrichCleanupScheduler;
+        startEnrichCleanupScheduler({ logger });
+      })().catch((error) => {
+        if (isViteModuleRunnerClosed(error)) {
+          return;
+        }
+        logger.error("enrich_cleanup_scheduler_init_failed", {
           error: toErrorMessage(error),
         });
       });
@@ -352,6 +368,17 @@ export function shutdownApiServices(): void {
     });
   }
 
+  try {
+    stopEnrichCleanupSchedulerFn?.();
+    if (stopEnrichCleanupSchedulerFn) {
+      logger.info("enrich_cleanup_scheduler_stopped");
+    }
+  } catch (error) {
+    logger.warn("enrich_cleanup_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
   // Shutdown voice pools
   if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
@@ -372,6 +399,7 @@ export function shutdownApiServices(): void {
   stopCompressionWorkerFn = null;
   stopLearningWorkerFn = null;
   stopCodexSessionCleanupWorkerFn = null;
+  stopEnrichCleanupSchedulerFn = null;
 
   initialized = false;
   logger.info("api_services_shutdown_complete");

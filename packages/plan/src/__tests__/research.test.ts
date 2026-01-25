@@ -26,7 +26,7 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
             title: "React v18.0",
             snippet: "React 18 is now available on npm!",
             publishedDate: dateStr,
-            score: 1.0,
+            score: 1,
             kind: "web",
             id: "web:0",
             // Exa-specific fields

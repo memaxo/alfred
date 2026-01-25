@@ -10,16 +10,16 @@ import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 /** Maximum facts to fetch for entity filtering */
 const ENTITY_FETCH_LIMIT = 500;
 
-type GraphNodeSeed = {
+interface GraphNodeSeed {
   resource: string;
   hash: string;
   kind: string;
   label: string;
   properties?: unknown;
   embedding?: number[];
-};
+}
 
-type GraphEdgeSeed = {
+interface GraphEdgeSeed {
   resource: string;
   hash: string;
   fromId: string;
@@ -27,9 +27,9 @@ type GraphEdgeSeed = {
   kind: string;
   weight?: number;
   metadata?: unknown;
-};
+}
 
-type VisualizeNode = {
+export interface VisualizeNode {
   id: string;
   label: string;
   entityType?: string;
@@ -37,17 +37,17 @@ type VisualizeNode = {
   archived?: string;
   description?: string;
   hgHash?: string;
-};
+}
 
-type VisualizeEdge = {
+export interface VisualizeEdge {
   id: string;
   fromId: string;
   toId: string;
   kind: string;
   weight?: number;
-};
+}
 
-type VisualizeResult = {
+export interface VisualizeResult {
   nodes: VisualizeNode[];
   edges: VisualizeEdge[];
   meta: {
@@ -56,7 +56,7 @@ type VisualizeResult = {
     nodeCount: number;
     edgeCount: number;
   };
-};
+}
 
 function asProps(value: unknown): Record<string, unknown> {
   if (!value) {
@@ -88,7 +88,7 @@ function makeNode(
 ): GraphNodeSeed | null {
   const { data, hash } = entry;
   switch (data._) {
-    case "fact":
+    case "fact": {
       return {
         resource,
         hash,
@@ -100,7 +100,8 @@ function makeNode(
           ts: data.ts,
         },
       };
-    case "insight":
+    }
+    case "insight": {
       return {
         resource,
         hash,
@@ -111,7 +112,8 @@ function makeNode(
           confidence: data.confidence,
         },
       };
-    case "pattern":
+    }
+    case "pattern": {
       return {
         resource,
         hash,
@@ -122,8 +124,10 @@ function makeNode(
           accuracy: data.accuracy,
         },
       };
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -179,7 +183,7 @@ export async function visualizeKnowledge(input: {
 
   // Persist to DB (facts + entity facts + relation edges) with visible failures (unlike runtime fire-and-forget).
   const nodeSeeds: GraphNodeSeed[] = [];
-  const relationEntries: Array<{ hash: string; data: Knowledge }> = [];
+  const relationEntries: { hash: string; data: Knowledge }[] = [];
   for (const entry of entries) {
     const nodeSeed = makeNode(resource, entry);
     if (nodeSeed) {
@@ -194,7 +198,7 @@ export async function visualizeKnowledge(input: {
 
   // Active Recall: Reinforce newly created/updated nodes
   try {
-    const nodeIds = Array.from(nodeMap.values()).map((n) => n.id);
+    const nodeIds = [...nodeMap.values()].map((n) => n.id);
     if (nodeIds.length > 0) {
       await touchNodes(nodeIds);
     }

@@ -6,9 +6,9 @@ import {
 } from "@alfred/agent/orchestrator/multi/decompose";
 import { describe, expect, it } from "bun:test";
 
-type BundleOptions = {
+interface BundleOptions {
   includeContent?: boolean;
-};
+}
 
 function makeBundle(
   paths: string[],

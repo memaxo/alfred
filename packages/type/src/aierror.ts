@@ -35,7 +35,7 @@ export type AiSdkErrorKind =
   | "output"
   | "unknown";
 
-export type AiSdkErrorClassification = {
+export interface AiSdkErrorClassification {
   name: string | null;
   kind: AiSdkErrorKind;
   retryable: boolean;
@@ -51,7 +51,7 @@ export type AiSdkErrorClassification = {
   safeCode: string;
   safeMessage: string;
   log: Record<string, unknown>;
-};
+}
 
 function safeUrl(value: unknown): string | null {
   if (typeof value !== "string" || value.length === 0) {
@@ -69,7 +69,7 @@ function errName(error: unknown): string | null {
   if (!error || typeof error !== "object") {
     return null;
   }
-  const name = (error as { name?: unknown }).name;
+  const { name } = error as { name?: unknown };
   return typeof name === "string" ? name : null;
 }
 
@@ -91,7 +91,7 @@ export function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
   }
-  const code = (error as { code?: unknown }).code;
+  const { code } = error as { code?: unknown };
   return code === "ABORT_ERR";
 }
 
@@ -99,7 +99,7 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
   const log = { name };
 
   switch (name) {
-    case "AI_InvalidToolApprovalError":
+    case "AI_InvalidToolApprovalError": {
       return {
         name,
         kind: "approval",
@@ -110,7 +110,8 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "Tool approval state is invalid.",
         log,
       };
-    case "AI_ToolCallNotFoundForApprovalError":
+    }
+    case "AI_ToolCallNotFoundForApprovalError": {
       return {
         name,
         kind: "approval",
@@ -121,7 +122,8 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "Tool approval request was not found.",
         log,
       };
-    case "AI_NoTranscriptGeneratedError":
+    }
+    case "AI_NoTranscriptGeneratedError": {
       return {
         name,
         kind: "output",
@@ -132,7 +134,8 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "No transcript was generated.",
         log,
       };
-    case "AI_InvalidDataContent":
+    }
+    case "AI_InvalidDataContent": {
       return {
         name,
         kind: "client",
@@ -143,7 +146,8 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "Invalid data content.",
         log,
       };
-    case "AI_InvalidDataContentError":
+    }
+    case "AI_InvalidDataContentError": {
       return {
         name,
         kind: "client",
@@ -154,7 +158,8 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "Invalid data content.",
         log,
       };
-    case "AI_NoOutputSpecifiedError":
+    }
+    case "AI_NoOutputSpecifiedError": {
       return {
         name,
         kind: "misconfig",
@@ -165,7 +170,8 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "AI output configuration is missing.",
         log,
       };
-    default:
+    }
+    default: {
       return {
         name,
         kind: "unknown",
@@ -176,6 +182,7 @@ function classifyByNameFallback(name: string): AiSdkErrorClassification {
         safeMessage: "AI request failed.",
         log,
       };
+    }
   }
 }
 

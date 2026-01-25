@@ -19,7 +19,7 @@ export function parseTrajectory(pathOrJson: string): AtifTrajectory {
     if (!fs.existsSync(pathOrJson)) {
       throw new Error(`Trajectory file not found: ${pathOrJson}`);
     }
-    content = fs.readFileSync(pathOrJson, "utf-8");
+    content = fs.readFileSync(pathOrJson, "utf8");
   }
 
   const parsed = JSON.parse(content) as AtifTrajectory;
@@ -32,7 +32,7 @@ export function parseTrajectory(pathOrJson: string): AtifTrajectory {
     throw new Error("Invalid ATIF trajectory: missing session_id");
   }
   if (!Array.isArray(parsed.steps)) {
-    throw new Error("Invalid ATIF trajectory: steps must be an array");
+    throw new TypeError("Invalid ATIF trajectory: steps must be an array");
   }
 
   return parsed;

@@ -1,7 +1,8 @@
+import type { ZodTypeAny, z } from "zod";
+
 import { createGatewayProvider } from "@ai-sdk/gateway";
 import { createOpenAI } from "@ai-sdk/openai";
 import { type Tool, tool } from "ai";
-import { type ZodTypeAny, type z } from "zod";
 
 import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";

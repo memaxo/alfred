@@ -10,14 +10,63 @@ import {
 import {
   __internals as codexServerInternals,
   executeWithCodexServer,
-} from "./server.js";
+} from "./server.ts";
 
-type FakeFileSink = {
+const realSpawn = Bun.spawn;
+
+interface SpawnResult {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr?: string;
+}
+
+function setSpawnMock(map: Record<string, SpawnResult>): string[] {
+  const calls: string[] = [];
+  Bun.spawn = ((argv: readonly string[]) => {
+    const cmd = argv.at(-1);
+    if (!cmd) {
+      throw new Error("hook_test_missing_command");
+    }
+    calls.push(cmd);
+    const res = map[cmd];
+    if (!res) {
+      throw new Error(`hook_test_unexpected_command:${cmd}`);
+    }
+
+    const stdin = {
+      write() {
+        return 0;
+      },
+      end() {
+        return Promise.resolve(0);
+      },
+    };
+
+    return {
+      stdin,
+      stdout: new Response(res.stdout).body,
+      stderr: new Response(res.stderr ?? "").body,
+      exited: Promise.resolve(res.exitCode),
+      kill() {},
+    } as any;
+  }) as typeof Bun.spawn;
+
+  return calls;
+}
+
+interface FakeFileSink {
   write: (chunk: Uint8Array) => void;
   end: () => Promise<void>;
-};
+}
 
-function makeFakeProc(args?: { holdComplete?: boolean }): {
+function makeFakeProc(args?: {
+  holdComplete?: boolean;
+  onTurnStart?: (info: {
+    send: (value: unknown) => void;
+    threadId: string;
+    turnId: string;
+  }) => void;
+}): {
   proc: {
     stdin: FakeFileSink;
     stdout: ReadableStream<Uint8Array>;
@@ -93,6 +142,7 @@ function makeFakeProc(args?: { holdComplete?: boolean }): {
       send({ id: msg.id, result: { turn: { id: turnId } } });
 
       queueMicrotask(() => {
+        args?.onTurnStart?.({ send, threadId, turnId });
         send({
           method: "item/agentMessage/delta",
           params: {
@@ -149,7 +199,7 @@ function makeFakeProc(args?: { holdComplete?: boolean }): {
       buffer += decoder.decode(chunk, { stream: true });
       while (true) {
         const idx = buffer.indexOf("\n");
-        if (idx < 0) {
+        if (idx === -1) {
           break;
         }
         const line = buffer.slice(0, idx);
@@ -180,9 +230,9 @@ function makeFakeProc(args?: { holdComplete?: boolean }): {
   };
 }
 
-function makeCwdHandle() {
+function makeCwdHandle(dir = "/tmp") {
   return {
-    path: "/tmp",
+    path: dir,
     fd: 0,
     close: () => {},
   };
@@ -196,6 +246,7 @@ describe("toolCodex server profile (app-server)", () => {
   afterEach(async () => {
     await stopAllServers("test_end");
     codexServerInternals.resetSpawn();
+    Bun.spawn = realSpawn;
   });
 
   it("spawns docker exec with -i for stdin piping", async () => {
@@ -263,9 +314,9 @@ describe("toolCodex server profile (app-server)", () => {
         writer,
         cwdHandle: makeCwdHandle() as any,
       });
-    } catch (err: any) {
+    } catch (error: any) {
       threw = true;
-      expect(String(err?.message ?? err)).toContain(
+      expect(String(error?.message ?? error)).toContain(
         "codex_server_requires_container"
       );
     }
@@ -292,9 +343,9 @@ describe("toolCodex server profile (app-server)", () => {
         writer,
         cwdHandle: makeCwdHandle() as any,
       });
-    } catch (err: any) {
+    } catch (error: any) {
       threw = true;
-      expect(String(err?.message ?? err)).toContain(
+      expect(String(error?.message ?? error)).toContain(
         "codex_container_cwd_invalid"
       );
     }
@@ -387,6 +438,145 @@ describe("toolCodex server profile (app-server)", () => {
     expect(spawns).toBe(2);
   });
 
+  it("gates execCommandApproval via hooks.json when present", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "alfred-codex-hooks-"));
+    try {
+      await writeFile(
+        path.join(dir, "hooks.json"),
+        JSON.stringify({
+          version: 1,
+          hooks: {
+            "agent:shell:before": [{ command: "allow" }],
+          },
+        })
+      );
+
+      expect(await Bun.file(path.join(dir, "hooks.json")).exists()).toBe(true);
+
+      const calls = setSpawnMock({
+        allow: { exitCode: 0, stdout: JSON.stringify({ decision: "allow" }) },
+      });
+
+      const approvalId = 123;
+      const fake = makeFakeProc({
+        onTurnStart: ({ send }) => {
+          send({
+            id: approvalId,
+            method: "execCommandApproval",
+            params: { command: "echo hello" },
+          });
+        },
+      });
+      codexServerInternals.setSpawn(() => fake.proc as any);
+
+      const writer = { write: mock(() => {}) };
+      const input: any = {
+        action: "exec",
+        execProfile: "server",
+        prompt: "hello",
+        out: "text",
+        auto: "read",
+        cw: dir,
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      };
+
+      await executeWithCodexServer({
+        input,
+        writer,
+        cwdHandle: makeCwdHandle(dir) as any,
+      });
+
+      expect(calls).toContain("allow");
+
+      let resp: any;
+      for (let i = 0; i < 20; i++) {
+        resp = fake.sent.find(
+          (m: any) => m && typeof m === "object" && m.id === approvalId
+        );
+        if (resp) {
+          break;
+        }
+        await Promise.resolve();
+      }
+
+      expect(resp?.result?.decision?.type).toBe("approved");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gates applyPatchApproval via hooks.json when present", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "alfred-codex-hooks-"));
+    try {
+      await writeFile(
+        path.join(dir, "hooks.json"),
+        JSON.stringify({
+          version: 1,
+          hooks: {
+            "agent:file:before": [{ command: "allow" }],
+          },
+        })
+      );
+
+      expect(await Bun.file(path.join(dir, "hooks.json")).exists()).toBe(true);
+
+      const calls = setSpawnMock({
+        allow: { exitCode: 0, stdout: JSON.stringify({ decision: "allow" }) },
+      });
+
+      const approvalId = 456;
+      const patch =
+        "*** Begin Patch\n*** Update File: /tmp/a.txt\n@@\n- a\n+ b\n*** End Patch";
+
+      const fake = makeFakeProc({
+        onTurnStart: ({ send }) => {
+          send({
+            id: approvalId,
+            method: "applyPatchApproval",
+            params: { patch },
+          });
+        },
+      });
+      codexServerInternals.setSpawn(() => fake.proc as any);
+
+      const writer = { write: mock(() => {}) };
+      const input: any = {
+        action: "exec",
+        execProfile: "server",
+        prompt: "hello",
+        out: "text",
+        auto: "read",
+        cw: dir,
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      };
+
+      await executeWithCodexServer({
+        input,
+        writer,
+        cwdHandle: makeCwdHandle(dir) as any,
+      });
+
+      expect(calls).toContain("allow");
+
+      let resp: any;
+      for (let i = 0; i < 20; i++) {
+        resp = fake.sent.find(
+          (m: any) => m && typeof m === "object" && m.id === approvalId
+        );
+        if (resp) {
+          break;
+        }
+        await Promise.resolve();
+      }
+
+      expect(resp?.result?.decision?.type).toBe("approved");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("propagates AbortSignal by issuing turn/interrupt", async () => {
     const fake = makeFakeProc({ holdComplete: true });
     codexServerInternals.setSpawn(() => fake.proc as any);
@@ -416,9 +606,9 @@ describe("toolCodex server profile (app-server)", () => {
     let threw = false;
     try {
       await promise;
-    } catch (err: any) {
+    } catch (error: any) {
       threw = true;
-      expect(String(err?.name ?? err)).toContain("Abort");
+      expect(String(error?.name ?? error)).toContain("Abort");
     }
     expect(threw).toBe(true);
 

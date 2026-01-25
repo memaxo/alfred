@@ -10,11 +10,11 @@
 import { db } from "@alfred/db";
 import { sql } from "drizzle-orm";
 
-type DbFixture = {
+interface DbFixture {
   db: typeof db;
   reset: () => Promise<void>;
   cleanup: () => Promise<void>;
-};
+}
 
 /**
  * Creates a real database fixture for integration tests.

@@ -27,7 +27,7 @@ export const DEFAULT_MIN_SCORE = 0.3;
 /**
  * Retrieval scoring options
  */
-export type ScoringOptions = {
+export interface ScoringOptions {
   /** Number of candidates to retrieve (default: 20) */
   topK?: number;
   /** Minimum score for final results (default: 0.3) */
@@ -36,16 +36,16 @@ export type ScoringOptions = {
   recencyWeight?: number;
   /** Optional access count weight (0-1, default: 0.05) */
   accessWeight?: number;
-};
+}
 
 /**
  * Scored result with relevance score
  */
-export type ScoredResult<T> = {
+export interface ScoredResult<T> {
   item: T;
   score: number;
   matchType: "exact" | "semantic" | "fuzzy" | "hybrid";
-};
+}
 
 /**
  * Compute relevance score for a node given a query embedding.
@@ -191,7 +191,7 @@ function normalizeEmbedding(value: unknown): number[] | null {
   }
 
   if (value instanceof ArrayBuffer) {
-    const arr = Array.from(new Float32Array(value));
+    const arr = [...new Float32Array(value)];
     return arr.length > 0 ? arr : null;
   }
 
@@ -244,7 +244,7 @@ export function computeHybridScore(
     const normalizedLabel = node.label.toLowerCase().trim();
 
     if (normalizedLabel === normalizedQuery) {
-      textScore = 1.0;
+      textScore = 1;
       matchType = "exact";
     } else if (normalizedLabel.includes(normalizedQuery)) {
       textScore = 0.8;
@@ -257,7 +257,7 @@ export function computeHybridScore(
 
   // Combine scores (prefer exact matches)
   const score =
-    matchType === "exact" ? 1.0 : Math.max(semanticScore, textScore * 0.9);
+    matchType === "exact" ? 1 : Math.max(semanticScore, textScore * 0.9);
 
   return { item: node, score, matchType };
 }

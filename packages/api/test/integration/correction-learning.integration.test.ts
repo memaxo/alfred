@@ -142,7 +142,7 @@ describe("Correction Learning", () => {
             metadata: { source: "user_correction" },
             resource: "correction-test",
             toId: node2Id[0]!,
-            weight: 1.0,
+            weight: 1,
           },
         ]);
 

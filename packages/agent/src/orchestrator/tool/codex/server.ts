@@ -1,4 +1,13 @@
+import type {
+  AgentFileBeforeEvent,
+  AgentShellBeforeEvent,
+  HookContext,
+  HookRegistry,
+} from "@alfred/type";
 import type { FileSink, Subprocess } from "bun";
+
+import { logger } from "@alfred/logger";
+import * as path from "node:path";
 
 import type { DirectoryHandle } from "../../../security/filesystem.js";
 import type { CodexToolInput } from "./definition.js";
@@ -17,35 +26,42 @@ type AllowedDirectoryHandle = DirectoryHandle;
 
 type JsonRpcId = number;
 
-type JsonRpcRequest = {
+interface JsonRpcRequest {
   id: JsonRpcId;
   method: string;
   params?: unknown;
-};
+}
 
-type JsonRpcNotification = {
+interface JsonRpcNotification {
   method: string;
   params?: unknown;
-};
+}
 
-type JsonRpcResponse = {
+interface JsonRpcResponse {
   id: JsonRpcId;
   result?: unknown;
   error?: unknown;
-};
+}
 
-type TurnState = {
+interface TurnState {
   threadId: string;
   turnId: string;
   auto: CodexToolInput["auto"];
   writer: Writer;
+  signal?: AbortSignal;
+  hooks?: HooksRuntime | null;
   text: string;
-  artifacts: Array<{ path: string; kind: string }>;
+  artifacts: { path: string; kind: string }[];
   resolve: () => void;
   reject: (error: unknown) => void;
   done: Promise<void>;
   status: "running" | "completed" | "failed" | "interrupted";
-};
+}
+
+interface HooksRuntime {
+  readonly registry: HookRegistry;
+  readonly ctx: HookContext;
+}
 
 type CodexServer = ServerHandle & {
   exited: boolean;
@@ -56,7 +72,7 @@ type CodexServer = ServerHandle & {
     containerCw: string;
   }) => Promise<{
     result: string;
-    artifacts: Array<{ path: string; kind: string }>;
+    artifacts: { path: string; kind: string }[];
   }>;
 };
 
@@ -98,7 +114,7 @@ async function* readLines(
       buffer += decoder.decode(value, { stream: true });
       while (true) {
         const idx = buffer.indexOf("\n");
-        if (idx < 0) {
+        if (idx === -1) {
           break;
         }
         const line = buffer.slice(0, idx);
@@ -131,6 +147,10 @@ function emit(
   void Promise.resolve(writer?.write?.(payload)).catch(() => {});
 }
 
+function emitNotice(writer: Writer, message: string) {
+  emit(writer, { type: "notice", message });
+}
+
 function emitCommand(
   writer: Writer,
   command: string,
@@ -157,6 +177,100 @@ function emitOutput(writer: Writer, text: string) {
     type: "stdout",
     event: { type: "output", content: text, timestamp: Date.now() },
   });
+}
+
+function coerceParams(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
+}
+
+function parseCommandForApproval(
+  params: Record<string, unknown> | null
+): string {
+  const command =
+    (params ? asString(params.command) : undefined) ??
+    (params ? asString(params.cmd) : undefined) ??
+    (params ? asString(params.value) : undefined);
+  return command ?? "command";
+}
+
+function parsePatchForApproval(params: Record<string, unknown> | null): string {
+  const patch =
+    (params ? asString(params.patch) : undefined) ??
+    (params ? asString(params.diff) : undefined) ??
+    (params ? asString(params.value) : undefined);
+  return patch ?? "";
+}
+
+function guessPatchPath(patch: string): string | undefined {
+  const lines = patch.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const m1 = /^\*\*\* (?:Update File|Add File|Delete File):\s+(.+)$/.exec(
+      trimmed
+    );
+    if (m1?.[1]) {
+      return m1[1].trim();
+    }
+    const m2 = /^diff --git a\/(.+) b\//.exec(trimmed);
+    if (m2?.[1]) {
+      return m2[1].trim();
+    }
+  }
+  return;
+}
+
+async function maybeCreateHooksRuntime(args: {
+  projectDir: string;
+  sessionId: string;
+  workflowId: string | undefined;
+  signal: AbortSignal;
+}): Promise<HooksRuntime | null> {
+  const hooksFile = path.join(args.projectDir, "hooks.json");
+  try {
+    if (!(await Bun.file(hooksFile).exists())) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const { createHookRegistry, loadHooksJsonFile } =
+    await import("@alfred/hooks");
+
+  const registry = createHookRegistry();
+
+  try {
+    registry.loadConfig(await loadHooksJsonFile(hooksFile));
+  } catch (error) {
+    logger.warn("codex_server_hooks_config_load_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      hooksFile,
+    });
+    return null;
+  }
+
+  const ctx: HookContext = {
+    sessionId: args.sessionId,
+    workflowId: args.workflowId,
+    autonomy: 0.5,
+    cognitive: {
+      state: "idle",
+      autonomy: 0.5,
+      physiology: { energy: 1, boredom: 0, frustration: 0 },
+    },
+    alfredVersion: process.env.ALFRED_VERSION ?? "dev",
+    projectDir: args.projectDir,
+    emit: async () => {},
+    signal: args.signal,
+    log: {
+      debug: (msg, data) => logger.debug(msg, data as any),
+      info: (msg, data) => logger.info(msg, data as any),
+      warn: (msg, data) => logger.warn(msg, data as any),
+      error: (msg, data) => logger.error(msg, data as any),
+    },
+  };
+
+  return { ctx, registry };
 }
 
 function createLock() {
@@ -220,7 +334,7 @@ function parseMessage(
     return null;
   }
   const method = asString(parsed.method);
-  const id = parsed.id;
+  const { id } = parsed;
   if (typeof id === "number") {
     const base: JsonRpcResponse = { id };
     if ("result" in parsed) {
@@ -254,6 +368,8 @@ async function startServer(args: {
   const envWithAgentFS = args.input.agentfsDbPath
     ? { ...envBase, AGENTFS_DB_PATH: args.input.agentfsDbPath }
     : envBase;
+
+  const serverAbort = new AbortController();
 
   const dockerBin = resolveExecutable("docker");
   const envKeys = Object.keys(envWithAgentFS ?? {}).filter((k) => k !== "PATH");
@@ -310,6 +426,7 @@ async function startServer(args: {
   const pendingText = new Map<string, string>();
   const pendingStatus = new Map<string, string>();
   let activeTurnId: string | null = null;
+  let currentHooks: HooksRuntime | null = null;
 
   const request = async <T = unknown>(
     method: string,
@@ -345,7 +462,7 @@ async function startServer(args: {
   };
 
   const handleNotification = (note: JsonRpcNotification) => {
-    const method = note.method;
+    const { method } = note;
     const params = isRecord(note.params) ? note.params : null;
 
     if (method === "item/agentMessage/delta") {
@@ -382,9 +499,9 @@ async function startServer(args: {
         const mapped =
           status === "failed" || status === "declined"
             ? "failed"
-            : status === "completed"
+            : (status === "completed"
               ? "completed"
-              : "running";
+              : "running");
         emitCommand(turn.writer, command, mapped);
         return;
       }
@@ -430,9 +547,9 @@ async function startServer(args: {
       state.status =
         status === "interrupted"
           ? "interrupted"
-          : status === "failed"
+          : (status === "failed"
             ? "failed"
-            : "completed";
+            : "completed");
 
       if (state.status === "failed") {
         const errRecord = isRecord(turn.error) ? turn.error : null;
@@ -452,9 +569,9 @@ async function startServer(args: {
           new Error(
             errMsg
               ? `codex_server_turn_failed: ${errMsg}`
-              : payload
+              : (payload
                 ? `codex_server_turn_failed: ${payload}`
-                : "codex_server_turn_failed"
+                : "codex_server_turn_failed")
           )
         );
       } else if (state.status === "interrupted") {
@@ -476,6 +593,67 @@ async function startServer(args: {
       : "read";
     const allow = auto !== "read";
     const decision = allow ? "approved" : "denied";
+
+    const active = activeTurnId ? turns.get(activeTurnId) : undefined;
+    const hooks = active?.hooks ?? currentHooks;
+
+    if (hooks) {
+      const params = coerceParams(req.params);
+      const ctx: HookContext = {
+        ...hooks.ctx,
+        signal: active?.signal ?? hooks.ctx.signal,
+      };
+
+      if (req.method === "execCommandApproval") {
+        const cmd = parseCommandForApproval(params);
+        const hookEvent: AgentShellBeforeEvent = {
+          type: "agent:shell:before",
+          command: cmd,
+          cwd: hooks.ctx.projectDir ?? process.cwd(),
+        };
+
+        const out = await hooks.registry.emit(hookEvent, ctx);
+        const allowByHook = out.decision === "allow";
+        if (!allowByHook) {
+          emitNotice(
+            active?.writer,
+            out.userMessage ?? out.reason ?? "hook_denied:agent:shell:before"
+          );
+        }
+
+        await writeJsonLine(stdin, {
+          id: req.id,
+          result: { decision: { type: allowByHook ? "approved" : "denied" } },
+        });
+        return;
+      }
+
+      if (req.method === "applyPatchApproval") {
+        const patch = parsePatchForApproval(params);
+        const guessed = patch ? guessPatchPath(patch) : undefined;
+        const hookEvent: AgentFileBeforeEvent = {
+          type: "agent:file:before",
+          filePath: guessed ?? "patch",
+          operation: "write",
+          content: patch || undefined,
+        };
+
+        const out = await hooks.registry.emit(hookEvent, ctx);
+        const allowByHook = out.decision === "allow";
+        if (!allowByHook) {
+          emitNotice(
+            active?.writer,
+            out.userMessage ?? out.reason ?? "hook_denied:agent:file:before"
+          );
+        }
+
+        await writeJsonLine(stdin, {
+          id: req.id,
+          result: { decision: { type: allowByHook ? "approved" : "denied" } },
+        });
+        return;
+      }
+    }
 
     if (
       req.method === "applyPatchApproval" ||
@@ -564,6 +742,11 @@ async function startServer(args: {
     },
     stop: async () => {
       try {
+        serverAbort.abort();
+      } catch {
+        // ignore
+      }
+      try {
         proc.kill();
       } catch {
         // ignore
@@ -574,147 +757,173 @@ async function startServer(args: {
       lock(async () => {
         const sessionKey = input.sessionId?.trim() || "default";
 
-        let threadId = threads.get(sessionKey);
-        if (!threadId) {
-          const sandbox = mapAutoToCodex(input.auto);
-          const startRes = (await request("thread/start", {
+        const hooksDir =
+          typeof input.cw === "string" && input.cw.trim().length > 0
+            ? input.cw
+            : args.cwdHandle.path;
+
+        currentHooks = await maybeCreateHooksRuntime({
+          projectDir: hooksDir,
+          sessionId: sessionKey,
+          workflowId: isRecord(input.context)
+            ? asString(
+                (input.context as unknown as Record<string, unknown>).workflowId
+              )
+            : undefined,
+          signal: serverAbort.signal,
+        });
+
+        try {
+          let threadId = threads.get(sessionKey);
+          if (!threadId) {
+            const sandbox = mapAutoToCodex(input.auto);
+            const startRes = (await request("thread/start", {
+              model: input.model ?? null,
+              modelProvider: null,
+              cwd: runCw,
+              approvalPolicy: sandbox.approval,
+              sandbox: sandbox.sandbox,
+              config: null,
+              baseInstructions: null,
+              developerInstructions: null,
+              experimentalRawEvents: false,
+            })) as unknown;
+
+            const thread =
+              isRecord(startRes) && isRecord(startRes.thread)
+                ? startRes.thread
+                : null;
+            const id = thread ? asString(thread.id) : undefined;
+            if (!id) {
+              throw new Error("codex_server_thread_start_failed");
+            }
+            threadId = id;
+            threads.set(sessionKey, threadId);
+          }
+
+          const artifacts: { path: string; kind: string }[] = [];
+
+          const turnStartRes = (await request("turn/start", {
+            threadId,
+            input: [{ type: "text", text: input.prompt }],
             model: input.model ?? null,
-            modelProvider: null,
-            cwd: runCw,
-            approvalPolicy: sandbox.approval,
-            sandbox: sandbox.sandbox,
-            config: null,
-            baseInstructions: null,
-            developerInstructions: null,
-            experimentalRawEvents: false,
           })) as unknown;
 
-          const thread =
-            isRecord(startRes) && isRecord(startRes.thread)
-              ? startRes.thread
+          const turn =
+            isRecord(turnStartRes) && isRecord(turnStartRes.turn)
+              ? turnStartRes.turn
               : null;
-          const id = thread ? asString(thread.id) : undefined;
-          if (!id) {
-            throw new Error("codex_server_thread_start_failed");
+          const turnId = turn ? asString(turn.id) : undefined;
+          if (!turnId) {
+            throw new Error("codex_server_turn_start_failed");
           }
-          threadId = id;
-          threads.set(sessionKey, threadId);
-        }
 
-        const artifacts: Array<{ path: string; kind: string }> = [];
+          const deferred = createDeferred();
+          const turnState: TurnState = {
+            threadId,
+            turnId,
+            auto: input.auto,
+            writer,
+            signal,
+            hooks: currentHooks,
+            text: "",
+            artifacts,
+            resolve: deferred.resolve,
+            reject: deferred.reject,
+            done: deferred.promise,
+            status: "running",
+          };
+          turns.set(turnId, turnState);
+          activeTurnId = turnId;
 
-        const turnStartRes = (await request("turn/start", {
-          threadId,
-          input: [{ type: "text", text: input.prompt }],
-          model: input.model ?? null,
-        })) as unknown;
-
-        const turn =
-          isRecord(turnStartRes) && isRecord(turnStartRes.turn)
-            ? turnStartRes.turn
-            : null;
-        const turnId = turn ? asString(turn.id) : undefined;
-        if (!turnId) {
-          throw new Error("codex_server_turn_start_failed");
-        }
-
-        const deferred = createDeferred();
-        const turnState: TurnState = {
-          threadId,
-          turnId,
-          auto: input.auto,
-          writer,
-          text: "",
-          artifacts,
-          resolve: deferred.resolve,
-          reject: deferred.reject,
-          done: deferred.promise,
-          status: "running",
-        };
-        turns.set(turnId, turnState);
-        activeTurnId = turnId;
-
-        const earlyText = pendingText.get(turnId);
-        if (earlyText) {
-          pendingText.delete(turnId);
-          turnState.text += earlyText;
-          emitOutput(writer, earlyText);
-        }
-
-        const earlyStatus = pendingStatus.get(turnId);
-        if (earlyStatus) {
-          pendingStatus.delete(turnId);
-          turns.delete(turnId);
-          if (activeTurnId === turnId) {
-            activeTurnId = null;
+          const earlyText = pendingText.get(turnId);
+          if (earlyText) {
+            pendingText.delete(turnId);
+            turnState.text += earlyText;
+            emitOutput(writer, earlyText);
           }
-          if (earlyStatus === "interrupted") {
-            turnState.status = "interrupted";
-            turnState.reject(new DOMException("Aborted", "AbortError"));
-          } else if (earlyStatus === "failed") {
-            turnState.status = "failed";
-            turnState.reject(new Error("codex_server_turn_failed"));
-          } else {
-            turnState.status = "completed";
-            turnState.resolve();
+
+          const earlyStatus = pendingStatus.get(turnId);
+          if (earlyStatus) {
+            pendingStatus.delete(turnId);
+            turns.delete(turnId);
+            if (activeTurnId === turnId) {
+              activeTurnId = null;
+            }
+            if (earlyStatus === "interrupted") {
+              turnState.status = "interrupted";
+              turnState.reject(new DOMException("Aborted", "AbortError"));
+            } else if (earlyStatus === "failed") {
+              turnState.status = "failed";
+              turnState.reject(new Error("codex_server_turn_failed"));
+            } else {
+              turnState.status = "completed";
+              turnState.resolve();
+            }
           }
-        }
 
-        let didTimeout = false;
-        const timeoutMs = (input.timeoutSec ?? 20 * 60) * 1000;
-        const timer = setTimeout(() => {
-          didTimeout = true;
-          void request("turn/interrupt", { threadId, turnId }).catch(() => {});
-        }, timeoutMs);
-        (timer as unknown as { unref?: () => void }).unref?.();
+          let didTimeout = false;
+          const timeoutMs = (input.timeoutSec ?? 20 * 60) * 1000;
+          const timer = setTimeout(() => {
+            didTimeout = true;
+            void request("turn/interrupt", { threadId, turnId }).catch(
+              () => {}
+            );
+          }, timeoutMs);
+          (timer as unknown as { unref?: () => void }).unref?.();
 
-        const onAbort = () => {
-          void request("turn/interrupt", { threadId, turnId }).catch(() => {});
-        };
-        if (signal) {
-          if (signal.aborted) {
-            onAbort();
-          } else {
-            signal.addEventListener("abort", onAbort, { once: true });
-          }
-        }
-
-        let finalText = "";
-        try {
-          await Promise.race([
-            deferred.promise,
-            new Promise<never>((_, reject) => {
-              if (!signal) {
-                return;
-              }
-              if (signal.aborted) {
-                reject(new DOMException("Aborted", "AbortError"));
-                return;
-              }
-              signal.addEventListener(
-                "abort",
-                () => reject(new DOMException("Aborted", "AbortError")),
-                { once: true }
-              );
-            }),
-          ]);
-          finalText = turnState.text;
-        } finally {
-          clearTimeout(timer);
+          const onAbort = () => {
+            void request("turn/interrupt", { threadId, turnId }).catch(
+              () => {}
+            );
+          };
           if (signal) {
-            signal.removeEventListener("abort", onAbort);
+            if (signal.aborted) {
+              onAbort();
+            } else {
+              signal.addEventListener("abort", onAbort, { once: true });
+            }
           }
-          turns.delete(turnId);
-          if (activeTurnId === turnId) {
-            activeTurnId = null;
+
+          let finalText = "";
+          try {
+            await Promise.race([
+              deferred.promise,
+              new Promise<never>((_, reject) => {
+                if (!signal) {
+                  return;
+                }
+                if (signal.aborted) {
+                  reject(new DOMException("Aborted", "AbortError"));
+                  return;
+                }
+                signal.addEventListener(
+                  "abort",
+                  () => reject(new DOMException("Aborted", "AbortError")),
+                  { once: true }
+                );
+              }),
+            ]);
+            finalText = turnState.text;
+          } finally {
+            clearTimeout(timer);
+            if (signal) {
+              signal.removeEventListener("abort", onAbort);
+            }
+            turns.delete(turnId);
+            if (activeTurnId === turnId) {
+              activeTurnId = null;
+            }
           }
-        }
 
-        if (didTimeout) {
-          throw new Error("codex_server_turn_timeout");
-        }
+          if (didTimeout) {
+            throw new Error("codex_server_turn_timeout");
+          }
 
-        return { result: finalText, artifacts };
+          return { result: finalText, artifacts };
+        } finally {
+          currentHooks = null;
+        }
       }),
   };
 }
@@ -726,7 +935,7 @@ export async function executeWithCodexServer(args: {
   cwdHandle: AllowedDirectoryHandle;
 }): Promise<{
   result: string;
-  artifacts: Array<{ path: string; kind: string }>;
+  artifacts: { path: string; kind: string }[];
 }> {
   if (!args.input.containerName) {
     throw new Error("codex_server_requires_container");

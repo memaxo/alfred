@@ -8,11 +8,6 @@ import {
   vi,
 } from "bun:test";
 
-import {
-  recordMemoryForgetMock,
-  recordMemoryUpdateMock,
-  resetAgentMocks,
-} from "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
@@ -27,6 +22,9 @@ const getMessageMock = vi.fn();
 const messageRowToUIMessageMock = vi.fn();
 const invalidatePreferenceCacheMock = vi.fn();
 const inferPreferenceFromCorrectionMock = vi.fn();
+const recordMemoryUpdateMock = vi.fn();
+const recordMemoryForgetMock = vi.fn();
+const noopTimer = vi.fn(() => {});
 
 dbModuleStub.userRepo.getPreferences = getPreferencesMock;
 dbModuleStub.userRepo.setPreference = setPreferenceMock;
@@ -56,18 +54,73 @@ vi.spyOn(dbModuleStub.conversationRepo, "createMessage").mockImplementation();
 dbModuleStub.userSchema = dbModuleStub.userSchema ?? {};
 dbModuleStub.userSchema.preferences = { $inferSelect: {} };
 
-mock.module("@alfred/agent/preference/loader", () => ({
-  invalidatePreferenceCache: invalidatePreferenceCacheMock,
-  loadPreferences: vi.fn().mockResolvedValue(new Map()),
-  loadPreferencesWithDefaults: vi.fn().mockResolvedValue(new Map()),
-  resetPreferenceCache: vi.fn(),
-}));
+mock.module("@alfred/agent/metrics", () => ({
+  __esModule: true,
 
-mock.module("@alfred/agent/preference/inference", () => ({
-  inferDomainPreferences: vi.fn().mockReturnValue(new Map()),
-  inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
-  inferPreferencesFromFeedback: vi.fn().mockReturnValue(new Map()),
-  inferResponsePreferences: vi.fn().mockResolvedValue(new Map()),
+  registerDroidExecCounter: vi.fn(),
+  registerDroidExecHistogram: vi.fn(),
+  recordDroidExecRun: vi.fn(),
+  startDroidExecTimer: noopTimer,
+
+  registerCodexExecCounter: vi.fn(),
+  registerCodexExecHistogram: vi.fn(),
+  recordCodexExecRun: vi.fn(),
+  startCodexExecTimer: noopTimer,
+
+  registerCodexErrorCounter: vi.fn(),
+  recordCodexError: vi.fn(),
+  registerCodexWriterErrorCounter: vi.fn(),
+  recordCodexWriterError: vi.fn(),
+  registerCodexSessionViolationCounter: vi.fn(),
+  recordCodexSessionViolation: vi.fn(),
+  registerCodexSessionValidationHistogram: vi.fn(),
+  startCodexSessionValidationTimer: noopTimer,
+
+  registerEvalRunsCounter: vi.fn(),
+  registerEvalDurationHistogram: vi.fn(),
+  registerEvalScoreCounter: vi.fn(),
+  registerEvalFailureCounter: vi.fn(),
+  registerLaminarDatapointCounter: vi.fn(),
+  registerLaminarErrorCounter: vi.fn(),
+  recordEvalRunStatus: vi.fn(),
+  startEvalRunTimer: noopTimer,
+  recordEvalScore: vi.fn(),
+  recordEvalFailure: vi.fn(),
+  recordLaminarDatapoint: vi.fn(),
+  recordLaminarError: vi.fn(),
+
+  registerAssistantToolCounter: vi.fn(),
+  recordAssistantToolCall: vi.fn(),
+  registerAssistantEscalationCounter: vi.fn(),
+  recordAssistantEscalation: vi.fn(),
+
+  registerPolicyCheckFailureCounter: vi.fn(),
+  recordPolicyCheckFailure: vi.fn(),
+
+  registerMemoryUpdatesCounter: vi.fn(),
+  registerMemoryForgetsCounter: vi.fn(),
+  recordMemoryUpdate: recordMemoryUpdateMock,
+  recordMemoryForget: recordMemoryForgetMock,
+
+  registerCompressionCycleHistogram: vi.fn(),
+  startCompressionCycleTimer: noopTimer,
+  registerCompressionCycleCounter: vi.fn(),
+  recordCompressionCycle: vi.fn(),
+  registerCompressionNodeCounter: vi.fn(),
+  recordCompressionNodeUpdate: vi.fn(),
+
+  registerMemoryToolCounter: vi.fn(),
+  recordMemoryToolCall: vi.fn(),
+  registerMemorySearchLatencyHistogram: vi.fn(),
+  recordMemorySearchLatency: vi.fn(),
+  registerMemorySearchResultsHistogram: vi.fn(),
+  recordMemorySearchResults: vi.fn(),
+  registerMemoryTraverseDepthHistogram: vi.fn(),
+  recordMemoryTraverseDepth: vi.fn(),
+  registerMemoryBoostCounter: vi.fn(),
+  recordMemoryBoost: vi.fn(),
+  registerMemoryRemovalCounter: vi.fn(),
+  recordMemoryRemoval: vi.fn(),
 }));
 
 let caller: Awaited<
@@ -78,6 +131,12 @@ beforeAll(async () => {
   const { createTestCaller } = await import("./utils/trpc");
   caller = await createTestCaller({
     scopes: ["preference.write"],
+    deps: {
+      preference: {
+        inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
+        invalidatePreferenceCache: invalidatePreferenceCacheMock,
+      },
+    },
   });
 });
 
@@ -96,7 +155,6 @@ beforeEach(() => {
   getPreferencesMock.mockReset();
   setPreferenceMock.mockReset();
   deletePreferenceMock.mockReset();
-  resetAgentMocks();
   recordMemoryUpdateMock.mockClear();
   recordMemoryForgetMock.mockClear();
 });
@@ -132,7 +190,7 @@ describe("preference router", () => {
   describe("set", () => {
     it("sets a preference", async () => {
       const mockPreference = {
-        confidence: 1.0,
+        confidence: 1,
         key: "theme",
         value: "dark",
       };
@@ -140,7 +198,7 @@ describe("preference router", () => {
       setPreferenceMock.mockResolvedValue(mockPreference);
 
       const result = await caller.preference.set({
-        confidence: 1.0,
+        confidence: 1,
         key: "theme",
         value: "dark",
       });
@@ -159,13 +217,13 @@ describe("preference router", () => {
 
     it("normalizes model preference values to provider:modelId", async () => {
       setPreferenceMock.mockResolvedValue({
-        confidence: 1.0,
+        confidence: 1,
         key: "domain.ai.model.chat",
         value: "openai:gpt-4o-mini",
       });
 
       await caller.preference.set({
-        confidence: 1.0,
+        confidence: 1,
         key: "domain.ai.model.chat",
         value: "openai/gpt-4o-mini",
       });
@@ -184,13 +242,13 @@ describe("preference router", () => {
       const projectId = "00000000-0000-4000-8000-000000000000";
 
       setPreferenceMock.mockResolvedValue({
-        confidence: 1.0,
+        confidence: 1,
         key: "theme",
         value: "dark",
       });
 
       await caller.preference.set({
-        confidence: 1.0,
+        confidence: 1,
         key: "theme",
         projectId,
         value: "dark",

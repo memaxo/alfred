@@ -19,15 +19,15 @@ import {
 
 type Session = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
-type EnforceArgs = {
+interface EnforceArgs {
   request?: Request;
   session: Session | null;
   input: WorkflowInputPayload;
-};
+}
 
-type EnforcementResult = {
+interface EnforcementResult {
   obligations: Obligation[];
-};
+}
 
 export async function enforceWorkflowPlanPolicy({
   session,

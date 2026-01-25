@@ -41,7 +41,7 @@ export async function generateCritique(
     // Return empty critique as fallback
     return {
       issues: [],
-      overallScore: 1.0,
+      overallScore: 1,
       strengths: ["Automatic fallback due to generation error"],
       weaknesses: [],
     };

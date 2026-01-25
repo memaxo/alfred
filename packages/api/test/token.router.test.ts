@@ -109,7 +109,7 @@ describe("token router", () => {
 
   describe("elevate", () => {
     it("issues an elevated token with biometric", async () => {
-      requireRecentBiometricMock.mockResolvedValue(undefined);
+      requireRecentBiometricMock.mockResolvedValue();
       issueAccessTokenMock.mockResolvedValue("elevated-token-123");
 
       const result = await caller.token.elevate({

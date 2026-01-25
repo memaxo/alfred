@@ -84,7 +84,7 @@ describe("gatherCodeContext cache handoff", () => {
       receipt,
     });
 
-    const writer = { write: vi.fn().mockResolvedValue(undefined) };
+    const writer = { write: vi.fn().mockResolvedValue() };
 
     const result = await gatherCodeContext({
       requirement,
@@ -114,7 +114,7 @@ describe("gatherCodeContext cache handoff", () => {
       }),
     });
 
-    const writer = { write: vi.fn().mockResolvedValue(undefined) };
+    const writer = { write: vi.fn().mockResolvedValue() };
 
     const receipts = await gatherCodeContext({
       requirement: "Collect latest context",

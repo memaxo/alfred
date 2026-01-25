@@ -25,16 +25,16 @@ const _imageOk = dockerOk && isImageAvailable(IMAGE);
 
 describe("AgentFS Hardening (RO Isolation + CoW)", () => {
   const _repoRoot = process.cwd();
-  const cleanupFns: Array<() => Promise<void> | void> = [];
+  const cleanupFns: (() => Promise<void> | void)[] = [];
   const dirs: string[] = [];
 
   afterEach(async () => {
-    for (const fn of cleanupFns.splice(0, cleanupFns.length).reverse()) {
+    for (const fn of cleanupFns.splice(0).toReversed()) {
       try {
         await fn();
       } catch {}
     }
-    for (const dir of dirs.splice(0, dirs.length)) {
+    for (const dir of dirs.splice(0)) {
       cleanupTestDir(dir);
     }
   });
@@ -232,7 +232,7 @@ describe("AgentFS Hardening (RO Isolation + CoW)", () => {
       expect(catRes.stdout.trim()).toBe("mutated content");
 
       // CRITICAL: Verify the host file remains UNTOUCHED
-      const hostContent = readFileSync(canaryFile, "utf-8");
+      const hostContent = readFileSync(canaryFile, "utf8");
       expect(hostContent).toBe("original content");
 
       // Verify diff API shows the change

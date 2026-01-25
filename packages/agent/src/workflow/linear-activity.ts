@@ -14,11 +14,11 @@ import {
   setLinearStarted,
 } from "../orchestrator/linear";
 
-type LinearConfig = {
+interface LinearConfig {
   sessionId?: string;
   space: string;
   issueId?: string;
-};
+}
 
 export class LinearActivityService {
   private readonly linear: LinearConfig;

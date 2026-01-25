@@ -20,13 +20,13 @@ describe("terminal router", () => {
     spawn: (...args: unknown[]) => Bun.Subprocess;
   };
 
-  type TerminalSpawnOptions = {
+  interface TerminalSpawnOptions {
     terminal?: {
       cols?: number;
       rows?: number;
       data?: (term: unknown, data: string | Uint8Array) => void;
     };
-  };
+  }
 
   const pendingExit = () => new Promise<number>(() => {});
 
@@ -319,8 +319,8 @@ describe("terminal router", () => {
           sessionId: "invalid-id",
           data: "test",
         });
-      } catch (e) {
-        error = e;
+      } catch (error) {
+        error = error;
       }
       expect(error).toBeDefined();
       expect(error).toBeInstanceOf(TRPCError);

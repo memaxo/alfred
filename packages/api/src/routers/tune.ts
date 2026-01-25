@@ -14,14 +14,14 @@ const startInput = z.object({
 });
 
 // In-memory job storage (would be persisted in DB after migration)
-type TuneJobArtifacts = {
+export interface TuneJobArtifacts {
   outputDir?: string;
   adaptersPath?: string;
   fusedModelDir?: string;
   metricsPath?: string;
-};
+}
 
-type TuneJob = {
+interface TuneJob {
   id: string;
   userId: string;
   projectId?: string;
@@ -40,7 +40,7 @@ type TuneJob = {
   createdAt: Date;
   startedAt: Date | null;
   completedAt: Date | null;
-};
+}
 const jobsStore = new Map<string, TuneJob>();
 
 // Sample datasets (would come from filesystem/DB in production)

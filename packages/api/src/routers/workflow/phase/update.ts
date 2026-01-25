@@ -1,4 +1,8 @@
-import { type PipelineSnapshot } from "@alfred/pipeline";
+import {
+  toSerializable,
+  type PipelineSnapshot,
+  type SerializableValue,
+} from "@alfred/pipeline";
 import { TRPCError } from "@trpc/server";
 import { performance } from "node:perf_hooks";
 import { z } from "zod";
@@ -83,18 +87,23 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
       const waves = planToWaves(parsedPlan, { maxConcurrency: 5 });
 
       // Update snapshot context
-      const ctxMap = new Map(snapshot.contextEntries ?? []);
+      const ctxMap = new Map<string, SerializableValue>(
+        snapshot.contextEntries ?? []
+      );
       const planOutput = ctxMap.get("planOutput") as Record<
         string,
         unknown
       > | null;
 
       if (planOutput) {
-        ctxMap.set("planOutput", {
-          ...planOutput,
-          structuredPlan: parsedPlan,
-          subtasks,
-        });
+        ctxMap.set(
+          "planOutput",
+          toSerializable({
+            ...planOutput,
+            structuredPlan: parsedPlan,
+            subtasks,
+          })
+        );
       }
 
       const scheduleOutputEntry = ctxMap.get("scheduleOutput") as Record<
@@ -103,10 +112,13 @@ export const workflowPhaseUpdatePlanProcedure = phasePlanProcedure
       > | null;
 
       if (scheduleOutputEntry) {
-        ctxMap.set("scheduleOutput", {
-          ...scheduleOutputEntry,
-          waves,
-        });
+        ctxMap.set(
+          "scheduleOutput",
+          toSerializable({
+            ...scheduleOutputEntry,
+            waves,
+          })
+        );
       }
 
       // Update snapshot

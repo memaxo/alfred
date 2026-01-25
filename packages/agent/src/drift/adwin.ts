@@ -19,16 +19,16 @@
  * Bucket in the exponential histogram
  * Each bucket stores statistics for a contiguous subsequence
  */
-type Bucket = {
+interface Bucket {
   total: number; // Sum of values in bucket
   variance: number; // Variance of values (for improved detection)
   count: number; // Number of elements
-};
+}
 
 /**
  * ADWIN configuration options
  */
-export type AdwinConfig = {
+export interface AdwinConfig {
   /** Confidence parameter delta (default: 0.002) */
   delta?: number;
   /** Maximum number of buckets per level (default: 5) */
@@ -37,12 +37,12 @@ export type AdwinConfig = {
   minWindowSize?: number;
   /** Clock for timestamps (default: Date.now) */
   clock?: () => number;
-};
+}
 
 /**
  * Drift detection result
  */
-export type DriftResult = {
+export interface DriftResult {
   /** Whether drift was detected */
   driftDetected: boolean;
   /** Current window mean */
@@ -55,19 +55,19 @@ export type DriftResult = {
   droppedCount: number;
   /** Timestamp of detection */
   timestamp: number;
-};
+}
 
 /**
  * Snapshot of ADWIN state for persistence
  */
-export type AdwinSnapshot = {
+export interface AdwinSnapshot {
   buckets: Bucket[][];
   total: number;
   count: number;
   variance: number;
   lastDriftTime: number | null;
   driftCount: number;
-};
+}
 
 /**
  * ADWIN change detector

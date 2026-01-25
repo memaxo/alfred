@@ -178,7 +178,7 @@ export class ApiClient {
 
   async startWorkflow(
     requirement: string,
-    auto: "read" | "low" = "read"
+    _auto: "read" | "low" = "read"
   ): Promise<
     ApiResult<{
       runId: string;
@@ -186,11 +186,12 @@ export class ApiClient {
       plan?: unknown;
     }>
   > {
-    const url = `${this.baseUrl}/api/trpc/workflow.start`;
+    // Pipeline canonical: plan via phase API (init → context → plan → schedule).
+    // Note: `_auto` is currently ignored by the phase.plan input schema.
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.plan`;
     return await fetchJson(url, {
       body: JSON.stringify({
         requirement,
-        auto,
       }),
       method: "POST",
     });

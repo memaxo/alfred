@@ -12,7 +12,7 @@ export type { ProcessConfig };
  */
 export type ChunkSize = "fast" | "low" | "medium" | "accurate";
 
-export type STTRequest = {
+export interface STTRequest {
   audioBase64: string;
   mimeType: string;
   language?: string;
@@ -24,9 +24,9 @@ export type STTRequest = {
   chunkSize?: ChunkSize;
   /** Clear session cache before transcription */
   clearCache?: boolean;
-};
+}
 
-export type STTResult = {
+export interface STTResult {
   text: string;
   language?: string;
   isPartial?: boolean;
@@ -37,7 +37,7 @@ export type STTResult = {
   endOfUtterance?: boolean;
   processingTime?: number;
   streamingEnabled?: boolean;
-};
+}
 
 export class STTPool {
   private processes: Process[] = [];

@@ -53,7 +53,7 @@ export const runMlxFineTune = async (
   await writeFile(
     runPaths.configPath,
     JSON.stringify(pythonConfig, null, 2),
-    "utf-8"
+    "utf8"
   );
 
   const pythonPathSegment = path.join(
@@ -127,9 +127,9 @@ export const runMlxFineTune = async (
   const completedAt = new Date();
   const status: FineTuneRunResult["status"] = aborted
     ? "cancelled"
-    : exitCode === 0
+    : (exitCode === 0
       ? "success"
-      : "failed";
+      : "failed");
 
   if (tokensProcessed > 0) {
     fineTuneTokensTotal.inc({ backend: "mlx" }, tokensProcessed);

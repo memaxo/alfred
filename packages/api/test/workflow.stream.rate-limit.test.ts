@@ -17,8 +17,8 @@ describe("workflow.streamPipeline rate limit", () => {
       consumeRouteRateLimit("workflow.streamPipeline", "sess-1");
       consumeRouteRateLimit("workflow.streamPipeline", "sess-1");
       consumeRouteRateLimit("workflow.streamPipeline", "sess-1");
-    } catch (err) {
-      msg = err instanceof Error ? err.message : String(err);
+    } catch (error) {
+      msg = error instanceof Error ? error.message : String(error);
     }
 
     expect(msg).toContain("rate_limited");

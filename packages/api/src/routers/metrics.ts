@@ -31,9 +31,9 @@ export const metricsRouter = router({
       let modelId: string;
       try {
         const parsed = parseModelKey(normalized);
-        provider = parsed.provider;
+        ({ provider } = parsed);
         modelKey = parsed.key;
-        modelId = parsed.modelId;
+        ({ modelId } = parsed);
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",

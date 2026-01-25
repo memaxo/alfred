@@ -1,7 +1,7 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 
-import { type ToolExecuteArgs } from "./shared/context.js";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 const runtimeInputSchema = z.object({
   action: z.enum(["status", "recover", "logs"]),
@@ -46,7 +46,7 @@ export const toolRuntime = {
               stt: sttPool.getHealth() as unknown[],
               tts: ttsPool.getHealth() as unknown[],
             };
-          } catch (_e) {
+          } catch {
             // Not initialized
           }
         }
@@ -169,8 +169,9 @@ export const toolRuntime = {
         return { logs };
       }
 
-      default:
+      default: {
         throw new Error("runtime_action_not_supported");
+      }
     }
   },
   inputSchema: runtimeInputSchema,

@@ -61,15 +61,15 @@ function sanitizeHeaders(
   headers: Headers | Record<string, string>
 ): Record<string, string> {
   const result: Record<string, string> = {};
-  const sensitiveKeys = ["authorization", "api-key", "x-api-key"];
+  const sensitiveKeys = new Set(["authorization", "api-key", "x-api-key"]);
 
   const entries =
     headers instanceof Headers
-      ? Array.from(headers.entries())
+      ? [...headers.entries()]
       : Object.entries(headers);
 
   for (const [key, value] of entries) {
-    if (sensitiveKeys.includes(key.toLowerCase())) {
+    if (sensitiveKeys.has(key.toLowerCase())) {
       result[key] = "[REDACTED]";
     } else {
       result[key] = value;
@@ -125,8 +125,7 @@ export class VCRRecorder {
       const loaded = await loadCassette(this.cassettePath);
       if (loaded) {
         this.cassette = loaded;
-      } else if (this.strictReplay) {
-      }
+      } else if (this.strictReplay) {}
     }
 
     // Patch global fetch
@@ -161,7 +160,7 @@ export class VCRRecorder {
    * Creates the fetch interceptor
    */
   private createInterceptor() {
-    const originalFetch = this.originalFetch;
+    const { originalFetch } = this;
     if (!originalFetch) {
       throw new Error(
         "VCR: originalFetch is missing during interception setup"
@@ -175,9 +174,9 @@ export class VCRRecorder {
       const url =
         typeof input === "string"
           ? input
-          : input instanceof URL
+          : (input instanceof URL
             ? input.href
-            : input.url;
+            : input.url);
       const provider = getProvider(url);
 
       // Pass through non-AI requests
@@ -200,7 +199,7 @@ export class VCRRecorder {
           body =
             typeof init.body === "string" ? JSON.parse(init.body) : init.body;
         } catch {
-          body = init.body;
+          ({ body } = init);
         }
       }
 

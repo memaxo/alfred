@@ -1,10 +1,11 @@
-import * as graphRepo from "@alfred/db/repo/graph";
-import { type memoryEdges, type memoryNodes } from "@alfred/db/schema/graph";
-import {
-  type Hypergraph,
-  type Knowledge,
-  type NodeId,
+import type { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import type {
+  Hypergraph,
+  Knowledge,
+  NodeId,
 } from "@alfred/knowledge/hypergraph";
+
+import * as graphRepo from "@alfred/db/repo/graph";
 import {
   execute as executeDatalog,
   semanticQuery as hyperSemantic,
@@ -12,11 +13,7 @@ import {
 } from "@alfred/knowledge/query";
 import { embed as ragEmbed, retrieve as ragRetrieve } from "@alfred/rag";
 
-import {
-  type UnifiedEdge,
-  type UnifiedNode,
-  type UnifiedNodeKind,
-} from "./unified.js";
+import type { UnifiedEdge, UnifiedNode, UnifiedNodeKind } from "./unified.js";
 
 type DbNode = typeof memoryNodes.$inferSelect;
 type DbEdge = typeof memoryEdges.$inferSelect;
@@ -107,7 +104,7 @@ async function runTraverse(
   const edges = neighbors.map(({ edge }) => mapEdgeRow(edge));
   return {
     edges,
-    nodes: Array.from(nodeMap.values()),
+    nodes: [...nodeMap.values()],
   };
 }
 
@@ -133,7 +130,7 @@ async function runPath(
     .map((edge) => mapEdgeRow(edge));
   return {
     edges,
-    nodes: Array.from(nodeMap.values()),
+    nodes: [...nodeMap.values()],
   };
 }
 
@@ -158,8 +155,8 @@ function runDatalog(
     }
   }
   return {
-    edges: Array.from(edges.values()),
-    nodes: Array.from(nodes.values()),
+    edges: [...edges.values()],
+    nodes: [...nodes.values()],
   };
 }
 

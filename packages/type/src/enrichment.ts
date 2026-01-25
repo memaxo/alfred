@@ -7,6 +7,27 @@
 
 import { z } from "zod";
 
+const enrichBaseSchema = z.object({
+  schemaVersion: z.number().int().default(1),
+  createdAt: z
+    .number()
+    .int()
+    .default(() => Date.now()),
+});
+
+export const enrichCaps = {
+  errMsg: 2000,
+  errParam: 5000,
+  summary: 6000,
+  decision: 600,
+  rationale: 1200,
+  blocker: 400,
+  question: 400,
+  avoidReason: 300,
+  delta: 6000,
+  liveErr: 2000,
+} as const;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FailureContext: Unified aggregation of all failure signals
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +69,7 @@ export const escalationRecordSchema = z.object({
 
 export type EscalationRecord = z.infer<typeof escalationRecordSchema>;
 
-export const failureContextSchema = z.object({
+export const failureContextSchema = enrichBaseSchema.extend({
   durationMs: z.number(),
   escalations: z.array(escalationRecordSchema),
   loopDetections: z.array(loopDetectionSchema),
@@ -82,7 +103,7 @@ export const toolAvoidanceSchema = z.object({
 
 export type ToolAvoidance = z.infer<typeof toolAvoidanceSchema>;
 
-export const structuredHandoffSchema = z.object({
+export const structuredHandoffSchema = enrichBaseSchema.extend({
   blockers: z.array(z.string()),
   decisions: z.array(decisionRecordSchema),
   filesCreated: z.array(z.string()),
@@ -115,7 +136,7 @@ export const successContextSchema = z.object({
 
 export type SuccessContext = z.infer<typeof successContextSchema>;
 
-export const retryResolutionSchema = z.object({
+export const retryResolutionSchema = enrichBaseSchema.extend({
   attempt: z.number(),
   delta: z.string(),
   failureContext: failureContextSchema,
@@ -161,7 +182,7 @@ export const upstreamFailureSchema = z.object({
 
 export type UpstreamFailure = z.infer<typeof upstreamFailureSchema>;
 
-export const taskEnrichmentSchema = z.object({
+export const taskEnrichmentSchema = enrichBaseSchema.extend({
   handoffContext: structuredHandoffSchema.optional(),
 
   relevantHeuristics: z.array(relevantHeuristicSchema).max(10),
@@ -179,9 +200,11 @@ export type TaskEnrichment = z.infer<typeof taskEnrichmentSchema>;
 // LiveError: Streaming error for sibling agent awareness
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const liveErrorSchema = z.object({
+export const liveErrorSchema = enrichBaseSchema.extend({
+  agentId: z.string().optional(),
   error: z.string(),
   parameters: z.unknown().optional(),
+  taskId: z.string().optional(),
   tool: z.string(),
   ts: z.number(),
 });

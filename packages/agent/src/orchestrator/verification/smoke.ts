@@ -6,10 +6,10 @@ import {
 } from "../../security/filesystem";
 import { spawnWithSecureCwd } from "../../security/secure-spawn";
 
-type SmokeResult = {
+interface SmokeResult {
   success: boolean;
   message: string;
-};
+}
 
 function formatOutput(stdout: string, stderr: string): string {
   const out = stdout.trim();

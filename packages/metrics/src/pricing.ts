@@ -18,12 +18,12 @@ import type { ModelProvider } from "@alfred/type/model";
  * - xAI: https://x.ai/api
  */
 
-export type ModelPricing = {
+export interface ModelPricing {
   promptCostPer1M: number;
   completionCostPer1M: number;
   cachedPromptPer1M?: number;
   reasoningPer1M?: number;
-};
+}
 
 type PricingRegistry = Record<string, ModelPricing>;
 
@@ -32,13 +32,13 @@ const openaiPricing: PricingRegistry = {
   // GPT-5 family
   "gpt-5.2": {
     promptCostPer1M: 1.75,
-    completionCostPer1M: 14.0,
+    completionCostPer1M: 14,
     cachedPromptPer1M: 0.175,
   },
   // GPT-4o family
   "gpt-4o": {
     promptCostPer1M: 2.5,
-    completionCostPer1M: 10.0,
+    completionCostPer1M: 10,
     cachedPromptPer1M: 1.25,
   },
   "gpt-4o-mini": {
@@ -48,8 +48,8 @@ const openaiPricing: PricingRegistry = {
   },
   // GPT-4.1 family
   "gpt-4.1": {
-    promptCostPer1M: 2.0,
-    completionCostPer1M: 8.0,
+    promptCostPer1M: 2,
+    completionCostPer1M: 8,
     cachedPromptPer1M: 0.5,
   },
   "gpt-4.1-mini": {
@@ -64,9 +64,9 @@ const openaiPricing: PricingRegistry = {
   },
   // o-series (reasoning)
   o1: {
-    promptCostPer1M: 15.0,
-    completionCostPer1M: 60.0,
-    reasoningPer1M: 60.0,
+    promptCostPer1M: 15,
+    completionCostPer1M: 60,
+    reasoningPer1M: 60,
   },
   "o1-mini": {
     promptCostPer1M: 1.1,
@@ -74,9 +74,9 @@ const openaiPricing: PricingRegistry = {
     reasoningPer1M: 4.4,
   },
   o3: {
-    promptCostPer1M: 10.0,
-    completionCostPer1M: 40.0,
-    reasoningPer1M: 40.0,
+    promptCostPer1M: 10,
+    completionCostPer1M: 40,
+    reasoningPer1M: 40,
   },
   "o3-mini": {
     promptCostPer1M: 1.1,
@@ -89,8 +89,8 @@ const openaiPricing: PricingRegistry = {
     reasoningPer1M: 4.4,
   },
   // Legacy
-  "gpt-4-turbo": { promptCostPer1M: 10.0, completionCostPer1M: 30.0 },
-  "gpt-4": { promptCostPer1M: 30.0, completionCostPer1M: 60.0 },
+  "gpt-4-turbo": { promptCostPer1M: 10, completionCostPer1M: 30 },
+  "gpt-4": { promptCostPer1M: 30, completionCostPer1M: 60 },
   "gpt-3.5-turbo": { promptCostPer1M: 0.5, completionCostPer1M: 1.5 },
 };
 
@@ -98,50 +98,50 @@ const openaiPricing: PricingRegistry = {
 const anthropicPricing: PricingRegistry = {
   // Claude 4.5 family
   "claude-opus-4.5": {
-    promptCostPer1M: 5.0,
-    completionCostPer1M: 25.0,
+    promptCostPer1M: 5,
+    completionCostPer1M: 25,
     cachedPromptPer1M: 0.5,
   },
   "claude-sonnet-4.5": {
-    promptCostPer1M: 3.0,
-    completionCostPer1M: 15.0,
+    promptCostPer1M: 3,
+    completionCostPer1M: 15,
     cachedPromptPer1M: 0.3,
   },
   // Claude 4 family
   "claude-opus-4": {
-    promptCostPer1M: 15.0,
-    completionCostPer1M: 75.0,
+    promptCostPer1M: 15,
+    completionCostPer1M: 75,
     cachedPromptPer1M: 1.5,
   },
   "claude-sonnet-4": {
-    promptCostPer1M: 3.0,
-    completionCostPer1M: 15.0,
+    promptCostPer1M: 3,
+    completionCostPer1M: 15,
     cachedPromptPer1M: 0.3,
   },
   // Claude 3.5 family
   "claude-3-5-sonnet": {
-    promptCostPer1M: 3.0,
-    completionCostPer1M: 15.0,
+    promptCostPer1M: 3,
+    completionCostPer1M: 15,
     cachedPromptPer1M: 0.3,
   },
   "claude-3.5-sonnet": {
-    promptCostPer1M: 3.0,
-    completionCostPer1M: 15.0,
+    promptCostPer1M: 3,
+    completionCostPer1M: 15,
     cachedPromptPer1M: 0.3,
   },
   "claude-3-5-haiku": {
     promptCostPer1M: 0.8,
-    completionCostPer1M: 4.0,
+    completionCostPer1M: 4,
     cachedPromptPer1M: 0.08,
   },
   "claude-3.5-haiku": {
     promptCostPer1M: 0.8,
-    completionCostPer1M: 4.0,
+    completionCostPer1M: 4,
     cachedPromptPer1M: 0.08,
   },
   // Claude 3 family
-  "claude-3-opus": { promptCostPer1M: 15.0, completionCostPer1M: 75.0 },
-  "claude-3-sonnet": { promptCostPer1M: 3.0, completionCostPer1M: 15.0 },
+  "claude-3-opus": { promptCostPer1M: 15, completionCostPer1M: 75 },
+  "claude-3-sonnet": { promptCostPer1M: 3, completionCostPer1M: 15 },
   "claude-3-haiku": { promptCostPer1M: 0.25, completionCostPer1M: 1.25 },
 };
 
@@ -150,7 +150,7 @@ const googlePricing: PricingRegistry = {
   // Gemini 2.5 family
   "gemini-2.5-pro": {
     promptCostPer1M: 1.25,
-    completionCostPer1M: 10.0,
+    completionCostPer1M: 10,
     cachedPromptPer1M: 0.125,
   },
   "gemini-2.5-flash": {
@@ -160,15 +160,15 @@ const googlePricing: PricingRegistry = {
   },
   // Gemini 2.0 family
   "gemini-2.0-pro": { promptCostPer1M: 0.1, completionCostPer1M: 0.4 },
-  "gemini-2.0-flash": { promptCostPer1M: 0.0, completionCostPer1M: 0.0 }, // Free experimental
+  "gemini-2.0-flash": { promptCostPer1M: 0, completionCostPer1M: 0 }, // Free experimental
   // Gemini 1.5 family
   "gemini-1.5-pro": {
     promptCostPer1M: 1.25,
-    completionCostPer1M: 5.0,
+    completionCostPer1M: 5,
     cachedPromptPer1M: 0.3125,
   },
   "gemini-1.5-flash": { promptCostPer1M: 0.075, completionCostPer1M: 0.3 },
-  "gemini-pro-1.5": { promptCostPer1M: 1.25, completionCostPer1M: 5.0 },
+  "gemini-pro-1.5": { promptCostPer1M: 1.25, completionCostPer1M: 5 },
 };
 
 // DeepSeek pricing (January 2025) - Ultra low cost
@@ -197,7 +197,7 @@ const deepseekPricing: PricingRegistry = {
 
 // Mistral pricing (January 2025)
 const mistralPricing: PricingRegistry = {
-  "mistral-large": { promptCostPer1M: 2.0, completionCostPer1M: 6.0 },
+  "mistral-large": { promptCostPer1M: 2, completionCostPer1M: 6 },
   "mistral-small": { promptCostPer1M: 0.2, completionCostPer1M: 0.6 },
   codestral: { promptCostPer1M: 0.3, completionCostPer1M: 0.9 },
   "mistral-nemo": { promptCostPer1M: 0.15, completionCostPer1M: 0.15 },
@@ -205,8 +205,8 @@ const mistralPricing: PricingRegistry = {
 
 // xAI Grok pricing (January 2025)
 const xaiPricing: PricingRegistry = {
-  "grok-3": { promptCostPer1M: 3.0, completionCostPer1M: 15.0 },
-  "grok-4": { promptCostPer1M: 5.0, completionCostPer1M: 25.0 },
+  "grok-3": { promptCostPer1M: 3, completionCostPer1M: 15 },
+  "grok-4": { promptCostPer1M: 5, completionCostPer1M: 25 },
 };
 
 // Cerebras pricing (January 2025) - Ultra fast inference
@@ -241,8 +241,8 @@ const openrouterPricing: PricingRegistry = {
 
 // Default fallback pricing for unknown models
 const defaultPricing: ModelPricing = {
-  promptCostPer1M: 1.0,
-  completionCostPer1M: 3.0,
+  promptCostPer1M: 1,
+  completionCostPer1M: 3,
 };
 
 /**
@@ -250,24 +250,33 @@ const defaultPricing: ModelPricing = {
  */
 function getRegistryForProvider(provider: ModelProvider): PricingRegistry {
   switch (provider) {
-    case "openai":
+    case "openai": {
       return openaiPricing;
-    case "anthropic":
+    }
+    case "anthropic": {
       return anthropicPricing;
-    case "google":
+    }
+    case "google": {
       return googlePricing;
-    case "deepseek":
+    }
+    case "deepseek": {
       return deepseekPricing;
-    case "mistral":
+    }
+    case "mistral": {
       return mistralPricing;
-    case "xai":
+    }
+    case "xai": {
       return xaiPricing;
-    case "cerebras":
+    }
+    case "cerebras": {
       return cerebrasPricing;
-    case "openrouter":
+    }
+    case "openrouter": {
       return openrouterPricing;
-    default:
+    }
+    default: {
       return {};
+    }
   }
 }
 

@@ -1,0 +1,26 @@
+{
+  "name": "@alfred/hookpipe",
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsgo -b --pretty false",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
+  },
+  "dependencies": {
+    "@alfred/hooks": "workspace:*",
+    "@alfred/pipeline": "workspace:*",
+    "@alfred/type": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}

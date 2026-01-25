@@ -48,7 +48,7 @@ const searchInputSchema = z.object({
 
 type SearchInput = z.infer<typeof searchInputSchema>;
 
-type MemorySearchResult = {
+interface MemorySearchResult {
   id: string;
   label: string;
   kind: string;
@@ -58,7 +58,7 @@ type MemorySearchResult = {
   accessCount: number;
   createdAt: string | null;
   updatedAt: string | null;
-};
+}
 
 export const toolMemorySearch = {
   name: "memory_search",

@@ -5,10 +5,10 @@
 
 import type { ExtractionResult } from "./types.js";
 
-type CacheEntry = {
+interface CacheEntry {
   result: ExtractionResult;
   expires: number;
-};
+}
 
 /**
  * Simple LRU cache with TTL support.
@@ -27,7 +27,7 @@ class ExtractionCache {
     let hash = 0;
     const normalized = text.trim().toLowerCase();
     for (let i = 0; i < normalized.length; i++) {
-      const char = normalized.charCodeAt(i);
+      const char = normalized.codePointAt(i) ?? 0;
       hash = (hash << 5) - hash + char;
       hash &= hash; // Convert to 32-bit integer
     }

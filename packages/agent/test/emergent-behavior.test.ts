@@ -256,10 +256,10 @@ describe("Emergent Behavior & Entity Linking", () => {
 
 function buildDeterministicVector(label: string): number[] {
   const base =
-    label
-      .toLowerCase()
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0) % 97;
+    [...label.toLowerCase()].reduce(
+      (acc, char) => acc + char.codePointAt(0),
+      0
+    ) % 97;
   return Array.from({ length: 8 }, (_, idx) => ((base + idx * 13) % 101) / 100);
 }
 
@@ -284,5 +284,5 @@ function lookupFixtureEntry(label: string | undefined) {
 }
 
 function normalizeLabel(label: string): string {
-  return label.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return label.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
 }

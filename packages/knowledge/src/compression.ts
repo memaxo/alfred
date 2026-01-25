@@ -20,13 +20,13 @@ const updateConfidence = <T extends ConfidentKnowledge>(
   confidence: clamp(value) as typeof node.confidence,
 });
 
-export type CompressionConfig = {
+export interface CompressionConfig {
   confidenceDecayHalfLife: number;
   minConfidenceThreshold: number;
   maxAgeThreshold: number;
   patternMinSupport: number;
   patternMinConfidence: number;
-};
+}
 
 export const DEFAULT_COMPRESSION_CONFIG: CompressionConfig = {
   confidenceDecayHalfLife: 7 * 24 * 60 * 60 * 1000,
@@ -123,11 +123,11 @@ export function getAccessMultiplier(accessCount: number): number {
 }
 
 export function consolidatePatterns(
-  facts: Array<{ id: NodeId; data: Knowledge }>,
+  facts: { id: NodeId; data: Knowledge }[],
   minSupport: number,
   minConfidence: number
 ): Knowledge[] {
-  const groups = new Map<string, Array<{ id: NodeId; data: Knowledge }>>();
+  const groups = new Map<string, { id: NodeId; data: Knowledge }[]>();
 
   for (const entry of facts) {
     if (entry.data._ !== "fact") {
@@ -169,7 +169,7 @@ export function consolidatePatterns(
 }
 
 export function identifyPrunableNodes(
-  nodes: Array<{ id: NodeId; data: Knowledge; createdMs: number }>,
+  nodes: { id: NodeId; data: Knowledge; createdMs: number }[],
   config: CompressionConfig,
   currentTimeMs: number
 ): NodeId[] {
@@ -206,23 +206,23 @@ export function identifyPrunableNodes(
 }
 
 export function compressTransitiveRelations(
-  relations: Array<{
+  relations: {
     id: NodeId;
     from: NodeId;
     to: NodeId;
     kind: string;
     weight: number;
-  }>
-): Array<{
+  }[]
+): {
   from: NodeId;
   to: NodeId;
   via: NodeId[];
   kind: string;
   weight: number;
-}> {
+}[] {
   const adjacency = new Map<
     NodeId,
-    Array<{ to: NodeId; kind: string; weight: number; id: NodeId }>
+    { to: NodeId; kind: string; weight: number; id: NodeId }[]
   >();
 
   for (const relation of relations) {
@@ -237,13 +237,13 @@ export function compressTransitiveRelations(
     });
   }
 
-  const compressed: Array<{
+  const compressed: {
     from: NodeId;
     to: NodeId;
     via: NodeId[];
     kind: string;
     weight: number;
-  }> = [];
+  }[] = [];
 
   for (const [from, edges] of adjacency.entries()) {
     for (const first of edges) {
@@ -272,7 +272,7 @@ export function compressTransitiveRelations(
 }
 
 export function promoteToInsights(
-  accessLog: Array<{ nodeId: NodeId; timestamp: number }>,
+  accessLog: { nodeId: NodeId; timestamp: number }[],
   nodes: Map<NodeId, Knowledge>,
   minAccess: number,
   windowMs: number,

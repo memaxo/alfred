@@ -4,15 +4,15 @@ import { expect, it } from "bun:test";
 
 import { runQuery } from "../src/query";
 
-type NodeSeed = {
+interface NodeSeed {
   resource: string;
   hash: string;
   kind: string;
   label: string;
   properties?: unknown;
-};
+}
 
-type EdgeSeed = {
+interface EdgeSeed {
   resource: string;
   hash: string;
   fromId: string;
@@ -20,7 +20,7 @@ type EdgeSeed = {
   kind: string;
   weight?: number;
   metadata?: unknown;
-};
+}
 
 describeSqlite("graph.runQuery traverse with sqlite driver", () => {
   it("returns neighbor node for a simple sqlite-backed graph", async () => {

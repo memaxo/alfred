@@ -118,7 +118,7 @@ export async function executeQuery(
   const chunks: Chunk[] = await retrieve(query, k, threshold);
 
   // Filter by source if specified
-  const source = input.source;
+  const { source } = input;
   const filteredChunks = source
     ? chunks.filter((chunk) => {
         const metadata = chunk.metadata as Record<string, unknown> | undefined;

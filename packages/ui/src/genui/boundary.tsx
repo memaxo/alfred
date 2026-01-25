@@ -11,7 +11,7 @@ import type { ErrorInfo, ReactNode } from "react";
 
 import { Component } from "react";
 
-type GenUIErrorBoundaryProps = {
+interface GenUIErrorBoundaryProps {
   /** The child content to render */
   children: ReactNode;
   /** The schema being rendered (for error reporting) */
@@ -20,12 +20,12 @@ type GenUIErrorBoundaryProps = {
   fallback?: ReactNode;
   /** Called when an error is caught */
   onError?: (error: Error, errorInfo: ErrorInfo, schema?: UIComponent) => void;
-};
+}
 
-type GenUIErrorBoundaryState = {
+interface GenUIErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-};
+}
 
 /**
  * Default fallback component shown when rendering fails.

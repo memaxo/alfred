@@ -5,7 +5,7 @@
 
 import parseDiff from "parse-diff";
 
-import { type HunkChange, type ParsedFile, type ParsedHunk } from "./types.js";
+import type { HunkChange, ParsedFile, ParsedHunk } from "./types.js";
 
 /**
  * Parse a unified diff string into structured file and hunk data

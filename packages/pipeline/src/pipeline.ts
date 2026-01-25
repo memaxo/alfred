@@ -26,14 +26,14 @@ export const STAGE_ORDER: readonly StageName[] = [
 ] as const;
 
 // Pipeline stage interface (generic over input/output types)
-export type PipelineStage<TInput, TOutput> = {
+export interface PipelineStage<TInput, TOutput> {
   readonly name: StageName;
   execute(input: TInput, ctx: PipelineContext): Promise<TOutput>;
   rollback?(output: TOutput, ctx: PipelineContext): Promise<void>;
-};
+}
 
 // Context available to all stages
-export type PipelineContext = {
+export interface PipelineContext {
   readonly runId: string;
   readonly requirement: string;
   readonly workspace: string;
@@ -43,52 +43,52 @@ export type PipelineContext = {
   emit(event: PipelineEvent): void;
   get<T>(key: string): T | undefined;
   set(key: string, value: unknown): void;
-};
+}
 
 /**
  * Agent retry configuration.
  */
-export type RetryConfig = {
+export interface RetryConfig {
   /** Maximum attempts per agent (default: 1 = no retries) */
   maxAgentAttempts?: number;
   /** Statuses that trigger retry */
-  retryableStatuses?: Array<"failure" | "stuck" | "timeout">;
+  retryableStatuses?: ("failure" | "stuck" | "timeout")[];
   /** Base backoff in milliseconds (default: 1000) */
   backoffMs?: number;
-};
+}
 
 /**
  * Wave abort configuration.
  */
-export type WaveAbortConfig = {
+export interface WaveAbortConfig {
   /** Failure rate threshold per wave (default: 0.5) */
   waveFailureThreshold?: number;
   /** Overall failure rate threshold (default: 0.3) */
   overallFailureThreshold?: number;
-};
+}
 
 /**
  * Context caching configuration.
  */
-export type ContextCachingConfig = {
+export interface ContextCachingConfig {
   /** Enable context caching */
   enabled?: boolean;
   /** Cache TTL in milliseconds (default: 300000 = 5 min) */
   ttlMs?: number;
-};
+}
 
 /**
  * Review fixer configuration.
  */
-export type ReviewFixerConfig = {
+export interface ReviewFixerConfig {
   /** Enable automatic fix attempts on review failure */
   enabled?: boolean;
   /** Maximum fix attempts (default: 3) */
   maxAttempts?: number;
-};
+}
 
 // Configuration for pipeline execution
-export type PipelineConfig = {
+export interface PipelineConfig {
   /** Max parallel agents per wave (1 for sequential) */
   maxParallel: number;
   /** Max agent attempts (deprecated, use retries.maxAgentAttempts) */
@@ -115,7 +115,7 @@ export type PipelineConfig = {
   contextCaching?: ContextCachingConfig;
   /** Review fixer configuration */
   reviewFixer?: ReviewFixerConfig;
-};
+}
 
 // Default configuration
 export const DEFAULT_CONFIG: PipelineConfig = {

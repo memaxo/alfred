@@ -33,8 +33,8 @@ export const clampConfidence = (value: number): number =>
 
 export const cleanText = (value: string): string =>
   value
-    .replace(/\s+/g, " ")
-    .replace(/[^\w\s'-]/g, "")
+    .replaceAll(/\s+/g, " ")
+    .replaceAll(/[^\w\s'-]/g, "")
     .trim();
 
 export const canonicalize = (value: string): string =>
@@ -114,7 +114,7 @@ const pickEntityKind = (
   if (ORG_KEYWORDS.some((kw) => lower.includes(kw))) {
     return "organization";
   }
-  const condensed = label.replace(/[^A-Za-z]/g, "");
+  const condensed = label.replaceAll(/[^A-Za-z]/g, "");
   if (/[A-Z]{2,}/.test(condensed) || /[A-Z][a-z]+[A-Z]/.test(label)) {
     return "organization";
   }
@@ -224,7 +224,7 @@ export const extractCodeEntities = (text: string): Entity[] => {
   // Extract potential code terms (single words that match languages/frameworks/tools)
   const words = text.split(/\s+/).filter((w) => w.length > 2);
   for (const word of words) {
-    const normalized = word.toLowerCase().replace(/[^\w-]/g, "");
+    const normalized = word.toLowerCase().replaceAll(/[^\w-]/g, "");
     if (seen.has(normalized)) {
       continue;
     }
@@ -330,7 +330,7 @@ export const extractEntities = (text: string): Entity[] => {
   // Add code entities
   const codeEntities = extractCodeEntities(text);
   for (const codeEntity of codeEntities) {
-    const canonical = codeEntity.canonical;
+    const { canonical } = codeEntity;
     const existing = entityMap.get(canonical);
     if (!existing) {
       entityMap.set(canonical, codeEntity);
@@ -343,7 +343,7 @@ export const extractEntities = (text: string): Entity[] => {
     }
   }
 
-  const entities = Array.from(entityMap.values());
+  const entities = [...entityMap.values()];
   entities.forEach((entity) =>
     entity.mentions.sort(
       (a: EntityMention, b: EntityMention) =>

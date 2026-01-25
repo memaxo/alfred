@@ -6,9 +6,9 @@ import {
 import { installLoggerMock } from "@alfred/test-kit/logger";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
-import {
-  type VoiceControlInput,
-  type VoiceStatusInput,
+import type {
+  VoiceControlInput,
+  VoiceStatusInput,
 } from "../assistant/src/tool/voice";
 
 // Install shared mocks

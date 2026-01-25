@@ -249,7 +249,7 @@ export const graphRouter = router({
         let timeout: ReturnType<typeof setTimeout> | null = null;
         let stopped = false;
         let lastIds = new Set<string>();
-        const uniqueIds = Array.from(new Set(input.nodeIds));
+        const uniqueIds = [...new Set(input.nodeIds)];
         const resource = input.resource ?? "user";
 
         const buildWhere = () => {
@@ -310,7 +310,7 @@ export const graphRouter = router({
     .input(unifiedQuerySchema)
     .query(async ({ input }) => {
       const resource = input.resource ?? "user";
-      const kind = input.kind;
+      const { kind } = input;
       let graphInstance: import("@alfred/knowledge").Hypergraph | undefined;
       let stopTimer: (() => void) | null = null;
 
@@ -360,10 +360,10 @@ export const graphRouter = router({
 
           if (nodeIds.length > 0) {
             // Use a microtask or immediate to detach from current stack
-            void touchNodes(nodeIds).catch((err: unknown) => {
+            void touchNodes(nodeIds).catch((error: unknown) => {
               logger.warn("graph_active_recall_failed", {
                 nodeCount: nodeIds.length,
-                error: err instanceof Error ? err.message : String(err),
+                error: error instanceof Error ? error.message : String(error),
               });
             });
           }
@@ -579,14 +579,18 @@ function mapNodeKindToContextType(
   switch (kind) {
     case "document":
     case "file":
-    case "note":
+    case "note": {
       return "document";
+    }
     case "url":
-    case "link":
+    case "link": {
       return "url";
-    case "fact":
+    }
+    case "fact": {
       return "fact";
-    default:
+    }
+    default: {
       return "knowledge";
+    }
   }
 }

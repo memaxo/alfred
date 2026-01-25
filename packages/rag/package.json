@@ -10,9 +10,10 @@
     }
   },
   "scripts": {
-    "build": "tsgo -b --emitDeclarationOnly",
+    "build": "tsgo -b --clean && tsgo -b --emitDeclarationOnly",
     "dev": "tsgo -b --watch",
-    "lint": "biome check .",
+    "lint": "oxlint -c ../../.oxlintrc.json .",
+    "lint:fix": "oxlint -c ../../.oxlintrc.json --fix .",
     "check-types": "tsgo --noEmit",
     "typecheck": "tsgo -b --emitDeclarationOnly --pretty false"
   },

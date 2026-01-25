@@ -4,7 +4,7 @@ export type ObligationKind =
   | "confirmation"
   | (string & {});
 
-export type Obligation = {
+export interface Obligation {
   /**
    * Category of follow-up action the user or system must satisfy (e.g. biometric, MFA).
    */
@@ -17,7 +17,7 @@ export type Obligation = {
    * Optional, structured metadata that provides additional context (e.g. rule ids, scopes).
    */
   metadata?: Record<string, unknown> | null;
-};
+}
 
 export type ObligationResumeEvent = "bio-authz" | "mfa-authz" | "human-authz";
 
@@ -60,5 +60,5 @@ export function resolveObligationResumeEvents(
   if (events.size === 0) {
     events.add("human-authz");
   }
-  return Array.from(events);
+  return [...events];
 }

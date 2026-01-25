@@ -138,7 +138,7 @@ function createSqliteDrizzle(connectionString: string) {
     const normalized =
       typeof source === "string"
         ? source
-            .replaceAll(/gen_random_uuid\(\)/g, "lower(hex(randomblob(16)))")
+            .replaceAll("gen_random_uuid()", "lower(hex(randomblob(16)))")
             .replaceAll(/\bnow\(\)/gi, "CURRENT_TIMESTAMP")
         : source;
     // oxlint-disable noExplicitAny: Internal Bun-SQLite binding

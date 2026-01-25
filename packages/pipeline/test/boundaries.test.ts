@@ -28,7 +28,7 @@ const CORE_FILES = [
 ];
 
 function readFile(filePath: string): string {
-  return fs.readFileSync(filePath, "utf-8");
+  return fs.readFileSync(filePath, "utf8");
 }
 
 function findImportsInFile(content: string): string[] {

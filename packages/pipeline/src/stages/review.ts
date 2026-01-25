@@ -1,14 +1,12 @@
+import type { WorkflowEvent } from "@alfred/type";
+
 import { logger } from "@alfred/logger";
-import { type WorkflowEvent } from "@alfred/type";
+
+import type { PipelineContext, PipelineStage } from "../pipeline";
+import type { SerializableValue } from "../snapshot";
+import type { ExecuteOutput, ReviewCheck, ReviewOutput } from "./types";
 
 import { createEvent } from "../events";
-import { type PipelineContext, type PipelineStage } from "../pipeline";
-import { type SerializableValue } from "../snapshot";
-import {
-  type ExecuteOutput,
-  type ReviewCheck,
-  type ReviewOutput,
-} from "./types";
 
 /**
  * Review Stage

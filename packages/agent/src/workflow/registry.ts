@@ -11,7 +11,7 @@ import {
   runRegistryEventsTotal,
 } from "./metrics";
 
-export type ResumePayload = {
+export interface ResumePayload {
   event:
     | "deploy-authz"
     | "linear-authz"
@@ -19,9 +19,9 @@ export type ResumePayload = {
     | "mfa-authz"
     | "human-authz";
   authz: string;
-};
+}
 
-export type RunHandle = {
+export interface RunHandle {
   resume(args: {
     resumeData: unknown;
     runtimeContext?: RuntimeContext;
@@ -29,14 +29,15 @@ export type RunHandle = {
   suspend?(): Promise<unknown>;
   cancel(): Promise<unknown>;
   abortController: AbortController;
-};
+}
 
-export type RunRegistry = {
+export interface RunRegistry {
   register(runId: string, handle: RunHandle): Promise<void> | void;
   unregister(runId: string): Promise<void> | void;
   dispatchResume(runId: string, payload: unknown): Promise<boolean>;
   dispatchSuspend(runId: string): Promise<boolean>;
-};
+  dispatchCancel(runId: string): Promise<boolean>;
+}
 
 type RegistryEvent = "register" | "unregister" | "dispatch" | "deliver";
 type RegistryOutcome = "ok" | "error" | "miss" | "local" | "delivered";
@@ -167,6 +168,15 @@ export class MemoryRunRegistry implements RunRegistry {
       return true;
     }
     return false;
+  }
+
+  async dispatchCancel(runId: string): Promise<boolean> {
+    const handle = this.runs.get(runId);
+    if (!handle) {
+      return false;
+    }
+    await handle.cancel();
+    return true;
   }
 }
 
@@ -321,6 +331,27 @@ export class RedisRunRegistry implements RunRegistry {
     return ack === "ok";
   }
 
+  async dispatchCancel(runId: string): Promise<boolean> {
+    await this.ensureReady();
+    const localHandle = this.runs.get(runId);
+    if (localHandle) {
+      await localHandle.cancel();
+      return true;
+    }
+
+    const owner = await this.cmd.get(KEY_OWNER(runId));
+    if (!owner || owner === this.instanceId) {
+      return false;
+    }
+
+    const corrId = randomUUID();
+    const message = JSON.stringify({ type: "cancel", runId, corrId });
+    await this.cmd.publish(CH_INST(owner), message);
+
+    const ack = await this.awaitAck(corrId);
+    return ack === "ok";
+  }
+
   private async initialize(): Promise<void> {
     try {
       await this.cmd.connect();
@@ -402,7 +433,7 @@ export class RedisRunRegistry implements RunRegistry {
       });
       return;
     }
-    const expirations = Array.from(this.runs.keys()).map((runId) =>
+    const expirations = [...this.runs.keys()].map((runId) =>
       this.cmd.expire(KEY_OWNER(runId), this.ownerTtlSec).catch((error) => {
         logger.warn("redis_expire_failed", {
           runId,
@@ -432,7 +463,7 @@ export class RedisRunRegistry implements RunRegistry {
 
   private async handleMessage(raw: string) {
     let parsed: {
-      type?: "resume" | "suspend";
+      type?: "resume" | "suspend" | "cancel";
       runId?: string;
       payload?: unknown;
       corrId?: string;
@@ -475,6 +506,8 @@ export class RedisRunRegistry implements RunRegistry {
         } else {
           ackValue = "error";
         }
+      } else if (type === "cancel") {
+        await handle.cancel();
       } else {
         const resumePromise = handle.resume({ resumeData: payload });
         recordEvent("deliver", this.backend, "ok");

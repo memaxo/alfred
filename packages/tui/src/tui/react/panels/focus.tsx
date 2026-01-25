@@ -12,19 +12,19 @@ import { colors } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
 import { useFocusStore } from "../hooks/stores";
 
-type FocusPanelProps = {
+interface FocusPanelProps {
   width: number;
   height: number;
   focused: boolean;
   x?: number;
   y?: number;
-};
+}
 
-type FocusRow = {
+interface FocusRow {
   id: string;
   title: string;
   meta?: string;
-};
+}
 
 function toTitle(value: unknown): string {
   if (typeof value === "string" && value.trim().length > 0) {
@@ -77,9 +77,9 @@ export function FocusPanel({ width, height, focused, x, y }: FocusPanelProps) {
           const lane =
             c.lane === "spotlight"
               ? fg(colors.primary)("S")
-              : c.lane === "maintenance"
+              : (c.lane === "maintenance"
                 ? fg(colors.muted)("M")
-                : dim("B");
+                : dim("B"));
           rows.push({
             id: c.id,
             title: `  ${lane} ${truncate(toTitle(c.title), width - 6)}`,

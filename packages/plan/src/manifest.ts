@@ -1,18 +1,18 @@
 // Inline manifest types to avoid tsconfig rootDir issues
-type HealthStatus = {
+interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   latencyMs?: number;
   details?: Record<string, unknown>;
-};
+}
 
-type CliManifest = {
+interface CliManifest {
   name: string;
   version: string;
   description: string;
   healthCheck?: () => Promise<HealthStatus>;
   dependencies?: string[];
-};
+}
 
 export const manifest: CliManifest = {
   name: "@alfred/plan",

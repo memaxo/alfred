@@ -179,7 +179,7 @@ export async function getNeighbors(
     kind?: string;
     limit?: number;
   }
-): Promise<Array<{ edge: EdgeRow; otherNodeId: string }>> {
+): Promise<{ edge: EdgeRow; otherNodeId: string }[]> {
   const direction = options?.direction ?? "both";
   const kind = options?.kind;
   const resource = options?.resource;
@@ -217,7 +217,7 @@ export async function getNeighbors(
   }
 
   const seen = new Set<string>();
-  const results: Array<{ edge: EdgeRow; otherNodeId: string }> = [];
+  const results: { edge: EdgeRow; otherNodeId: string }[] = [];
   for (const edge of edges) {
     if (seen.has(edge.id)) {
       continue;
@@ -330,11 +330,11 @@ export async function findNodesByConfidence(
 /**
  * Domain association result type
  */
-export type DomainAssociation = {
+export interface DomainAssociation {
   domain: string;
   confidence: number;
   source: "learned" | "seed";
-};
+}
 
 /**
  * Find domain associations for text using FTS and keyword matching.
@@ -379,11 +379,11 @@ export async function findDomainAssociations(
   `;
 
   const result = await db.execute(ftsQuery);
-  const rows = (result.rows ?? []) as Array<{
+  const rows = (result.rows ?? []) as {
     label: string;
     properties: Record<string, unknown> | null;
     rankScore: number | string | null;
-  }>;
+  }[];
 
   const associations: DomainAssociation[] = [];
   const seenDomains = new Set<string>();

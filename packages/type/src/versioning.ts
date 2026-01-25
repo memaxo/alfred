@@ -1,4 +1,4 @@
-import { type EventEnvelope } from "./envelope";
+import type { EventEnvelope } from "./envelope";
 
 /**
  * A migration function transforms an event from version V to V+1.

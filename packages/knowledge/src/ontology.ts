@@ -60,19 +60,19 @@ export const ANCHORS = {
   News: "concept:news",
 } as const;
 
-export type RiskAnchor = {
+export interface RiskAnchor {
   label: string;
   id: string;
   level: "low" | "medium" | "high";
   description: string;
-};
+}
 
-export type PatternAnchor = {
+export interface PatternAnchor {
   label: string;
   id: string;
   pattern: "causal" | "decision" | "alternative";
   description: string;
-};
+}
 
 export const RISK_ANCHORS: RiskAnchor[] = [
   {
@@ -248,26 +248,26 @@ export function getOntologyKnowledge(): { hash: string; data: Knowledge }[] {
  * Get ontology knowledge with explicit source type tracking
  * Returns additional metadata for each knowledge item
  */
-export function getOntologyKnowledgeWithMetadata(): Array<{
+export function getOntologyKnowledgeWithMetadata(): {
   hash: string;
   data: Knowledge;
   sourceType: KnowledgeSourceType;
   confidence: number;
-}> {
-  const list: Array<{
+}[] {
+  const list: {
     hash: string;
     data: Knowledge;
     sourceType: KnowledgeSourceType;
     confidence: number;
-  }> = [];
+  }[] = [];
 
   // 1. Create Anchor Nodes
   for (const anchor of ALL_ANCHORS) {
     const sourceType: KnowledgeSourceType = anchor.label.startsWith("Concept:")
       ? "official"
-      : anchor.label.startsWith("Pattern:")
+      : (anchor.label.startsWith("Pattern:")
         ? "inferred"
-        : "established";
+        : "established");
     const confidence = getSeedConfidence(sourceType);
     const k = fact(anchor.label, confidence, "ontology");
     list.push({ hash: knowledgeHash(k), data: k, sourceType, confidence });

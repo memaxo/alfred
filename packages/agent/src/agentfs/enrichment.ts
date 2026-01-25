@@ -9,10 +9,40 @@ import {
   type FailureContext,
   type RetryResolution,
   type StructuredHandoff,
+  enrichCaps,
+  failureContextSchema,
+  retryResolutionSchema,
+  structuredHandoffSchema,
 } from "@alfred/type";
 
+import type { AgentFSInterface } from "./types.js";
+
+import { redactObject, redactSecrets } from "../utils/redaction.js";
 import { AGENTFS_KV_KEYS, FAILURE_PREFIX, RETRY_PREFIX } from "./keys.js";
-import { type AgentFSInterface } from "./types.js";
+
+function capText(text: string, max: number): string {
+  if (text.length <= max) {
+    return text;
+  }
+  return `${text.slice(0, max)}…<truncated>`;
+}
+
+function capParams(params: unknown): unknown {
+  const redacted = redactObject(params);
+  try {
+    const raw = JSON.stringify(redacted);
+    if (raw.length <= enrichCaps.errParam) {
+      return redacted;
+    }
+    return capText(raw, enrichCaps.errParam);
+  } catch {
+    return undefined;
+  }
+}
+
+function isEnrichmentEnabled(): boolean {
+  return process.env.ALFRED_ENRICHMENT === "1";
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FailureContext
@@ -22,23 +52,42 @@ export async function persistFailureContext(
   agent: AgentFSInterface,
   ctx: FailureContext
 ): Promise<void> {
-  await agent.kv.set(AGENTFS_KV_KEYS.failureContext(ctx.taskId), ctx);
+  if (!isEnrichmentEnabled()) {
+    return;
+  }
+  await agent.kv.set(
+    AGENTFS_KV_KEYS.failureContext(ctx.taskId),
+    failureContextSchema.parse(ctx)
+  );
 }
 
 export async function getFailureContext(
   agent: AgentFSInterface,
   taskId: string
 ): Promise<FailureContext | undefined> {
-  return agent.kv.get<FailureContext>(AGENTFS_KV_KEYS.failureContext(taskId));
+  if (!isEnrichmentEnabled()) {
+    return undefined;
+  }
+  const raw = await agent.kv.get<unknown>(
+    AGENTFS_KV_KEYS.failureContext(taskId)
+  );
+  const parsed = failureContextSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export async function listFailureContexts(
   agent: AgentFSInterface
 ): Promise<FailureContext[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const entries = await agent.kv.list(FAILURE_PREFIX);
   return entries
-    .map((e) => e.value as FailureContext)
-    .filter((ctx) => ctx && ctx.taskId);
+    .map((e) => {
+      const parsed = failureContextSchema.safeParse(e.value);
+      return parsed.success ? parsed.data : null;
+    })
+    .filter((ctx): ctx is FailureContext => Boolean(ctx && ctx.taskId));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,14 +99,25 @@ export async function persistStructuredHandoff(
   waveId: string,
   handoff: StructuredHandoff
 ): Promise<void> {
-  await agent.kv.set(AGENTFS_KV_KEYS.handoff(waveId), handoff);
+  if (!isEnrichmentEnabled()) {
+    return;
+  }
+  await agent.kv.set(
+    AGENTFS_KV_KEYS.handoff(waveId),
+    structuredHandoffSchema.parse(handoff)
+  );
 }
 
 export async function getStructuredHandoff(
   agent: AgentFSInterface,
   waveId: string
 ): Promise<StructuredHandoff | undefined> {
-  return agent.kv.get<StructuredHandoff>(AGENTFS_KV_KEYS.handoff(waveId));
+  if (!isEnrichmentEnabled()) {
+    return undefined;
+  }
+  const raw = await agent.kv.get<unknown>(AGENTFS_KV_KEYS.handoff(waveId));
+  const parsed = structuredHandoffSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,32 +128,47 @@ export async function persistRetryResolution(
   agent: AgentFSInterface,
   resolution: RetryResolution
 ): Promise<void> {
+  if (!isEnrichmentEnabled()) {
+    return;
+  }
   const key = AGENTFS_KV_KEYS.retryResolution(
     resolution.taskId,
     resolution.attempt
   );
-  await agent.kv.set(key, resolution);
+  await agent.kv.set(key, retryResolutionSchema.parse(resolution));
 }
 
 export async function getRetryResolutions(
   agent: AgentFSInterface,
   taskId: string
 ): Promise<RetryResolution[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const entries = await agent.kv.list(`${RETRY_PREFIX}${taskId}:`);
   return entries
-    .map((e) => e.value as RetryResolution)
-    .filter((r) => r && r.taskId)
-    .toSorted((a, b) => a.attempt - b.attempt);
+    .map((e) => {
+      const parsed = retryResolutionSchema.safeParse(e.value);
+      return parsed.success ? parsed.data : null;
+    })
+    .filter((r): r is RetryResolution => Boolean(r && r.taskId))
+    .sort((a, b) => a.attempt - b.attempt);
 }
 
 export async function listAllRetryResolutions(
   agent: AgentFSInterface
 ): Promise<RetryResolution[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const entries = await agent.kv.list(RETRY_PREFIX);
   return entries
-    .map((e) => e.value as RetryResolution)
-    .filter((r) => r && r.taskId)
-    .toSorted((a, b) => b.ts - a.ts);
+    .map((e) => {
+      const parsed = retryResolutionSchema.safeParse(e.value);
+      return parsed.success ? parsed.data : null;
+    })
+    .filter((r): r is RetryResolution => Boolean(r && r.taskId))
+    .sort((a, b) => b.ts - a.ts);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,6 +187,9 @@ export async function persistDecision(
   taskId: string,
   decision: Decision
 ): Promise<void> {
+  if (!isEnrichmentEnabled()) {
+    return;
+  }
   const existing = await getDecisions(agent, taskId);
   existing.push(decision);
   await agent.kv.set(AGENTFS_KV_KEYS.decisions(taskId), existing);
@@ -121,6 +199,9 @@ export async function getDecisions(
   agent: AgentFSInterface,
   taskId: string
 ): Promise<Decision[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const decisions = await agent.kv.get<Decision[]>(
     AGENTFS_KV_KEYS.decisions(taskId)
   );
@@ -142,6 +223,9 @@ export async function persistTaskLearning(
   taskId: string,
   learning: TaskLearning
 ): Promise<void> {
+  if (!isEnrichmentEnabled()) {
+    return;
+  }
   const existing = await getTaskLearnings(agent, taskId);
   existing.push(learning);
   await agent.kv.set(AGENTFS_KV_KEYS.taskLearnings(taskId), existing);
@@ -151,6 +235,9 @@ export async function getTaskLearnings(
   agent: AgentFSInterface,
   taskId: string
 ): Promise<TaskLearning[]> {
+  if (!isEnrichmentEnabled()) {
+    return [];
+  }
   const learnings = await agent.kv.get<TaskLearning[]>(
     AGENTFS_KV_KEYS.taskLearnings(taskId)
   );
@@ -197,26 +284,29 @@ export async function buildFailureContext(
     if (call.error) {
       const existing = toolErrors.find((e) => e.tool === call.name);
       if (existing) {
-        existing.error = call.error;
+        existing.error = capText(redactSecrets(call.error), enrichCaps.errMsg);
         existing.lastOccurrence = call.completed_at * 1000;
         if (call.parameters) {
-          existing.parameters = call.parameters;
+          existing.parameters = capParams(call.parameters);
         }
       }
     }
   }
 
+  const ts = Date.now();
   return {
+    createdAt: ts,
     durationMs: input?.durationMs ?? 0,
     escalations: input?.escalations ?? [],
     loopDetections: input?.loopDetections ?? [],
     reviewFailures: input?.reviewFailures ?? [],
     runId,
+    schemaVersion: 1,
     status,
     stuckReason: input?.stuckReason,
     taskId,
     toolErrors,
-    ts: Date.now(),
+    ts,
   };
 }
 
@@ -267,7 +357,7 @@ export async function getCommonErrorPatterns(
   }
 
   return [...errorCounts.values()]
-    .toSorted((a, b) => b.count - a.count)
+    .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 }
 
@@ -299,14 +389,17 @@ export async function createRetryResolution(
   agent: AgentFSInterface,
   input: RetryResolutionInput
 ): Promise<RetryResolution> {
+  const ts = Date.now();
   const resolution: RetryResolution = {
     attempt: input.attempt,
-    delta: input.delta,
+    createdAt: ts,
+    delta: capText(redactSecrets(input.delta), enrichCaps.delta),
     failureContext: input.failureContext,
     runId: input.runId,
+    schemaVersion: 1,
     successContext: input.successContext,
     taskId: input.taskId,
-    ts: Date.now(),
+    ts,
   };
 
   await persistRetryResolution(agent, resolution);
@@ -373,7 +466,7 @@ export async function getRetryPatternSummary(agent: AgentFSInterface): Promise<{
 
   const commonFixes = [...fixCounts.entries()]
     .map(([pattern, count]) => ({ count, pattern }))
-    .toSorted((a, b) => b.count - a.count)
+    .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
   return {

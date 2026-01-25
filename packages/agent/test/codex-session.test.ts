@@ -11,7 +11,7 @@ import {
 
 import type { CodexSessionState } from "../src/orchestrator/codex-session";
 
-type RepoRecord = {
+interface RepoRecord {
   sessionId: string;
   userId: string;
   threadId: string;
@@ -21,7 +21,7 @@ type RepoRecord = {
   createdAt: Date;
   lastAccessedAt: Date;
   expiresAt: Date;
-};
+}
 
 const repoStore = new Map<string, RepoRecord>();
 
@@ -95,7 +95,7 @@ const updateSessionRepoMock = vi.fn(
 
 const deleteSessionRepoMock = vi.fn((sessionId: string) => {
   repoStore.delete(sessionId);
-  return Promise.resolve(undefined);
+  return Promise.resolve();
 });
 
 const cleanupExpiredSessionsRepoMock = vi.fn(() => {
@@ -136,7 +136,7 @@ let assessSessionResumeEligibility:
 beforeAll(async () => {
   const mod = await import("../src/orchestrator/codex-session");
   CodexSessionManagerClass = mod.CodexSessionManager;
-  assessSessionResumeEligibility = mod.assessSessionResumeEligibility;
+  ({ assessSessionResumeEligibility } = mod);
   sessionManager = new CodexSessionManagerClass();
 });
 

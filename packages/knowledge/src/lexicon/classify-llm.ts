@@ -41,21 +41,21 @@ const domainClassificationSchema = z.object({
 /**
  * Options for LLM domain classification
  */
-export type ClassifyDomainLLMOptions = {
+export interface ClassifyDomainLLMOptions {
   /** Model to use for classification */
   model: LanguageModel;
   /** Model key for logging */
   modelKey?: string;
   /** Maximum text length to send (truncate if longer) */
   maxTextLength?: number;
-};
+}
 
 /**
  * Build the classification prompt for domain assignment.
  */
 function buildDomainPrompt(text: string, maxLength: number): string {
   const truncated =
-    text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+    text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 
   return `Classify the primary knowledge domain of this text.
 
@@ -138,14 +138,24 @@ export function isAmbiguousClassification(results: DomainResult[]): boolean {
     return true;
   }
 
+  const top = results[0];
+  if (!top) {
+    return true;
+  }
+
   // Top result has low confidence
-  if (results[0].confidence < 0.5) {
+  if (top.confidence < 0.5) {
     return true;
   }
 
   // Multiple results with similar confidence (no clear winner)
   if (results.length >= 2) {
-    const diff = results[0].confidence - results[1].confidence;
+    const second = results[1];
+    if (!second) {
+      return false;
+    }
+
+    const diff = top.confidence - second.confidence;
     if (diff < 0.2) {
       return true;
     }

@@ -1,11 +1,14 @@
 import type { AtifTrajectory } from "./atif";
 
-export type AtifValidationError = { path: string; message: string };
+export interface AtifValidationError {
+  path: string;
+  message: string;
+}
 
-export type AtifValidationResult = {
+export interface AtifValidationResult {
   ok: boolean;
   errors: AtifValidationError[];
-};
+}
 
 function isIsoTimestamp(v: string): boolean {
   const t = Date.parse(v);

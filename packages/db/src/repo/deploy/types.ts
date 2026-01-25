@@ -3,7 +3,7 @@ import type { deployments } from "../../schema/deploy";
 export type DeploymentInsert = typeof deployments.$inferInsert;
 export type DeploymentRecord = typeof deployments.$inferSelect;
 
-export type UpsertDeploymentInput = {
+export interface UpsertDeploymentInput {
   userId: string;
   projectId?: string | null;
   app: string;
@@ -20,4 +20,4 @@ export type UpsertDeploymentInput = {
   ports?: Array<{ host: number; container: number }> | null;
   healthUrl?: string | null;
   metadata?: unknown;
-};
+}

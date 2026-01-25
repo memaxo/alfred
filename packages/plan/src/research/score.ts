@@ -10,9 +10,9 @@ import { classify } from "../classify/index.js";
 import { detectFrameworkVersion } from "./filter.js";
 
 const DOMAIN_AUTHORITY: Record<string, number> = {
-  "react.dev": 1.0,
-  "nextjs.org": 1.0,
-  "tanstack.com": 1.0,
+  "react.dev": 1,
+  "nextjs.org": 1,
+  "tanstack.com": 1,
   "github.com": 0.9,
   "stackoverflow.com": 0.7,
   "medium.com": 0.5,
@@ -34,7 +34,7 @@ export function calculateReliability(params: {
 
   // 1. HTTPS requirement
   if (url.protocol !== "https:") {
-    return 0.0;
+    return 0;
   }
 
   // 2. Domain authority
@@ -56,7 +56,7 @@ export function calculateReliability(params: {
       score *= 0.6; // Decay to 60%
     } else {
       // Linear decay between 1 and 3 years: 1.0 to 0.6
-      const factor = 1.0 - (ageInYears - 1) * 0.2;
+      const factor = 1 - (ageInYears - 1) * 0.2;
       score *= factor;
     }
   }
@@ -94,14 +94,14 @@ const relevanceSchema = z.object({
 /**
  * Options for relevance calculation
  */
-export type CalculateRelevanceOptions = {
+export interface CalculateRelevanceOptions {
   /** Model to use for semantic relevance (optional) */
   model?: LanguageModel;
   /** Model key for logging */
   modelKey?: string;
   /** Maximum text length to send (truncate if longer) */
   maxContentLength?: number;
-};
+}
 
 /**
  * Build the relevance scoring prompt.
@@ -114,7 +114,7 @@ function buildRelevancePrompt(
   const content = source.content ?? "";
   const truncatedContent =
     content.length > maxContentLength
-      ? `${content.substring(0, maxContentLength)}...`
+      ? `${content.slice(0, maxContentLength)}...`
       : content;
 
   return `Rate how relevant this source is to the user's intent (0.0-1.0).
@@ -162,7 +162,7 @@ function calculateRelevanceHeuristic(
   }
 
   const maxPossible = terms.length * 3.5;
-  return Math.min(matches / maxPossible + 0.2, 1.0); // Bias slightly upwards
+  return Math.min(matches / maxPossible + 0.2, 1); // Bias slightly upwards
 }
 
 /**

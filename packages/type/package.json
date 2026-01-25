@@ -177,7 +177,8 @@
     "build": "tsgo -b",
     "check-types": "tsgo --noEmit",
     "dev": "tsgo -b -w",
-    "lint": "biome check .",
+    "lint": "oxlint -c ../../.oxlintrc.json .",
+    "lint:fix": "oxlint -c ../../.oxlintrc.json --fix .",
     "typecheck": "tsgo -b"
   },
   "dependencies": {

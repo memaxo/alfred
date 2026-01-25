@@ -30,11 +30,11 @@ import {
   senseWorkingsets,
 } from "../schema/sense";
 
-export type InboxRow = {
+export interface InboxRow {
   capture: Capture;
   bundle: Bundle | null;
   receipt: Receipt | null;
-};
+}
 
 function toIso(value: Date): string {
   return value.toISOString();

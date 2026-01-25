@@ -9,16 +9,16 @@ import type { z } from "zod";
 
 // ─── Health Status ────────────────────────────────────────────────────────────
 
-export type HealthStatus = {
+export interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   latencyMs?: number;
   details?: Record<string, unknown>;
-};
+}
 
 // ─── Command Definition ───────────────────────────────────────────────────────
 
-export type CommandDef = {
+export interface CommandDef {
   /** Command name (e.g., "test-stt", "migrate") */
   name: string;
   /** Human-readable description */
@@ -33,11 +33,11 @@ export type CommandDef = {
   requiresAuth?: boolean;
   /** Whether command requires biometric elevation */
   requiresBiometric?: boolean;
-};
+}
 
 // ─── TUI Panel Definition ─────────────────────────────────────────────────────
 
-export type TuiPanelDef = {
+export interface TuiPanelDef {
   /** Unique panel identifier */
   id: string;
   /** Display name in TUI */
@@ -52,11 +52,11 @@ export type TuiPanelDef = {
   category?: "monitoring" | "admin" | "debug" | "data";
   /** Default visibility in dashboard */
   defaultVisible?: boolean;
-};
+}
 
 // ─── Shortcut Definition ──────────────────────────────────────────────────────
 
-export type ShortcutDef = {
+export interface ShortcutDef {
   /** Key combination (e.g., "Ctrl+Shift+V") */
   keys: string;
   /** Action description */
@@ -65,18 +65,18 @@ export type ShortcutDef = {
   handler: () => void | Promise<void>;
   /** Context where shortcut is active */
   context?: "global" | "panel" | "modal";
-};
+}
 
 // ─── Subscription Definition ──────────────────────────────────────────────────
 
-export type SubscriptionDef = {
+export interface SubscriptionDef {
   /** Subscription identifier */
   id: string;
   /** tRPC subscription path (e.g., "cognitive.state") */
   path: string;
   /** Description for documentation */
   description?: string;
-};
+}
 
 // ─── CLI Manifest ─────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export type SubscriptionDef = {
  * };
  * ```
  */
-export type CliManifest = {
+export interface CliManifest {
   /** Package name (e.g., "@alfred/voice") */
   name: string;
   /** Package version */
@@ -128,7 +128,7 @@ export type CliManifest = {
 
   /** Dependencies on other packages (for load order) */
   dependencies?: string[];
-};
+}
 
 // ─── Manifest Validation ──────────────────────────────────────────────────────
 
@@ -154,12 +154,12 @@ export function isValidManifest(obj: unknown): obj is CliManifest {
 /**
  * Minimal package info for discovery
  */
-export type PackageInfo = {
+export interface PackageInfo {
   name: string;
   version: string;
   path: string;
   hasManifest: boolean;
-};
+}
 
 /**
  * Registered package with resolved manifest

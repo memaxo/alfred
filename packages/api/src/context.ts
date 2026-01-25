@@ -13,7 +13,7 @@ type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
 const TEST_SESSION_HEADER = "x-alfred-test-session";
 
-export type RuntimeMetadata = {
+export interface RuntimeMetadata {
   /** Unique identifier for the incoming request */
   requestId: string;
   /** Timestamp when the backend received the request */
@@ -30,9 +30,9 @@ export type RuntimeMetadata = {
   userAgent: string | null;
   /** Referer/Referrer header */
   referer: string | null;
-};
+}
 
-export type Context = {
+export interface Context {
   session: AuthSession | null;
   runtime: RuntimeMetadata;
   runtimeContext: RuntimeContext;
@@ -41,7 +41,7 @@ export type Context = {
   };
   /** Injectable dependencies for testing */
   deps?: RouterDeps;
-};
+}
 
 function parseForwardedFor(headers: Headers) {
   const header = headers.get("x-forwarded-for");
@@ -124,7 +124,7 @@ function parseTestSession(headers: Headers): AuthSession | null {
       return null;
     }
     return parsed;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
@@ -134,7 +134,7 @@ export async function createContext({
 }: {
   req: Request;
 }): Promise<Context> {
-  const headers = req.headers;
+  const { headers } = req;
   const forwardedFor = parseForwardedFor(headers);
   const runtime: RuntimeMetadata = {
     requestId: resolveRequestId(headers),

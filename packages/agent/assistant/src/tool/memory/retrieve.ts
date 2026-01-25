@@ -34,15 +34,15 @@ const retrieveInputSchema = z.object({
 
 type RetrieveInput = z.infer<typeof retrieveInputSchema>;
 
-type NeighborInfo = {
+interface NeighborInfo {
   id: string;
   label: string;
   kind: string;
   edgeKind: string;
   direction: "outbound" | "inbound";
-};
+}
 
-type MemoryNode = {
+interface MemoryNode {
   id: string;
   label: string;
   kind: string;
@@ -53,7 +53,7 @@ type MemoryNode = {
   lastAccessedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
-};
+}
 
 export const toolMemoryRetrieve = {
   name: "memory_retrieve",

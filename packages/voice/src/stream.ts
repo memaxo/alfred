@@ -11,16 +11,16 @@ import { PCM_MIME_TYPE } from "./audio/pcm";
 type StartPayload = Omit<VoiceStreamStartPayload, "_">;
 type AudioChunkPayload = Omit<VoiceStreamAudioChunkPayload, "_">;
 
-export type VoiceStreamClientOptions = {
+export interface VoiceStreamClientOptions {
   url: string;
   start?: Partial<StartPayload>;
   headers?: Record<string, string>;
   protocols?: string | string[];
   logger?: (event: string, context?: Record<string, unknown>) => void;
   sessionTimeoutMs?: number;
-};
+}
 
-export type VoiceStreamClientHandlers = {
+export interface VoiceStreamClientHandlers {
   onReady?(event: Extract<VoiceStreamServerEvent, { _: "ready" }>): void;
   onSessionStarted?(
     event: Extract<VoiceStreamServerEvent, { _: "session_started" }>
@@ -44,7 +44,7 @@ export type VoiceStreamClientHandlers = {
   onStatus?(event: VoiceStreamStatusEvent): void;
   onError?(event: Extract<VoiceStreamServerEvent, { _: "error" }>): void;
   onClose?(code: number, reason: string): void;
-};
+}
 
 const SESSION_START_TIMEOUT_MS = 10_000;
 
@@ -109,7 +109,7 @@ function normalizeMessageData(data: unknown): string {
       const bytes = new Uint8Array(data);
       let result = "";
       for (const byte of bytes) {
-        result += String.fromCharCode(byte);
+        result += String.fromCodePoint(byte);
       }
       return result;
     }
@@ -125,7 +125,7 @@ function normalizeMessageData(data: unknown): string {
       }
       let result = "";
       for (const byte of view) {
-        result += String.fromCharCode(byte);
+        result += String.fromCodePoint(byte);
       }
       return result;
     }
@@ -382,42 +382,53 @@ export class VoiceStreamClient {
 
   private handleServerEvent(event: VoiceStreamServerEvent) {
     switch (event._) {
-      case "ready":
+      case "ready": {
         this.handlers.onReady?.(event);
         return;
-      case "session_started":
+      }
+      case "session_started": {
         this.sessionId = event.sessionId;
         this.handlers.onSessionStarted?.(event);
         this.resolvePendingSession(event.sessionId);
         return;
-      case "partial_transcript":
+      }
+      case "partial_transcript": {
         this.handlers.onPartialTranscript?.(event);
         return;
-      case "final_transcript":
+      }
+      case "final_transcript": {
         this.handlers.onFinalTranscript?.(event);
         return;
-      case "vad_state":
+      }
+      case "vad_state": {
         this.handlers.onVadState?.(event);
         return;
-      case "auto_stop":
+      }
+      case "auto_stop": {
         this.handlers.onAutoStop?.(event);
         return;
-      case "assistant_message":
+      }
+      case "assistant_message": {
         this.handlers.onAssistantMessage?.(event);
         return;
-      case "tts_chunk":
+      }
+      case "tts_chunk": {
         this.handlers.onTtsChunk?.(event);
         return;
-      case "tts_complete":
+      }
+      case "tts_complete": {
         this.handlers.onTtsComplete?.(event);
         return;
-      case "interrupt":
+      }
+      case "interrupt": {
         this.handlers.onInterrupt?.(event);
         return;
-      case "status":
+      }
+      case "status": {
         this.handlers.onStatus?.(event);
         return;
-      case "error":
+      }
+      case "error": {
         this.handlers.onError?.(event);
         if (!this.sessionId) {
           this.rejectPendingSession(
@@ -425,13 +436,17 @@ export class VoiceStreamClient {
           );
         }
         return;
-      case "pong":
+      }
+      case "pong": {
         return;
-      case "telemetry_report":
+      }
+      case "telemetry_report": {
         // Ignore, server only
         return;
-      default:
+      }
+      default: {
         return;
+      }
     }
   }
 }

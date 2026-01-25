@@ -1,6 +1,6 @@
 import { mock, vi } from "bun:test";
 
-const noop = vi.fn().mockResolvedValue(undefined);
+const noop = vi.fn().mockResolvedValue();
 const noopTimer = vi.fn(() => () => {});
 
 const assistantTools = {};
@@ -50,9 +50,9 @@ const getModelForRole = vi.fn(
     const selection =
       role === "orchestrator"
         ? { model: orchestratorDefaults.model, modelKey: "openai/orchestrator" }
-        : role === "voice"
+        : (role === "voice"
           ? { model: voiceDefaults.model, modelKey: "openai/voice" }
-          : { model: assistantDefaults.model, modelKey: "openai/assistant" };
+          : { model: assistantDefaults.model, modelKey: "openai/assistant" });
 
     if (opts && typeof opts === "object" && typeof opts.userId === "string") {
       return Promise.resolve(selection);

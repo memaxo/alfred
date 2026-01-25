@@ -8,11 +8,11 @@ import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { conflictArbiter } from "../conflict.js";
 import { worktreeManager } from "../tool/worktree";
 
-type GitResult = {
+interface GitResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-};
+}
 
 async function runGitCommand(
   cwdHandle: DirectoryHandle,
@@ -76,25 +76,25 @@ async function ensureBranchCheckedOut(
   }
 }
 
-export type MergeResult = {
+export interface MergeResult {
   status: "completed" | "conflict" | "failed";
   mergedBranches: string[];
   targetBranch: string;
   conflictBranch?: string;
   conflictFiles?: string[];
   error?: string;
-};
+}
 
-export type GitTool = {
+export interface GitTool {
   execute(args: {
     input: GitInput;
     writer?: ToolWriter;
   }): Promise<{ ok: boolean; details?: unknown }>;
-};
+}
 
-export type ConflictArbiterLike = {
+export interface ConflictArbiterLike {
   resolve: typeof conflictArbiter.resolve;
-};
+}
 
 export async function executeMergePlan(
   plan: MergePlan,
@@ -221,9 +221,9 @@ export async function executeMergePlan(
           error:
             error instanceof Error
               ? error.message
-              : typeof error === "string"
+              : (typeof error === "string"
                 ? error
-                : String(error),
+                : String(error)),
         };
       }
     }

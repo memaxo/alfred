@@ -164,7 +164,7 @@ describe("Golden Path Pipeline", () => {
     const plansDir = join(testWorkspace, ".agent", "plans", runId);
     const rootPlanPath = join(plansDir, "root.md");
 
-    const rootPlanContent = await readFile(rootPlanPath, "utf-8");
+    const rootPlanContent = await readFile(rootPlanPath, "utf8");
     expect(rootPlanContent).toContain("# Root ExecPlan:");
     expect(rootPlanContent).toContain(input.requirement);
     expect(rootPlanContent).toContain("## Subtasks");

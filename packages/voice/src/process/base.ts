@@ -29,7 +29,7 @@ export function resolveVoiceDir(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 }
 
-export type ProcessConfig = {
+export interface ProcessConfig {
   scriptPath: string;
   modelPath: string;
   device?: string;
@@ -38,15 +38,15 @@ export type ProcessConfig = {
   env?: Record<string, string>;
   readyTimeoutMs?: number;
   requestTimeoutMs?: number;
-};
+}
 
-export type ProcessHealth = {
+export interface ProcessHealth {
   isHealthy: boolean;
   lastPing: number | null;
   requestCount: number;
   errorCount: number;
   uptime: number;
-};
+}
 
 export class Process {
   private process: Subprocess | null = null;
@@ -117,7 +117,7 @@ export class Process {
     cwd: string;
   }> {
     const voiceDir = resolveVoiceDir();
-    const scriptPath = this.config.scriptPath;
+    const { scriptPath } = this.config;
 
     const isVoiceScript = scriptPath.startsWith(voiceDir);
 
@@ -318,10 +318,10 @@ except ImportError as e:
               try {
                 const response = JSON.parse(line) as IPCResponse;
                 this.ipc.handleResponse(response);
-              } catch (_error) {}
+              } catch {}
             }
           }
-        } catch (_error) {}
+        } catch {}
       })();
     }
 
@@ -409,7 +409,7 @@ except ImportError as e:
       try {
         await this.ping();
         this.lastPing = Date.now();
-      } catch (_error) {}
+      } catch {}
     }, 30_000); // Every 30 seconds
     this.healthCheckInterval.unref();
   }

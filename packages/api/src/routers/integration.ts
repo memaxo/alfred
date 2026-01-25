@@ -9,7 +9,7 @@ import { z } from "zod";
 import { probeTailscaleStatus, type TailscaleProbe } from "../tailscale/status";
 import { authedProcedure, router } from "../trpc";
 
-type IntegrationStatus = {
+export interface IntegrationStatus {
   id: string;
   name: string;
   enabled: boolean;
@@ -23,7 +23,7 @@ type IntegrationStatus = {
     dnsName?: string;
     hostName?: string;
   };
-};
+}
 
 export const integrationRouter = router({
   // List all integration statuses

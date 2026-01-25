@@ -1,4 +1,4 @@
-import { type Workspace, type WorkspaceKind } from "./types.js";
+import type { Workspace, WorkspaceKind } from "./types.js";
 
 /**
  * Options for workspace creation.

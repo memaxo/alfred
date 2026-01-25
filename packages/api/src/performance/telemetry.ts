@@ -17,15 +17,15 @@ import {
 } from "../metrics";
 import { healthChecksTotal } from "../metrics/health";
 
-export type HistogramSummary = {
+export interface HistogramSummary {
   count: number;
   average: number | null;
   p50: number | null;
   p95: number | null;
   unit: "seconds" | "milliseconds";
-};
+}
 
-export type PerformanceTelemetrySnapshot = {
+export interface PerformanceTelemetrySnapshot {
   generatedAt: number;
   graph: {
     queriesTotal: number;
@@ -46,7 +46,7 @@ export type PerformanceTelemetrySnapshot = {
     healthChecksTotal: number;
     cognitiveFeedbackTotal: number;
   };
-};
+}
 
 type HistogramMetric = client.Histogram<string>;
 type CounterMetric = client.Counter<string>;
@@ -109,7 +109,7 @@ async function summarizeCounter(counter: CounterMetric): Promise<number> {
       return 0;
     }
     return metric.values.reduce((sum, value) => sum + (value.value ?? 0), 0);
-  } catch (_error) {
+  } catch {
     return 0;
   }
 }
@@ -149,7 +149,7 @@ async function summarizeHistogram(
       p50: computePercentile(sortedBuckets, totalCount, 0.5),
       p95: computePercentile(sortedBuckets, totalCount, 0.95),
     };
-  } catch (_error) {
+  } catch {
     return {
       unit,
       count: 0,

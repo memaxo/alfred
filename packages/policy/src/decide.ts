@@ -28,7 +28,7 @@ export function combineDecisions(decisions: Decision[]): Decision {
     }
     return {
       allow: false,
-      obligations: Array.from(obligations.values()),
+      obligations: [...obligations.values()],
       reason: denyDecision.reason,
       ruleIds: denyDecision.ruleIds,
     };
@@ -49,7 +49,7 @@ export function combineDecisions(decisions: Decision[]): Decision {
 
   return {
     allow: true,
-    obligations: Array.from(obligations.values()),
+    obligations: [...obligations.values()],
     reason: combinedReason || undefined,
     ruleIds: ruleIds.length > 0 ? ruleIds : undefined,
   };

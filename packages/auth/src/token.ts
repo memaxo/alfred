@@ -47,7 +47,7 @@ function getPublicKey() {
   return publicKeyPromise;
 }
 
-export type TokenClaims = {
+export interface TokenClaims {
   sub: string;
   pid?: string; // ALFRED Project ID
   scopes: string[];
@@ -59,15 +59,15 @@ export type TokenClaims = {
   jti: string;
   aud: string | string[];
   iss: string;
-};
+}
 
-type IssueOptions = {
+interface IssueOptions {
   projectId?: string;
   ttlSec?: number;
   elevated?: boolean;
   mfa?: "passkey" | "none";
   roles?: string[];
-};
+}
 
 export async function issueAccessToken(
   sub: string,
@@ -121,10 +121,10 @@ export function verifyAccessToken(
   });
 }
 
-type VerifyOptions = {
+interface VerifyOptions {
   /** When false, skips JTI replay protection (required for multi-request sessions). */
   replayProtection: boolean;
-};
+}
 
 async function verifyAccessTokenInternal(
   token: string,
@@ -205,17 +205,17 @@ export function issueMcpSessionToken(
   return issueAccessToken(sub, scopes, audience, { ...options, ttlSec });
 }
 
-export type ToolPolicyInput = {
+export interface ToolPolicyInput {
   action: string;
   resource: PolicyResource;
   context?: Record<string, unknown>;
   audience?: string;
-};
+}
 
-export type ToolPolicyResult = {
+export interface ToolPolicyResult {
   decision: Decision;
   claims: TokenClaims;
-};
+}
 
 export async function requireToolScopesAndPolicy(
   authz: string | undefined,

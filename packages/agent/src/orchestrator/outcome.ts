@@ -5,19 +5,20 @@
  * Consolidates outcome handling from runtime and pipeline.
  */
 
-import {
-  type FailureContext,
-  type LoopDetection,
-  type ReviewFailure,
+import type {
+  FailureContext,
+  LoopDetection,
+  ReviewFailure,
 } from "@alfred/type";
+
+import type { AgentFSInterface } from "../agentfs/types.js";
+import type { AgentEscalationReason } from "./tool/shared/context.js";
 
 import {
   buildFailureContext,
   persistFailureContext,
   type FailureContextInput,
 } from "../agentfs/enrichment.js";
-import { type AgentFSInterface } from "../agentfs/types.js";
-import { type AgentEscalationReason } from "./tool/shared/context.js";
 
 /**
  * Status values for agent execution outcomes.
@@ -190,7 +191,7 @@ export interface FinalizeOutcomeInput {
   /** Loop detection result if available */
   loopResult?: { loop: boolean; reason?: string; layer?: number };
   /** Review failures (lint, test, typecheck) */
-  reviewFailures?: Array<{ check: string; evidence: string; file?: string }>;
+  reviewFailures?: { check: string; evidence: string; file?: string }[];
 }
 
 /**

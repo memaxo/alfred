@@ -8,7 +8,7 @@ import {
   toSerializable,
 } from "./snapshot";
 
-export type ContextOptions = {
+export interface ContextOptions {
   runId: string;
   requirement: string;
   workspace: string;
@@ -22,7 +22,7 @@ export type ContextOptions = {
   onContextSet?: (key: string, value: SerializableValue) => void;
   /** Whether to emit context:set events (default: true) */
   emitContextEvents?: boolean;
-};
+}
 
 export function createPipelineContext(
   options: ContextOptions

@@ -34,11 +34,11 @@ function namedError(name: string): Error {
   return err;
 }
 
-type Case = {
+interface Case {
   label: string;
   error: unknown;
   expect: { code: string; message: string };
-};
+}
 
 const cases: Case[] = [
   {

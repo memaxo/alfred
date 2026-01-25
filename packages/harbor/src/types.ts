@@ -7,18 +7,18 @@
  */
 export type AtifSource = "user" | "agent" | "system";
 
-export type AtifToolCall = {
+export interface AtifToolCall {
   tool_call_id: string;
   function_name: string;
   arguments: unknown;
-};
+}
 
-export type AtifObservationResult = {
+export interface AtifObservationResult {
   source_call_id: string;
   content: unknown;
-};
+}
 
-export type AtifStep = {
+export interface AtifStep {
   step_id: number;
   timestamp: string;
   source: AtifSource;
@@ -28,9 +28,9 @@ export type AtifStep = {
   observation?: { results: AtifObservationResult[] };
   metrics?: unknown;
   extra?: Record<string, unknown>;
-};
+}
 
-export type AtifTrajectory = {
+export interface AtifTrajectory {
   schema_version: string;
   session_id: string;
   agent: {
@@ -48,18 +48,18 @@ export type AtifTrajectory = {
     total_cost_usd?: number;
   };
   extra?: Record<string, unknown>;
-};
+}
 
 /**
  * Filter for querying ATIF steps
  */
-export type StepFilter = {
+export interface StepFilter {
   source?: "user" | "agent" | "system";
   hasToolCalls?: boolean;
   hasObservation?: boolean;
   messageContains?: string;
   eventType?: string;
-};
+}
 
 /**
  * Assertion error with path information
@@ -90,30 +90,30 @@ export type ResolvedToolCall = AtifToolCall & {
 /**
  * Wave information extracted from trajectory
  */
-export type WaveInfo = {
+export interface WaveInfo {
   waveId: string;
   startStepId: number;
   endStepId?: number;
   agents: string[];
   status: "running" | "completed" | "aborted";
-};
+}
 
 /**
  * Phase information extracted from trajectory
  */
-export type PhaseInfo = {
+export interface PhaseInfo {
   phaseId: string;
   startStepId: number;
   endStepId?: number;
   status: "running" | "completed" | "failed";
-};
+}
 
 /**
  * Plan information extracted from trajectory
  */
-export type PlanInfo = {
+export interface PlanInfo {
   planId?: string;
   subtaskCount: number;
   hasDependencies: boolean;
   hasEstimates: boolean;
-};
+}

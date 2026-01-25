@@ -62,7 +62,7 @@ export const toolMemoryBoost = {
 
     // Calculate new confidence
     const boostAmount = input.amount ?? 0.1;
-    const newConfidence = Math.min(1.0, currentConfidence + boostAmount);
+    const newConfidence = Math.min(1, currentConfidence + boostAmount);
 
     // Update confidence
     const result = await updateNodeConfidence(input.id, newConfidence);

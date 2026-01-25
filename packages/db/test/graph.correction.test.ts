@@ -25,8 +25,8 @@ describeFn("graphRepo corrections", () => {
       "graphRepo corrections tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    graphRepo = mod.graphRepo;
-    db = mod.db;
+    ({ graphRepo } = mod);
+    ({ db } = mod);
   });
 
   beforeEach(async () => {

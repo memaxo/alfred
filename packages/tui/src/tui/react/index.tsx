@@ -13,12 +13,12 @@ import type { TuiStores } from "./hooks/stores";
 
 import { Dashboard, type DashboardCallbacks } from "./dashboard";
 
-export type ReactTuiOptions = {
+export interface ReactTuiOptions {
   stores: TuiStores;
   callbacks: DashboardCallbacks;
   initialMode?: "chat" | "debug" | "plan" | "help";
   headless?: boolean;
-};
+}
 
 export class ReactTuiApp {
   private renderer: CliRenderer | null = null;

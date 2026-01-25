@@ -5,10 +5,10 @@ import { ruleMatches } from "./rule";
 
 const CACHE_TTL_MS = 30_000;
 
-type CachedDecision = {
+interface CachedDecision {
   expiresAt: number;
   decision: Decision;
-};
+}
 
 const cache = new Map<string, CachedDecision>();
 
@@ -42,7 +42,7 @@ function aggregateObligations(rules: PolicyRule[]): Obligation[] {
       map.set(key, obligation);
     }
   }
-  return Array.from(map.values());
+  return [...map.values()];
 }
 
 export async function evaluate(input: EvaluateInput): Promise<Decision> {

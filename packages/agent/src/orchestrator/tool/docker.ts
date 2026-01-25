@@ -8,7 +8,9 @@ import {
 } from "node:timers";
 import { z } from "zod";
 
-import { type DirectoryHandle } from "../../security/filesystem.js";
+import type { DirectoryHandle } from "../../security/filesystem.js";
+import type { ToolWriter } from "./shared/context.js";
+
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
@@ -16,7 +18,6 @@ import {
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { withPolicyApproval, type AITool } from "./approval.js";
-import { type ToolWriter } from "./shared/context.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -1168,7 +1169,7 @@ function executeRunLegacy(input: DockerInput, writer: ToolWriter) {
 set -e
 cd "${spawnCwd}"
 export DOCKER_BUILDKIT=0
-${command} ${args.map((a) => `"${a.replaceAll(/"/g, String.raw`\"`)}"`).join(" ")} > "${outputPath}" 2>&1
+${command} ${args.map((a) => `"${a.replaceAll('"', String.raw`\"`)}"`).join(" ")} > "${outputPath}" 2>&1
 EXIT_CODE=$?
 echo "$EXIT_CODE" > "${outputPath}.exit"
 exit $EXIT_CODE
@@ -1989,28 +1990,39 @@ export const toolDocker = {
     await enforcePolicy(input);
 
     switch (input.action) {
-      case "build":
+      case "build": {
         return executeBuild(input, writer);
-      case "run":
+      }
+      case "run": {
         return executeRun(input, writer);
-      case "start":
+      }
+      case "start": {
         return executeStart(input, writer);
-      case "stop":
+      }
+      case "stop": {
         return executeStop(input, writer);
-      case "rm":
+      }
+      case "rm": {
         return executeRemove(input, writer);
-      case "inspect":
+      }
+      case "inspect": {
         return executeInspect(input, writer);
-      case "logs":
+      }
+      case "logs": {
         return executeLogs(input, writer);
-      case "wait":
+      }
+      case "wait": {
         return executeWait(input, writer);
-      case "exec.probe":
+      }
+      case "exec.probe": {
         return executeProbe(input, writer);
-      case "exec":
+      }
+      case "exec": {
         return executeExec(input, writer);
-      default:
+      }
+      default: {
         throw new Error("docker_action_not_supported");
+      }
     }
   },
   inputSchema: dockerInputSchema,

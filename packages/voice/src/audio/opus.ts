@@ -1,4 +1,4 @@
-import { type Buffer } from "node:buffer";
+import type { Buffer } from "node:buffer";
 
 // Lazy load @discordjs/opus to allow mocking in tests
 // oxlint-disable noExplicitAny: Dynamic require
@@ -11,7 +11,7 @@ function getOpusClass() {
       const mod = require("@discordjs/opus");
       OpusEncoderClass = mod.OpusEncoder;
     } catch (error) {
-      throw new Error(`opus_load_failed: ${String(error)}`, { cause: e });
+      throw new Error(`opus_load_failed: ${String(error)}`, { cause: error });
     }
   }
   return OpusEncoderClass;

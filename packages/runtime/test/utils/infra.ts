@@ -1,10 +1,10 @@
 import path from "node:path";
 
-export type CmdResult = {
+export interface CmdResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-};
+}
 
 const decoder = new TextDecoder();
 

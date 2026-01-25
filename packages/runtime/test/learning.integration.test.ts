@@ -2,7 +2,7 @@ import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 
-const persistCalls: Array<{ resource: string; size: number }> = [];
+const persistCalls: { resource: string; size: number }[] = [];
 
 mock.module("@alfred/agent/assistant/hypergraph-bridge", () => ({
   persistHypergraphToDb: vi.fn(async (graph: Hypergraph, resource: string) => {

@@ -28,7 +28,7 @@ const correctInput = z.object({
 
 export const receiptRouter = router({
   get: authedProcedure.input(getInput).query(({ ctx, input }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -44,7 +44,7 @@ export const receiptRouter = router({
   correct: authedProcedure
     .input(correctInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session) {
         throw new TRPCError({
           code: "UNAUTHORIZED",

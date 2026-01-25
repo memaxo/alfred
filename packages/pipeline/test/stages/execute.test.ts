@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
-import { type PipelineEvent } from "../../src/events";
-import { type PipelineConfig, type PipelineContext } from "../../src/pipeline";
+import type { PipelineEvent } from "../../src/events";
+import type { PipelineConfig, PipelineContext } from "../../src/pipeline";
+import type { ScheduleOutput, WavePlan } from "../../src/stages/types";
+
 import { DEFAULT_CONFIG } from "../../src/pipeline";
-import { type ScheduleOutput, type WavePlan } from "../../src/stages/types";
 
 /**
  * Execute Stage Tests

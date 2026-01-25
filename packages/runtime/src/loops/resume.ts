@@ -48,9 +48,9 @@ export async function resumeInterruptedPlans(tools: Record<string, any>) {
 
     for (const snapshot of activeSnapshots) {
       const state = snapshot.state as any;
-      const plan = state.plan;
+      const { plan } = state;
       const stepIndex = state.step;
-      const streamId = snapshot.streamId;
+      const { streamId } = snapshot;
 
       if (
         plan &&

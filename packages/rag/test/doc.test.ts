@@ -157,7 +157,7 @@ describe("RAG doc functions", () => {
         });
         return map;
       });
-      upsertEdgesMock.mockResolvedValue(undefined);
+      upsertEdgesMock.mockResolvedValue();
 
       try {
         await doc.ingest("edge-source", "Elon Musk founded SpaceX in 2002.");

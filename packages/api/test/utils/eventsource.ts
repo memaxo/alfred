@@ -8,7 +8,7 @@ export class MockEventSource {
   onopen: ((event: Event) => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
-  private messages: Array<{ data: string; event?: string }> = [];
+  private messages: { data: string; event?: string }[] = [];
   private closed = false;
   private openTimer: ReturnType<typeof setTimeout> | null = null;
 

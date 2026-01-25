@@ -24,12 +24,12 @@ import {
 } from "../chain";
 import { runOrchestrator } from "../orchestrator";
 
-export type ActResult = {
+export interface ActResult {
   escalated: boolean;
   reason?: string;
-};
+}
 
-type ActPhaseDeps = {
+interface ActPhaseDeps {
   createAiAdapter?: (runId: string) => AiAdapter;
   buildToolset?: () => Record<string, ToolDef>;
   runOrchestratorFn?: typeof runOrchestrator;
@@ -39,7 +39,7 @@ type ActPhaseDeps = {
     signal: AbortSignal;
     tools: Record<string, ToolDef>;
   }) => Promise<ToolGraph>;
-};
+}
 
 type ToolDef = Tool<unknown, unknown>;
 

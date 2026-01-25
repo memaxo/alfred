@@ -8,32 +8,32 @@ import { Maya } from "./maya";
 // Re-export ProcessConfig for use in other packages
 export type { ProcessConfig };
 
-export type TTSRequest = {
+export interface TTSRequest {
   text: string;
   voice?: string;
   streaming?: boolean;
-};
+}
 
-export type TTSChunk = {
+export interface TTSChunk {
   audioBase64: string;
   mimeType: string;
   sampleRate?: number;
-};
+}
 
-export type ProcessHealth = {
+export interface ProcessHealth {
   isHealthy: boolean;
   lastPing: number | null;
   requestCount: number;
   errorCount: number;
   uptime: number;
-};
+}
 
 export class TTSPool {
-  private processes: Array<{
+  private processes: {
     process: Process;
     wrapper: Maya;
     active: boolean;
-  }> = [];
+  }[] = [];
   private supertonic: SupertonicTTS | null = null;
   private readonly supertonicStats: {
     startedAt: number | null;
@@ -122,7 +122,8 @@ export class TTSPool {
       // Clean up any started processes
       await this.shutdown();
       throw new Error(
-        `Failed to initialize TTS pool: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to initialize TTS pool: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
       );
     }
   }
@@ -139,7 +140,7 @@ export class TTSPool {
         try {
           // Send warmup request but don't use the audio
           await p.wrapper.synthesize(warmupRequest);
-        } catch (_e) {
+        } catch {
           // Ignore warmup errors
         }
       })
@@ -153,7 +154,7 @@ export class TTSPool {
   } {
     // Simple round-robin or first available
     const availableIndex = this.processes.findIndex((p) => !p.active);
-    if (availableIndex >= 0) {
+    if (availableIndex !== -1) {
       const p = this.processes[availableIndex];
       if (!p) {
         throw new Error(`Process not found at index ${availableIndex}`);
@@ -196,7 +197,7 @@ export class TTSPool {
                     const val = float32[i];
                     if (val !== undefined) {
                       const s = Math.max(-1, Math.min(1, val));
-                      int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+                      int16[i] = s < 0 ? s * 0x80_00 : s * 0x7F_FF;
                     }
                   }
                   const audioBase64 = Buffer.from(int16.buffer).toString(
@@ -225,7 +226,7 @@ export class TTSPool {
             continue;
           }
           const s = Math.max(-1, Math.min(1, val));
-          int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+          int16[i] = s < 0 ? s * 0x80_00 : s * 0x7F_FF;
         }
         const audioBase64 = Buffer.from(int16.buffer).toString("base64");
 
@@ -255,7 +256,7 @@ export class TTSPool {
 
   getHealth(): ProcessHealth[] {
     if (this.useSupertonic) {
-      const startedAt = this.supertonicStats.startedAt;
+      const { startedAt } = this.supertonicStats;
       return [
         {
           isHealthy: this.initialized,

@@ -42,12 +42,12 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type TuiOptions = {
+export interface TuiOptions {
   skipIntro?: boolean;
   skipChecks?: boolean;
   initialMode?: "chat" | "debug" | "plan" | "help";
   headless?: boolean;
-};
+}
 
 type HeadlessMode = "none" | "chat" | "debug" | "plan" | "help";
 
@@ -197,7 +197,7 @@ export class TuiApp {
 
     const render = () => {
       switch (mode) {
-        case "none":
+        case "none": {
           process.stdout.write(
             [
               "ALFRED Dashboard",
@@ -211,22 +211,27 @@ export class TuiApp {
             ].join("\n")
           );
           return;
-        case "debug":
+        }
+        case "debug": {
           process.stdout.write(
             ["ALFRED Debug", "Refresh", "Quit", ""].join("\n")
           );
           return;
-        case "chat":
+        }
+        case "chat": {
           process.stdout.write(["ALFRED Chat", ""].join("\n"));
           return;
-        case "plan":
+        }
+        case "plan": {
           process.stdout.write(["ALFRED Plan", ""].join("\n"));
           return;
-        case "help":
+        }
+        case "help": {
           process.stdout.write(
             ["ALFRED Help", "Keyboard Shortcuts", ""].join("\n")
           );
           return;
+        }
       }
     };
 
@@ -284,7 +289,7 @@ export class TuiApp {
         const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
         for (const ch of text) {
           // Esc
-          if (ch === "\x1b") {
+          if (ch === "\u001B") {
             if (startedInMode) {
               finish(0);
               return;
@@ -299,7 +304,7 @@ export class TuiApp {
           }
 
           // Ctrl+D opens debug from dashboard
-          if (ch === "\x04") {
+          if (ch === "\u0004") {
             transitionTo("debug");
             continue;
           }

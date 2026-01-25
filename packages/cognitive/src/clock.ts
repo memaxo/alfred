@@ -5,9 +5,9 @@
  * Use systemClock in production, testClock for deterministic tests.
  */
 
-export type Clock = {
+export interface Clock {
   now: () => number;
-};
+}
 
 /**
  * System clock using Date.now() - use in production

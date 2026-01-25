@@ -74,7 +74,7 @@ describe("STT Streaming Verification", () => {
 
     const err = await p2.then(
       () => null,
-      (e) => e
+      (error) => error
     );
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toBe("voice_stt_pool_saturated");

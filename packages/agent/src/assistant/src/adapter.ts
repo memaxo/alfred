@@ -1,9 +1,9 @@
 import { linkEntities } from "../../services/entity-linker";
 
-type TextMessage = {
+interface TextMessage {
   role: string;
   content: string;
-};
+}
 
 const PERSONAS: Partial<Record<string, string>> = {
   Coding: `
@@ -45,13 +45,13 @@ function extractTextContent(raw: unknown): string | null {
   }
   const msg = raw as Record<string, unknown>;
 
-  const content = msg.content;
+  const { content } = msg;
   if (typeof content === "string") {
     const trimmed = content.trim();
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  const parts = msg.parts;
+  const { parts } = msg;
   if (!Array.isArray(parts)) {
     return null;
   }
@@ -84,7 +84,7 @@ function normalizeTextMessages(messages: unknown[]): TextMessage[] {
     }
 
     const msg = raw as Record<string, unknown>;
-    const role = msg.role;
+    const { role } = msg;
     if (typeof role !== "string" || role.trim().length === 0) {
       continue;
     }

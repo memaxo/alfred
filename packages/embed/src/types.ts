@@ -3,15 +3,15 @@
  * IPC protocol types for embedding server communication
  */
 
-export type EmbedRequest = {
+export interface EmbedRequest {
   id: string;
   type: "embed" | "ping";
   payload: {
     texts?: string[];
   };
-};
+}
 
-export type EmbedResponse = {
+export interface EmbedResponse {
   id: string;
   type: "embed_response" | "pong" | "error" | "status" | "ready";
   payload: {
@@ -20,16 +20,16 @@ export type EmbedResponse = {
     traceback?: string;
     message?: string;
   };
-};
+}
 
-export type EmbedConfig = {
+export interface EmbedConfig {
   modelName?: string;
   device?: "auto" | "cpu" | "rocm" | "mps";
   poolSize?: number;
   requestTimeout?: number;
-};
+}
 
-export type ProcessHealth = {
+export interface ProcessHealth {
   isHealthy: boolean;
   lastPing: number | null;
   requestCount: number;
@@ -37,4 +37,4 @@ export type ProcessHealth = {
   uptime: number;
   status: "idle" | "busy" | "error" | "terminated";
   lastActive: number;
-};
+}

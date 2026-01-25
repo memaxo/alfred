@@ -51,14 +51,14 @@ const traverseInputSchema = z.object({
 
 type TraverseInput = z.infer<typeof traverseInputSchema>;
 
-type TraversedNode = {
+interface TraversedNode {
   id: string;
   label: string;
   kind: string;
   depth: number;
   path: string[];
   similarity?: number;
-};
+}
 
 export const toolMemoryTraverse = {
   name: "memory_traverse",
@@ -172,7 +172,7 @@ export const toolMemoryTraverse = {
     } else {
       // Simple BFS traversal
       const visited = new Set<string>([input.startId]);
-      const queue: Array<{ nodeId: string; depth: number; path: string[] }> = [
+      const queue: { nodeId: string; depth: number; path: string[] }[] = [
         { nodeId: input.startId, depth: 0, path: [input.startId] },
       ];
 

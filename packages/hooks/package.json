@@ -1,0 +1,21 @@
+{
+  "name": "@alfred/hooks",
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo -b --pretty false",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
+  },
+  "dependencies": {
+    "@alfred/type": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}

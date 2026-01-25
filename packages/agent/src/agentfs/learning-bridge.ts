@@ -20,7 +20,7 @@ import { AlfredAgentFS } from "./wrapper.js";
 /**
  * Analyzed tool call pattern from AgentFS data.
  */
-export type ToolCallPattern = {
+export interface ToolCallPattern {
   /** Tool name */
   toolName: string;
   /** Total number of calls */
@@ -38,24 +38,24 @@ export type ToolCallPattern = {
     earliest: number;
     latest: number;
   };
-};
+}
 
 /**
  * Mistake entry compatible with ALFRED's learning system.
  */
-export type MistakeEntry = {
+export interface MistakeEntry {
   id: string;
   category: string;
   description: string;
   context: Record<string, unknown>;
   severity: "low" | "medium" | "high";
   timestamp: string;
-};
+}
 
 /**
  * Knowledge insight generated from tool call patterns.
  */
-export type LearningInsight = {
+export interface LearningInsight {
   id: string;
   derived: string[];
   conclusion: string;
@@ -65,7 +65,7 @@ export type LearningInsight = {
     basis: string;
   };
   rationale: string;
-};
+}
 
 /**
  * Extract tool call patterns from an AgentFS database.
@@ -249,7 +249,7 @@ export function generateInsights(
     if (pattern.commonErrors.length >= 3 && pattern.successRate < 0.9) {
       const errorSummary = pattern.commonErrors
         .slice(0, 3)
-        .map((e) => e.substring(0, 50))
+        .map((e) => e.slice(0, 50))
         .join("; ");
 
       insights.push({
@@ -316,7 +316,7 @@ export async function getToolUsageSummary(agent: AgentFSInterface): Promise<{
   totalTools: number;
   overallSuccessRate: number;
   avgDurationMs: number;
-  topTools: Array<{ name: string; calls: number; successRate: number }>;
+  topTools: { name: string; calls: number; successRate: number }[];
 }> {
   const stats = await agent.tools.getStats();
 

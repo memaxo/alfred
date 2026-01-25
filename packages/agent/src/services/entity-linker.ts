@@ -31,17 +31,17 @@ type FindNearestConceptFn = (
 ) => Promise<ConceptResult>;
 
 // Type for findDomainAssociations result (defined locally to work around stale dist types)
-type DomainAssociation = {
+interface DomainAssociation {
   domain: string;
   confidence: number;
   source: "learned" | "seed";
-};
+}
 
-export type EntityLinkResult = {
+export interface EntityLinkResult {
   domains: string[];
   domainResults?: DomainResult[];
   paths: string[][];
-};
+}
 
 function shouldSkipEmbedding(entity: string): boolean {
   // Skip embedding if domain classification already detected it (sync path)
@@ -83,7 +83,7 @@ async function findAssociationsAdapter(
  * 2. Find path from entities to Anchor Concepts in the Graph.
  */
 export async function linkEntities(
-  messages: Array<{ role: string; content: string }>
+  messages: { role: string; content: string }[]
 ): Promise<EntityLinkResult> {
   const stopTimer = entityLinkingDurationMs.startTimer();
 
@@ -136,14 +136,14 @@ export async function linkEntities(
 
   // 3. Query the Graph for connection to Anchor Concepts
   // We check the first 5 entities to keep latency low
-  const candidates = Array.from(entities).slice(0, 5);
+  const candidates = [...entities].slice(0, 5);
   const detectedPaths: string[][] = [];
   const targetConcepts = Object.keys(ANCHORS);
 
   // Generate embeddings for vector-native entity linking
-  const embeddings: Array<number[] | undefined> = new Array(
-    candidates.length
-  ).fill(undefined);
+  const embeddings: (number[] | undefined)[] = Array.from({
+    length: candidates.length,
+  });
   const embeddingTargets = candidates
     .map((entity, index) => ({ entity, index }))
     .filter(({ entity }) => !shouldSkipEmbedding(entity));
@@ -159,9 +159,9 @@ export async function linkEntities(
           embeddings[target.index] = vectors[i];
         }
       }
-    } catch (e) {
+    } catch (error) {
       logger.warn("Failed to generate embeddings for entity linking", {
-        error: e,
+        error: error,
       });
       entityLinkingFallbackTotal.inc();
     }
@@ -187,8 +187,8 @@ export async function linkEntities(
           detectedConcepts.add(nodeLabel);
           detectedPaths.push(result.path);
         }
-      } catch (e) {
-        logger.error("ADAPTER GRAPH QUERY ERROR", { error: e });
+      } catch (error) {
+        logger.error("ADAPTER GRAPH QUERY ERROR", { error: error });
         // Ignore graph query errors (fail open)
       }
     })
@@ -197,7 +197,7 @@ export async function linkEntities(
   stopTimer();
 
   return {
-    domains: Array.from(detectedConcepts),
+    domains: [...detectedConcepts],
     domainResults: classifiedDomains,
     paths: detectedPaths,
   };

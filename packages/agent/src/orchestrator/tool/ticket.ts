@@ -3,8 +3,9 @@ import { getLinearByWorkspace } from "@alfred/db/repo/linear";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
 
+import type { ToolExecuteArgs } from "./shared/context.js";
+
 import { withPolicyApproval, type AITool } from "./approval.js";
-import { type ToolExecuteArgs } from "./shared/context.js";
 
 const ticketInputSchema = z.object({
   action: z.enum([
@@ -366,25 +367,33 @@ export const toolTicket = {
     const client = createClient(installation.token);
 
     switch (input.action) {
-      case "create":
+      case "create": {
         return runCreate(client, input);
-      case "update":
+      }
+      case "update": {
         return runUpdate(client, input);
-      case "comment":
+      }
+      case "comment": {
         return runComment(client, input);
-      case "set-delegate":
+      }
+      case "set-delegate": {
         return runDelegate(client, input, installation.appUser);
-      case "set-started":
+      }
+      case "set-started": {
         return runSetStarted(client, input);
-      case "set-cancelled":
+      }
+      case "set-cancelled": {
         return runSetCancelled(client, input);
-      case "set-completed":
+      }
+      case "set-completed": {
         return runSetCompleted(client, input);
-      case "activity.thought":
+      }
+      case "activity.thought": {
         return runAgentActivity(client, input, {
           type: "thought",
           body: ensure(input.description, "ticket_activity_body_required"),
         });
+      }
       case "activity.action": {
         const title = ensure(input.title, "ticket_activity_title_required");
         const body = input.description ?? "";
@@ -403,24 +412,30 @@ export const toolTicket = {
         }
         return runAgentActivity(client, input, content);
       }
-      case "activity.response":
+      case "activity.response": {
         return runAgentActivity(client, input, {
           type: "response",
           body: ensure(input.description, "ticket_activity_body_required"),
         });
-      case "activity.error":
+      }
+      case "activity.error": {
         return runAgentActivity(client, input, {
           type: "error",
           body: ensure(input.description, "ticket_activity_body_required"),
         });
-      case "session.external-url":
+      }
+      case "session.external-url": {
         return runSessionExternalUrl(client, input);
-      case "add-relation":
+      }
+      case "add-relation": {
         return runAddRelation(client, input);
-      case "remove-relation":
+      }
+      case "remove-relation": {
         return runRemoveRelation(client, input);
-      default:
+      }
+      default: {
         throw new Error("ticket_action_not_supported");
+      }
     }
   },
   inputSchema: ticketInputSchema,

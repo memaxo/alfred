@@ -17,15 +17,18 @@ const DEFAULT_CONNECTION_TIMEOUT_MS =
 const DEFAULT_RATE_LIMIT_PER_MINUTE =
   Number.parseInt(process.env.SSE_RATE_LIMIT_PER_MINUTE ?? "", 10) || 10;
 
-type ConnectionInfo = {
+interface ConnectionInfo {
   connectionId: string;
   userId: string;
   endpoint: string;
   createdAt: number;
   timeoutAt: number;
-};
+}
 
-type RateLimitBucket = { count: number; resetAt: number };
+interface RateLimitBucket {
+  count: number;
+  resetAt: number;
+}
 
 // Track connections per user
 const userConnections = new Map<string, Set<string>>();

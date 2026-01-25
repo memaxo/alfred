@@ -1,10 +1,11 @@
+import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+
 import {
   alfredCodexEventSchema,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
 } from "@alfred/agent/orchestrator/tool/codex/definition";
-import { type AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import { codexRunRepo, codexSessionRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
@@ -252,27 +253,32 @@ function createCodexStreamObservable({
               }
 
               switch (parsed.type) {
-                case "stdout":
+                case "stdout": {
                   emit.next({ type: "stdout", text: parsed.text });
                   break;
-                case "stderr":
+                }
+                case "stderr": {
                   emit.next({ type: "stderr", text: parsed.text });
                   break;
-                case "notice":
+                }
+                case "notice": {
                   emit.next({
                     type: "notice",
                     message: parsed.message,
                     usage: parsed.usage,
                   });
                   break;
-                case "codex_event":
+                }
+                case "codex_event": {
                   emit.next({
                     type: "codex_event",
                     event: parsed.event as AlfredCodexEvent,
                   });
                   break;
-                default:
+                }
+                default: {
                   break;
+                }
               }
             },
           },

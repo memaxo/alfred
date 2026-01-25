@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+import { TransitionGuard } from "@alfred/resilience/transitions";
 
 import type { ExecutionSummary, PipelineEvent } from "./events";
 import type {
@@ -14,21 +15,21 @@ import { createPipelineContext } from "./context";
 import { createEvent } from "./events";
 import { DEFAULT_CONFIG, STAGE_ORDER } from "./pipeline";
 
-export type PipelineObserver = {
+export interface PipelineObserver {
   onEvent(event: PipelineEvent): void;
   onComplete?(): void;
-};
+}
 
 type StageMap = Map<StageName, PipelineStage<unknown, unknown>>;
 
 /**
  * Metrics tracked during pipeline execution.
  */
-type ExecutionMetrics = {
+interface ExecutionMetrics {
   agentsSpawned: number;
   filesChanged: number;
   learningInsights: number;
-};
+}
 
 /**
  * Pipeline runner with support for resume from snapshot.
@@ -226,23 +227,30 @@ export class PipelineRunner {
     startStageIndex: number,
     stopStageIndex: number,
     initialContext: [string, SerializableValue][],
-    previousStageResults: Array<{
+    previousStageResults: {
       name: StageName;
       durationMs: number;
       status: string;
-    }> = [],
+    }[] = [],
     signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, unknown, void> {
-    const runId = input.runId;
+    const { runId } = input;
     const stageResults = [...previousStageResults];
-    let transitionCount = 0;
     let transitionsExhausted = false;
     let pipelineFailedEmitted = false;
     let currentStage: StageName | null = null;
-    const maxTransitions = this.config.maxTransitions;
+    const { maxTransitions } = this.config;
     const abortError = new Error("pipeline_aborted");
     abortError.name = "AbortError";
     let lastStageOutput: unknown;
+    let lastEventType: PipelineEvent["type"] | null = null;
+
+    const transitionGuard = new TransitionGuard(maxTransitions, (count) => {
+      transitionsExhausted = true;
+      throw new Error(
+        `pipeline_max_transitions_exceeded runId=${runId} count=${count} max=${maxTransitions} last=${lastEventType ?? "unknown"}`
+      );
+    });
 
     const assertWithinTransitionLimit = (
       eventType: PipelineEvent["type"],
@@ -251,13 +259,8 @@ export class PipelineRunner {
       if (transitionsExhausted && options.allowAfterExhausted) {
         return;
       }
-      transitionCount += 1;
-      if (transitionCount > maxTransitions) {
-        transitionsExhausted = true;
-        throw new Error(
-          `pipeline_max_transitions_exceeded runId=${runId} count=${transitionCount} max=${maxTransitions} last=${eventType}`
-        );
-      }
+      lastEventType = eventType;
+      transitionGuard.tick();
     };
 
     // Create context with initial values
@@ -465,14 +468,14 @@ export class PipelineRunner {
     input: PipelineInput,
     startStageIndex: number,
     initialContext: [string, SerializableValue][],
-    previousStageResults: Array<{
+    previousStageResults: {
       name: StageName;
       durationMs: number;
       status: string;
-    }> = [],
+    }[] = [],
     signal?: AbortSignal
   ): AsyncGenerator<PipelineEvent, PipelineResult, void> {
-    const runId = input.runId;
+    const { runId } = input;
     const stageResults = [...previousStageResults];
     const startTime = performance.now();
     const metrics: ExecutionMetrics = {
@@ -480,13 +483,20 @@ export class PipelineRunner {
       filesChanged: 0,
       learningInsights: 0,
     };
-    let transitionCount = 0;
     let transitionsExhausted = false;
     let pipelineFailedEmitted = false;
     let currentStage: StageName | null = null;
-    const maxTransitions = this.config.maxTransitions;
+    const { maxTransitions } = this.config;
     const abortError = new Error("pipeline_aborted");
     abortError.name = "AbortError";
+    let lastEventType: PipelineEvent["type"] | null = null;
+
+    const transitionGuard = new TransitionGuard(maxTransitions, (count) => {
+      transitionsExhausted = true;
+      throw new Error(
+        `pipeline_max_transitions_exceeded runId=${runId} count=${count} max=${maxTransitions} last=${lastEventType ?? "unknown"}`
+      );
+    });
 
     const assertWithinTransitionLimit = (
       eventType: PipelineEvent["type"],
@@ -495,13 +505,8 @@ export class PipelineRunner {
       if (transitionsExhausted && options.allowAfterExhausted) {
         return;
       }
-      transitionCount += 1;
-      if (transitionCount > maxTransitions) {
-        transitionsExhausted = true;
-        throw new Error(
-          `pipeline_max_transitions_exceeded runId=${runId} count=${transitionCount} max=${maxTransitions} last=${eventType}`
-        );
-      }
+      lastEventType = eventType;
+      transitionGuard.tick();
     };
 
     // Create context with initial values
@@ -758,24 +763,33 @@ export class PipelineRunner {
     const previousStage = STAGE_ORDER[stageIndex - 1] as StageName;
 
     switch (previousStage) {
-      case "init":
+      case "init": {
         return ctx.get("initOutput");
-      case "context":
+      }
+      case "context": {
         return ctx.get("contextOutput");
-      case "plan":
+      }
+      case "plan": {
         return ctx.get("planOutput");
-      case "schedule":
+      }
+      case "schedule": {
         return ctx.get("scheduleOutput");
-      case "execute":
+      }
+      case "execute": {
         return ctx.get("executeOutput");
-      case "review":
+      }
+      case "review": {
         return ctx.get("reviewOutput");
-      case "learn":
+      }
+      case "learn": {
         return ctx.get("learnOutput");
-      case "summarize":
+      }
+      case "summarize": {
         return ctx.get("summarizeOutput");
-      default:
+      }
+      default: {
         return;
+      }
     }
   }
 

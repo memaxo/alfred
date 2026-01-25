@@ -14,12 +14,12 @@ import {
   type ReasoningAccumulator,
 } from "../shared/index.js";
 
-export type EventProcessorContext = {
+export interface EventProcessorContext {
   outputDebug: boolean;
   reasoningAccumulator: ReasoningAccumulator;
-};
+}
 
-export type ProcessedEvent = {
+export interface ProcessedEvent {
   alfredEvents: AlfredCodexEvent[];
   outputChunk?: string;
   reasoning?: string;
@@ -33,7 +33,7 @@ export type ProcessedEvent = {
   turnStarted?: boolean;
   turnCompleted?: boolean;
   error?: { message: string; stage: string };
-};
+}
 
 function processItemCompleted(
   item: ThreadItem,
@@ -61,9 +61,9 @@ function processItemCompleted(
       const status: "running" | "completed" | "failed" =
         item.status === "in_progress"
           ? "running"
-          : item.status === "failed"
+          : (item.status === "failed"
             ? "failed"
-            : "completed";
+            : "completed");
 
       alfredEvents.push({
         type: "command",
@@ -81,7 +81,7 @@ function processItemCompleted(
       break;
     }
     case "agent_message": {
-      const text = item.text;
+      const { text } = item;
       if (text) {
         result.outputChunk = text;
         alfredEvents.push({
@@ -92,7 +92,7 @@ function processItemCompleted(
       break;
     }
     case "file_change": {
-      const changes = item.changes;
+      const { changes } = item;
       const artifacts: CodexArtifactSummary[] = [];
       for (const change of changes) {
         if (!change?.path) {
@@ -111,8 +111,9 @@ function processItemCompleted(
       result.artifacts = artifacts;
       break;
     }
-    default:
+    default: {
       break;
+    }
   }
 
   return result;
@@ -138,7 +139,7 @@ export function processThreadEvent(
     }
     case "turn.completed": {
       result.turnCompleted = true;
-      const usage = event.usage;
+      const { usage } = event;
       if (usage) {
         result.tokenUsage = {
           inputTokens: usage.input_tokens,
@@ -161,8 +162,9 @@ export function processThreadEvent(
     case "item.completed": {
       return processItemCompleted(event.item, ctx);
     }
-    default:
+    default: {
       break;
+    }
   }
 
   return result;

@@ -1,7 +1,7 @@
 declare module "@better-auth/passkey" {
   import type { BetterAuthPlugin } from "better-auth";
 
-  export type PasskeyOptions = {
+  export interface PasskeyOptions {
     rpID: string;
     rpName: string;
     origin: string;
@@ -13,7 +13,7 @@ declare module "@better-auth/passkey" {
     advanced?: {
       webAuthnChallengeCookie?: string;
     };
-  };
+  }
 
   export function passkey(options: PasskeyOptions): BetterAuthPlugin;
 }

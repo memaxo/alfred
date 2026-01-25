@@ -1,4 +1,5 @@
-import { type AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+
 import {
   requireToolScopesAndPolicy,
   type TokenClaims,

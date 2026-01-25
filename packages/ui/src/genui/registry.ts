@@ -5,7 +5,7 @@
  * Components are registered by name and resolved at render time.
  */
 
-import { type ComponentType } from "react";
+import type { ComponentType } from "react";
 
 // oxlint-disable noExplicitAny: Generic component registry requires flexible typing
 type GenUIComponent = ComponentType<any>;

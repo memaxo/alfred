@@ -7,14 +7,14 @@ import { logger } from "@alfred/logger";
 import { makeEventId } from "@alfred/type/id";
 import { generateText } from "ai";
 
-type PersistArgs = {
+interface PersistArgs {
   userId: string;
   projectId?: string;
   kind: "assistant" | "orchestrator";
   input: unknown;
   result: unknown;
   schemaContext?: Partial<SchemaContext>;
-};
+}
 
 export type GenerateTextInput = Parameters<typeof generateText>[0];
 

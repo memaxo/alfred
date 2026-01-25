@@ -13,7 +13,7 @@ import type { WorkflowEvent } from "@alfred/type/plan";
  * Runtime doesn't know about database internals - it uses this interface.
  * Router/API layer provides implementation that talks to @alfred/db
  */
-export type StorageAdapter = {
+export interface StorageAdapter {
   /**
    * Append single event to workflow run
    */
@@ -32,7 +32,7 @@ export type StorageAdapter = {
     status: "running" | "completed" | "failed" | "cancelled",
     message?: string
   ): Promise<void>;
-};
+}
 
 /**
  * No-op storage adapter for testing

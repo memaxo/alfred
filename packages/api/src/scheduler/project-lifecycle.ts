@@ -2,13 +2,13 @@ import * as projectRepo from "@alfred/db/repo/project";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type ProjectLifecycleSchedulerOptions = {
+export interface ProjectLifecycleSchedulerOptions {
   intervalMs?: number;
   jitterMs?: number;
   batchSize?: number;
   archiveAfterDays?: number;
   logger?: Pick<Console, "info" | "warn" | "error">;
-};
+}
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

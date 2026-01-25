@@ -16,16 +16,16 @@ export type VoiceStreamSurface =
  * It is designed to be AI SDK v6-compatible (UIMessage parts), so all surfaces can
  * render GenUI and tool results consistently.
  */
-export type VoiceAssistantRaw = {
+export interface VoiceAssistantRaw {
   uiMessages: UIMessage[];
   meta?: {
     runId?: string;
     planId?: string;
     [key: string]: unknown;
   };
-};
+}
 
-export type VoiceStreamStartPayload = {
+export interface VoiceStreamStartPayload {
   _: "start";
   /**
    * Version of the realtime voice protocol.
@@ -54,32 +54,32 @@ export type VoiceStreamStartPayload = {
   maxUtteranceMs?: number;
   ttsVoice?: string;
   ttsFormat?: "mp3" | "opus" | "wav";
-};
+}
 
-export type VoiceStreamAudioChunkPayload = {
+export interface VoiceStreamAudioChunkPayload {
   _: "audio_chunk";
   audioBase64?: string;
   audio?: Uint8Array | ArrayBuffer; // Binary support
   mimeType: string;
   emitPartial?: boolean;
-};
+}
 
-export type VoiceStreamStopPayload = {
+export interface VoiceStreamStopPayload {
   _: "stop";
   reason?: "manual" | "silence" | "timeout";
-};
+}
 
-export type VoiceStreamStatusEvent = {
+export interface VoiceStreamStatusEvent {
   _: "status";
   sessionId: string | null;
   state: "recording" | "processing" | "playing" | "idle";
-};
+}
 
-export type VoiceStreamAutoStopEvent = {
+export interface VoiceStreamAutoStopEvent {
   _: "auto_stop";
   sessionId: string;
   reason: "manual" | "silence" | "timeout";
-};
+}
 
 export type VoiceStreamServerEvent =
   | { _: "ready"; sessionId: null; protocolVersion?: number }
@@ -144,10 +144,10 @@ export type VoiceStreamServerEvent =
       timestamp: number;
     };
 
-export type VoiceStreamInput = {
+export interface VoiceStreamInput {
   mode?: "clip" | "stream";
   sessionId?: string;
   language?: string;
-};
+}
 
 export type VoiceStreamEvent = VoiceStreamServerEvent;

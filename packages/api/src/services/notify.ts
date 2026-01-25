@@ -1,6 +1,7 @@
-import { type AttentionItem } from "@alfred/db/schema/attention";
-import { type DeltaBrief } from "@alfred/db/schema/delta";
-import { type ReviewPriority, type ReviewType } from "@alfred/db/schema/review";
+import type { AttentionItem } from "@alfred/db/schema/attention";
+import type { DeltaBrief } from "@alfred/db/schema/delta";
+import type { ReviewPriority, ReviewType } from "@alfred/db/schema/review";
+
 import { logger } from "@alfred/logger";
 
 export type NotifyEvent =

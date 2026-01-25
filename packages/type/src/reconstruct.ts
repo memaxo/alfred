@@ -24,7 +24,7 @@
  * @template S - The state type (e.g., CognitiveState, WorkflowState)
  * @template E - The event type (e.g., Event, WorkflowEvent)
  */
-export type StateReconstructor<S, E> = {
+export interface StateReconstructor<S, E> {
   /** Initial state before any events are applied */
   readonly initialState: S;
 
@@ -62,7 +62,7 @@ export type StateReconstructor<S, E> = {
    * @returns State after applying events up to and including eventId
    */
   reconstructAt(events: Iterable<E>, eventId: string): S;
-};
+}
 
 /**
  * Helper type for snapshot-based reconstruction.
@@ -73,12 +73,12 @@ export type StateReconstructor<S, E> = {
  *
  * This pattern is used in cognitive state reconstruction.
  */
-export type Snapshot<S> = {
+export interface Snapshot<S> {
   id: string;
   state: S;
   lastEventId: string;
   createdAt: Date;
-};
+}
 
 /**
  * Snapshot-first reconstruction strategy.

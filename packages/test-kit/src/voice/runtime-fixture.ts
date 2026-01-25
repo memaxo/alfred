@@ -26,10 +26,10 @@ export async function installVoiceTestPools(options?: VoiceTestOptions) {
 
   const initSpy = vi
     .spyOn(poolsModule, "initializeVoicePools")
-    .mockResolvedValue(undefined);
+    .mockResolvedValue();
   const shutdownSpy = vi
     .spyOn(poolsModule, "shutdownVoicePools")
-    .mockResolvedValue(undefined);
+    .mockResolvedValue();
 
   return {
     registry,

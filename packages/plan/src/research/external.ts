@@ -1,15 +1,16 @@
 import { logger } from "@alfred/logger";
 
-import { type WorkflowIntent } from "../intent/types.js";
+import type { WorkflowIntent } from "../intent/types.js";
+import type {
+  ResearchOptions,
+  ResearchResult,
+  ResearchSource,
+} from "./types.js";
+
 import { aggregateResearch } from "./aggregate.js";
 import { applyDateFilter, detectFrameworkVersion } from "./filter.js";
 import { gatherInternalResearch } from "./internal.js";
 import { calculateRelevance, calculateReliability } from "./score.js";
-import {
-  type ResearchOptions,
-  type ResearchResult,
-  type ResearchSource,
-} from "./types.js";
 
 /**
  * Lazy load agent tools to break circular dependency
@@ -186,8 +187,8 @@ Identify specific framework versions and compatibility constraints.`,
   const filteredByDate = applyDateFilter(filteredByReliability, dateFilter);
 
   // 5. Sort by relevance and reliability, then take top K
-  return filteredByDate
-    .toSorted((a, b) => {
+  return [...filteredByDate]
+    .sort((a, b) => {
       const scoreA = a.relevanceScore * 0.7 + a.reliability * 0.3;
       const scoreB = b.relevanceScore * 0.7 + b.reliability * 0.3;
       return scoreB - scoreA;

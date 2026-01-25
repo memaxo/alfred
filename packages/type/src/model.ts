@@ -45,19 +45,19 @@ export type ModelProvider = (typeof MODEL_PROVIDERS)[number];
 
 export type ModelRef = string & { readonly __brand: "ModelRef" };
 
-export type ParsedModelRef = {
+export interface ParsedModelRef {
   provider: ModelProvider;
   modelId: string;
   ref: ModelRef;
-};
+}
 
 export type ModelKey = string & { readonly __brand: "ModelKey" };
 
-export type ParsedModelKey = {
+export interface ParsedModelKey {
   provider: ModelProvider;
   modelId: string;
   key: ModelKey;
-};
+}
 
 export function isModelRole(v: unknown): v is ModelRole {
   if (typeof v !== "string") {

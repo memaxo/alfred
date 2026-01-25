@@ -114,7 +114,7 @@ export class SummarizeProcess {
 
     // Handle stderr (errors)
     if (this.process.stderr && typeof this.process.stderr !== "number") {
-      const stderr = this.process.stderr;
+      const { stderr } = this.process;
       (async () => {
         const reader = stderr.getReader();
         const decoder = new TextDecoder();
@@ -157,7 +157,7 @@ export class SummarizeProcess {
         try {
           const response: CompressResponse = JSON.parse(line);
           this.handleResponse(response);
-        } catch (_error) {
+        } catch {
           // Ignore invalid JSON (e.g., log lines)
         }
       }
@@ -241,7 +241,7 @@ export class SummarizeProcess {
             compressedText: response.payload.compressed_text ?? "",
             originalTokens: response.payload.original_tokens ?? 0,
             compressedTokens: response.payload.compressed_tokens ?? 0,
-            compressionRatio: response.payload.compression_ratio ?? 1.0,
+            compressionRatio: response.payload.compression_ratio ?? 1,
           });
         }
       });
@@ -382,7 +382,7 @@ export class SummarizeProcess {
       try {
         await this.ping();
         this.lastPing = Date.now();
-      } catch (_error) {
+      } catch {
         // Ping failed
       }
     }, 30_000); // Check every 30 seconds
@@ -432,9 +432,9 @@ export class SummarizeProcess {
       status:
         this.errorCount > 5
           ? "error"
-          : this.pendingRequests.size > 0
+          : (this.pendingRequests.size > 0
             ? "busy"
-            : "idle",
+            : "idle"),
       lastActive: this.lastPing ?? 0,
     };
   }

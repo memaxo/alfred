@@ -20,11 +20,11 @@ export type EvalPointRow = typeof evalPoints.$inferSelect;
 export type EvalRunRow = typeof evalRuns.$inferSelect;
 export type EvalScoreRow = typeof evalScores.$inferSelect;
 
-export type EvalRunWithRelations = {
+export interface EvalRunWithRelations {
   run: EvalRunRow;
   def: EvalDefRow;
   dataset: EvalDatasetRow;
-};
+}
 
 function chunkArray<T>(items: T[], size = 100) {
   const chunks: T[][] = [];
@@ -152,7 +152,7 @@ export async function getDatasetById(
 
 export async function addPoints(
   datasetId: string,
-  points: Array<{ input: unknown; target?: unknown; metadata?: unknown }>
+  points: { input: unknown; target?: unknown; metadata?: unknown }[]
 ): Promise<number> {
   if (points.length === 0) {
     return 0;
@@ -246,13 +246,13 @@ export async function updateRun(
 
 export async function insertScores(
   runId: string,
-  scores: Array<{
+  scores: {
     pointId: string;
     scorer: string;
     score: number;
     reason?: unknown;
     metadata?: unknown;
-  }>
+  }[]
 ): Promise<number> {
   if (scores.length === 0) {
     return 0;

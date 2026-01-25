@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { shutdownPool } from "../src/pool.js";
 import {
   enableProfiling,
   formatIndexBuildProfile,
@@ -34,71 +35,75 @@ const workspace =
   process.cwd().replace(/\/packages\/codeprint.*$/, "");
 
 async function main() {
-  enableProfiling();
-  clearProfiles();
+  try {
+    enableProfiling();
+    clearProfiles();
 
-  console.log("=== Codeprint Profiler ===\n");
-  console.log(`Workspace: ${workspace}`);
-  console.log(`Iterations: ${iterations}`);
-  console.log("");
+    console.log("=== Codeprint Profiler ===\n");
+    console.log(`Workspace: ${workspace}`);
+    console.log(`Iterations: ${iterations}`);
+    console.log("");
 
-  // Profile index build
-  console.log("--- Index Build ---\n");
-  for (let i = 0; i < iterations; i++) {
-    // Clear disk cache to force rebuild
-    try {
-      await Bun.write(`${workspace}/.codeprint.json`, "invalid");
-    } catch {}
-
-    const { profile } = await buildIndexProfiled(workspace);
-    if (i === 0 || iterations === 1) {
-      console.log(formatIndexBuildProfile(profile));
-      console.log("");
-    }
-  }
-
-  // Profile queries
-  console.log("--- Query Profiles ---\n");
-
-  // First query (cache miss)
-  console.log("Cold query (cache miss):");
-  const { profile: coldProfile } = await findRelevantFilesProfiled(
-    workspace,
-    SAMPLE_QUERIES[0]!,
-    15
-  );
-  console.log(formatQueryProfile(coldProfile));
-  console.log("");
-
-  // Warm queries
-  console.log("Warm queries (cache hit):");
-  for (const query of SAMPLE_QUERIES.slice(1, 5)) {
-    const { profile } = await findRelevantFilesProfiled(workspace, query, 15);
-    console.log(
-      `  "${query.slice(0, 40)}..." - ${profile.totalMs.toFixed(2)}ms`
-    );
-  }
-  console.log("");
-
-  // Run all queries for aggregation
-  if (iterations > 1) {
-    console.log(
-      `Running ${SAMPLE_QUERIES.length} queries x ${iterations} iterations...`
-    );
+    // Profile index build
+    console.log("--- Index Build ---\n");
     for (let i = 0; i < iterations; i++) {
-      for (const query of SAMPLE_QUERIES) {
-        await findRelevantFilesProfiled(workspace, query, 15);
+      // Clear disk cache to force rebuild
+      try {
+        await Bun.write(`${workspace}/.codeprint.json`, "invalid");
+      } catch {}
+
+      const { profile } = await buildIndexProfiled(workspace);
+      if (i === 0 || iterations === 1) {
+        console.log(formatIndexBuildProfile(profile));
+        console.log("");
       }
     }
+
+    // Profile queries
+    console.log("--- Query Profiles ---\n");
+
+    // First query (cache miss)
+    console.log("Cold query (cache miss):");
+    const { profile: coldProfile } = await findRelevantFilesProfiled(
+      workspace,
+      SAMPLE_QUERIES[0]!,
+      15
+    );
+    console.log(formatQueryProfile(coldProfile));
     console.log("");
+
+    // Warm queries
+    console.log("Warm queries (cache hit):");
+    for (const query of SAMPLE_QUERIES.slice(1, 5)) {
+      const { profile } = await findRelevantFilesProfiled(workspace, query, 15);
+      console.log(
+        `  "${query.slice(0, 40)}..." - ${profile.totalMs.toFixed(2)}ms`
+      );
+    }
+    console.log("");
+
+    // Run all queries for aggregation
+    if (iterations > 1) {
+      console.log(
+        `Running ${SAMPLE_QUERIES.length} queries x ${iterations} iterations...`
+      );
+      for (let i = 0; i < iterations; i++) {
+        for (const query of SAMPLE_QUERIES) {
+          await findRelevantFilesProfiled(workspace, query, 15);
+        }
+      }
+      console.log("");
+    }
+
+    // Summary
+    console.log(formatProfileSummary());
+
+    // Bottleneck analysis
+    console.log("\n--- Bottleneck Analysis ---\n");
+    analyzeBottlenecks(coldProfile);
+  } finally {
+    shutdownPool();
   }
-
-  // Summary
-  console.log(formatProfileSummary());
-
-  // Bottleneck analysis
-  console.log("\n--- Bottleneck Analysis ---\n");
-  analyzeBottlenecks(coldProfile);
 }
 
 function analyzeBottlenecks(profile: import("../src/profile.js").QueryProfile) {

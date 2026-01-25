@@ -1,10 +1,10 @@
-export type ReviewCheckStatus = {
+export interface ReviewCheckStatus {
   id: string;
   type: string;
   status: "pending" | "running" | "passed" | "failed";
   attempts: number;
   evidence?: string;
-};
+}
 
 export class ReviewGate {
   private readonly checks = new Map<string, ReviewCheckStatus>();
@@ -12,7 +12,7 @@ export class ReviewGate {
   private planRequired = false;
   private minimumRequired = 0;
 
-  applyPlan(plan: { checks?: Array<{ id?: string; type?: string }> }): void {
+  applyPlan(plan: { checks?: { id?: string; type?: string }[] }): void {
     const items = Array.isArray(plan.checks) ? plan.checks : [];
     this.planInitialized = true;
     this.planRequired = items.length > 0 || this.minimumRequired > 0;
@@ -20,9 +20,9 @@ export class ReviewGate {
       const id =
         typeof item.id === "string" && item.id.length > 0
           ? item.id
-          : typeof item.type === "string" && item.type.length > 0
+          : (typeof item.type === "string" && item.type.length > 0
             ? item.type
-            : undefined;
+            : undefined);
       if (!id) {
         continue;
       }
@@ -52,9 +52,9 @@ export class ReviewGate {
     const id =
       typeof result.id === "string" && result.id.length > 0
         ? result.id
-        : typeof result.type === "string" && result.type.length > 0
+        : (typeof result.type === "string" && result.type.length > 0
           ? result.type
-          : undefined;
+          : undefined);
     if (!id) {
       return;
     }
@@ -113,7 +113,7 @@ export class ReviewGate {
     if (this.minimumRequired > 0 && this.checks.size < this.minimumRequired) {
       return false;
     }
-    const passed = Array.from(this.checks.values()).filter(
+    const passed = [...this.checks.values()].filter(
       (check) => check.status === "passed"
     ).length;
     if (this.minimumRequired > 0 && passed < this.minimumRequired) {
@@ -128,7 +128,7 @@ export class ReviewGate {
   }
 
   summary(): ReviewCheckStatus[] {
-    return Array.from(this.checks.values());
+    return [...this.checks.values()];
   }
 
   serialize(): {
@@ -138,7 +138,7 @@ export class ReviewGate {
     minimumRequired: number;
   } {
     return {
-      checks: Array.from(this.checks.values()),
+      checks: [...this.checks.values()],
       planInitialized: this.planInitialized,
       planRequired: this.planRequired,
       minimumRequired: this.minimumRequired,

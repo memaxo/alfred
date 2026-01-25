@@ -1,6 +1,7 @@
+import type { WorkflowEvent } from "@alfred/type";
+
 // Install shared logger mock first
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
-import { type WorkflowEvent } from "@alfred/type";
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 installLoggerMock();

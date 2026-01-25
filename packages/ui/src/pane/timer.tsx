@@ -1,20 +1,20 @@
 import type { ReactNode } from "react";
 
-export type TimerPaneItem = {
+export interface TimerPaneItem {
   id: string;
   duration: number; // Total duration in seconds
   label: string | null;
   startedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
-};
+}
 
-export type TimerPaneProps = {
+export interface TimerPaneProps {
   items: TimerPaneItem[];
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   className?: string;
-};
+}
 
 function formatTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);

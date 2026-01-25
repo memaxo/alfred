@@ -84,11 +84,11 @@ export const structuredPlanSchema = z.object({
   ),
 }) satisfies z.ZodType<StructuredPlan>;
 
-export type GeneratePlanOptions = {
+export interface GeneratePlanOptions {
   maxPhases?: number;
   preferParallel?: boolean;
   agentTypes?: AgentType[];
-};
+}
 
 // Re-export core types
 export type { Phase, StructuredPlan };

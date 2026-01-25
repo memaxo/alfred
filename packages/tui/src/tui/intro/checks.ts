@@ -16,28 +16,28 @@ export type CheckStatus =
   | "warning"
   | "error";
 
-export type SystemCheck = {
+export interface SystemCheck {
   id: string;
   label: string;
   status: CheckStatus;
   message?: string;
   duration?: number;
-};
+}
 
-export type CheckResult = {
+export interface CheckResult {
   status: "success" | "warning" | "error";
   message?: string;
-};
+}
 
 export type CheckFn = () => Promise<CheckResult>;
 
 // ─── Check Definitions ───────────────────────────────────────────────────────
 
-export type CheckDefinition = {
+export interface CheckDefinition {
   id: string;
   label: string;
   check: CheckFn;
-};
+}
 
 // ─── Default Checks ──────────────────────────────────────────────────────────
 
@@ -187,26 +187,31 @@ export function renderCheck(check: SystemCheck): string {
   let messageColor: (text: string) => string;
 
   switch (check.status) {
-    case "pending":
+    case "pending": {
       statusIcon = muted(icons.pending);
       messageColor = muted;
       break;
-    case "running":
+    }
+    case "running": {
       statusIcon = primary(getSpinnerFrame());
       messageColor = muted;
       break;
-    case "success":
+    }
+    case "success": {
       statusIcon = success(icons.success);
       messageColor = success;
       break;
-    case "warning":
+    }
+    case "warning": {
       statusIcon = warning(icons.warning);
       messageColor = warning;
       break;
-    case "error":
+    }
+    case "error": {
       statusIcon = error(icons.error);
       messageColor = error;
       break;
+    }
   }
 
   const label = check.label.padEnd(20, ".");

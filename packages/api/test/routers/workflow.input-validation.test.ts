@@ -16,7 +16,7 @@ describe("workflow input validation", () => {
     });
 
     it("returns empty object for undefined", () => {
-      const result = parseWorkflowInputData(undefined);
+      const result = parseWorkflowInputData();
       expect(result).toEqual({});
     });
 

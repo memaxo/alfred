@@ -31,7 +31,7 @@ export const embeddingModels = pgTable("embedding_models", {
 /**
  * Model-specific configuration stored in JSONB
  */
-export type EmbeddingModelConfig = {
+export interface EmbeddingModelConfig {
   /** Whether MRL truncation is applied */
   mrl_truncation?: boolean;
   /** Native dimensions before truncation */
@@ -40,7 +40,7 @@ export type EmbeddingModelConfig = {
   context_length?: number;
   /** Additional model-specific settings */
   [key: string]: unknown;
-};
+}
 
 /**
  * Known embedding model IDs (used for type safety)

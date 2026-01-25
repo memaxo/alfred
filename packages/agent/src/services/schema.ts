@@ -11,26 +11,26 @@ import { uiComponentSchema } from "@alfred/type/genui.zod";
 
 import { DefaultAIAdapter } from "./aigeneration";
 
-export type SchemaMeta = {
+export interface SchemaMeta {
   path: "deterministic" | "llm" | "skipped";
   selectedComponent: string | null;
   modelKey?: string;
   validationErrors?: string[];
-};
+}
 
-export type SchemaResult = {
+export interface SchemaResult {
   ui: UIComponent | null;
   meta: SchemaMeta;
-};
+}
 
-type GenUiPart = {
+interface GenUiPart {
   type: "data-ui";
   ui: UIComponent;
   id?: string;
   // NOTE: ALFRED sometimes attaches backing data for convenience in UIs.
   // This is not part of the canonical UIDataPart type.
   data?: unknown;
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -170,7 +170,7 @@ function buildChartFromNumberArray(
 }
 
 function buildListFromRecords(
-  records: Array<Record<string, unknown>>
+  records: Record<string, unknown>[]
 ): SchemaResult {
   const items = records.slice(0, 20).map((r, idx) => ({
     id: typeof r.id === "string" && r.id.length > 0 ? r.id : `row-${idx}`,
@@ -203,9 +203,9 @@ function buildGridFromRecord(rec: Record<string, unknown>): SchemaResult {
   });
 }
 
-type SchemaGeneratorInit = {
+interface SchemaGeneratorInit {
   role?: ModelRole;
-};
+}
 
 export class SchemaGenerator {
   private readonly role: ModelRole;
@@ -223,7 +223,7 @@ export class SchemaGenerator {
     }
 
     if (isRecord(data)) {
-      const kind = data.kind;
+      const { kind } = data;
       if (typeof kind === "string" && kind.length > 0) {
         if (kind === "workflow-timeline") {
           return "workflow-timeline";
@@ -260,7 +260,7 @@ export class SchemaGenerator {
       }
 
       if (data.every((v) => isRecord(v))) {
-        const objs = data as Array<Record<string, unknown>>;
+        const objs = data as Record<string, unknown>[];
         if (objs.some((o) => hasTimestampishField(o))) {
           // Prefer workflow-timeline when the data appears workflowish; list otherwise.
           if (ctx.mode === "workflow") {
@@ -387,8 +387,8 @@ export class SchemaGenerator {
     }
 
     // LLM path: capability gating + generateObject with uiComponentSchema.
-    const userId = args.ctx.userId;
-    const projectId = args.ctx.projectId;
+    const { userId } = args.ctx;
+    const { projectId } = args.ctx;
     if (!userId) {
       // Without identity we can't safely resolve preferences/model; skip.
       return finish(

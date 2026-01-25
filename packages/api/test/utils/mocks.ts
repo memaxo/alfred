@@ -50,12 +50,12 @@ export function withEnv<T>(
 /**
  * Mock tRPC subscription callbacks
  */
-export type MockSubscriptionCallbacks = {
+export interface MockSubscriptionCallbacks {
   onStarted?: (unsubscribe: () => void) => void;
   onData?: (chunk: unknown) => void;
   onError?: (error: unknown) => void;
   onComplete?: () => void;
-};
+}
 
 /**
  * Create mock tRPC subscription

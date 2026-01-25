@@ -9,7 +9,7 @@ import { calculateCostUsd } from "./pricing";
  * Tracks token usage and USD costs per workflow run.
  */
 
-export type CostEntry = {
+export interface CostEntry {
   runId: string;
   provider: ModelProvider;
   modelId: string;
@@ -17,15 +17,15 @@ export type CostEntry = {
   completionTokens: number;
   costUsd: number;
   timestamp: Date;
-};
+}
 
-export type RunCostSummary = {
+export interface RunCostSummary {
   runId: string;
   totalCostUsd: number;
   totalPromptTokens: number;
   totalCompletionTokens: number;
   entries: CostEntry[];
-};
+}
 
 // In-memory cost tracking per run
 const runCosts = new Map<string, CostEntry[]>();
@@ -139,5 +139,5 @@ export function clearRunCosts(runId: string): void {
  * Get all tracked runs (for debugging).
  */
 export function getTrackedRuns(): string[] {
-  return Array.from(runCosts.keys());
+  return [...runCosts.keys()];
 }

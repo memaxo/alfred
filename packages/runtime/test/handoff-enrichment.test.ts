@@ -4,10 +4,11 @@
  * Tests buildStructuredHandoff, formatStructuredHandoffPrompt, and helper functions.
  */
 
-import { type FailureContext, type StructuredHandoff } from "@alfred/type";
+import type { FailureContext, StructuredHandoff } from "@alfred/type";
+
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
-import { type AgentOutcome } from "../src/orchestrator/agent";
+import type { AgentOutcome } from "../src/orchestrator/agent";
 
 // Mock file change detection
 mock.module("../src/orchestrator/changes.js", () => ({

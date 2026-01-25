@@ -160,7 +160,7 @@ describe("isEscalationError", () => {
 
   it("returns false for non-errors", () => {
     expect(isEscalationError(null)).toBe(false);
-    expect(isEscalationError(undefined)).toBe(false);
+    expect(isEscalationError()).toBe(false);
     expect(isEscalationError("string")).toBe(false);
     expect(isEscalationError({})).toBe(false);
   });
@@ -211,7 +211,7 @@ describe("isAgentEscalationEvent", () => {
 
   it("returns false for non-objects", () => {
     expect(isAgentEscalationEvent(null)).toBe(false);
-    expect(isAgentEscalationEvent(undefined)).toBe(false);
+    expect(isAgentEscalationEvent()).toBe(false);
     expect(isAgentEscalationEvent("string")).toBe(false);
     expect(isAgentEscalationEvent(123)).toBe(false);
   });

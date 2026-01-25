@@ -44,7 +44,7 @@ function buildCaddyRoute(
       : upstream.hostname;
 
   return {
-    "@id": `alfred-route-${host.replace(/[^a-zA-Z0-9.-]/g, "-")}`,
+    "@id": `alfred-route-${host.replaceAll(/[^a-zA-Z0-9.-]/g, "-")}`,
     match: [
       {
         host: [host],
@@ -82,7 +82,7 @@ async function caddyRequest(
 }
 
 async function executeCaddy(input: RouterInput) {
-  const routeId = `alfred-route-${input.host.replace(/[^a-zA-Z0-9.-]/g, "-")}`;
+  const routeId = `alfred-route-${input.host.replaceAll(/[^a-zA-Z0-9.-]/g, "-")}`;
 
   switch (input.action) {
     case "register":
@@ -110,8 +110,9 @@ async function executeCaddy(input: RouterInput) {
       );
       return { ok: true };
     }
-    default:
+    default: {
       throw new Error("router_action_not_supported");
+    }
   }
 }
 

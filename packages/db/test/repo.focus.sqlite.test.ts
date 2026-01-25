@@ -12,10 +12,10 @@ describeSqlite("focus/attention/delta repos (sqlite drift-catcher)", () => {
       "This test requires sqlite fallback. Ensure DATABASE_URL is sqlite::memory:."
     );
     const mod = await import("@alfred/db");
-    db = mod.db;
-    focusRepo = mod.focusRepo;
-    attentionRepo = mod.attentionRepo;
-    deltaRepo = mod.deltaRepo;
+    ({ db } = mod);
+    ({ focusRepo } = mod);
+    ({ attentionRepo } = mod);
+    ({ deltaRepo } = mod);
     expect(db).toBeTruthy();
   });
 

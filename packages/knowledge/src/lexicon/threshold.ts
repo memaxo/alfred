@@ -37,14 +37,14 @@ export const MIN_SAMPLES_FOR_CALIBRATION = 10;
 /**
  * Domain threshold data
  */
-export type DomainThresholdData = {
+export interface DomainThresholdData {
   domain: string;
   threshold: number;
   correctionCount: number;
   classificationCount: number;
   accuracy: number;
   updatedAt: Date;
-};
+}
 
 /**
  * In-memory cache for domain thresholds
@@ -56,10 +56,10 @@ let cacheInitialized = false;
 /**
  * Callbacks for persistence (injected by preference router)
  */
-type ThresholdPersistence = {
+interface ThresholdPersistence {
   load: () => Promise<DomainThresholdData[]>;
   save: (data: DomainThresholdData) => Promise<void>;
-};
+}
 
 let persistence: ThresholdPersistence | null = null;
 
@@ -86,7 +86,7 @@ async function initializeCache(): Promise<void> {
       thresholdCache.set(item.domain.toLowerCase(), item);
     }
     cacheInitialized = true;
-  } catch (_error) {
+  } catch {
     cacheInitialized = true; // Mark initialized to avoid retry loops
   }
 }
@@ -250,11 +250,11 @@ export async function recordCorrection(
  * @param corrections - Array of correction records
  */
 export function calibrateThresholds(
-  corrections: Array<{
+  corrections: {
     domain: string;
     wasCorrect: boolean;
     timestamp?: Date;
-  }>
+  }[]
 ): Promise<Map<string, DomainThresholdData>> {
   // Group corrections by domain
   const byDomain = new Map<string, { correct: number; incorrect: number }>();
@@ -304,7 +304,7 @@ export function calibrateThresholds(
  * Get all cached threshold data (for debugging/monitoring)
  */
 export function getAllThresholds(): DomainThresholdData[] {
-  return Array.from(thresholdCache.values());
+  return [...thresholdCache.values()];
 }
 
 /**

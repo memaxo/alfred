@@ -4,7 +4,7 @@ import { deltaRepo } from "@alfred/db";
 
 import { publishDelta } from "./notify";
 
-type EnsureRunDeltaArgs = {
+interface EnsureRunDeltaArgs {
   userId: string;
   runId: string;
   focusSetId?: string | null;
@@ -13,7 +13,7 @@ type EnsureRunDeltaArgs = {
     PipelineEvent,
     { type: "pipeline:complete" | "pipeline:failed" }
   >;
-};
+}
 
 export async function ensureRunDeltaBrief(
   args: EnsureRunDeltaArgs

@@ -3,9 +3,9 @@ import omelette from "omelette";
 
 import { getRegistry } from "../registry";
 
-type RouterWithProcedures = {
+interface RouterWithProcedures {
   _def: { procedures: Record<string, unknown> };
-};
+}
 
 function getProceduresMap(): Record<string, unknown> {
   return (appRouter as unknown as RouterWithProcedures)._def.procedures;
@@ -26,7 +26,7 @@ function getRouterNames(): string[] {
     }
   }
 
-  return Array.from(routers);
+  return [...routers];
 }
 
 // Get procedures for a router

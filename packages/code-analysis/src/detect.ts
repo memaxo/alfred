@@ -3,7 +3,7 @@
  * Pattern-based detection for common issues in code diffs
  */
 
-import { type DetectedBug, type ParsedFile } from "./types.js";
+import type { DetectedBug, ParsedFile } from "./types.js";
 
 let bugIdCounter = 0;
 function generateBugId(): string {

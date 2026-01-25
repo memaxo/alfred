@@ -1,17 +1,21 @@
 import type { NodeId, Timestamp } from "../hypergraph.js";
 
-export type Interval = { start: Timestamp; end: Timestamp; id: NodeId };
+export interface Interval {
+  start: Timestamp;
+  end: Timestamp;
+  id: NodeId;
+}
 
 type Color = "R" | "B";
 
-type Node = {
+interface Node {
   interval: Interval;
   maxEnd: Timestamp;
   color: Color;
   left: Node | null;
   right: Node | null;
   parent: Node | null;
-};
+}
 
 const isRed = (node: Node | null): boolean => node?.color === "R";
 const maxTimestamp = (a: Timestamp, b: Timestamp, c: Timestamp): Timestamp =>
@@ -111,23 +115,26 @@ export class IntervalTree {
   private fixAfterInsert(node: Node): void {
     let current: Node | null = node;
     while (current?.parent && isRed(current.parent)) {
-      const parent: Node = current.parent;
-      const grandparent: Node | null = parent.parent;
+      const p: Node | null = current.parent;
+      if (!p) {
+        break;
+      }
+      const grandparent: Node | null = p.parent;
       if (!grandparent) {
         break;
       }
-      if (parent === grandparent.left) {
+      if (p === grandparent.left) {
         const uncle = grandparent.right;
         if (isRed(uncle)) {
-          parent.color = "B";
+          p.color = "B";
           if (uncle) {
             uncle.color = "B";
           }
           grandparent.color = "R";
           current = grandparent;
         } else {
-          if (current === parent.right) {
-            current = parent;
+          if (current === p.right) {
+            current = p;
             if (current) {
               this.rotateLeft(current);
             }
@@ -141,15 +148,15 @@ export class IntervalTree {
       } else {
         const uncle = grandparent.left;
         if (isRed(uncle)) {
-          parent.color = "B";
+          p.color = "B";
           if (uncle) {
             uncle.color = "B";
           }
           grandparent.color = "R";
           current = grandparent;
         } else {
-          if (current === parent.left) {
-            current = parent;
+          if (current === p.left) {
+            current = p;
             if (current) {
               this.rotateRight(current);
             }

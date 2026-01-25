@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Container = {
+export interface Container {
   id: string;
   name: string;
   image: string;
@@ -16,42 +16,42 @@ export type Container = {
   cpuPercent: number;
   memoryUsage: number;
   memoryLimit: number;
-};
+}
 
-export type ContainerStats = {
+export interface ContainerStats {
   cpuPercent: number;
   memoryUsage: number;
   memoryLimit: number;
-};
+}
 
-export type ContainerInspect = {
+export interface ContainerInspect {
   networks: string[];
-  mounts: Array<{
+  mounts: {
     type: "bind" | "volume" | "tmpfs" | "npipe" | "cluster" | "unknown";
     source: string;
     destination: string;
     rw: boolean;
     name?: string;
-  }>;
-};
+  }[];
+}
 
-export type Network = {
+export interface Network {
   id: string;
   name: string;
   driver: string;
   scope: string;
-};
+}
 
-export type Volume = {
+export interface Volume {
   name: string;
   driver: string;
-};
+}
 
-export type LogEntry = {
+export interface LogEntry {
   timestamp: string;
   level: "debug" | "info" | "warn" | "error";
   message: string;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Container List
@@ -104,7 +104,7 @@ export async function listContainers(
             id: raw.ID,
             name: raw.Names,
             image: raw.Image,
-            status: isPaused ? "paused" : isRunning ? "running" : "exited",
+            status: isPaused ? "paused" : (isRunning ? "running" : "exited"),
             ports: raw.Ports ? raw.Ports.split(", ").filter(Boolean) : [],
             created: raw.CreatedAt,
             isAgentWorkspace: isAgent,
@@ -296,7 +296,7 @@ export async function removeContainer(
 export async function createContainer(input: {
   image: string;
   name?: string;
-  ports?: Array<{ host: number; container: number }>;
+  ports?: { host: number; container: number }[];
   env?: Record<string, string>;
   network?: string;
   volumes?: string[];
@@ -502,7 +502,7 @@ async function runDockerOk(args: string[]): Promise<number> {
 export function buildRunArgs(input: {
   image: string;
   name?: string;
-  ports?: Array<{ host: number; container: number }>;
+  ports?: { host: number; container: number }[];
   env?: Record<string, string>;
   network?: string;
   volumes?: string[];
@@ -616,13 +616,13 @@ function readNetworks(value: object): string[] {
 
 function readMounts(value: object): ContainerInspect["mounts"] {
   const v = value as {
-    Mounts?: Array<{
+    Mounts?: {
       Type?: string;
       Source?: string;
       Destination?: string;
       RW?: boolean;
       Name?: string;
-    }>;
+    }[];
   };
   const mounts = Array.isArray(v.Mounts) ? v.Mounts : [];
   return mounts

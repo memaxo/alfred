@@ -5,11 +5,7 @@
  * Follows the fixture handle pattern from workflow/runtime-fixture.ts.
  */
 
-import {
-  type BrowserContext,
-  type Page,
-  type TestInfo,
-} from "@playwright/test";
+import type { BrowserContext, Page, TestInfo } from "@playwright/test";
 
 export interface CrashReport {
   type: "browser-crash" | "context-crash" | "page-crash" | "render-crash";
@@ -83,9 +79,14 @@ export function createCrashMonitor(
 
   // Detect page crash
   page.on("crash", async () => {
-    const screenshot = screenshots
-      ? await screenshots.captureError("page-crash").catch(() => {})
-      : undefined;
+    let screenshot: string | undefined;
+    if (screenshots) {
+      try {
+        screenshot = await screenshots.captureError("page-crash");
+      } catch {
+        screenshot = undefined;
+      }
+    }
 
     crashes.push({
       consoleErrors: [...consoleErrors],
@@ -122,7 +123,9 @@ export function createCrashMonitor(
     getCrashes: () => crashes,
 
     getReport(): string {
-      if (crashes.length === 0) return "";
+      if (crashes.length === 0) {
+        return "";
+      }
 
       return crashes
         .map(

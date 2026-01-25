@@ -6,13 +6,13 @@ import type {
   WorkingSet,
 } from "@alfred/type/sense";
 
-export type RouteScore = {
+export interface RouteScore {
   summary: string;
   outcome: ReceiptOutcome;
   alternatives: ReceiptOutcome[];
   evidence: ReceiptEvidenceItem[];
   confidence: number;
-};
+}
 
 function clamp01(value: number): number {
   if (value < 0) {
@@ -124,9 +124,9 @@ export function scoreRoute({
   const summary =
     outcome.kind === "reminder"
       ? "Suggested reminder based on time-related language."
-      : outcome.kind === "note"
+      : (outcome.kind === "note"
         ? "Suggested note as a durable capture."
-        : "Suggested inbox triage due to low confidence.";
+        : "Suggested inbox triage due to low confidence.");
 
   return { summary, outcome, alternatives, evidence, confidence };
 }

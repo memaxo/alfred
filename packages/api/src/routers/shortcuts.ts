@@ -13,11 +13,11 @@ const shortcutInput = z.object({
   shortcut: z.string(),
 });
 
-type Shortcut = {
+export interface Shortcut {
   action: string;
   shortcut: string;
   description: string;
-};
+}
 
 // Default shortcuts
 const defaultShortcuts: Shortcut[] = [

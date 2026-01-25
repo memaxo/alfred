@@ -8,7 +8,7 @@ export type PhaseResult<T> =
   | { status: "failure"; error: Error }
   | { status: "escalate"; reason: string; targetPhase?: string };
 
-export type Phase<Input, Output> = {
+export interface Phase<Input, Output> {
   /**
    * Unique identifier for the phase (e.g., "plan", "act", "review")
    */
@@ -21,14 +21,14 @@ export type Phase<Input, Output> = {
     input: Input,
     context: RuntimeContext
   ): AsyncGenerator<WorkflowEvent, PhaseResult<Output>, void>;
-};
+}
 
-export type PipelineState = {
+export interface PipelineState {
   currentPhaseId: string;
-  history: Array<{
+  history: {
     phaseId: string;
     result: PhaseStatus;
     timestamp: number;
-  }>;
+  }[];
   context: RuntimeContext;
-};
+}

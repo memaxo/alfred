@@ -76,7 +76,7 @@ describe("codex-linear", () => {
   describe("injectLinearContext", () => {
     it("returns original prompt when no linearIssueId", () => {
       const prompt = "Fix the bug";
-      const result = injectLinearContext(prompt, undefined);
+      const result = injectLinearContext(prompt);
       expect(result).toBe(prompt);
     });
 

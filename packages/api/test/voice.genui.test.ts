@@ -124,9 +124,9 @@ describe("voice workflow GenUI raw output", () => {
     const plan = makeStructuredPlan();
 
     mock.module("./session-context.js", () => ({
-      clearVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
-      getVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
-      setVoiceWorkflowContext: vi.fn().mockResolvedValue(undefined),
+      clearVoiceWorkflowContext: vi.fn().mockResolvedValue(),
+      getVoiceWorkflowContext: vi.fn().mockResolvedValue(),
+      setVoiceWorkflowContext: vi.fn().mockResolvedValue(),
     }));
 
     mock.module("./preferences.js", () => ({
@@ -187,8 +187,8 @@ describe("voice workflow GenUI raw output", () => {
           };
         }
       },
-      createRun: vi.fn().mockResolvedValue(undefined),
-      updateRun: vi.fn().mockResolvedValue(undefined),
+      createRun: vi.fn().mockResolvedValue(),
+      updateRun: vi.fn().mockResolvedValue(),
     }));
     mock.module("@alfred/pipeline/snapshot", () => ({
       createContextFromSnapshot: () => ({

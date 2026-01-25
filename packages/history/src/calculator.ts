@@ -60,7 +60,7 @@ export const BUDGET_RATIOS = Object.freeze({
 // Budget Types
 // ============================================================================
 
-import { type HistoryTier } from "./types";
+import type { HistoryTier } from "./types";
 export type { HistoryTier };
 
 export interface BudgetConfig {

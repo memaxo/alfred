@@ -51,10 +51,11 @@ describe("profiling", () => {
     expect(profile.bytesRead).toBeGreaterThan(0);
 
     // All stages should have timing
-    expect(profile.stages.glob.durationMs).toBeGreaterThanOrEqual(0);
+    expect(profile.stages.discover.durationMs).toBeGreaterThanOrEqual(0);
     expect(profile.stages.read.durationMs).toBeGreaterThanOrEqual(0);
     expect(profile.stages.parse.durationMs).toBeGreaterThanOrEqual(0);
     expect(profile.stages.extract.durationMs).toBeGreaterThanOrEqual(0);
+    expect(profile.stages.bm25Build.durationMs).toBeGreaterThanOrEqual(0);
     expect(profile.stages.persist.durationMs).toBeGreaterThanOrEqual(0);
   });
 
@@ -105,7 +106,7 @@ describe("profiling", () => {
     expect(output).toContain("Index Build Profile");
     expect(output).toContain("Files:");
     expect(output).toContain("Stages:");
-    expect(output).toContain("glob:");
+    expect(output).toContain("discover:");
     expect(output).toContain("parse:");
   });
 

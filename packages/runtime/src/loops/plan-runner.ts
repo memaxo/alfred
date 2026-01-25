@@ -10,27 +10,27 @@ import { logger } from "@alfred/logger";
 
 import { classifyPlanRisk } from "../engines/safety";
 
-export type StepResult = {
+export interface StepResult {
   status: "completed" | "failed" | "suspended";
   output?: unknown;
   error?: string;
-};
+}
 
-type ToolExecuteContext = {
+interface ToolExecuteContext {
   toolCallId: string;
   messages: unknown[];
-};
+}
 
-type ToolLike = {
+interface ToolLike {
   execute: (input: unknown, ctx: ToolExecuteContext) => Promise<unknown>;
-};
+}
 
 type CognitiveRepo = Pick<
   typeof cognitiveRepo,
   "getLatestSnapshot" | "saveSnapshot" | "appendEvent"
 >;
 
-type CognitiveStepCompleteEvent = {
+interface CognitiveStepCompleteEvent {
   _: "cognitive_step_complete";
   ts: number;
   step: number;
@@ -40,7 +40,7 @@ type CognitiveStepCompleteEvent = {
   durationMs: number;
   output?: unknown;
   error?: string;
-};
+}
 
 export class PlanRunner {
   constructor(
@@ -53,6 +53,26 @@ export class PlanRunner {
     const isRecord = (value: unknown): value is Record<string, unknown> =>
       typeof value === "object" && value !== null && !Array.isArray(value);
 
+    const isAutonomyGradient = (
+      value: unknown
+    ): value is ReturnType<typeof initialAutonomy> &
+      Record<string, unknown> => {
+      if (!isRecord(value)) {
+        return false;
+      }
+      const { prior } = value;
+      return (
+        typeof value.level === "number" &&
+        typeof value.confidence === "number" &&
+        isRecord(prior) &&
+        typeof prior.alpha === "number" &&
+        typeof prior.beta === "number" &&
+        Array.isArray(value.evidence) &&
+        Array.isArray(value.constraints) &&
+        typeof value.lastUpdate === "number"
+      );
+    };
+
     // Get initial lastEventId (needed for snapshots)
     const latestSnapshot = await this.repo.getLatestSnapshot(this.streamId);
     let lastEventId =
@@ -60,10 +80,9 @@ export class PlanRunner {
     const snapshotState = latestSnapshot?.state;
     const snapshotRecord = isRecord(snapshotState) ? snapshotState : null;
     const autoCandidate = snapshotRecord?.auto;
-    const currentAutonomy =
-      isRecord(autoCandidate) && typeof autoCandidate.level === "number"
-        ? (autoCandidate as ReturnType<typeof initialAutonomy>)
-        : initialAutonomy(Date.now());
+    const currentAutonomy = isAutonomyGradient(autoCandidate)
+      ? autoCandidate
+      : initialAutonomy(Date.now());
     const retryCandidate = snapshotRecord?.retryCount;
     const retryCount =
       (typeof retryCandidate === "number" && Number.isFinite(retryCandidate)
@@ -105,11 +124,11 @@ export class PlanRunner {
           persistedState,
           lastEventId
         );
-      } catch (err) {
+      } catch (error) {
         logger.warn("plan_runner_checkpoint_failed", {
           streamId: this.streamId,
           step: i,
-          error: String(err),
+          error: String(error),
         });
       }
 
@@ -146,12 +165,12 @@ export class PlanRunner {
         if (inserted?.id) {
           lastEventId = inserted.id;
         }
-      } catch (err) {
+      } catch (error) {
         logger.warn("plan_runner_step_complete_event_failed", {
           streamId: this.streamId,
           step: i,
           action: step.action,
-          error: String(err),
+          error: String(error),
         });
       }
 

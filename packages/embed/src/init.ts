@@ -7,14 +7,14 @@ import { createKalmProvider } from "./providers/kalm.js";
 import { createQwenProvider } from "./providers/qwen.js";
 import { getRegistry, MODEL_IDS, resetRegistry } from "./registry.js";
 
-export type EmbedInitOptions = {
+export interface EmbedInitOptions {
   /** Default model to use (kalm or qwen). Defaults to qwen for multimodal support */
   defaultModel?: "kalm" | "qwen";
   /** Initialize providers immediately (load models). Defaults to false (lazy init) */
   eager?: boolean;
   /** Logger for status messages */
   logger?: Pick<Console, "info" | "warn" | "error">;
-};
+}
 
 let initialized = false;
 

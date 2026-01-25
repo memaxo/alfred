@@ -38,7 +38,7 @@ import {
 } from "./session-registry";
 import { getVoiceIceServers, type VoiceIceServer } from "./webrtc";
 
-type WebrtcSession = {
+interface WebrtcSession {
   readonly userId: string;
   readonly sessionId: string;
   readonly surface: VoiceStreamSurface;
@@ -66,7 +66,7 @@ type WebrtcSession = {
   pcm16QueuedBytes: number;
   readonly opusDecoder: Decoder;
   readonly opusEncoder: Encoder;
-};
+}
 
 const sessions = new Map<string, WebrtcSession>();
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
@@ -118,7 +118,9 @@ export async function createWebrtcSession(input: {
   const pc = createPeerConnection();
 
   pc.addTransceiver("audio", { direction: "sendrecv" });
-  type SenderLike = { kind?: unknown };
+  interface SenderLike {
+    kind?: unknown;
+  }
   const audioSender = pc.getSenders().find((s) => {
     const kind = (s as SenderLike)?.kind;
     return kind === "audio";
@@ -147,7 +149,7 @@ export async function createWebrtcSession(input: {
     audioSender,
     rtpPayloadType: null,
     rtpSeq: Math.floor(Math.random() * 65_535),
-    rtpTimestamp: Math.floor(Math.random() * 0xff_ff_ff_ff),
+    rtpTimestamp: Math.floor(Math.random() * 0xFF_FF_FF_FF),
     registryId: "",
     runtime: input.runtime,
     vadThreshold: 0.5,
@@ -216,10 +218,13 @@ export async function createWebrtcSession(input: {
     }
   };
 
-  type RtpObservableLike = {
+  interface RtpObservableLike {
     subscribe: (fn: (packet: unknown) => void) => void;
-  };
-  type TrackLike = { kind?: unknown; onReceiveRtp?: RtpObservableLike };
+  }
+  interface TrackLike {
+    kind?: unknown;
+    onReceiveRtp?: RtpObservableLike;
+  }
   pc.ontrack = (event: unknown) => {
     const track =
       typeof event === "object" && event && "track" in event
@@ -231,7 +236,7 @@ export async function createWebrtcSession(input: {
     if ((track as TrackLike).kind !== "audio") {
       return;
     }
-    const onReceiveRtp = (track as TrackLike).onReceiveRtp;
+    const { onReceiveRtp } = track as TrackLike;
     if (!onReceiveRtp || typeof onReceiveRtp.subscribe !== "function") {
       return;
     }
@@ -294,7 +299,7 @@ export async function createWebrtcSession(input: {
           if (typeof vad === "number" && Number.isFinite(vad)) {
             sess.vadThreshold = Math.min(1, Math.max(0, vad));
           }
-          const sttChunkSize = msg.sttChunkSize;
+          const { sttChunkSize } = msg;
           if (
             sttChunkSize === "fast" ||
             sttChunkSize === "low" ||
@@ -307,7 +312,7 @@ export async function createWebrtcSession(input: {
           if (typeof max === "number" && Number.isFinite(max) && max > 0) {
             sess.maxUtteranceMs = Math.min(60_000, Math.floor(max));
           }
-          const autoStop = msg.autoStop;
+          const { autoStop } = msg;
           if (typeof autoStop === "boolean") {
             sess.autoStop = autoStop;
           }
@@ -344,7 +349,7 @@ export function drainWebrtcIceCandidates(
     return [];
   }
   sess.updatedAt = Date.now();
-  const out = sess.iceOutbox.splice(0, sess.iceOutbox.length);
+  const out = sess.iceOutbox.splice(0);
   return out;
 }
 
@@ -363,7 +368,7 @@ export async function applyWebrtcOffer(input: {
   await sess.pc.setLocalDescription(answer);
   let payloadType = 111;
   const audioTransceiver = sess.pc.getTransceivers().find((t) => {
-    const kind = (t as { kind?: unknown }).kind;
+    const { kind } = t as { kind?: unknown };
     return kind === "audio";
   });
   const getPayloadType =
@@ -452,7 +457,7 @@ function chunkSizeToFlushBytes(size: WebrtcSession["sttChunkSize"]) {
 
 async function handleInboundRtp(sess: WebrtcSession, packet: unknown) {
   const p = packet as { payload?: Buffer };
-  const payload = p.payload;
+  const { payload } = p;
   if (!payload || payload.byteLength === 0) {
     return;
   }
@@ -625,10 +630,10 @@ async function finalizeQueuedAudio(sess: WebrtcSession) {
   }
 }
 
-type VoiceSessionLike = {
+interface VoiceSessionLike {
   getTranscript?: () => string;
   clearUtterance?: () => void;
-};
+}
 
 async function finalizeUtterance(
   sess: WebrtcSession,
@@ -708,7 +713,7 @@ async function streamTtsAsOpus(sess: WebrtcSession, text: string) {
 
     // Collect PCM chunks from the TTS pool; we then resample to 48k and stream
     // as Opus RTP packets in 20ms frames.
-    const pcmChunks: Array<{ audio: Buffer; sampleRate: number }> = [];
+    const pcmChunks: { audio: Buffer; sampleRate: number }[] = [];
     await ttsPool.synthesize(
       { text, streaming: true },
       (chunk: { audioBase64: string; sampleRate?: number }) => {
@@ -754,13 +759,12 @@ async function sendOpusRtp(sess: WebrtcSession, opus: Buffer) {
     ssrc,
     marker: false,
   });
-  sess.rtpSeq = (sess.rtpSeq + 1) & 0xff_ff;
+  sess.rtpSeq = (sess.rtpSeq + 1) & 0xFF_FF;
   sess.rtpTimestamp = (sess.rtpTimestamp + 960) >>> 0;
   const packet = new RtpPacket(header, opus);
-  const sendRtp = (sess.audioSender as unknown as { sendRtp?: unknown })
-    .sendRtp;
+  const { sendRtp } = sess.audioSender as unknown as { sendRtp?: unknown };
   if (typeof sendRtp !== "function") {
-    throw new Error("webrtc_send_rtp_missing");
+    throw new TypeError("webrtc_send_rtp_missing");
   }
   await (sendRtp as (rtp: RtpPacket) => Promise<void>)(packet);
   voiceWebrtcRtpPacketsSentTotal.inc();

@@ -15,10 +15,10 @@ describe("graphstore integration (sqlite)", () => {
   beforeAll(async () => {
     ({ persistKnowledge } = await import("../src/graphstore"));
     const dbModule = await import("@alfred/db");
-    db = dbModule.db;
+    ({ db } = dbModule);
     const schema = await import("@alfred/db/schema/graph");
-    memoryNodes = schema.memoryNodes;
-    memoryEdges = schema.memoryEdges;
+    ({ memoryNodes } = schema);
+    ({ memoryEdges } = schema);
   });
 
   afterAll(() => {

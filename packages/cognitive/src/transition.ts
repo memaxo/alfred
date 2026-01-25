@@ -34,7 +34,7 @@ const applyPhysiologyEvent = (
   }
 
   if (event._ === "interrupt") {
-    const reason = event.reason;
+    const { reason } = event;
     if (entropyKeywords.some((keyword) => reason.includes(keyword))) {
       return updatePhysiology(physiology, "entropy_high");
     }
@@ -44,10 +44,10 @@ const applyPhysiologyEvent = (
   return updatePhysiology(physiology, "step");
 };
 
-export type TransitionResult = {
+export interface TransitionResult {
   state: CognitiveState;
   autonomy: AutonomyGradient;
-};
+}
 
 export const applyTransition = (
   state: CognitiveState,
@@ -61,15 +61,15 @@ export const applyTransition = (
     const eventTimestamp =
       event._ === "timeout"
         ? event.deadline
-        : "ts" in event
+        : ("ts" in event
           ? event.ts
           : (() => {
               throw new Error("event_missing_timestamp");
-            })();
+            })());
     const nextPhysiology = applyPhysiologyEvent(state.physiology, event);
 
     switch (state._) {
-      case "idle":
+      case "idle": {
         if (event._ === "input") {
           result = {
             state: capturing(
@@ -82,8 +82,9 @@ export const applyTransition = (
           };
         }
         break;
+      }
 
-      case "capturing":
+      case "capturing": {
         if (event._ === "input") {
           // Input processed, move to thinking
           result = {
@@ -110,8 +111,9 @@ export const applyTransition = (
           };
         }
         break;
+      }
 
-      case "thinking":
+      case "thinking": {
         if (event._ === "complete") {
           result = {
             state: reflecting(
@@ -143,8 +145,9 @@ export const applyTransition = (
           };
         }
         break;
+      }
 
-      case "deciding":
+      case "deciding": {
         if (event._ === "input") {
           // Decision made (input contains selected option ID or decision)
           // Find the selected option or use first option
@@ -191,8 +194,9 @@ export const applyTransition = (
           }
         }
         break;
+      }
 
-      case "executing":
+      case "executing": {
         if (event._ === "complete") {
           result = {
             state: reflecting(
@@ -200,9 +204,9 @@ export const applyTransition = (
               state.plan.steps.map((s) => s.action).join(", "),
               event.outcome._ === "success"
                 ? String(event.outcome.result ?? "completed")
-                : event.outcome._ === "failure"
+                : (event.outcome._ === "failure"
                   ? event.outcome.error
-                  : "unknown",
+                  : "unknown"),
               nextPhysiology
             ),
             autonomy,
@@ -220,14 +224,16 @@ export const applyTransition = (
           };
         }
         break;
+      }
 
-      case "reflecting":
+      case "reflecting": {
         // After reflection, return to idle
         result = {
           state: idle(eventTimestamp, nextPhysiology),
           autonomy,
         };
         break;
+      }
     }
 
     if (!result) {
@@ -253,7 +259,6 @@ export const applyTransition = (
 
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.1) {
-    }
+    if (shouldWarn && durationMs > 0.1) {}
   }
 };

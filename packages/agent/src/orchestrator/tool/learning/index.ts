@@ -3,13 +3,14 @@
  * Exposes explicit learning/feedback capabilities as agent tools.
  */
 
-import { withPolicyApproval, type AITool } from "../approval.js";
-import { type ToolExecuteArgs } from "../shared/context.js";
-import {
-  type LearnMistakeInput,
-  type LearnPatternInput,
-  type LearnRecordInput,
+import type { ToolExecuteArgs } from "../shared/context.js";
+import type {
+  LearnMistakeInput,
+  LearnPatternInput,
+  LearnRecordInput,
 } from "./definition.js";
+
+import { withPolicyApproval, type AITool } from "../approval.js";
 import {
   learnMistakeInputSchema,
   learnMistakeOutputSchema,

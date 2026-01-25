@@ -13,13 +13,13 @@ import { recordVoiceStt, voiceStreamLatencySeconds } from "../metrics";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap
 
-export type SttInput = {
+export interface SttInput {
   audioBase64: string;
   mimeType: string;
   model: string;
   language?: string;
   prompt?: string;
-};
+}
 
 export type SttStreamingInput = SttInput & {
   sessionId: string;
@@ -61,7 +61,8 @@ export async function normalizeLocalSttAudio(input: SttInput) {
     throw new Error(
       `local_codec_decode_failed: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }
@@ -120,7 +121,8 @@ export async function transcribeLocal(
     throw new Error(
       `local_transcription_failed: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }
@@ -198,7 +200,8 @@ export async function transcribeStreaming(
     throw new Error(
       `streaming_transcription_failed: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }

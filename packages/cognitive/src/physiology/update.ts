@@ -10,10 +10,10 @@ import { cognitivePhysiologyUpdateDuration } from "../metrics.js";
 import { clamp01 } from "../util/math.js";
 
 export const defaultPhysiology = (): Physiology => ({
-  energy: 1.0,
-  boredom: 0.0,
-  frustration: 0.0,
-  entropy: 0.0,
+  energy: 1,
+  boredom: 0,
+  frustration: 0,
+  entropy: 0,
 });
 
 export const updatePhysiology = (
@@ -25,29 +25,34 @@ export const updatePhysiology = (
     let { energy, boredom, frustration, entropy } = current;
 
     switch (event) {
-      case "step":
+      case "step": {
         energy -= 0.01;
         entropy += 0.01;
         break;
-      case "success":
+      }
+      case "success": {
         frustration *= 0.5;
         energy += 0.05;
         boredom *= 0.9;
         entropy *= 0.8;
         break;
-      case "error":
+      }
+      case "error": {
         frustration += 0.2;
         energy -= 0.05;
         entropy += 0.1;
         break;
-      case "entropy_high":
+      }
+      case "entropy_high": {
         boredom += 0.3;
         entropy += 0.2;
         break;
-      case "entropy_low":
+      }
+      case "entropy_low": {
         boredom *= 0.8;
         entropy *= 0.5;
         break;
+      }
     }
 
     return {
@@ -60,7 +65,6 @@ export const updatePhysiology = (
     const durationMs = performance.now() - start;
     cognitivePhysiologyUpdateDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.01) {
-    }
+    if (shouldWarn && durationMs > 0.01) {}
   }
 };

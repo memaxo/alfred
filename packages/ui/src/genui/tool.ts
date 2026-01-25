@@ -52,7 +52,7 @@ export function createGenUIResult<T = unknown>(
  */
 export function createChartResult<T = unknown>(
   title: string,
-  data: Array<{ x: string; y: number }>,
+  data: { x: string; y: number }[],
   rawData: T
 ): GenUIToolResult<T> {
   return createGenUIResult(
@@ -95,7 +95,7 @@ export function createGridResult<T = unknown>(
  * @returns GenUIToolResult with list component
  */
 export function createListResult<T = unknown>(
-  items: Array<{ id: string; content: string }>,
+  items: { id: string; content: string }[],
   rawData: T
 ): GenUIToolResult<T> {
   return createGenUIResult(
@@ -117,7 +117,7 @@ export function createListResult<T = unknown>(
  */
 export function createTermResult<T = unknown>(
   title: string,
-  lines: Array<{ text: string; type?: "output" | "error" | "input" }>,
+  lines: { text: string; type?: "output" | "error" | "input" }[],
   rawData: T
 ): GenUIToolResult<T> {
   return createGenUIResult(
@@ -179,11 +179,11 @@ export function createLoadingResult(
  */
 export function createPlanResult<T = unknown>(
   requirement: string,
-  tasks: Array<{
+  tasks: {
     id: string;
     title: string;
     status: "pending" | "running" | "completed" | "error";
-  }>,
+  }[],
   rawData: T
 ): GenUIToolResult<T> {
   return createGenUIResult(
@@ -225,11 +225,11 @@ export function createTaskResult<T = unknown>(
 // Orchestrator UI Tool Helpers
 // ============================================================================
 
-type OutputLine = {
+interface OutputLine {
   type: "stdout" | "stderr" | "system" | "command";
   content: string;
   timestamp?: string;
-};
+}
 
 /**
  * Create a streaming terminal result for real-time log output.
@@ -294,18 +294,18 @@ export function createProgressResult<T = unknown>(
   );
 }
 
-type WorkflowPhase = {
+interface WorkflowPhase {
   id: string;
   name: string;
   status: "pending" | "running" | "completed" | "error";
   progress: number;
-  tasks: Array<{
+  tasks: {
     id: string;
     name: string;
     status: "pending" | "running" | "completed" | "error";
     duration?: number;
-  }>;
-};
+  }[];
+}
 
 /**
  * Create a workflow timeline result for multi-phase execution.
@@ -361,12 +361,12 @@ export function createTaskTrackerResult<T = unknown>(
   );
 }
 
-type ErrorContext = {
+interface ErrorContext {
   operation: string;
   inputs?: Record<string, unknown>;
   step?: string;
   exitCode?: number;
-};
+}
 
 /**
  * Create an error panel result for error visualization.
@@ -390,12 +390,12 @@ export function createErrorResult<T = unknown>(
   );
 }
 
-type Artifact = {
+interface Artifact {
   path: string;
   kind: string;
   size?: number;
   preview?: string;
-};
+}
 
 /**
  * Create an artifact browser result for output management.
@@ -419,7 +419,7 @@ export function createArtifactsResult<T = unknown>(
   );
 }
 
-type ResourceInfo = {
+interface ResourceInfo {
   id: string;
   name: string;
   type: "container" | "vm" | "lxc";
@@ -427,8 +427,8 @@ type ResourceInfo = {
   cpu: number;
   memory: number;
   network?: { in: number; out: number };
-  ports?: Array<{ host: number; container: number }>;
-};
+  ports?: { host: number; container: number }[];
+}
 
 /**
  * Create a resource monitor result for container/VM monitoring.

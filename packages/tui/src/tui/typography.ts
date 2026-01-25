@@ -9,7 +9,7 @@ import { colors, hexToRgba } from "./theme";
 
 // ─── ANSI Escape Codes ───────────────────────────────────────────────────────
 
-const ESC = "\x1b[";
+const ESC = "\u001B[";
 const RESET = `${ESC}0m`;
 
 // ─── Style Modifiers ─────────────────────────────────────────────────────────
@@ -205,8 +205,8 @@ export function truncate(
   let i = 0;
 
   while (i < text.length && visibleCount < maxLength - ellipsis.length) {
-    if (text[i] === "\x1b") {
-      const match = text.slice(i).match(/^\x1b\[[0-9;]*m/);
+    if (text[i] === "\u001B") {
+      const match = text.slice(i).match(/^\u001B\[[0-9;]*m/);
       if (match) {
         result += match[0];
         i += match[0].length;
@@ -252,7 +252,7 @@ export function center(text: string, width: number, char = " "): string {
  */
 export function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/\x1b\[[0-9;]*m/g, "");
+  return text.replaceAll(/\u001B\[[0-9;]*m/g, "");
 }
 
 /**

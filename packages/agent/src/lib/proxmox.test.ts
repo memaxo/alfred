@@ -160,8 +160,8 @@ test("taskWait times out", async () => {
       intervalMs: 10,
     });
     expect(false).toBe(true);
-  } catch (err) {
-    const pveErr = err as ProxmoxError;
+  } catch (error) {
+    const pveErr = error as ProxmoxError;
     expect(pveErr.kind).toBe("timeout");
   }
 });
@@ -187,8 +187,8 @@ test("401 error maps to auth error", async () => {
   try {
     await client.lxcStatus("pve", 100);
     expect(false).toBe(true);
-  } catch (err) {
-    const pveErr = err as ProxmoxError;
+  } catch (error) {
+    const pveErr = error as ProxmoxError;
     expect(pveErr.kind).toBe("auth");
     expect(pveErr.status).toBe(401);
   }
@@ -212,8 +212,8 @@ test("404 error maps to notfound error", async () => {
   try {
     await client.lxcStatus("pve", 999);
     expect(false).toBe(true);
-  } catch (err) {
-    const pveErr = err as ProxmoxError;
+  } catch (error) {
+    const pveErr = error as ProxmoxError;
     expect(pveErr.kind).toBe("notfound");
   }
 });
@@ -239,8 +239,8 @@ test("500 error maps to server error", async () => {
   try {
     await client.lxcStatus("pve", 100);
     expect(false).toBe(true);
-  } catch (err) {
-    const pveErr = err as ProxmoxError;
+  } catch (error) {
+    const pveErr = error as ProxmoxError;
     expect(pveErr.kind).toBe("server");
     expect(pveErr.status).toBe(500);
   }
@@ -266,8 +266,8 @@ test("timeout abort triggers timeout error", async () => {
   try {
     await client.lxcStatus("pve", 100);
     expect(false).toBe(true);
-  } catch (err) {
-    const pveErr = err as ProxmoxError;
+  } catch (error) {
+    const pveErr = error as ProxmoxError;
     expect(pveErr.kind).toBe("timeout");
   }
 });

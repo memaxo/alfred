@@ -157,7 +157,7 @@ export function extractWaves(traj: AtifTrajectory): WaveInfo[] {
     }
   }
 
-  return Array.from(waveMap.values());
+  return [...waveMap.values()];
 }
 
 /**
@@ -192,7 +192,7 @@ export function extractPhases(traj: AtifTrajectory): PhaseInfo[] {
     }
   }
 
-  return Array.from(phaseMap.values());
+  return [...phaseMap.values()];
 }
 
 /**
@@ -206,10 +206,10 @@ export function extractPlan(traj: AtifTrajectory): PlanInfo | null {
     if (eventType === "plan-selected") {
       const plan = extra.plan as Record<string, unknown> | undefined;
       if (plan) {
-        const phases = (plan.phases ?? []) as Array<{
+        const phases = (plan.phases ?? []) as {
           tasks?: unknown[];
           deps?: unknown[];
-        }>;
+        }[];
         let subtaskCount = 0;
         let hasDependencies = false;
 

@@ -267,8 +267,8 @@ describe("droids router", () => {
                 expect.objectContaining({ resume: expect.any(Function) })
               );
               resolve();
-            } catch (assertionError) {
-              reject(assertionError);
+            } catch (error) {
+              reject(error);
             }
           },
           error: reject,
@@ -305,7 +305,7 @@ describe("droids router", () => {
                 const payload = JSON.parse(event.data ?? "{}") as {
                   runId: string;
                 };
-                runId = payload.runId;
+                ({ runId } = payload);
               } catch (error) {
                 reject(error);
                 return;
@@ -365,7 +365,7 @@ describe("droids router", () => {
         })
         .catch(() => {});
 
-      const capturedRunId = Array.from(runHandlers.keys())[0];
+      const capturedRunId = [...runHandlers.keys()][0];
       expect(capturedRunId).toBeDefined();
       if (!capturedRunId) {
         throw new Error("capturedRunId is undefined");

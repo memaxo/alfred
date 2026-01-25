@@ -31,7 +31,7 @@ function ensureObligations(ctx: Context) {
 
 export const profileRouter = router({
   get: authedProcedure.query(({ ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -50,7 +50,7 @@ export const profileRouter = router({
     )
     .input(profileUpdateSchema)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",

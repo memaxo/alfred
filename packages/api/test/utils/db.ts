@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
 
-type TestDb = {
+interface TestDb {
   client: Client;
   db: NodePgDatabase;
-};
+}
 
 /**
  * Creates an isolated test database connection.

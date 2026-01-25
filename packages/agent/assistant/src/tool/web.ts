@@ -91,12 +91,12 @@ function termScore(terms: string[], haystack: string) {
 
 function rerankResults(
   query: string,
-  original: Array<{
+  original: {
     url?: string;
     title?: string;
     snippet?: string;
     score?: number;
-  }>
+  }[]
 ) {
   const terms = tokenize(query);
   const scored = original.map((result, index) => {
@@ -179,7 +179,7 @@ export const toolWebAssistant = {
       });
     }
 
-    const url = input.url;
+    const { url } = input;
     if (!url) {
       throw new Error("assistant_web_fetch_url_required");
     }
@@ -193,7 +193,7 @@ export const toolWebAssistant = {
       },
     });
 
-    const details = base.details;
+    const { details } = base;
     if (!details) {
       throw new Error("assistant_web_fetch_missing_details");
     }

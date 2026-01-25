@@ -21,14 +21,14 @@ export function deduplicateSources(
   }
 
   // 2. Deduplicate internal code paths
-  const uniqueCode = Array.from(new Set(internal.existingCode));
+  const uniqueCode = [...new Set(internal.existingCode)];
 
   // 3. Cross-source deduplication:
   // If an external source is actually a local file path that we already have in internal,
   // we might want to remove it from external to avoid redundant processing.
   // This depends on how URLs are stored. If they are file:// or just paths.
   const codeSet = new Set(uniqueCode);
-  const finalExternal = Array.from(externalMap.values()).filter((ext) => {
+  const finalExternal = [...externalMap.values()].filter((ext) => {
     // Basic check for file paths in URL-like strings
     const sourceStr = ext.source.toLowerCase();
     if (sourceStr.startsWith("file://")) {
@@ -60,8 +60,8 @@ export function deduplicateSources(
     external: finalExternal,
     internal: {
       existingCode: uniqueCode,
-      patterns: Array.from(patternMap.values()),
-      conventions: Array.from(conventionMap.values()),
+      patterns: [...patternMap.values()],
+      conventions: [...conventionMap.values()],
     },
   };
 }

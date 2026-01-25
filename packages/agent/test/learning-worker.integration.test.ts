@@ -22,7 +22,7 @@ mock.module("@alfred/knowledge/extractor", () => ({
     facts: [
       {
         content: "Test Fact",
-        confidence: 1.0,
+        confidence: 1,
         source: "test",
         entities: [],
         relations: [],
@@ -37,7 +37,7 @@ mock.module("@alfred/knowledge/extractor", () => ({
       data: {
         _: "fact",
         content: "Test Fact",
-        confidence: 1.0,
+        confidence: 1,
         source: "test",
       },
     },
@@ -161,7 +161,7 @@ mock.module("@alfred/db", () => ({
               target.dreamedAt = new Date();
             }
           }
-          return Promise.resolve(undefined);
+          return Promise.resolve();
         },
       }),
     }),
@@ -178,10 +178,10 @@ mock.module("@alfred/db/repo/graph/index", () => ({
 
   // Decay mocks
   findNodesForDecay: () =>
-    Promise.resolve([{ id: "node-decay-1", properties: { confidence: 1.0 } }]),
+    Promise.resolve([{ id: "node-decay-1", properties: { confidence: 1 } }]),
   updateNodeConfidenceBatch: (updates: unknown[]) => {
     decayCalled = true;
-    decayedNodes = updates as Array<{ id: string; confidence: number }>;
+    decayedNodes = updates as { id: string; confidence: number }[];
     return Promise.resolve(updates.length);
   },
 

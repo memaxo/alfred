@@ -83,7 +83,10 @@ let server: ReturnType<typeof Bun.serve> | null = null;
 const activeSockets = new Set<ServerWebSocket<VoiceSocketData>>();
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-type RateLimitBucket = { count: number; resetAt: number };
+interface RateLimitBucket {
+  count: number;
+  resetAt: number;
+}
 const ipRateLimitBuckets = new Map<string, RateLimitBucket>();
 const userRateLimitBuckets = new Map<string, RateLimitBucket>();
 

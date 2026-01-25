@@ -62,11 +62,11 @@ function maybeUiMessages(event: WorkflowEvent): UIMessage[] | null {
   return Array.isArray(msgs) && msgs.length > 0 ? msgs : null;
 }
 
-export type PersistEventResult = {
+export interface PersistEventResult {
   eventId: string;
   eventType: string;
   uiMessages: UIMessage[] | null;
-};
+}
 
 export async function persistWorkflowEvent(
   runId: string,

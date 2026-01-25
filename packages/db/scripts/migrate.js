@@ -96,8 +96,8 @@ async function main() {
   console.log("Done.");
 }
 if (import.meta.main) {
-  main().catch((err) => {
-    console.error("Migration failed:", err);
+  main().catch((error) => {
+    console.error("Migration failed:", error);
     process.exit(1);
   });
 }

@@ -16,32 +16,32 @@ export type PersistFn = (
   entries: KnowledgeEntry[]
 ) => Promise<void>;
 
-export type NodeRecord = {
+export interface NodeRecord {
   hash: string;
   kind: Knowledge["_"];
   label: string;
   properties?: Record<string, unknown> | null;
-};
+}
 
-export type RelationRecord = {
+export interface RelationRecord {
   hash: string;
   fromHash: string;
   toHash: string;
   kind: string;
   weight?: number | null;
-};
+}
 
-export type HypergraphLoader = {
+export interface HypergraphLoader {
   loadNodes(resource: string): Promise<NodeRecord[]>;
   loadRelations(resource: string): Promise<RelationRecord[]>;
-};
+}
 
-export type Embedder = {
+export interface Embedder {
   embed: (text: string) => Promise<Float32Array>;
   embedMany?: (texts: string[]) => Promise<Float32Array[]>;
-};
+}
 
-export type AutoPersistOptions = {
+export interface AutoPersistOptions {
   intervalMs?: number;
   batchSize?: number;
   computeEmbeddings?: boolean;
@@ -49,12 +49,12 @@ export type AutoPersistOptions = {
   onError?: (err: unknown) => void;
   embedder?: Embedder;
   isEmbeddable?: (k: Knowledge) => boolean;
-};
+}
 
-export type AutoPersistHandle = {
+export interface AutoPersistHandle {
   stop(): void;
   flush(): Promise<void>;
-};
+}
 
 const PERSIST_BUDGET_MS = 25;
 const LOAD_BUDGET_MS = 30;
@@ -67,7 +67,7 @@ export function extractEntries(
   opts?: { onlyDirty?: boolean }
 ): KnowledgeEntry[] {
   return measureSync("knowledge.persist.extract", 5, () => {
-    const ids = opts?.onlyDirty ? graph.getDirty() : Array.from(graph.ids());
+    const ids = opts?.onlyDirty ? graph.getDirty() : [...graph.ids()];
     const entries: KnowledgeEntry[] = [];
     for (const id of ids) {
       const knowledge = graph.get(id);
@@ -138,10 +138,10 @@ export function startAutoPersist(
     options.embedBatchSize ?? DEFAULT_EMBED_BATCH
   );
   const computeEmbeddings = options.computeEmbeddings ?? true;
-  const embedder = options.embedder;
+  const { embedder } = options;
   const isEmbeddable =
     options.isEmbeddable ?? ((knowledge: Knowledge) => knowledge._ === "fact");
-  const onError = options.onError;
+  const { onError } = options;
   const processedEmbeddings = new Set<NodeId>();
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -187,7 +187,7 @@ export function startAutoPersist(
     if (!(computeEmbeddings && embedder)) {
       return;
     }
-    const candidates: Array<{ id: NodeId; text: string }> = [];
+    const candidates: { id: NodeId; text: string }[] = [];
     for (const [id, knowledge] of graph.entries()) {
       if (candidates.length >= embedBatchSize) {
         break;
@@ -217,12 +217,13 @@ export function startAutoPersist(
       }
     }
     for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
       const vector = vectors[i];
-      if (!vector) {
+      if (!(candidate && vector)) {
         continue;
       }
-      graph.setEmbedding(candidates[i]?.id, vector);
-      processedEmbeddings.add(candidates[i]?.id);
+      graph.setEmbedding(candidate.id, vector);
+      processedEmbeddings.add(candidate.id);
     }
   };
 
@@ -240,8 +241,8 @@ export function startAutoPersist(
     try {
       await flushDirty();
       await embedMissing();
-    } catch (err) {
-      onError?.(err);
+    } catch (error) {
+      onError?.(error);
     } finally {
       scheduleNext();
     }
@@ -295,8 +296,9 @@ function deserializeNode(record: NodeRecord): Knowledge | null {
         accuracy: clamp01(readNumber(props, "accuracy", 0.5)),
       };
     }
-    default:
+    default: {
       return null;
+    }
   }
 }
 
@@ -377,15 +379,20 @@ function clamp01(value: number): number {
 
 function embeddingText(knowledge: Knowledge): string | null {
   switch (knowledge._) {
-    case "fact":
+    case "fact": {
       return knowledge.content;
-    case "insight":
+    }
+    case "insight": {
       return knowledge.conclusion;
-    case "pattern":
+    }
+    case "pattern": {
       return knowledge.rule;
-    case "relation":
+    }
+    case "relation": {
       return `${knowledge.kind}:${knowledge.from}->${knowledge.to}`;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }

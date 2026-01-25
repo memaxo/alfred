@@ -116,9 +116,9 @@ const stringifyForLog = (payload: unknown): string => {
   }
 };
 
-export type ParseOptions = {
+export interface ParseOptions {
   onWarning?: (message: string, context: Record<string, unknown>) => void;
-};
+}
 
 /**
  * Parse a thread event from unknown payload

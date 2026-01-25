@@ -11,15 +11,15 @@ import {
   voiceStreamLatencySeconds,
 } from "../metrics";
 
-export type VoiceLogger = {
+export interface VoiceLogger {
   info(message: string, meta?: Record<string, unknown>): void;
   error(message: string, meta?: Record<string, unknown>): void;
   warn(message: string, meta?: Record<string, unknown>): void;
-};
+}
 
 const defaultLogger: VoiceLogger = globalLogger;
 
-export type VoiceSessionConfig = {
+export interface VoiceSessionConfig {
   userId: string;
   sessionId: string;
   language?: string;
@@ -28,7 +28,7 @@ export type VoiceSessionConfig = {
   logger?: VoiceLogger;
   /** Default chunk size for STT latency/accuracy tradeoff */
   defaultChunkSize?: ChunkSize;
-};
+}
 
 export class VoiceSession {
   private readonly config: VoiceSessionConfig;

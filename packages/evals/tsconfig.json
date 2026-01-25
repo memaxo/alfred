@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "strictNullChecks": true
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["dist"],
+  "references": [
+    { "path": "../agent" },
+    { "path": "../auth" },
+    { "path": "../logger" }
+  ]
+}

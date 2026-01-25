@@ -4,27 +4,27 @@ import { logger } from "@alfred/logger";
 import { coerceNonEmptyString, coerceRecord } from "../utils/coerce";
 import { type ReviewCheckStatus, ReviewGate } from "./review-gate";
 
-type ReviewGateState = {
+interface ReviewGateState {
   checks: ReviewCheckStatus[];
   planInitialized: boolean;
   planRequired: boolean;
   minimumRequired: number;
-};
+}
 
-export type ReviewEscalationSummary = {
+export interface ReviewEscalationSummary {
   reason?: string;
   attempts?: number;
   fixerAttempts?: number;
   plan?: string;
-  failures?: Array<{
+  failures?: {
     command?: string;
     output?: string;
     error?: string;
     checkId?: string;
-  }>;
+  }[];
   relevantFiles?: string[];
   summary?: string;
-};
+}
 
 export class ReviewGateManager {
   private readonly gate = new ReviewGate();
@@ -166,7 +166,7 @@ function formatEscalationMetricKind(reason?: string): string {
   }
   const slug = reason
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replaceAll(/[^a-z0-9]+/g, "_")
+    .replaceAll(/^_+|_+$/g, "");
   return slug.length > 0 ? `review_${slug}` : "review_escalated";
 }

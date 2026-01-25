@@ -6,7 +6,7 @@
 
 import { logger } from "@alfred/logger";
 
-type StatusResult = {
+interface StatusResult {
   stt: {
     configured: boolean;
     poolSize: number;
@@ -22,7 +22,7 @@ type StatusResult = {
     useUv: boolean;
     path: string | undefined;
   };
-};
+}
 
 /**
  * Show voice pipeline configuration status

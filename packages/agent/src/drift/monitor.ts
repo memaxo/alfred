@@ -18,24 +18,24 @@ import {
 /**
  * Domain-specific drift detector
  */
-type DomainDetector = {
+interface DomainDetector {
   detector: Adwin;
   domain: string;
   lastDrift: number | null;
   driftHistory: DriftEvent[];
-};
+}
 
 /**
  * Drift event for history tracking
  */
-export type DriftEvent = {
+export interface DriftEvent {
   domain: string;
   timestamp: number;
   oldMean: number;
   newMean: number;
   windowSizeBefore: number;
   windowSizeAfter: number;
-};
+}
 
 /**
  * Drift callback function type
@@ -45,27 +45,27 @@ export type DriftCallback = (event: DriftEvent) => void | Promise<void>;
 /**
  * Monitor configuration
  */
-export type MonitorConfig = {
+export interface MonitorConfig {
   /** ADWIN configuration for all detectors */
   adwinConfig?: AdwinConfig;
   /** Maximum drift events to retain in history */
   maxHistorySize?: number;
   /** Callback when drift is detected */
   onDrift?: DriftCallback;
-};
+}
 
 /**
  * Monitor snapshot for persistence
  */
-export type MonitorSnapshot = {
-  detectors: Array<{
+export interface MonitorSnapshot {
+  detectors: {
     domain: string;
     adwin: AdwinSnapshot;
     lastDrift: number | null;
     driftHistory: DriftEvent[];
-  }>;
+  }[];
   globalHistory: DriftEvent[];
-};
+}
 
 /**
  * Concept Drift Monitor
@@ -201,7 +201,7 @@ export class DriftMonitor {
    * Get all monitored domains
    */
   getMonitoredDomains(): string[] {
-    return Array.from(this.detectors.keys());
+    return [...this.detectors.keys()];
   }
 
   /**

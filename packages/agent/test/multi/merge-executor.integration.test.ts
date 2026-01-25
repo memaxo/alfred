@@ -11,11 +11,11 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-type MergePlan = {
+interface MergePlan {
   strategy: "branch";
   branches: string[];
   targetBranch: string;
-};
+}
 
 function git(cwd: string, args: string[]) {
   return execFileAsync("git", args, { cwd });

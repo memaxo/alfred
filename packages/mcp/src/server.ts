@@ -1,3 +1,5 @@
+import type { AnySchema } from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/spec.types.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -7,16 +9,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { z } from "zod";
+import { z, type output } from "zod/mini";
 
-export type RuntimeMcpServerOptions = {
+export interface RuntimeMcpServerOptions {
   bindHost: string;
   port: number;
   /** Path for the MCP endpoint (default: "/mcp") */
   path?: string;
-};
+}
 
-export type RuntimeMcpSession = {
+export interface RuntimeMcpSession {
   runId: string;
   agentId: string;
   abort: (reason: string) => void;
@@ -26,35 +28,21 @@ export type RuntimeMcpSession = {
     input: RuntimeMcpEscalationInput;
     receipt: RuntimeMcpEscalationReceipt;
   }) => void;
-};
+}
 
 export const RUNTIME_MCP_TOOL_NAMES = {
   ESCALATE: "escalate",
 } as const;
 
-export type RuntimeMcpEscalationInput = {
-  reason:
-    | "missing_dependency"
-    | "wrong_architecture"
-    | "permission_denied"
-    | "resource_exhausted"
-    | "external_service_unavailable"
-    | "conflicting_requirements"
-    | "other";
-  details: string;
-  suggestions?: string[];
-  severity: "warning" | "blocking";
-};
-
-export type RuntimeMcpEscalationReceipt = {
+export interface RuntimeMcpEscalationReceipt {
   ok: true;
   receiptId: string;
   receivedAt: number;
   action: "abort" | "continue";
   message: string;
-};
+}
 
-const escalationInputShape = {
+const escalationInputSchema = z.object({
   reason: z.enum([
     "missing_dependency",
     "wrong_architecture",
@@ -64,19 +52,23 @@ const escalationInputShape = {
     "conflicting_requirements",
     "other",
   ]),
-  details: z.string().min(10).max(2000),
-  suggestions: z.array(z.string().max(500)).max(5).optional(),
-  severity: z.enum(["warning", "blocking"]).default("blocking"),
-} as const;
+  details: z.string().check(z.minLength(10), z.maxLength(2000)),
+  suggestions: z.optional(
+    z.array(z.string().check(z.maxLength(500))).check(z.maxLength(5))
+  ),
+  severity: z._default(z.enum(["warning", "blocking"]), "blocking"),
+});
 
-type SessionConn = {
+export type RuntimeMcpEscalationInput = output<typeof escalationInputSchema>;
+
+interface SessionConn {
   token: string;
   runId: string;
   agentId: string;
   session: RuntimeMcpSession;
   server: McpServer;
   transport: StreamableHTTPServerTransport;
-};
+}
 
 function normalizeHeaderValue(value: unknown): string | undefined {
   if (typeof value === "string") {
@@ -129,11 +121,28 @@ function createPerSessionMcpServer(session: RuntimeMcpSession): {
 
   const toolName = RUNTIME_MCP_TOOL_NAMES.ESCALATE;
 
-  mcp.tool(
+  mcp.registerTool(
     toolName,
-    "Escalate an environment blocker to the ALFRED orchestrator (immediate ack).",
-    escalationInputShape,
-    (input: RuntimeMcpEscalationInput) => {
+    {
+      description:
+        "Escalate an environment blocker to the ALFRED orchestrator (immediate ack).",
+      inputSchema: escalationInputSchema as unknown as AnySchema,
+    },
+    async (inputRaw: unknown): Promise<CallToolResult> => {
+      const parsed = escalationInputSchema.safeParse(inputRaw);
+      if (!parsed.success) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "invalid_input",
+            },
+          ],
+        };
+      }
+
+      const input = parsed.data;
       const shouldAbort = input.severity === "blocking";
       const receipt: RuntimeMcpEscalationReceipt = {
         ok: true,
@@ -181,7 +190,7 @@ function createPerSessionMcpServer(session: RuntimeMcpSession): {
             text: JSON.stringify(receipt),
           },
         ],
-        structuredContent: receipt,
+        structuredContent: receipt as unknown as Record<string, unknown>,
       };
     }
   );
@@ -318,7 +327,7 @@ export class RuntimeMcpServer {
     // per session (tools/list, tools/call, etc.), so replay protection must be disabled.
     try {
       await verifyMcpSessionToken(token, ["mcp.escalate"]);
-    } catch (_error) {
+    } catch {
       sendText(res, 403, "Invalid token");
       return;
     }

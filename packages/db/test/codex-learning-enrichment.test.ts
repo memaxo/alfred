@@ -33,6 +33,7 @@ mock.module("../src/client.js", () => {
   };
 
   return {
+    dbDriver: "postgres",
     db: {
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -40,6 +41,13 @@ mock.module("../src/client.js", () => {
         }),
       }),
       select: vi.fn().mockImplementation(createChainableMock),
+    },
+    getDbDriver: () => "postgres",
+    isPostgresDriver: () => true,
+    isSqliteDriver: () => false,
+    requirePostgresDriver: () => {},
+    requireSqliteDriver: () => {
+      throw new Error("sqlite driver not available in mocked db client");
     },
   };
 });
@@ -54,7 +62,7 @@ const {
 } = await import("../src/repo/codex-learning.js");
 
 // Import type separately
-import { type CreateHeuristicInput } from "../src/repo/codex-learning.js";
+import type { CreateHeuristicInput } from "../src/repo/codex-learning.js";
 
 describe("codex-learning enrichment (unit - no DB)", () => {
   describe("createHeuristicFromFailure", () => {

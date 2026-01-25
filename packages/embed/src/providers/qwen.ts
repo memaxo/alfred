@@ -14,19 +14,19 @@ import {
   MODEL_IDS,
 } from "../registry.js";
 
-type QwenRequest = {
+interface QwenRequest {
   id: string;
   type: "embed" | "ping";
   payload: {
-    inputs?: Array<{
+    inputs?: {
       type: "text" | "image" | "mixed";
       text?: string;
       image_url?: string;
-    }>;
+    }[];
   };
-};
+}
 
-type QwenResponse = {
+interface QwenResponse {
   id: string;
   type: "embed_response" | "pong" | "error" | "status" | "ready";
   payload: {
@@ -34,7 +34,7 @@ type QwenResponse = {
     error?: string;
     message?: string;
   };
-};
+}
 
 /**
  * Qwen3-VL-Embedding provider implementation
@@ -205,16 +205,19 @@ export class QwenProvider implements EmbeddingProvider {
 
     const payload = inputs.map((input) => {
       switch (input.type) {
-        case "text":
+        case "text": {
           return { type: "text" as const, text: input.content };
-        case "image":
+        }
+        case "image": {
           return { type: "image" as const, image_url: input.url };
-        case "mixed":
+        }
+        case "mixed": {
           return {
             type: "mixed" as const,
             text: input.text,
             image_url: input.imageUrl,
           };
+        }
       }
     });
 

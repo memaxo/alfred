@@ -11,23 +11,23 @@ export type ReviewCheckType =
   | "smoke"
   | "verify";
 
-export type ReviewCheck = {
+export interface ReviewCheck {
   id: string;
   description: string;
   type: ReviewCheckType;
   script?: string;
-};
+}
 
-export type ReviewPlan = {
+export interface ReviewPlan {
   summary: string;
   checks: ReviewCheck[];
-};
+}
 
-type VerifyRule = {
+interface VerifyRule {
   script: string;
   description: string;
   pattern: (file: string) => boolean;
-};
+}
 
 const VERIFY_RULES: VerifyRule[] = [
   {
@@ -85,12 +85,12 @@ function findRepoRoot(start: string): string {
   }
 }
 
-export type ReviewFailureDetail = {
+export interface ReviewFailureDetail {
   command?: string;
   output?: string;
   error?: string;
   checkId?: string;
-};
+}
 
 const DEFAULT_FIXER_ACCEPTANCE = [
   "All automated review checks pass without intervention.",
@@ -109,7 +109,7 @@ export function buildFixerSubTask(args: {
 }): SubTask {
   const attemptLabel = padAttempt(args.attempt);
   const hints = Array.isArray(args.relevantFiles)
-    ? Array.from(new Set(args.relevantFiles)).slice(0, 25)
+    ? [...new Set(args.relevantFiles)].slice(0, 25)
     : [];
 
   return {
@@ -181,7 +181,7 @@ export function generateFixerExecPlanSkeleton(args: {
 
   if (relevantFiles?.length) {
     lines.push("Focus files:");
-    for (const file of Array.from(new Set(relevantFiles)).slice(0, 25)) {
+    for (const file of [...new Set(relevantFiles)].slice(0, 25)) {
       lines.push(`- ${file}`);
     }
     lines.push("");
@@ -250,18 +250,18 @@ function selectVerifyChecks(files: string[]): ReviewCheck[] {
     }
   }
 
-  return Array.from(matches.values()).sort((a, b) => a.id.localeCompare(b.id));
+  return [...matches.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function pathToId(script: string) {
-  return script.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return script.replaceAll(/[^a-zA-Z0-9]+/g, "-").replaceAll(/^-|-$/g, "");
 }
 
 export function buildReviewPlan(mergedHint: {
   files: string[];
   summary?: string;
 }): ReviewPlan {
-  const uniqueFiles = Array.from(new Set(mergedHint.files ?? [])).sort();
+  const uniqueFiles = [...new Set(mergedHint.files ?? [])].sort();
 
   const checks: ReviewCheck[] = [];
 

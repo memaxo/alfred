@@ -11,34 +11,34 @@ import { addPollingWithFallback, type DataMode } from "./mode";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type LatencyMetrics = {
+export interface LatencyMetrics {
   p50: number;
   p99: number;
   avg: number;
-};
+}
 
-export type RouterMetrics = {
+export interface RouterMetrics {
   name: string;
   requests: number;
   errors: number;
   latency: LatencyMetrics;
-};
+}
 
-export type SystemMetrics = {
+export interface SystemMetrics {
   requestsPerMinute: number;
   errorsPerMinute: number;
   activeConnections: number;
   memoryUsageMb: number;
   cpuPercent: number;
-};
+}
 
-export type MetricsState = {
+export interface MetricsState {
   system: SystemMetrics;
   routers: RouterMetrics[];
   latencyHistory: number[]; // Recent latency samples for sparkline
   requestHistory: number[]; // Recent request counts for sparkline
   timestamp: number;
-};
+}
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
@@ -151,12 +151,12 @@ export class MetricsStore {
 
 // ─── Metrics Subscription Setup ──────────────────────────────────────────────
 
-export type MetricsSubscriptionOptions = {
+export interface MetricsSubscriptionOptions {
   manager: SubscriptionManager;
   store: MetricsStore;
   pollingInterval?: number;
   mode?: DataMode;
-};
+}
 
 export function setupMetricsSubscription(
   options: MetricsSubscriptionOptions

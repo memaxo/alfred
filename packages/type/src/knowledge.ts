@@ -21,39 +21,39 @@ export type KnowledgeSourceType =
   | "community"
   | "preference";
 
-export type KnowledgeFact = {
+export interface KnowledgeFact {
   id: string;
   content: string;
   confidence: KnowledgeConfidence;
   source?: string;
   timestamp?: string;
   tags?: string[];
-};
+}
 
-export type KnowledgeRelation = {
+export interface KnowledgeRelation {
   id: string;
   from: string;
   to: string;
   kind: string;
   weight?: number;
   metadata?: Record<string, unknown>;
-};
+}
 
-export type KnowledgeInsight = {
+export interface KnowledgeInsight {
   id: string;
   derived: string[];
   conclusion: string;
   confidence: KnowledgeConfidence;
   rationale?: string;
-};
+}
 
-export type KnowledgePattern = {
+export interface KnowledgePattern {
   id: string;
   examples: string[];
   rule: string;
   accuracy?: number;
   notes?: string;
-};
+}
 
 export type KnowledgeNode =
   | KnowledgeFact
@@ -61,7 +61,7 @@ export type KnowledgeNode =
   | KnowledgeInsight
   | KnowledgePattern;
 
-export type KnowledgeUpdate = {
+export interface KnowledgeUpdate {
   node: KnowledgeNode;
   replace?: boolean;
-};
+}

@@ -1,3 +1,5 @@
+import type { FileSink } from "bun";
+
 import { logger } from "@alfred/logger";
 import {
   type Client,
@@ -11,10 +13,12 @@ import {
   type WriteTextFileRequest,
   type WriteTextFileResponse,
 } from "@alfred/protocol/acp";
-import { type FileSink } from "bun";
 import { spawn } from "bun";
 import * as fs from "node:fs/promises";
 import path from "node:path";
+
+import type { ToolExecuteContext } from "../shared/context.js";
+import type { OpenCodeToolInput, OpenCodeToolOutput } from "./definition.js";
 
 import { persistArtifact } from "../../../artifact/persist.js";
 import {
@@ -22,7 +26,6 @@ import {
   isPathAllowed,
   openDirectorySecure,
 } from "../../../security/filesystem.js";
-import { type ToolExecuteContext } from "../shared/context.js";
 import { executorServerFallbackTotal } from "../shared/metrics.js";
 import {
   ensureServer,
@@ -31,10 +34,6 @@ import {
   type ServerHandle,
   serverKey,
 } from "../shared/server.js";
-import {
-  type OpenCodeToolInput,
-  type OpenCodeToolOutput,
-} from "./definition.js";
 
 interface AgentCmd {
   cmd: string;
@@ -240,7 +239,7 @@ function createClient(
         params && typeof params.sessionId === "string" ? params.sessionId : "";
       const ctx = sessionId ? getCtx(sessionId) : undefined;
       const writer = ctx?.writer;
-      const update = params.update;
+      const { update } = params;
       if (!update || typeof update !== "object") {
         return;
       }
@@ -268,7 +267,7 @@ function createClient(
       }
 
       if (kind === "plan") {
-        const entries = (update as { entries?: unknown }).entries;
+        const { entries } = update as { entries?: unknown };
         ctx?.onPlan(entries);
         void Promise.resolve(
           writer?.write?.({
@@ -281,8 +280,8 @@ function createClient(
       }
 
       if (kind === "tool_call") {
-        const title = (update as { title?: unknown }).title;
-        const status = (update as { status?: unknown }).status;
+        const { title } = update as { title?: unknown };
+        const { status } = update as { status?: unknown };
         const titleStr = typeof title === "string" ? title : "tool_call";
         const statusStr = status === "failed" ? "failed" : "running";
         emitCommand(writer, titleStr, statusStr);
@@ -290,26 +289,26 @@ function createClient(
       }
 
       if (kind === "tool_call_update") {
-        const status = (update as { status?: unknown }).status;
+        const { status } = update as { status?: unknown };
         const id = (update as { toolCallId?: unknown }).toolCallId;
         const titleStr =
           typeof id === "string" ? `tool_call:${id}` : "tool_call";
         const mapped =
           status === "completed"
             ? "completed"
-            : status === "failed"
+            : (status === "failed"
               ? "failed"
-              : "running";
+              : "running");
         emitCommand(writer, titleStr, mapped);
 
         // Capture diff payloads (ACP tool_call_update may include `content` array).
-        const content = (update as { content?: unknown }).content;
+        const { content } = update as { content?: unknown };
         if (Array.isArray(content)) {
           for (const item of content) {
             if (!item || typeof item !== "object") {
               continue;
             }
-            const type = (item as { type?: unknown }).type;
+            const { type } = item as { type?: unknown };
             if (type !== "diff") {
               continue;
             }
@@ -684,7 +683,7 @@ async function startOpenCodeServer(args: {
         const append = (delta: string) => {
           sessionText.value += delta;
         };
-        const artifacts: Array<{ path: string; kind: string }> = [];
+        const artifacts: { path: string; kind: string }[] = [];
         const addArtifact = (p: string, kind: string) => {
           const trimmed = p.trim();
           if (!trimmed) {

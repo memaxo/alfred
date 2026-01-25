@@ -1,4 +1,5 @@
-import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+
 import {
   __internals,
   buildAgentSpec,

@@ -1,5 +1,6 @@
-import { type UIMessage } from "@alfred/type/stream";
-import { type FormEvent, type ReactNode } from "react";
+import type { UIMessage } from "@alfred/type/stream";
+import type { FormEvent, ReactNode } from "react";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {

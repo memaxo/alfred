@@ -152,7 +152,10 @@ describe("@alfred/pacer (lite)", () => {
   });
 
   it("LiteQueuer processes higher priority first when getPriority is set", () => {
-    type Item = { id: string; pri: number };
+    interface Item {
+      id: string;
+      pri: number;
+    }
     const out: string[] = [];
     const q = new LiteQueuer<Item>(
       (item) => {

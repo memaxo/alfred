@@ -4,46 +4,46 @@
 
 import type { Autonomy, Confidence } from "../util/math.js";
 
-export type Plan = {
+export interface Plan {
   steps: Step[];
   duration: number; // estimated ms
   confidence: Confidence;
-};
+}
 
-export type Step = {
+export interface Step {
   action: string;
   params: Record<string, unknown>;
   timeout: number;
   retryable: boolean;
-};
+}
 
-export type Risk = {
+export interface Risk {
   type: "data_loss" | "irreversible" | "external_effect" | "high_cost";
   severity: "low" | "medium" | "high";
   mitigation?: string;
-};
+}
 
-export type Decision = {
+export interface Decision {
   id: string;
   description: string;
   score: number;
   plan: Plan;
   risks: Risk[];
   autonomy: Autonomy;
-};
+}
 
-export type Criteria = {
+export interface Criteria {
   safety: number;
   speed: number;
   accuracy: number;
   cost: number;
-};
+}
 
-export type Path = {
+export interface Path {
   direction: string;
   depth: number;
   promise: number; // how promising this path looks
-};
+}
 
 export type Outcome =
   | { _: "success"; result: unknown; duration: number }
@@ -52,7 +52,7 @@ export type Outcome =
   | { _: "cancelled"; reason: string };
 
 export const defaultCriteria = (): Criteria => ({
-  safety: 1.0,
+  safety: 1,
   speed: 0.7,
   accuracy: 0.9,
   cost: 0.5,

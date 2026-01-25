@@ -61,18 +61,18 @@ describe("buildHistoryContext", () => {
   });
 
   it("preserves the latest tool chain as an anchor", async () => {
-    type ToolCallPart = {
+    interface ToolCallPart {
       type: "tool-call";
       toolCallId: string;
       toolName: string;
       input: unknown;
-    };
-    type ToolResultPart = {
+    }
+    interface ToolResultPart {
       type: "tool-result";
       toolCallId: string;
       toolName: string;
       output: unknown;
-    };
+    }
 
     const toolCall: UIMessage = {
       id: "tool-call",
@@ -148,7 +148,7 @@ describe("buildHistoryContext", () => {
     expect(ctx.keptTokens).toBeGreaterThan(0);
     expect(ctx.droppedTokens).toBeGreaterThanOrEqual(0);
     expect(ctx.selection.tierByMessage instanceof WeakMap).toBe(true);
-    const dropped = ctx.selection.dropped;
+    const { dropped } = ctx.selection;
     if (dropped.length > 0) {
       const tier = ctx.selection.tierByMessage.get(dropped[0]);
       expect(tier).toBeDefined();

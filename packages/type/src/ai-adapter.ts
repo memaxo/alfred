@@ -1,22 +1,22 @@
 import type {
+  FlexibleSchema,
   GenerateObjectResult,
   GenerateTextResult,
   ModelMessage,
   ToolSet,
 } from "ai";
-import type { z } from "zod";
 
-export type AIAdapter = {
+export interface AIAdapter {
   generateText(params: {
     messages: ModelMessage[];
     system?: string;
     tools?: ToolSet;
   }): Promise<GenerateTextResult<ToolSet, never>>;
 
-  generateObject<T>(params: {
+  generateObject(params: {
     messages: ModelMessage[];
     system?: string;
-    schema: z.ZodType<T>;
+    schema: FlexibleSchema<unknown>;
     prompt?: string;
-  }): Promise<GenerateObjectResult<T>>;
-};
+  }): Promise<GenerateObjectResult<unknown>>;
+}

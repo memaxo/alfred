@@ -42,12 +42,12 @@ mock.module("node-pty", () => ({
 
 mock.module("@alfred/agent/orchestrator/linear", () => ({
   emitLinearActivity: vi.fn().mockResolvedValue({ ok: true }),
-  setLinearDelegate: vi.fn().mockResolvedValue(undefined),
+  setLinearDelegate: vi.fn().mockResolvedValue(),
   setLinearStarted: vi.fn().mockResolvedValue({ stateId: "started" }),
   setLinearCompleted: vi.fn().mockResolvedValue({ stateId: "done" }),
   setLinearCancelled: vi.fn().mockResolvedValue({ stateId: "cancelled" }),
-  setLinearSessionExternalUrl: vi.fn().mockResolvedValue(undefined),
-  commentOnLinearIssue: vi.fn().mockResolvedValue(undefined),
+  setLinearSessionExternalUrl: vi.fn().mockResolvedValue(),
+  commentOnLinearIssue: vi.fn().mockResolvedValue(),
   extractIssueIdFromSession: (id: string) => id,
 }));
 
@@ -71,7 +71,7 @@ mock.module("../src/workflow/access", () => ({
 
 setupTestEnv();
 mockPolicyAudit();
-installPipelineMocks();
+installPipelineMocks({ runtimeLinear: true, sessionRecovery: true });
 
 const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
@@ -165,7 +165,7 @@ function createMockExecutor(
   mockSummary: string,
   events: WorkflowEvent[]
 ) {
-  const mockStream = async function* () {
+  const mockStream = async function* mockStream() {
     await Promise.resolve();
     for (const event of events) {
       yield event;
@@ -176,7 +176,7 @@ function createMockExecutor(
     runId: mockRunId,
     summary: mockSummary,
     stream: mockStream(),
-    resume: vi.fn().mockResolvedValue(undefined),
+    resume: vi.fn().mockResolvedValue(),
     cancel: vi.fn(),
   };
 }
@@ -185,33 +185,16 @@ describe("workflow router", () => {
   describe("start", () => {
     it("creates a workflow run and registers handle", async () => {
       const mockRunId = "test-run-id";
-      const mockSummary = "Plan initialized for test requirement";
-      const mockStream = async function* () {
-        await Promise.resolve();
-        yield { _: "run", id: mockRunId } as WorkflowEvent;
-        yield {
-          _: "progress",
-          pct: 10,
-          message: "starting",
-        } as WorkflowEvent;
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue({
-        runId: mockRunId,
-        summary: mockSummary,
-        stream: mockStream(),
-        resume: vi.fn().mockResolvedValue(undefined),
-        cancel: vi.fn(),
-      });
 
       workflowRepoMocks.createRun.mockResolvedValue({
         id: mockRunId,
         userId: "test-user",
-        workflowId: "plan",
+        workflowId: "pipeline",
         status: "running",
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any);
+      workflowRepoMocks.getRun.mockResolvedValue(null);
 
       const conversationRow = {
         id: "conv-start",
@@ -225,32 +208,28 @@ describe("workflow router", () => {
       createConversationMock.mockResolvedValueOnce(conversationRow);
       createMessageMock.mockResolvedValue(null);
 
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
       const result = await caller.workflow.start({
         requirement: "test requirement",
         auto: "low",
+        runId: mockRunId,
       });
 
-      expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
       expect(workflowRepoMocks.createRun).toHaveBeenCalledWith(
         expect.objectContaining({
           id: mockRunId,
           userId: "test-user",
-          workflowId: "plan",
+          workflowId: "pipeline",
           status: "running",
           inputData: expect.objectContaining({
             requirement: "test requirement",
             auto: "low",
-            executionId: mockRunId,
             reasoningSince: expect.any(Number),
           }),
         })
       );
-      expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
       expect(result).toMatchObject({
         runId: mockRunId,
-        summary: mockSummary,
+        summary: expect.stringContaining("Pipeline run created"),
       });
       expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith(
         "test-user",
@@ -304,13 +283,15 @@ describe("workflow router", () => {
     });
 
     it("handles workflow start errors", async () => {
-      workflowRuntimeMocks.createRuntime.mockImplementation(() => {
-        throw new Error("runner failed");
+      workflowRepoMocks.getRun.mockResolvedValueOnce(null);
+      workflowRepoMocks.createRun.mockImplementationOnce(() => {
+        throw new Error("create_run_failed");
       });
 
       await expect(
         caller.workflow.start({
           requirement: "test",
+          runId: "test-run-id",
         })
       ).rejects.toThrow();
     });
@@ -493,156 +474,6 @@ describe("replay", () => {
   });
 });
 
-// Dual-path executor tests (Phase 3.3)
-describe("executor compatibility", () => {
-  describe("with legacy runner (USE_WORKFLOW_RUNTIME=false)", () => {
-    it("creates workflow with runPlanV6", async () => {
-      setupExecutorPath(false);
-
-      const mockRunId = "test-run-id";
-      const mockSummary = "Test summary";
-      const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
-        { _: "run", id: mockRunId } as WorkflowEvent,
-      ]);
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({
-        id: mockRunId,
-        userId: "test-user",
-        workflowId: "plan",
-        status: "running",
-      } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      const result = await caller.workflow.start({
-        requirement: "test requirement",
-        auto: "low",
-      });
-
-      expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
-      expect(result.runId).toBe(mockRunId);
-    });
-  });
-
-  describe("with new runtime (USE_WORKFLOW_RUNTIME=true)", () => {
-    it("creates workflow with createRuntime", async () => {
-      setupExecutorPath(true);
-
-      const mockRunId = "test-run-id";
-      const mockSummary = "Test summary";
-      const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
-        { _: "run", id: mockRunId } as WorkflowEvent,
-      ]);
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({
-        id: mockRunId,
-        userId: "test-user",
-        workflowId: "plan",
-        status: "running",
-      } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      const result = await caller.workflow.start({
-        requirement: "test requirement",
-        auto: "low",
-      });
-
-      expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
-      expect(result.runId).toBe(mockRunId);
-
-      // Verify runtime was called with correct model
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call).toHaveProperty("model");
-      expect(call).toHaveProperty("signal");
-      expect(call.stepTimeoutMs).toBe(5 * 60 * 1000);
-      expect(call.workflowTimeoutMs).toBe(30 * 60 * 1000);
-    });
-
-    it("passes Linear context correctly", async () => {
-      setupExecutorPath(true);
-
-      const mockRunId = "test-run-id";
-      const mockExecutor = createMockExecutor(mockRunId, "test", []);
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-        linear: {
-          sessionId: "linear-session-123",
-          space: "team-space",
-        },
-        authzLinear: "linear-token-xyz",
-      });
-
-      expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.input.linear).toEqual({
-        sessionId: "linear-session-123",
-        space: "team-space",
-        authz: "linear-token-xyz",
-      });
-    });
-
-    it("handles cancel correctly", async () => {
-      setupExecutorPath(true);
-
-      const mockRunId = "test-run-id";
-      const cancelMock = vi.fn();
-      const mockExecutor = createMockExecutor(mockRunId, "test", []);
-      mockExecutor.cancel = cancelMock;
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-
-      // Call cancel handler
-      await registerCall.cancel();
-
-      expect(cancelMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("handles resume correctly", async () => {
-      setupExecutorPath(true);
-
-      const mockRunId = "test-run-id";
-      const resumeMock = vi.fn().mockResolvedValue(undefined);
-      const mockExecutor = createMockExecutor(mockRunId, "test", []);
-      mockExecutor.resume = resumeMock;
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-
-      // Call resume handler
-      const resumeData = { event: "bio-authz" as const, authz: "token-123" };
-      await registerCall.resume({ resumeData });
-
-      expect(resumeMock).toHaveBeenCalledWith(resumeData);
-    });
-  });
-});
-
 describe("streamPipeline", () => {
   it("streams pipeline events", async () => {
     const subscription = toObservable(
@@ -708,11 +539,11 @@ describe("cancel", () => {
       [
         "test-run-id",
         {
-          cancel: vi.fn().mockResolvedValue(undefined),
+          cancel: vi.fn().mockResolvedValue(),
         },
       ],
     ]);
-    workflowRepoMocks.updateRun.mockResolvedValue(undefined);
+    workflowRepoMocks.updateRun.mockResolvedValue();
 
     const result = await caller.workflow.cancel({
       runId: "test-run-id",

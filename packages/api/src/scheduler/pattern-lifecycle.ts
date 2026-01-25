@@ -1,10 +1,10 @@
 import { managePatternLifecycle } from "@alfred/plan/pattern";
 
-export type PatternLifecycleSchedulerOptions = {
+export interface PatternLifecycleSchedulerOptions {
   intervalMs?: number;
   jitterMs?: number;
   logger?: Pick<Console, "info" | "warn" | "error">;
-};
+}
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

@@ -30,6 +30,7 @@ export async function createRun(args: {
   status?: WorkflowStatus;
   inputData?: unknown;
   stateData?: unknown;
+  suspendedAt?: Date | null;
   webhookUrl?: string | null;
   webhookSecret?: string | null;
   linearSessionId?: string;
@@ -49,6 +50,7 @@ export async function createRun(args: {
       status: args.status ?? "running",
       inputData: args.inputData as WorkflowRunInsert["inputData"],
       stateData: args.stateData as WorkflowRunInsert["stateData"],
+      suspendedAt: args.suspendedAt ?? null,
       webhookUrl: args.webhookUrl ?? null,
       webhookSecret: args.webhookSecret ?? null,
       linearSessionId: args.linearSessionId ?? null,
@@ -304,12 +306,12 @@ export async function listRuns(args: {
   return rows;
 }
 
-type ToolCallRow = {
+interface ToolCallRow {
   eventId: string;
   toolName?: string;
   args?: Record<string, unknown>;
   timestamp: Date;
-};
+}
 
 function coerceRecord(val: unknown): Record<string, unknown> {
   if (typeof val === "object" && val !== null && !Array.isArray(val)) {
@@ -379,9 +381,9 @@ export async function getToolCalls(
     const args =
       typeof data.args === "object" && data.args !== null
         ? coerceRecord(data.args)
-        : typeof data.input === "object" && data.input !== null
+        : (typeof data.input === "object" && data.input !== null
           ? coerceRecord(data.input)
-          : undefined;
+          : undefined);
     return {
       eventId: row.eventId,
       toolName,
@@ -496,7 +498,7 @@ export class PostgresCheckpointStorage {
     if (!snapshot || typeof snapshot !== "object") {
       return null;
     }
-    const lastEventId = (snapshot as { lastEventId?: unknown }).lastEventId;
+    const { lastEventId } = snapshot as { lastEventId?: unknown };
     return typeof lastEventId === "string" ? lastEventId : null;
   }
 

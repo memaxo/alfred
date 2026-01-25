@@ -60,7 +60,7 @@ describe("ProjectLifecycleScheduler", () => {
       "proj-2",
       "proj-3",
     ]);
-    archiveProjectMock.mockResolvedValue(undefined);
+    archiveProjectMock.mockResolvedValue();
 
     startProjectLifecycleScheduler({
       logger: loggerMock,

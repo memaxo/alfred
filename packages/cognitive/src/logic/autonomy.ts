@@ -4,11 +4,11 @@ import { deciding, autonomy as toAutonomy } from "@alfred/cognitive/state";
 
 export type RiskLevel = "low" | "medium" | "high";
 
-export type RiskAssessment = {
+export interface RiskAssessment {
   level: RiskLevel;
   score?: number;
   anchors?: string[];
-};
+}
 
 const AUTONOMY_THRESHOLDS: Record<RiskLevel, number> = {
   low: 0.3,

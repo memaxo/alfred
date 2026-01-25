@@ -4,7 +4,7 @@ import { redactObject, redactSecrets } from "../utils/redaction.js";
 
 type DreamSeverity = "low" | "medium" | "high";
 
-export type DreamHeuristicSeed = {
+export interface DreamHeuristicSeed {
   hash: string;
   label: string;
   properties: {
@@ -24,7 +24,7 @@ export type DreamHeuristicSeed = {
     } | null;
     recordedAt: string;
   };
-};
+}
 
 const TRANSIENT_ERROR_PATTERNS: RegExp[] = [
   /\btimeout\b/i,
@@ -89,12 +89,15 @@ function inferSeverity(errorMessage: string): DreamSeverity {
 
 function inferConfidence(severity: DreamSeverity): number {
   switch (severity) {
-    case "high":
+    case "high": {
       return 0.9;
-    case "medium":
+    }
+    case "medium": {
       return 0.75;
-    case "low":
+    }
+    case "low": {
       return 0.6;
+    }
   }
 }
 
@@ -152,7 +155,7 @@ export function buildDreamHeuristic(args: {
     "dreaming",
     args.runId,
     workflowId,
-    safeError.substring(0, 240),
+    safeError.slice(0, 240),
   ].join("|");
   const digest = createHash("sha256").update(stable).digest("hex");
 

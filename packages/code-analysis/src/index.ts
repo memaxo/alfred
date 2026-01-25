@@ -7,9 +7,10 @@ export * from "./detect.js";
 export * from "./diff.js";
 export * from "./types.js";
 
+import type { AnalysisResult, DiffSource } from "./types.js";
+
 import { detectBugs, getBugSeverityStats } from "./detect.js";
 import { getDiffStats, parseDiffString } from "./diff.js";
-import { type AnalysisResult, type DiffSource } from "./types.js";
 
 /**
  * Analyze a diff and detect potential bugs

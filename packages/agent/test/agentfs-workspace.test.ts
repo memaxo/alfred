@@ -70,16 +70,16 @@ mock.module("../src/orchestrator/tool/docker.js", () => ({
 // Mock the agentfs-sdk module
 const mockAgentFS = {
   kv: {
-    set: vi.fn().mockResolvedValue(undefined),
-    get: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
+    set: vi.fn().mockResolvedValue(),
+    get: vi.fn().mockResolvedValue(),
+    delete: vi.fn().mockResolvedValue(),
     list: vi.fn().mockResolvedValue([]),
   },
   fs: {
-    writeFile: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(),
     readFile: vi.fn().mockResolvedValue("file content"),
     readdir: vi.fn().mockResolvedValue(["file1.txt", "file2.txt"]),
-    deleteFile: vi.fn().mockResolvedValue(undefined),
+    deleteFile: vi.fn().mockResolvedValue(),
     stat: vi.fn().mockResolvedValue({
       ino: 1,
       mode: 0o10_0644,
@@ -94,19 +94,19 @@ const mockAgentFS = {
       isDirectory: () => false,
       isSymbolicLink: () => false,
     }),
-    mkdir: vi.fn().mockResolvedValue(undefined),
+    mkdir: vi.fn().mockResolvedValue(),
   },
   tools: {
     record: vi.fn().mockResolvedValue(1),
-    get: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn().mockResolvedValue(),
     getByName: vi.fn().mockResolvedValue([]),
     getRecent: vi.fn().mockResolvedValue([]),
     getStats: vi.fn().mockResolvedValue([]),
   },
   getDatabase: vi.fn().mockReturnValue({
-    exec: vi.fn().mockResolvedValue(undefined),
+    exec: vi.fn().mockResolvedValue(),
   }),
-  close: vi.fn().mockResolvedValue(undefined),
+  close: vi.fn().mockResolvedValue(),
 };
 
 mock.module("agentfs-sdk", () => ({
@@ -119,7 +119,7 @@ mock.module("agentfs-sdk", () => ({
 mock.module("@alfred/db/src/repo/graph", () => ({
   getGraphClient: vi.fn().mockReturnValue({}),
   upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue(undefined),
+  upsertEdges: vi.fn().mockResolvedValue(),
 }));
 
 import {

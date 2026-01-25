@@ -35,8 +35,8 @@ describeFn("projectRepo", () => {
       "projectRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    projectRepo = mod.projectRepo;
-    db = mod.db;
+    ({ projectRepo } = mod);
+    ({ db } = mod);
     await setupTestData();
   });
 
@@ -115,9 +115,7 @@ describeFn("projectRepo", () => {
     const withConfig = await projectRepo.getProjectById(project.id);
     expect(withConfig?.config).toEqual(newConfig);
 
-    const conventions = [
-      { id: "c1", description: "Use tabs", confidence: 1.0 },
-    ];
+    const conventions = [{ id: "c1", description: "Use tabs", confidence: 1 }];
     await projectRepo.updateProjectConventions(project.id, conventions);
 
     const withConventions = await projectRepo.getProjectById(project.id);

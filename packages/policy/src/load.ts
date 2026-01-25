@@ -57,16 +57,16 @@ const policyDocumentSchema = z.object({
   scopes: z.array(z.string()).default([]),
 });
 
-type PolicyCache = {
+interface PolicyCache {
   path: string;
   mtimeMs: number;
   doc: PolicyDocument;
-};
+}
 
 let cache: PolicyCache | null = null;
 
 function dedupe(values: string[]): string[] {
-  return Array.from(new Set(values));
+  return [...new Set(values)];
 }
 
 const legacyObligationPresets: Record<string, Obligation> = {
@@ -116,7 +116,7 @@ function stableSerialize(value: unknown): string {
     return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
   }
   const entries = Object.entries(value as Record<string, unknown>).sort(
-    ([a], [b]) => (a > b ? 1 : a < b ? -1 : 0)
+    ([a], [b]) => (a > b ? 1 : (a < b ? -1 : 0))
   );
   return `{${entries
     .map(([key, val]) => `${JSON.stringify(key)}:${stableSerialize(val)}`)

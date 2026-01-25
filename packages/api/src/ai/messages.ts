@@ -14,13 +14,13 @@ import {
 } from "../metrics";
 import { modelRoleForSource, resolveModelKey } from "./model";
 
-type PrepareMessagesArgs = {
+interface PrepareMessagesArgs {
   rawMessages: unknown[];
   tools?: Record<string, Tool>;
   source: "assistant" | "orchestrator";
   model?: string | LanguageModel;
   system?: string;
-};
+}
 
 export function prepareModelMessagesForGenerate({
   rawMessages,

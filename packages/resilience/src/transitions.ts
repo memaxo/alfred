@@ -79,14 +79,14 @@ export function createGuardFromEnv(
 /**
  * Options for guarded execution.
  */
-export type GuardedExecutionOptions = {
+export interface GuardedExecutionOptions {
   /** Maximum iterations before throwing */
   maxIterations?: number;
   /** Optional callback when limit exceeded */
   onExceeded?: (count: number) => void;
   /** Optional callback after each iteration */
   onIteration?: (count: number) => void;
-};
+}
 
 /**
  * Execute a function repeatedly until condition is met, with transition guard.

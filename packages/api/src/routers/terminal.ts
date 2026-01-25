@@ -8,13 +8,13 @@ import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
 // Local session types (no exported abstraction per ALFRED rules)
-type BunPtySession = {
+interface BunPtySession {
   kind: "bun";
   proc: Bun.Subprocess & { terminal: Bun.Terminal };
   subscribers: Set<(chunk: string) => void>;
-};
+}
 
-type NodePtySession = {
+interface NodePtySession {
   kind: "node-pty";
   pty: {
     onData: (fn: (data: string) => void) => { dispose: () => void };
@@ -23,7 +23,7 @@ type NodePtySession = {
     resize: (cols: number, rows: number) => void;
     kill: () => void;
   };
-};
+}
 
 type Session = BunPtySession | NodePtySession;
 
@@ -80,8 +80,10 @@ export const terminalRouter = router({
                   for (const fn of subscribers) {
                     try {
                       fn(chunk);
-                    } catch (err) {
-                      logger.warn("terminal_subscriber_error", { error: err });
+                    } catch (error) {
+                      logger.warn("terminal_subscriber_error", {
+                        error: error,
+                      });
                     }
                   }
                 },
@@ -114,10 +116,9 @@ export const terminalRouter = router({
               sessions.delete(sessionId);
             });
             return { sessionId };
-          } catch (bunError) {
+          } catch (error) {
             logger.warn("terminal_bun_pty_failed", {
-              error:
-                bunError instanceof Error ? bunError.message : String(bunError),
+              error: error instanceof Error ? error.message : String(error),
             });
             // Fall through to node-pty
           }
@@ -125,7 +126,7 @@ export const terminalRouter = router({
 
         // 2) Fallback to node-pty (optional dependency)
         const ptyBackend = await getPty();
-        type PtyBackend = {
+        interface PtyBackend {
           spawn: (
             file: string,
             args: string[],
@@ -137,7 +138,7 @@ export const terminalRouter = router({
               env: Record<string, string>;
             }
           ) => NodePtySession["pty"];
-        };
+        }
         const backend =
           ptyBackend &&
           typeof (ptyBackend as { spawn?: unknown }).spawn === "function"

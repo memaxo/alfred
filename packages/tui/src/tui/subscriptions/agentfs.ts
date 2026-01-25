@@ -13,15 +13,15 @@
 
 import type { AgentFSStreamCursor, AgentFSStreamEvent } from "@alfred/type";
 
-export type DirEntry = {
+export interface DirEntry {
   name: string;
   ino: number;
   isDirectory: boolean;
   size?: number;
   mtime?: number;
-};
+}
 
-export type ToolCallInfo = {
+export interface ToolCallInfo {
   id: number;
   name: string;
   started_at: number; // Unix timestamp (seconds)
@@ -30,16 +30,16 @@ export type ToolCallInfo = {
   error?: string;
   parameters?: unknown;
   result?: unknown;
-};
+}
 
-export type KVEntry = {
+export interface KVEntry {
   key: string;
   value: unknown;
   created_at?: number;
   updated_at?: number;
-};
+}
 
-export type AgentFSSubscriptionState = {
+export interface AgentFSSubscriptionState {
   runId: string | null;
   dbPath: string | null;
   isConnected: boolean;
@@ -48,7 +48,7 @@ export type AgentFSSubscriptionState = {
   entries: DirEntry[];
   toolCalls: ToolCallInfo[];
   kvStore: KVEntry[];
-};
+}
 
 export type AgentFSSubscriptionCallback = (
   state: AgentFSSubscriptionState
@@ -319,7 +319,7 @@ export function createAgentFSSubscription(): AgentFSSubscription {
 
 function mergeToolCalls(
   prev: ToolCallInfo[],
-  incoming: Array<{
+  incoming: {
     id: number;
     name: string;
     startedAt: number;
@@ -328,7 +328,7 @@ function mergeToolCalls(
     error?: string | null;
     parameters?: unknown;
     result?: unknown;
-  }>
+  }[]
 ): ToolCallInfo[] {
   const seen = new Set(prev.map((c) => c.id));
   const next = [...prev];

@@ -82,7 +82,7 @@ describe("recordMultiAgentEvent", () => {
           status: "completed",
           agents: [
             { role: "planner", status: "completed", durationSeconds: 5.5 },
-            { role: "worker", status: "failed", durationSeconds: 2.0 },
+            { role: "worker", status: "failed", durationSeconds: 2 },
           ],
         },
         kind: "wave-result",
@@ -232,7 +232,7 @@ describe("recordMultiAgentEvent", () => {
 
         it("records error for failed agent", () => {
           recordMultiAgentEvent({
-            data: { role: "reviewer", status: "failed", durationSeconds: 2.0 },
+            data: { role: "reviewer", status: "failed", durationSeconds: 2 },
             kind,
           });
 
@@ -246,7 +246,7 @@ describe("recordMultiAgentEvent", () => {
 
         it("records error for stuck agent", () => {
           recordMultiAgentEvent({
-            data: { role: "reviewer", status: "stuck", durationSeconds: 5.0 },
+            data: { role: "reviewer", status: "stuck", durationSeconds: 5 },
             kind,
           });
 
@@ -260,7 +260,7 @@ describe("recordMultiAgentEvent", () => {
 
         it("defaults role to worker", () => {
           recordMultiAgentEvent({
-            data: { status: "completed", durationSeconds: 1.0 },
+            data: { status: "completed", durationSeconds: 1 },
             kind,
           });
 

@@ -4,7 +4,7 @@
     "target": "ESNext",
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["ESNext"],
+    "lib": ["ES2023", "ESNext"],
     "verbatimModuleSyntax": true,
     "strict": true,
     "skipLibCheck": true,
@@ -23,6 +23,10 @@
       "@alfred/auth/*": ["../auth/src/*"],
       "@alfred/policy/*": ["../policy/src/*"],
       "@alfred/db/*": ["../db/src/*"],
+      "@alfred/hooks": ["../hooks/src/index.ts"],
+      "@alfred/hooks/*": ["../hooks/src/*"],
+      "@alfred/hookpipe": ["../hookpipe/src/index.ts"],
+      "@alfred/hookpipe/*": ["../hookpipe/src/*"],
       "@alfred/pacer": ["../pacer/src/index.ts"],
       "@alfred/pacer/react": ["../pacer/src/react.ts"],
       "@alfred/pacer/*": ["../pacer/src/*"],
@@ -37,6 +41,7 @@
       "@alfred/learning/*": ["../learning/src/*"],
       "@alfred/metrics/*": ["../metrics/src/*"],
       "@alfred/runtime/*": ["../runtime/src/*"],
+      "zod": ["../../node_modules/zod/index.d.cts"],
       "*": ["./*"]
     }
   }

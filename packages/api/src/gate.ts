@@ -26,14 +26,14 @@ type MapResourceFn = (
 ) => PolicyResource;
 type BuildContextFn = (input: unknown, ctx: Context) => Record<string, unknown>;
 
-type PolicyEnforcementOptions = {
+interface PolicyEnforcementOptions {
   /**
    * Determines how the middleware reacts when obligations are present.
    * "error" (default) throws PRECONDITION_FAILED immediately.
    * "passThrough" leaves handling to downstream code (ctx.policy.obligations).
    */
   handleObligations?: "error" | "passThrough";
-};
+}
 
 function defaultResource(
   path: string | undefined,

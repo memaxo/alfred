@@ -17,7 +17,7 @@ import { renderUISchema } from "./interpreter";
 /**
  * Configuration for streaming GenUI.
  */
-export type StreamingGenUIConfig = {
+export interface StreamingGenUIConfig {
   /** API endpoint for streaming UI schema */
   api: string;
   /** Custom fetch function (optional) */
@@ -33,12 +33,12 @@ export type StreamingGenUIConfig = {
     object: UIComponent | undefined;
     error?: unknown;
   }) => void;
-};
+}
 
 /**
  * Return type for useStreamingGenUI hook.
  */
-export type StreamingGenUIResult = {
+export interface StreamingGenUIResult {
   /** The current partial UI schema */
   schema: Partial<UIComponent> | undefined;
   /** Whether streaming is in progress */
@@ -51,7 +51,7 @@ export type StreamingGenUIResult = {
   stop: () => void;
   /** Clear the current schema */
   clear: () => void;
-};
+}
 
 /**
  * Skeleton component for loading states.
@@ -162,7 +162,7 @@ function inferSkeletonVariant(
 /**
  * Props for StreamingUIRenderer component.
  */
-export type StreamingUIRendererProps = {
+export interface StreamingUIRendererProps {
   /** The partial schema being streamed */
   schema: Partial<UIComponent> | undefined;
   /** Whether streaming is in progress */
@@ -173,7 +173,7 @@ export type StreamingUIRendererProps = {
   options?: UIInterpreterOptions;
   /** Additional className */
   className?: string;
-};
+}
 
 /**
  * Renders a streaming UI schema with skeleton loading states.

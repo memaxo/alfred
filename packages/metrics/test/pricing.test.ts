@@ -7,7 +7,7 @@ describe("Pricing Registry", () => {
     it("returns correct pricing for known OpenAI models", () => {
       const pricing = getModelPricing("openai", "gpt-4o");
       expect(pricing.promptCostPer1M).toBe(2.5);
-      expect(pricing.completionCostPer1M).toBe(10.0);
+      expect(pricing.completionCostPer1M).toBe(10);
     });
 
     it("returns correct pricing for Cerebras models", () => {
@@ -27,27 +27,27 @@ describe("Pricing Registry", () => {
         "openrouter",
         "anthropic/claude-3.5-sonnet"
       );
-      expect(pricing.promptCostPer1M).toBe(3.0);
-      expect(pricing.completionCostPer1M).toBe(15.0);
+      expect(pricing.promptCostPer1M).toBe(3);
+      expect(pricing.completionCostPer1M).toBe(15);
     });
 
     it("handles model version prefixes for OpenAI", () => {
       // Should match "gpt-4o" prefix
       const pricing = getModelPricing("openai", "gpt-4o-2024-08-06");
       expect(pricing.promptCostPer1M).toBe(2.5);
-      expect(pricing.completionCostPer1M).toBe(10.0);
+      expect(pricing.completionCostPer1M).toBe(10);
     });
 
     it("falls back to default for unknown models", () => {
       const pricing = getModelPricing("openai", "unknown-model-xyz");
-      expect(pricing.promptCostPer1M).toBe(1.0);
-      expect(pricing.completionCostPer1M).toBe(3.0);
+      expect(pricing.promptCostPer1M).toBe(1);
+      expect(pricing.completionCostPer1M).toBe(3);
     });
 
     it("falls back to default for unknown providers", () => {
       const pricing = getModelPricing("unknown" as any, "some-model");
-      expect(pricing.promptCostPer1M).toBe(1.0);
-      expect(pricing.completionCostPer1M).toBe(3.0);
+      expect(pricing.promptCostPer1M).toBe(1);
+      expect(pricing.completionCostPer1M).toBe(3);
     });
 
     it("returns exact match over prefix match", () => {
@@ -83,7 +83,7 @@ describe("Pricing Registry", () => {
     it("handles very large token counts", () => {
       // 10M prompt tokens + 5M completion tokens
       const cost = calculateCostUsd("openai", "gpt-4o", 10_000_000, 5_000_000);
-      expect(cost).toBeCloseTo(75.0, 1); // (10M/1M * 2.5) + (5M/1M * 10) = 25 + 50 = 75
+      expect(cost).toBeCloseTo(75, 1); // (10M/1M * 2.5) + (5M/1M * 10) = 25 + 50 = 75
     });
 
     it("handles fractional costs correctly", () => {

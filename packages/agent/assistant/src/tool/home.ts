@@ -96,12 +96,12 @@ const homeOutputSchema = z.discriminatedUnion("action", [
 
 type HomeInput = z.infer<typeof homeInputSchema>;
 type HomeOutput = z.infer<typeof homeOutputSchema>;
-type HomeError = {
+interface HomeError {
   ok: false;
   code: string;
   message: string;
   detail?: string;
-};
+}
 
 function scopesForAction(action: HomeInput["action"]): string[] {
   return action === "control" ? ["home.write"] : ["home.read"];
@@ -293,15 +293,16 @@ export const toolHome = {
           };
         }
 
-        default:
+        default: {
           return {
             ok: false,
             code: "home_invalid_action",
             message: `Unknown action: ${input.action}`,
           };
+        }
       }
-    } catch (err) {
-      return errorToResponse(err);
+    } catch (error) {
+      return errorToResponse(error);
     }
   },
 };

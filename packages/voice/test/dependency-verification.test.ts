@@ -128,7 +128,7 @@ describe("Dependency Verification", () => {
     await expect(promise).rejects.toThrow("Python dependencies not installed");
 
     // Verify error message contains helpful instructions
-    const error = (await promise.catch((err) => err)) as Error;
+    const error = (await promise.catch((error) => error)) as Error;
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toContain(
       "Install with: cd packages/voice && ./scripts/install-deps.sh"

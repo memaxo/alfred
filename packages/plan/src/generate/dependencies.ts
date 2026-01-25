@@ -26,7 +26,7 @@ export function buildDependencyGraph(phases: Phase[]): Phase[] {
 
     return {
       ...phase,
-      dependsOn: Array.from(deps),
+      dependsOn: [...deps],
     };
   });
 }

@@ -15,10 +15,10 @@ export type InterruptResult =
   | { interrupt: false }
   | { interrupt: true; reason: string };
 
-export type BrainstemConfig = {
+export interface BrainstemConfig {
   /** Loop detector configuration */
   loop?: Partial<LoopConfig>;
-};
+}
 
 export class BrainstemSupervisor {
   private readonly detector: LoopDetector;

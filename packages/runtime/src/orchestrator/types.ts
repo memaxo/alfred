@@ -8,7 +8,7 @@ import type { RuntimeInput } from "../types";
 
 export type ProjectType = "node" | "rust" | "python" | "go" | "unknown";
 
-export type ProjectConfig = {
+export interface ProjectConfig {
   type: ProjectType;
   testCommand: string;
   runCommand: string;
@@ -16,9 +16,9 @@ export type ProjectConfig = {
   buildCommand: string;
   /** Optional stuck detection thresholds for tuning agent behavior */
   stuckDetection?: StuckDetectionConfig;
-};
+}
 
-export type OrchestratorContext = {
+export interface OrchestratorContext {
   input: RuntimeInput;
   runId: string;
   signal: AbortSignal;
@@ -35,24 +35,24 @@ export type OrchestratorContext = {
     /** Host bind URL for local callers (not necessarily container-reachable) */
     url: string;
   };
-};
+}
 
-export type FileChanges = {
+export interface FileChanges {
   modified: string[];
   created: string[];
   deleted: string[];
-};
+}
 
-export type AgentHandoff = {
+export interface AgentHandoff {
   fromWaveId: string;
   toWaveId: string;
   summary: string; // Human-readable summary of changes
   changes: FileChanges;
   gitDiff?: string; // Git diff summary
   timestamp: Date;
-};
+}
 
-export type ClarificationRequest = {
+export interface ClarificationRequest {
   id: string;
   runId: string;
   phaseId: string;
@@ -61,4 +61,4 @@ export type ClarificationRequest = {
   options?: string[]; // Multiple choice options
   required: boolean;
   timestamp: Date;
-};
+}

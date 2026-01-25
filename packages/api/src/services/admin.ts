@@ -7,7 +7,7 @@ import * as workflowRepo from "@alfred/db/repo/workflow";
  * to keep routers thin (validation, permissions, delegation).
  */
 
-type ProcessInfo = {
+export interface ProcessInfo {
   id: string;
   name: string;
   type: string;
@@ -15,16 +15,16 @@ type ProcessInfo = {
   cpu: number;
   memory: number;
   uptime: number;
-};
+}
 
-type NetworkConnection = {
+export interface NetworkConnection {
   id: string;
   localAddress: string;
   remoteAddress: string;
   protocol: "tcp" | "udp";
   state: "established" | "listening" | "time_wait";
   process: string;
-};
+}
 
 function parseMemoryMB(memStr: string): number {
   const match = /(\d+(?:\.\d+)?)\s*(MiB|MB|GiB|GB|KiB|KB)/i.exec(memStr);
@@ -189,7 +189,7 @@ export async function getTaskHistory(
   projectId: string | undefined,
   limit: number
 ): Promise<{
-  history: Array<{
+  history: {
     id: string;
     type: "agent";
     name: string;
@@ -197,7 +197,7 @@ export async function getTaskHistory(
     startTime: string;
     duration: number;
     tokenUsage: undefined;
-  }>;
+  }[];
 }> {
   const runs = await workflowRepo.listRuns({
     userId,

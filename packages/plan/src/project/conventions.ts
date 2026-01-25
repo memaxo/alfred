@@ -50,7 +50,7 @@ Return a list of NEW or REFINED conventions in JSON format.`,
 
     if (object.conventions.length > 0) {
       const config = project.config as {
-        conventions?: Array<{ id: string; description: string; type: string }>;
+        conventions?: { id: string; description: string; type: string }[];
       };
       const existingConventions = config.conventions ?? [];
       const updatedConventions = [...existingConventions];

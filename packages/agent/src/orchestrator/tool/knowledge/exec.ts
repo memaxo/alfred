@@ -19,7 +19,7 @@ import type {
 import { recordAudit } from "../../../utils/audit.js";
 
 // Types for dynamic imports
-type NodeRow = {
+interface NodeRow {
   id: string;
   resource: string;
   hash: string;
@@ -28,9 +28,9 @@ type NodeRow = {
   properties: unknown;
   created: Date;
   updated: Date;
-};
+}
 
-type EdgeRow = {
+interface EdgeRow {
   id: string;
   resource: string;
   hash: string;
@@ -40,21 +40,21 @@ type EdgeRow = {
   weight: number;
   metadata: unknown;
   created: Date;
-};
+}
 
-type CorrectionRow = {
+interface CorrectionRow {
   id: string;
-};
+}
 
-type NodeSeed = {
+interface NodeSeed {
   resource: string;
   hash: string;
   kind: string;
   label: string;
   properties?: unknown;
-};
+}
 
-type KnowledgeEntry = {
+interface KnowledgeEntry {
   hash: string;
   data: {
     _: "fact" | "relation" | "insight" | "pattern";
@@ -71,7 +71,7 @@ type KnowledgeEntry = {
     accuracy?: number;
     examples?: string[];
   };
-};
+}
 
 /**
  * Execute knowledge_query
@@ -104,7 +104,10 @@ export async function executeQuery(
     .split(/\s+/)
     .filter((t: string) => t.length > 2);
 
-  type ScoredNode = { node: NodeRow; score: number };
+  interface ScoredNode {
+    node: NodeRow;
+    score: number;
+  }
   const scoredNodes: ScoredNode[] = filteredNodes
     .map((node: NodeRow): ScoredNode => {
       const labelLower = node.label.toLowerCase();
@@ -145,7 +148,7 @@ export async function executeQuery(
   let edges: KnowledgeQueryOutput["edges"];
   if (input.includeEdges && nodes.length > 0) {
     const nodeIds = new Set(nodes.map((n: { id: string }) => n.id));
-    const allEdges: Array<{ fromId: string; toId: string; kind: string }> = [];
+    const allEdges: { fromId: string; toId: string; kind: string }[] = [];
 
     for (const node of nodes) {
       const outbound: EdgeRow[] = await graphRepo.getOutboundEdges(node.id);
@@ -213,7 +216,7 @@ export async function executeExtract(
   const nodeSeedsMap = new Map<string, NodeSeed>();
 
   for (const entry of entries) {
-    const data = entry.data;
+    const { data } = entry;
 
     if (data._ === "fact" && data.content) {
       nodeSeedsMap.set(entry.hash, {
@@ -266,7 +269,7 @@ export async function executeExtract(
     }
   }
 
-  const nodeSeeds = Array.from(nodeSeedsMap.values());
+  const nodeSeeds = [...nodeSeedsMap.values()];
 
   // Upsert nodes
   const nodeMap: Map<string, NodeRow> = await upsertNodes(nodeSeeds);
@@ -404,7 +407,7 @@ export async function executeCorrect(
 
   const resource = input.resource ?? "user";
   const operation = input.correction.type;
-  const reason = input.correction.reason;
+  const { reason } = input.correction;
 
   const correctionContextBase = {
     resource,
@@ -425,7 +428,7 @@ export async function executeCorrect(
       throw new Error("knowledge_edge_delete_not_supported");
     }
 
-    const metadataPatch = input.correction.metadataPatch;
+    const { metadataPatch } = input.correction;
     if (!metadataPatch || Object.keys(metadataPatch).length === 0) {
       throw new Error("knowledge_edge_update_missing_patch");
     }
@@ -485,9 +488,9 @@ export async function executeCorrect(
 
   const node: NodeRow | null = input.nodeId
     ? await graphRepo.getNode(input.nodeId)
-    : input.factId
+    : (input.factId
       ? await graphRepo.findNodeByHash(resource, input.factId)
-      : null;
+      : null);
 
   if (!node) {
     throw new Error("knowledge_node_not_found");
@@ -539,7 +542,7 @@ export async function executeCorrect(
   }
 
   const newLabel = input.correction.newValue;
-  const propertiesPatch = input.correction.propertiesPatch;
+  const { propertiesPatch } = input.correction;
 
   const nextProperties = mergeRecord(node.properties, propertiesPatch);
 

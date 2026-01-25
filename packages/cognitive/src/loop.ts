@@ -17,7 +17,7 @@ import {
 /**
  * Configuration for loop detection thresholds
  */
-export type LoopConfig = {
+export interface LoopConfig {
   /** Layer 0: Maximum transitions before forced termination (default: 500) */
   maxTransitions: number;
   /** Layer 1: Milliseconds without activity before stall detection (default: 60000) */
@@ -26,7 +26,7 @@ export type LoopConfig = {
   windowSize: number;
   /** Layer 3: Cosine similarity threshold for semantic loop detection (default: 0.92) */
   similarityThreshold: number;
-};
+}
 
 const DEFAULT_CONFIG: LoopConfig = {
   maxTransitions: 500,
@@ -35,11 +35,11 @@ const DEFAULT_CONFIG: LoopConfig = {
   similarityThreshold: 0.92,
 };
 
-type WindowEntry = {
+interface WindowEntry {
   hash: string;
   quantized: QuantizedEmbedding | null;
   ts: number;
-};
+}
 
 export type LoopResult =
   | { loop: false }
@@ -127,7 +127,7 @@ export class LoopDetector {
   private fastHash(s: string): string {
     let h = 2_166_136_261;
     for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
+      h ^= s.codePointAt(i) ?? 0;
       h = (h * 16_777_619) >>> 0;
     }
     return h.toString(36);

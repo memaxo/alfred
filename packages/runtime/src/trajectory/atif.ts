@@ -5,18 +5,18 @@ import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 
 export type AtifSource = "user" | "agent" | "system";
 
-export type AtifToolCall = {
+export interface AtifToolCall {
   tool_call_id: string;
   function_name: string;
   arguments: unknown;
-};
+}
 
-export type AtifObservationResult = {
+export interface AtifObservationResult {
   source_call_id: string;
   content: unknown;
-};
+}
 
-export type AtifStep = {
+export interface AtifStep {
   step_id: number;
   timestamp: string;
   source: AtifSource;
@@ -26,9 +26,9 @@ export type AtifStep = {
   observation?: { results: AtifObservationResult[] };
   metrics?: unknown;
   extra?: Record<string, unknown>;
-};
+}
 
-export type AtifTrajectory = {
+export interface AtifTrajectory {
   schema_version: string;
   session_id: string;
   agent: {
@@ -46,15 +46,15 @@ export type AtifTrajectory = {
     total_cost_usd?: number;
   };
   extra?: Record<string, unknown>;
-};
+}
 
-export type PersistedWorkflowEvent = {
+export interface PersistedWorkflowEvent {
   eventId: string;
   eventType: WorkflowEventType | string;
   eventData: unknown;
   timestamp: Date | null;
   seq: number | null;
-};
+}
 
 function coerceRecord(val: unknown): Record<string, unknown> {
   if (typeof val === "object" && val !== null && !Array.isArray(val)) {

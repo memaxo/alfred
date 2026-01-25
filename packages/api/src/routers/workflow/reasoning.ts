@@ -24,7 +24,7 @@ export const workflowReasoningProcedure = authedProcedure
     })
   )
   .query(async ({ input, ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -45,10 +45,10 @@ export const workflowReasoningProcedure = authedProcedure
     const resource =
       typeof inputData.cw === "string" && inputData.cw.length > 0
         ? inputData.cw
-        : typeof inputData.workspace === "string" &&
+        : (typeof inputData.workspace === "string" &&
             inputData.workspace.length > 0
           ? inputData.workspace
-          : process.cwd();
+          : process.cwd());
 
     const executionId =
       typeof inputData.executionId === "string" &&
@@ -59,9 +59,9 @@ export const workflowReasoningProcedure = authedProcedure
     const since =
       typeof inputData.reasoningSince === "number"
         ? inputData.reasoningSince
-        : run.created instanceof Date
+        : (run.created instanceof Date
           ? run.created.getTime()
-          : undefined;
+          : undefined);
 
     const graphRepoPkg = "@alfred/db/repo/graph";
     const { getReasoningChain } = await import(graphRepoPkg);
@@ -72,7 +72,7 @@ export const workflowReasoningProcedure = authedProcedure
     const dbPkg = "@alfred/db";
     const { db } = await import(dbPkg);
 
-    const limit = input.limit;
+    const { limit } = input;
     const initialArgs = {
       resource,
       executionId,
@@ -123,9 +123,9 @@ export const workflowReasoningProcedure = authedProcedure
       }
     }
 
-    let documents: Array<{ documentId: string; label: string }> = [];
+    let documents: { documentId: string; label: string }[] = [];
     if (docIds.size > 0) {
-      const wanted = Array.from(docIds);
+      const wanted = [...docIds];
       const documentIdExpr = sql<string>`${memoryNodes.properties} ->> 'documentId'`;
 
       const rows = await db

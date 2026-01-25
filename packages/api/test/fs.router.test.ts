@@ -112,7 +112,7 @@ describe("fs router (security boundaries)", () => {
   it("still allows regular (non-symlink) files inside root", async () => {
     const caller = await createTestCaller();
     const filePath = path.join(tmpRoot, "plain.txt");
-    writeFileSync(filePath, "plain", "utf-8");
+    writeFileSync(filePath, "plain", "utf8");
     const result = await caller.fs.read({ path: relFromRoot(filePath) });
     expect(result).toEqual({ content: "plain" });
   });

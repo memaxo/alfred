@@ -1,3 +1,5 @@
+import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
+
 import { createCerebras } from "@ai-sdk/cerebras";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -8,10 +10,6 @@ import {
   parseModelRef,
   toModelKey,
 } from "@alfred/type/model";
-import {
-  type PreferenceDetail,
-  type PreferenceKey,
-} from "@alfred/type/preference";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
   type LanguageModel,

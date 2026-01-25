@@ -1,10 +1,13 @@
+import type { Workspace } from "@alfred/agent/environment/types";
+import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type { AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
+import type { RuntimeMcpServer } from "@alfred/mcp";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import { type Workspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
-import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
-import { type AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
 import {
   detectStuckWithContext,
   type TrackerContext,
@@ -17,17 +20,16 @@ import {
 } from "@alfred/agent/orchestrator/tool/shared/context";
 import { issueMcpSessionToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
-import { type RuntimeMcpServer } from "@alfred/mcp";
-import { type WorkflowEvent } from "@alfred/type/plan";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setTimeout as setNodeTimeout } from "node:timers";
 
+import type { AsyncQueue } from "../utils/concurrency";
+import type { ProjectConfig } from "./types";
+
 import { formatCodexRuntimeError } from "../utils/codex-error";
-import { type AsyncQueue } from "../utils/concurrency";
 import { appendDecisionEntry, appendPlanProgressEntry } from "./execplan";
 import { normalizeWorkingDirectory } from "./hydrate";
-import { type ProjectConfig } from "./types";
 
 function mapStatusForEnrichment(
   status: string
@@ -52,6 +54,28 @@ function mapStatusForEnrichment(
       return null;
     }
   }
+}
+
+function isEnrichmentEnabled(): boolean {
+  return process.env.ALFRED_ENRICHMENT === "1";
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setNodeTimeout(() => {
+      reject(new Error(`enrichment_timeout:${ms}ms`));
+    }, ms);
+
+    promise
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((error) => {
+        clearTimeout(t);
+        reject(error);
+      });
+  });
 }
 
 export interface RunAgentOptions {
@@ -133,9 +157,9 @@ function isServerStartFailure(
   const code =
     executor === "codex"
       ? "codex_server_start_failed"
-      : executor === "opencode"
+      : (executor === "opencode"
         ? "opencode_server_start_failed"
-        : undefined;
+        : undefined);
   if (!code) {
     return false;
   }
@@ -616,6 +640,7 @@ export async function runAgent({
                   }
                 : undefined,
               context: {
+                workflowId: runId,
                 linearSessionId: spec.context.linearSessionId,
                 linearSpace: spec.context.linearSpace,
                 linearAuthz: spec.context.linearAuthz,
@@ -1053,7 +1078,7 @@ export async function runAgent({
       result: {
         summary: `${executor} agent execution`,
         artifacts: [],
-        changes: hints ? Array.from(hints) : [],
+        changes: hints ? [...hints] : [],
         notes: [],
         branch: workspaceEnv?.branch ?? undefined,
       },
@@ -1063,18 +1088,23 @@ export async function runAgent({
     };
 
     // Persist FailureContext to AgentFS KV for downstream enrichment.
-    if (isAgentFSWorkspace(workspaceEnv)) {
+    if (isEnrichmentEnabled() && isAgentFSWorkspace(workspaceEnv)) {
       const mapped = mapStatusForEnrichment(effectiveStatus);
       if (mapped && mapped !== "success") {
         try {
-          const { finalizeOutcome } =
-            await import("@alfred/agent/orchestrator/outcome");
-          const enriched = await finalizeOutcome(
-            {
-              ...(outcome as unknown as import("@alfred/agent/orchestrator/outcome").AgentOutcome),
-              status: mapped,
-            },
-            workspaceEnv.getAgent()
+          const enriched = await withTimeout(
+            (async () => {
+              const { finalizeOutcome } =
+                await import("@alfred/agent/orchestrator/outcome");
+              return finalizeOutcome(
+                {
+                  ...(outcome as unknown as import("@alfred/agent/orchestrator/outcome").AgentOutcome),
+                  status: mapped,
+                },
+                workspaceEnv.getAgent()
+              );
+            })(),
+            500
           );
           outcome.failureContext = enriched.failureContext;
         } catch (error) {
@@ -1107,9 +1137,9 @@ function buildAgentPrompt(
   const runtimeEscalateTool =
     executor === "codex" || executor === "droid"
       ? "mcp__alfred_runtime__escalate"
-      : executor === "opencode"
+      : (executor === "opencode"
         ? "alfred_runtime_escalate"
-        : "escalate";
+        : "escalate");
 
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
@@ -1248,9 +1278,9 @@ function createAgentWriter(
                 status:
                   inner.status === "failed"
                     ? "failed"
-                    : inner.status === "completed"
+                    : (inner.status === "completed"
                       ? "completed"
-                      : "running",
+                      : "running"),
                 ts,
                 type: "agent/command",
               }

@@ -7,7 +7,8 @@
  * @module @alfred/history/tracking
  */
 
-import { type ModelProvider } from "@alfred/type/model";
+import type { ModelProvider } from "@alfred/type/model";
+
 import { Counter, Gauge, Histogram, Registry } from "prom-client";
 
 import { calculateBudget, type CalculatedBudget } from "./calculator";
@@ -136,7 +137,7 @@ export const trackingMetrics = {
 
   // Latency
   requestLatency: new Histogram({
-    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
+    buckets: [50, 100, 250, 500, 1000, 2500, 5000, 10_000, 30_000],
     help: "Request latency in milliseconds",
     labelNames: ["provider", "model"],
     name: "alfred_request_latency_ms",

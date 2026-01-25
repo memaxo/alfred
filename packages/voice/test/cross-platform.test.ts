@@ -71,7 +71,7 @@ describe("Cross-Platform Integration", () => {
       return; // Skip on non-Windows
     }
 
-    const voiceDir = "C:\\test\\voice";
+    const voiceDir = String.raw`C:\test\voice`;
     const expectedPath = join(voiceDir, ".venv", "Scripts", "python.exe");
 
     const config: ProcessConfig = {
@@ -88,7 +88,7 @@ describe("Cross-Platform Integration", () => {
 
   it("should handle path separators correctly", () => {
     const voiceDir =
-      process.platform === "win32" ? "C:\\test\\voice" : "/test/voice";
+      process.platform === "win32" ? String.raw`C:\test\voice` : "/test/voice";
     const venvPath =
       process.platform === "win32"
         ? join(voiceDir, ".venv", "Scripts", "python.exe")

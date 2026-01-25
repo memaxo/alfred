@@ -86,12 +86,12 @@ describe("tool/shared/server resolveExecProfile", () => {
   });
 
   it("defaults to default outside AgentFS containers when unset", () => {
-    expect(resolveExecProfile(undefined, undefined)).toBe("default");
+    expect(resolveExecProfile()).toBe("default");
     expect(resolveExecProfile(undefined, "container-123")).toBe("default");
   });
 
   it("respects explicit profiles regardless of container name", () => {
     expect(resolveExecProfile("default", "alfred-agentfs-123")).toBe("default");
-    expect(resolveExecProfile("server", undefined)).toBe("server");
+    expect(resolveExecProfile("server")).toBe("server");
   });
 });

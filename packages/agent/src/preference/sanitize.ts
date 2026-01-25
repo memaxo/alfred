@@ -21,7 +21,7 @@ const RESPONSE_ENUM_SCHEMAS: Record<string, ResponseEnumSchema> = {
 };
 
 const MAX_STRING_LENGTH = 200;
-const CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]/g;
+const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/g;
 const INJECTION_CHARS = /[<>[\]{}\\]/g;
 
 export function sanitizePreferences(

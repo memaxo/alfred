@@ -16,7 +16,7 @@ export type VoiceSessionStatus =
   | "responding"
   | "error";
 
-export type VoiceSessionSnapshot = {
+export interface VoiceSessionSnapshot {
   id: string;
   userId: string;
   surface: VoiceSessionSurface;
@@ -33,7 +33,7 @@ export type VoiceSessionSnapshot = {
   lastTranscript?: string;
   lastAssistantText?: string;
   lastError?: string;
-};
+}
 
 type MutableSession = VoiceSessionSnapshot;
 
@@ -43,21 +43,21 @@ const SESSION_TTL_SECONDS = 3600; // 1 hour
 const memSessions = new Map<string, MutableSession>();
 const memSessionsByUser = new Map<string, Set<string>>();
 
-const knownSurfaces: VoiceSessionSurface[] = [
+const knownSurfaces = new Set<VoiceSessionSurface>([
   "drive",
   "carplay",
   "web",
   "native",
   "stream",
   "unknown",
-];
+]);
 
 function normalizeSurface(surface?: string | null): VoiceSessionSurface {
   if (!surface) {
     return "unknown";
   }
   const normalized = surface.toLowerCase();
-  if (knownSurfaces.includes(normalized as VoiceSessionSurface)) {
+  if (knownSurfaces.has(normalized as VoiceSessionSurface)) {
     return normalized as VoiceSessionSurface;
   }
   return "unknown";

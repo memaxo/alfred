@@ -21,7 +21,7 @@ import { STAGE_ORDER } from "../pipeline";
  * Implement this to store checkpoints in your preferred backend
  * (database, filesystem, Redis, etc.)
  */
-export type CheckpointStorage = {
+export interface CheckpointStorage {
   /**
    * Save a checkpoint for a run.
    * Should be idempotent (same runId + stage = same result).
@@ -39,7 +39,7 @@ export type CheckpointStorage = {
    * Optional cleanup method.
    */
   delete?(runId: string): Promise<void>;
-};
+}
 
 /**
  * In-memory checkpoint storage for testing.
@@ -87,11 +87,11 @@ export class CheckpointObserver implements PipelineObserver {
   private lastCompletedStage: StageName | null = null;
   private lastCompletedStageIndex = -1;
   private contextEntries: [string, SerializableValue][] = [];
-  private stageResults: Array<{
+  private stageResults: {
     name: StageName;
     durationMs: number;
     status: "success" | "failure" | "skipped";
-  }> = [];
+  }[] = [];
   private startedAt = 0;
   private lastEventAt = 0;
   private lastEventId: string | null = null;
@@ -104,15 +104,16 @@ export class CheckpointObserver implements PipelineObserver {
     this.lastEventId = `${event.type}:${event.timestamp}`;
 
     switch (event.type) {
-      case "pipeline:start":
+      case "pipeline:start": {
         this.currentRunId = event.runId;
         this.requirement = event.requirement;
         this.status = "running";
         this.startedAt = event.timestamp;
         this.reset();
         break;
+      }
 
-      case "stage:exit":
+      case "stage:exit": {
         this.lastCompletedStage = event.stage;
         this.lastCompletedStageIndex = STAGE_ORDER.indexOf(event.stage);
         this.stageResults.push({
@@ -123,8 +124,9 @@ export class CheckpointObserver implements PipelineObserver {
         // Checkpoint after each stage completion
         void this.checkpoint();
         break;
+      }
 
-      case "stage:error":
+      case "stage:error": {
         this.stageResults.push({
           name: event.stage,
           durationMs: 0,
@@ -134,37 +136,43 @@ export class CheckpointObserver implements PipelineObserver {
         this.error = event.error;
         void this.checkpoint();
         break;
+      }
 
-      case "context:set":
+      case "context:set": {
         // Update context entries
         this.contextEntries = this.contextEntries.filter(
           ([key]) => key !== event.key
         );
         this.contextEntries.push([event.key, event.value]);
         break;
+      }
 
-      case "pipeline:suspend":
+      case "pipeline:suspend": {
         this.status = "suspended";
         void this.checkpoint();
         break;
+      }
 
-      case "pipeline:resume":
+      case "pipeline:resume": {
         this.status = "running";
         break;
+      }
 
-      case "pipeline:complete":
+      case "pipeline:complete": {
         this.status = "completed";
         // Optionally cleanup checkpoint on completion
         if (this.currentRunId && this.storage.delete) {
           void this.storage.delete(this.currentRunId);
         }
         break;
+      }
 
-      case "pipeline:failed":
+      case "pipeline:failed": {
         this.status = "failed";
         this.error = event.error;
         void this.checkpoint();
         break;
+      }
     }
   }
 
@@ -198,7 +206,7 @@ export class CheckpointObserver implements PipelineObserver {
 
     try {
       await this.storage.save(this.currentRunId, snapshot);
-    } catch (_error) {}
+    } catch {}
   }
 
   /**

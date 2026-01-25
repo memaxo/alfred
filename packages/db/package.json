@@ -103,8 +103,8 @@
     "db:stop": "bun scripts/compose.ts stop",
     "db:watch": "bun scripts/compose.ts up",
     "db:down": "bun scripts/compose.ts down",
-    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
-    "test:postgres": "RUN_DB_TESTS=1 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
+    "test": "ALFRED_TEST_ISOLATE_FILES=1 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
+    "test:postgres": "RUN_DB_TESTS=1 ALFRED_TEST_ISOLATE_FILES=1 bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts",
     "typecheck": "tsgo -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {

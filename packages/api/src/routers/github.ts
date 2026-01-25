@@ -47,7 +47,7 @@ export const githubRouter = router({
           throw new Error(stderr || "gh command failed");
         }
 
-        const rawPRs = JSON.parse(stdout) as Array<{
+        const rawPRs = JSON.parse(stdout) as {
           number: number;
           title: string;
           author: { login: string };
@@ -59,11 +59,11 @@ export const githubRouter = router({
           deletions: number;
           comments: unknown[];
           reviewDecision: string | null;
-          statusCheckRollup: Array<{ conclusion?: string; status?: string }>;
+          statusCheckRollup: { conclusion?: string; status?: string }[];
           createdAt: string;
           updatedAt: string;
           url: string;
-        }>;
+        }[];
 
         const pullRequests = rawPRs.map((pr) => ({
           id: String(pr.number),
@@ -139,27 +139,27 @@ export const githubRouter = router({
           baseRefName: string;
           additions: number;
           deletions: number;
-          comments: Array<{
+          comments: {
             body: string;
             author: { login: string };
             createdAt: string;
-          }>;
+          }[];
           reviewDecision: string | null;
-          statusCheckRollup: Array<{
+          statusCheckRollup: {
             name?: string;
             conclusion?: string;
             status?: string;
-          }>;
+          }[];
           createdAt: string;
           updatedAt: string;
           url: string;
           body: string;
-          labels: Array<{ name: string; color: string }>;
+          labels: { name: string; color: string }[];
           mergeable: string;
           mergedAt: string | null;
           mergedBy: { login: string } | null;
-          reviewRequests: Array<{ login: string }>;
-          reviews: Array<{ state: string; author: { login: string } }>;
+          reviewRequests: { login: string }[];
+          reviews: { state: string; author: { login: string } }[];
         };
 
         return {
@@ -320,7 +320,7 @@ function mapReviewDecision(
 }
 
 function mapCIStatus(
-  checks: Array<{ conclusion?: string; status?: string }>
+  checks: { conclusion?: string; status?: string }[]
 ): "pending" | "success" | "failure" | "running" {
   if (checks.length === 0) {
     return "pending";
@@ -358,22 +358,22 @@ function isAgentAuthor(author: string): boolean {
   return agentPatterns.some((p) => author.toLowerCase().includes(p));
 }
 
-type DiffFile = {
+export interface DiffFile {
   path: string;
   additions: number;
   deletions: number;
-  hunks: Array<{
+  hunks: {
     header: string;
     lines: string[];
-  }>;
-};
+  }[];
+}
 
 function parseDiff(diffText: string): DiffFile[] {
   const files: DiffFile[] = [];
   const filePattern = /^diff --git a\/(.*) b\/(.*)$/gm;
 
   let match: RegExpExecArray | null;
-  const fileMatches: Array<{ path: string; start: number }> = [];
+  const fileMatches: { path: string; start: number }[] = [];
 
   while ((match = filePattern.exec(diffText)) !== null) {
     fileMatches.push({

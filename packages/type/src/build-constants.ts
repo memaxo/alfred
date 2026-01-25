@@ -12,14 +12,14 @@ declare const GIT_BRANCH: string;
 declare const NODE_ENV: "development" | "production" | "test";
 declare const BUILD_TARGET: string;
 
-export type BuildInfo = {
+export interface BuildInfo {
   version: string;
   buildTime: string;
   commit: string;
   branch: string;
   nodeEnv: "development" | "production" | "test";
   target?: string;
-};
+}
 
 /**
  * Get build information from compile-time constants

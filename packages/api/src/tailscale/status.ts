@@ -11,7 +11,7 @@ export type TailscaleProbe =
   | { ok: false; installed: false; error: string }
   | { ok: false; installed: true; error: string };
 
-type StatusJson = {
+interface StatusJson {
   BackendState?: string;
   Self?: {
     DNSName?: string;
@@ -19,7 +19,7 @@ type StatusJson = {
     ID?: string;
   };
   CurrentTailnet?: { Name?: string } | string;
-};
+}
 
 async function runCapture(
   args: string[],
@@ -108,10 +108,10 @@ async function probeOnce(timeoutMs: number): Promise<TailscaleProbe> {
       installed: false,
       error:
         error instanceof Error
-          ? error.message.toLowerCase().includes("no such file") ||
+          ? (error.message.toLowerCase().includes("no such file") ||
             error.message.toLowerCase().includes("not found")
             ? "tailscale_not_found"
-            : `tailscale_spawn_failed:${error.message}`
+            : `tailscale_spawn_failed:${error.message}`)
           : "tailscale_spawn_failed",
     };
   }

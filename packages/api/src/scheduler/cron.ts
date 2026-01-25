@@ -120,13 +120,13 @@ export function isRecurringValid(recurringRaw: string): boolean {
   }
 }
 
-export type NextDueAtInput = {
+export interface NextDueAtInput {
   recurring: string;
   after: Date;
   baseDueAt: Date;
   tz: string;
   maxTransitions?: number;
-};
+}
 
 export function nextDueAt({
   recurring,

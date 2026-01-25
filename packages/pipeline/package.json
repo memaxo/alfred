@@ -27,6 +27,7 @@
     "@alfred/metrics": "workspace:*",
     "@alfred/pacer": "workspace:*",
     "@alfred/plan": "workspace:*",
+    "@alfred/resilience": "workspace:*",
     "@alfred/runtime": "workspace:*",
     "@alfred/type": "workspace:*",
     "prom-client": "^15.1.3",

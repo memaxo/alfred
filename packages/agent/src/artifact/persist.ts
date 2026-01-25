@@ -81,6 +81,6 @@ export async function persistArtifact(
   await writeFile(tmpPath, args.content);
   await rename(tmpPath, finalPath);
 
-  const rel = path.relative(repoReal, finalPath).replaceAll(/\\/g, "/");
+  const rel = path.relative(repoReal, finalPath).replaceAll("\\", "/");
   return { path: rel };
 }

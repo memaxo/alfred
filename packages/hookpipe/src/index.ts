@@ -1,0 +1,1 @@
+export { HooksObserver } from "./pipeline";

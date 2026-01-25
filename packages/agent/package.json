@@ -82,6 +82,7 @@
     "@alfred/cognitive": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/embed": "workspace:*",
+    "@alfred/hooks": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
     "@alfred/logger": "workspace:*",

@@ -336,7 +336,7 @@ export function buildJarvisOpening(context: {
 /**
  * Configuration for JARVIS persona features.
  */
-export type JarvisConfig = {
+export interface JarvisConfig {
   /** Enable JARVIS-style transitions */
   transitions: boolean;
   /** Enable technical wit (0 = none, 1 = frequent) */
@@ -345,7 +345,7 @@ export type JarvisConfig = {
   proactive: boolean;
   /** Use JARVIS system enhancement in prompts */
   systemEnhancement: boolean;
-};
+}
 
 /**
  * Default JARVIS configuration.

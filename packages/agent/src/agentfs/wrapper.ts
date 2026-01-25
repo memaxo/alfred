@@ -10,22 +10,23 @@
 
 import { logger } from "@alfred/logger";
 
+import type { AgentFSSDK } from "./sdk.js";
+import type {
+  AgentFSChange,
+  AgentFSInitOptions,
+  AgentFSInterface,
+  AgentFSKVEntry,
+  AgentFSReadFileOptions,
+  AgentFSToolCall,
+  AgentFSToolCallStats,
+} from "./types.js";
+
 import {
   agentfsActiveWorkspaces,
   agentfsKvOpsTotal,
   agentfsOperationLatencyMs,
   agentfsToolCallsTotal,
 } from "./metrics.js";
-import { type AgentFSSDK } from "./sdk.js";
-import {
-  type AgentFSChange,
-  type AgentFSInitOptions,
-  type AgentFSInterface,
-  type AgentFSKVEntry,
-  type AgentFSReadFileOptions,
-  type AgentFSToolCall,
-  type AgentFSToolCallStats,
-} from "./types.js";
 
 // Cached SDK module
 let _agentFSModule: AgentFSSDK | null = null;
@@ -403,8 +404,8 @@ export class AlfredAgentFS implements AgentFSInterface {
     get: async (id: number): Promise<AgentFSToolCall | undefined> => {
       try {
         return await this.inner.tools.get(id);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError(
           "TOOL_GET_FAILED",
           `Failed to get tool call ${id}: ${msg}`
@@ -418,8 +419,8 @@ export class AlfredAgentFS implements AgentFSInterface {
     ): Promise<AgentFSToolCall[]> => {
       try {
         return await this.inner.tools.getByName(name, limit);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError(
           "TOOL_GET_BY_NAME_FAILED",
           `Failed to get tool calls for ${name}: ${msg}`
@@ -433,8 +434,8 @@ export class AlfredAgentFS implements AgentFSInterface {
     ): Promise<AgentFSToolCall[]> => {
       try {
         return await this.inner.tools.getRecent(since, limit);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError(
           "TOOL_GET_RECENT_FAILED",
           `Failed to get recent tool calls: ${msg}`
@@ -445,8 +446,8 @@ export class AlfredAgentFS implements AgentFSInterface {
     getStats: async (): Promise<AgentFSToolCallStats[]> => {
       try {
         return await this.inner.tools.getStats();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError(
           "TOOL_GET_STATS_FAILED",
           `Failed to get tool stats: ${msg}`
@@ -490,8 +491,8 @@ export class AlfredAgentFS implements AgentFSInterface {
         });
 
         return id;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         throw new AgentFSError(
           "TOOL_RECORD_FAILED",
           `Failed to record tool call ${name}: ${msg}`

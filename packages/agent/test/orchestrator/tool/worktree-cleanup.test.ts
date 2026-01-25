@@ -12,7 +12,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "-");
+const sanitize = (value: string) => value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
 
 async function initRepo(): Promise<string> {
   const repoRoot = await fs.mkdtemp(

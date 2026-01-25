@@ -1,4 +1,5 @@
-import { type ServerWebSocket } from "bun";
+import type { ServerWebSocket } from "bun";
+
 import { afterAll, describe, expect, it } from "bun:test";
 
 import { VoiceRegistry } from "../../src/server/registry";

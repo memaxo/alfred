@@ -282,11 +282,11 @@ export const FILE_EXTENSIONS: Record<string, string> = {
 /**
  * Code lexicon result with source tracking
  */
-export type CodeLexiconResult = {
+export interface CodeLexiconResult {
   result: boolean;
   source: "learned" | "static";
   confidence: number;
-};
+}
 
 /**
  * Confidence threshold for learned code lexicon to override static
@@ -296,12 +296,12 @@ const LEARNED_OVERRIDE_THRESHOLD = 0.8;
 /**
  * Cache for learned code lexicon associations
  */
-type CachedCodeAssociation = {
+interface CachedCodeAssociation {
   result: boolean;
   source: "learned" | "static";
   confidence: number;
   expiresAt: number;
-};
+}
 
 const codeLexiconCache = new Map<string, CachedCodeAssociation>();
 /**

@@ -12,19 +12,19 @@ import type { KeyEvent } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
 
-export type ModalButton = {
+export interface ModalButton {
   label: string;
   value: string;
-};
+}
 
-export type ModalProps = {
+export interface ModalProps {
   title: string;
   message: string;
   buttons?: ModalButton[];
   defaultButton?: string;
   isOpen: boolean;
   onClose: (value: string | null) => void;
-};
+}
 
 export function Modal({
   title,
@@ -43,7 +43,7 @@ export function Modal({
       const defaultIdx = buttons.findIndex(
         (b) => b.value === (defaultButton ?? buttons[0]?.value)
       );
-      setSelectedIndex(defaultIdx >= 0 ? defaultIdx : 0);
+      setSelectedIndex(Math.max(defaultIdx, 0));
     }
   }, [isOpen, buttons, defaultButton]);
 

@@ -170,7 +170,7 @@ export function compareAgentfsRuns(args: {
   let fileRemoved = 0;
   let fileModified = 0;
 
-  for (const p of [...allPaths].toSorted()) {
+  for (const p of [...allPaths].sort()) {
     const l = leftMap.get(p) ?? null;
     const r = rightMap.get(p) ?? null;
     if (!l && r) {
@@ -204,7 +204,7 @@ export function compareAgentfsRuns(args: {
   let kvRemoved = 0;
   let kvModified = 0;
 
-  for (const k of [...allKeys].toSorted()) {
+  for (const k of [...allKeys].sort()) {
     const l = leftKvMap.get(k) ?? null;
     const r = rightKvMap.get(k) ?? null;
     if (!l && r) {

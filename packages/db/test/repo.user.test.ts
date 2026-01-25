@@ -32,8 +32,8 @@ describeFn("userRepo", () => {
       "userRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    userRepo = mod.userRepo;
-    db = mod.db;
+    ({ userRepo } = mod);
+    ({ db } = mod);
   });
 
   beforeEach(async () => {

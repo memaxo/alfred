@@ -4,8 +4,9 @@
  * Tests propagateUpstreamFailures, collectToolsToAvoid, and related helpers.
  */
 
-import { type FailureContext } from "@alfred/type";
-import { type SubTask } from "@alfred/type/plan";
+import type { FailureContext } from "@alfred/type";
+import type { SubTask } from "@alfred/type/plan";
+
 import { describe, expect, it } from "bun:test";
 
 import {

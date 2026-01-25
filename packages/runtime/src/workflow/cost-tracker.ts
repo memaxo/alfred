@@ -7,25 +7,25 @@
 
 export type CostPeriod = "day" | "week" | "month" | "year";
 
-export type CostEntry = {
+export interface CostEntry {
   userId: string;
   planId: string;
   operation: "plan_generation" | "plan_execution" | "pattern_extraction";
   costUsd: number;
   tokensUsed: number;
   timestamp: Date;
-};
+}
 
-export type CostSummary = {
+export interface CostSummary {
   totalCost: number;
   totalTokens: number;
   operationsCount: number;
   averageCostPerOperation: number;
   byPeriod: Map<CostPeriod, number>;
   byOperation: Map<string, number>;
-};
+}
 
-export type Budget = {
+export interface Budget {
   userId: string;
   period: CostPeriod;
   limitUsd: number;
@@ -33,7 +33,7 @@ export type Budget = {
   alertThreshold: number;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 export class CostTracker {
   costs: Map<string, CostEntry> = new Map();
@@ -59,7 +59,7 @@ export class CostTracker {
     const now = new Date();
     const periodStart = this.getPeriodStart(now, period);
 
-    const userCosts = Array.from(this.costs.values()).filter(
+    const userCosts = [...this.costs.values()].filter(
       (c) => c.userId === userId && c.timestamp >= periodStart
     );
 
@@ -102,7 +102,7 @@ export class CostTracker {
     const percentageUsed = periodCost / budget.limitUsd;
 
     return {
-      withinBudget: percentageUsed < 1.0,
+      withinBudget: percentageUsed < 1,
       budget,
     };
   }
@@ -124,15 +124,19 @@ export class CostTracker {
     const start = new Date(date);
 
     switch (period) {
-      case "day":
+      case "day": {
         return new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      case "week":
+      }
+      case "week": {
         start.setDate(start.getDate() - start.getDay());
         return start;
-      case "month":
+      }
+      case "month": {
         return new Date(start.getFullYear(), start.getMonth(), 1);
-      case "year":
+      }
+      case "year": {
         return new Date(start.getFullYear(), 0, 1);
+      }
     }
   }
 

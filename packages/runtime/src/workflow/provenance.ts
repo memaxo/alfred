@@ -1,13 +1,13 @@
 import { logger } from "@alfred/logger";
 
-export type ReasonTrace = {
+export interface ReasonTrace {
   text: string;
   timestamp: number;
-};
+}
 
-export type ExecContext = {
+export interface ExecContext {
   ragDocumentIds?: string[];
-};
+}
 
 export async function workflowProvenance(options: {
   resource: string;

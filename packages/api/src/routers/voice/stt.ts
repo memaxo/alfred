@@ -14,8 +14,8 @@ export const voiceSttTranscribeProcedure = authedProcedure
   .use(requirePolicy("voice.stt", toSttResource))
   .input(sttInput)
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
-    let language = input.language;
+    const { session } = ctx;
+    let { language } = input;
 
     if (session) {
       language = await resolveSttLanguagePreference(
@@ -40,8 +40,8 @@ export const voiceSttTranscribeStreamingProcedure = authedProcedure
   .use(requirePolicy("voice.stt", toSttResource))
   .input(sttStreamingInput)
   .mutation(async ({ input, ctx }) => {
-    const session = ctx.session;
-    let language = input.language;
+    const { session } = ctx;
+    let { language } = input;
 
     if (session) {
       language = await resolveSttLanguagePreference(

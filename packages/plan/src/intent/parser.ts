@@ -1,13 +1,14 @@
 import { generateObject } from "ai";
 import { randomUUID } from "node:crypto";
 
+import type {
+  ClarificationQuestion,
+  Pattern,
+  WorkflowIntent,
+} from "./types.js";
+
 import { getModelId, getOpenAI } from "../ai.js";
 import { intentParserOutputSchema } from "./schema.js";
-import {
-  type ClarificationQuestion,
-  type Pattern,
-  type WorkflowIntent,
-} from "./types.js";
 
 /**
  * parseIntent: Parse natural language input into structured WorkflowIntent objects

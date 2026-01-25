@@ -3,10 +3,10 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 
 import type { AgentOutcome } from "./agent.js";
 
-export type PhaseResult = {
+export interface PhaseResult {
   status: "completed" | "failed" | "partial";
   outcomes: AgentOutcome[];
-};
+}
 
 export function makePlanSelectedEvent(plan: StructuredPlan): WorkflowEvent {
   return {

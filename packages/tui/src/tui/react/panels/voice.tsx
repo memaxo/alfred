@@ -17,13 +17,13 @@ import { colors, progressChars } from "../../theme";
 import { bold, dim, fg } from "../../typography";
 import { useVoiceStore } from "../hooks/stores";
 
-type VoicePanelProps = {
+interface VoicePanelProps {
   width: number;
   height: number;
   focused: boolean;
   x?: number;
   y?: number;
-};
+}
 
 function getPipelineStatusDisplay(status: VoiceState["status"]): {
   icon: string;
@@ -31,18 +31,24 @@ function getPipelineStatusDisplay(status: VoiceState["status"]): {
   color: string;
 } {
   switch (status) {
-    case "offline":
+    case "offline": {
       return { icon: "○", label: "Offline", color: colors.error };
-    case "initializing":
+    }
+    case "initializing": {
       return { icon: "◎", label: "Initializing", color: colors.warning };
-    case "standby":
+    }
+    case "standby": {
       return { icon: "●", label: "Standby", color: colors.muted };
-    case "listening":
+    }
+    case "listening": {
       return { icon: "◉", label: "Listening", color: colors.primary };
-    case "processing":
+    }
+    case "processing": {
       return { icon: "◉", label: "Processing", color: colors.warning };
-    case "speaking":
+    }
+    case "speaking": {
       return { icon: "●", label: "Speaking", color: colors.success };
+    }
   }
 }
 

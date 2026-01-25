@@ -23,10 +23,10 @@ describeIntegration("STT Integration (Parakeet)", () => {
     try {
       await initializeVoicePools();
       const pools = getVoicePools();
-      sttPool = pools.sttPool;
-    } catch (e) {
-      console.error("Failed to initialize voice pools:", e);
-      throw e;
+      ({ sttPool } = pools);
+    } catch (error) {
+      console.error("Failed to initialize voice pools:", error);
+      throw error;
     }
   }, TIMEOUT_MS);
 
@@ -107,6 +107,6 @@ function createWavHeader(numSamples: number, sampleRate: number): Uint8Array {
 
 function writeString(view: DataView, offset: number, string: string) {
   for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
+    view.setUint8(offset + i, string.codePointAt(i));
   }
 }

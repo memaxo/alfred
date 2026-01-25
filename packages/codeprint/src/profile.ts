@@ -13,10 +13,11 @@ export interface StageProfile {
 export interface IndexBuildProfile {
   totalMs: number;
   stages: {
-    glob: StageProfile;
+    discover: StageProfile;
     read: StageProfile;
     parse: StageProfile;
     extract: StageProfile;
+    bm25Build: StageProfile;
     persist: StageProfile;
   };
   files: {
@@ -25,6 +26,7 @@ export interface IndexBuildProfile {
     errors: number;
   };
   bytesRead: number;
+  discoveryMethod?: string;
 }
 
 export interface QueryProfile {
@@ -144,17 +146,21 @@ export function getQueryProfiles(): QueryProfile[] {
  * Format profile for console output
  */
 export function formatIndexBuildProfile(profile: IndexBuildProfile): string {
+  const methodInfo = profile.discoveryMethod
+    ? ` via ${profile.discoveryMethod}`
+    : "";
   const lines = [
     `Index Build Profile (${profile.totalMs.toFixed(1)}ms total)`,
-    `  Files: ${profile.files.total} scanned, ${profile.files.parsed} parsed, ${profile.files.errors} errors`,
+    `  Files: ${profile.files.total} scanned${methodInfo}, ${profile.files.parsed} parsed, ${profile.files.errors} errors`,
     `  Bytes: ${(profile.bytesRead / 1024 / 1024).toFixed(2)} MB`,
     ``,
     `  Stages:`,
-    `    glob:    ${profile.stages.glob.durationMs.toFixed(1)}ms (${pct(profile.stages.glob.durationMs, profile.totalMs)})`,
-    `    read:    ${profile.stages.read.durationMs.toFixed(1)}ms (${pct(profile.stages.read.durationMs, profile.totalMs)})`,
-    `    parse:   ${profile.stages.parse.durationMs.toFixed(1)}ms (${pct(profile.stages.parse.durationMs, profile.totalMs)})`,
-    `    extract: ${profile.stages.extract.durationMs.toFixed(1)}ms (${pct(profile.stages.extract.durationMs, profile.totalMs)})`,
-    `    persist: ${profile.stages.persist.durationMs.toFixed(1)}ms (${pct(profile.stages.persist.durationMs, profile.totalMs)})`,
+    `    discover: ${profile.stages.discover.durationMs.toFixed(1)}ms (${pct(profile.stages.discover.durationMs, profile.totalMs)})`,
+    `    read:     ${profile.stages.read.durationMs.toFixed(1)}ms (${pct(profile.stages.read.durationMs, profile.totalMs)})`,
+    `    parse:    ${profile.stages.parse.durationMs.toFixed(1)}ms (${pct(profile.stages.parse.durationMs, profile.totalMs)})`,
+    `    extract:  ${profile.stages.extract.durationMs.toFixed(1)}ms (${pct(profile.stages.extract.durationMs, profile.totalMs)})`,
+    `    bm25:     ${profile.stages.bm25Build.durationMs.toFixed(1)}ms (${pct(profile.stages.bm25Build.durationMs, profile.totalMs)})`,
+    `    persist:  ${profile.stages.persist.durationMs.toFixed(1)}ms (${pct(profile.stages.persist.durationMs, profile.totalMs)})`,
   ];
   return lines.join("\n");
 }
@@ -213,15 +219,16 @@ function pct(part: number, total: number): string {
 function averageIndexProfile(profiles: IndexBuildProfile[]): IndexBuildProfile {
   return {
     bytesRead: avg(profiles.map((p) => p.bytesRead)),
+    discoveryMethod: profiles[0]?.discoveryMethod,
     files: {
       total: Math.round(avg(profiles.map((p) => p.files.total))),
       parsed: Math.round(avg(profiles.map((p) => p.files.parsed))),
       errors: Math.round(avg(profiles.map((p) => p.files.errors))),
     },
     stages: {
-      glob: {
-        name: "glob",
-        durationMs: avg(profiles.map((p) => p.stages.glob.durationMs)),
+      discover: {
+        name: "discover",
+        durationMs: avg(profiles.map((p) => p.stages.discover.durationMs)),
       },
       read: {
         name: "read",
@@ -234,6 +241,10 @@ function averageIndexProfile(profiles: IndexBuildProfile[]): IndexBuildProfile {
       extract: {
         name: "extract",
         durationMs: avg(profiles.map((p) => p.stages.extract.durationMs)),
+      },
+      bm25Build: {
+        name: "bm25Build",
+        durationMs: avg(profiles.map((p) => p.stages.bm25Build.durationMs)),
       },
       persist: {
         name: "persist",

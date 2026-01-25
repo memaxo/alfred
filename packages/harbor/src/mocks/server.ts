@@ -5,25 +5,25 @@
 import { createGithubHandler, type GithubConfig } from "./github.js";
 import { createLinearHandler, type LinearConfig } from "./linear.js";
 
-export type MockConfig = {
+export interface MockConfig {
   linear?: LinearConfig;
   github?: GithubConfig;
   port?: number;
-};
+}
 
-export type MockRequest = {
+export interface MockRequest {
   path: string;
   method: string;
   body: unknown;
   timestamp: number;
-};
+}
 
-export type MockServer = {
+export interface MockServer {
   start(): { linearUrl: string; githubCliStub: string };
   stop(): void;
   getRequests(): MockRequest[];
   clearRequests(): void;
-};
+}
 
 /**
  * Create a mock server for Linear and GitHub APIs

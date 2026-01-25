@@ -79,7 +79,7 @@ export const toolPreferenceGet = {
         confidence:
           typeof row.confidence === "number" && Number.isFinite(row.confidence)
             ? row.confidence
-            : 1.0,
+            : 1,
         source: mapSource(row.source),
       }))
       .filter((pref) => pref.key.length > 0)
@@ -130,7 +130,7 @@ export const toolPreferenceSet = {
 
     const existing = await getPreferences(input.userId);
     const previous = Array.isArray(existing)
-      ? (existing as Array<{ key?: unknown; value?: unknown }>).find(
+      ? (existing as { key?: unknown; value?: unknown }[]).find(
           (row) => row.key === input.key
         )?.value
       : undefined;
@@ -139,7 +139,7 @@ export const toolPreferenceSet = {
       input.userId,
       input.key,
       input.value,
-      input.confidence ?? (input.source === "inferred" ? 0.8 : 1.0),
+      input.confidence ?? (input.source === "inferred" ? 0.8 : 1),
       toDbSource(input.source)
     );
 

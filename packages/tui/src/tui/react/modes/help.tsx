@@ -12,10 +12,10 @@ import type { KeyEvent } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback } from "react";
 
-export type HelpModeProps = {
+export interface HelpModeProps {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
 export function HelpMode({ isOpen, onClose }: HelpModeProps) {
   const { width, height } = useTerminalDimensions();

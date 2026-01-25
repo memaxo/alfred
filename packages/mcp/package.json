@@ -15,7 +15,7 @@
     }
   },
   "scripts": {
-    "build": "tsgo -b",
+    "build": "tsgo -b --emitDeclarationOnly",
     "dev": "tsgo -b -w",
     "typecheck": "tsgo -b --pretty false",
     "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"

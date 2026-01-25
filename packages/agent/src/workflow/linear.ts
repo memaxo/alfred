@@ -7,12 +7,12 @@ import { toolTicket } from "../orchestrator/tool/ticket";
 
 const MAX_LINEAR_TITLE = 240;
 
-export type LinearTicketLink = {
+export interface LinearTicketLink {
   issueId: string;
   sessionId: string;
   issueUrl?: string;
   created: boolean;
-};
+}
 
 function sanitize(value: string | undefined | null): string | undefined {
   if (!value) {
@@ -107,7 +107,7 @@ export async function ensureLinearTicket(params: {
     };
   }
 
-  const teamId = baseLinear.teamId;
+  const { teamId } = baseLinear;
   if (!teamId) {
     logger.warn("linear_ticket_team_missing", { space });
     return { linear: undefined, ticket: undefined };

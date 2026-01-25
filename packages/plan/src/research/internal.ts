@@ -1,10 +1,11 @@
 import { logger } from "@alfred/logger";
 
-import { type WorkflowIntent } from "../intent/types.js";
+import type { WorkflowIntent } from "../intent/types.js";
+import type { Convention, ResearchResult } from "./types.js";
+
 import { gatherCodebaseContext } from "./codebase.js";
 import { extractConventions } from "./conventions.js";
 import { lookupPatterns } from "./patterns.js";
-import { type Convention, type ResearchResult } from "./types.js";
 
 /**
  * Gather internal research context for a workflow intent

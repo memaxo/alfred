@@ -1,7 +1,5 @@
-import {
-  type PreferenceDetail,
-  type PreferenceKey,
-} from "@alfred/type/preference";
+import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 const loader = await import("./preference/loader");

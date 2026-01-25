@@ -8,7 +8,7 @@ export async function runCheck(
   plan: StructuredPlan,
   check: "typecheck" | "test" | "lint" | "build"
 ): Promise<CheckResult> {
-  const workspace = plan.workspace;
+  const { workspace } = plan;
   if (!workspace) {
     return { success: false, error: "No workspace defined for plan" };
   }

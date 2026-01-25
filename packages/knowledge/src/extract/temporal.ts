@@ -87,7 +87,7 @@ const temporalConfidence = (result: ChronoResult): number => {
   if (hasRelativeDateFormatTag(result)) {
     confidence -= 0.05;
   }
-  if (result.text.match(/^\d{4}$/)) {
+  if (/^\d{4}$/.test(result.text)) {
     confidence -= 0.05;
   }
   return clampConfidence(confidence);

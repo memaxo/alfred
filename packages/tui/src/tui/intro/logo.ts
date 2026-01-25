@@ -44,7 +44,7 @@ export function coloredLogo(
   const text = fg(colors.text);
 
   switch (variant) {
-    case "full":
+    case "full": {
       return [
         muted("    ╔═══════════════════════════════════════╗"),
         muted("    ║") +
@@ -59,8 +59,9 @@ export function coloredLogo(
           muted("║"),
         muted("    ╚═══════════════════════════════════════╝"),
       ];
+    }
 
-    case "compact":
+    case "compact": {
       return [
         muted("╔═══════════════════════════════════════╗"),
         muted("║") +
@@ -70,11 +71,13 @@ export function coloredLogo(
           muted("║"),
         muted("╚═══════════════════════════════════════╝"),
       ];
+    }
 
-    case "minimal":
+    case "minimal": {
       return [muted("┌─ ") + bold(primary("A L F R E D")) + muted(" ─┐")];
+    }
 
-    case "stylized":
+    case "stylized": {
       return [
         muted("    ╭───────────────────────────────────────╮"),
         muted("    │   ") +
@@ -88,6 +91,7 @@ export function coloredLogo(
           muted("        │"),
         muted("    ╰───────────────────────────────────────╯"),
       ];
+    }
   }
 }
 

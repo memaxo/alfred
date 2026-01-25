@@ -24,7 +24,7 @@
  * };
  * ```
  */
-export type ContinuityContext = {
+export interface ContinuityContext {
   /** Ephemeral WebSocket/voice session identifier (Layer 1: Session State) */
   sessionId?: string;
   /** Persistent conversation thread identifier (Layer 2: Conversation Persistence) */
@@ -35,4 +35,4 @@ export type ContinuityContext = {
   focusSetId?: string | null;
   /** Commitment identifier (Layer 3: Structured Artifacts) */
   commitmentId?: string | null;
-};
+}

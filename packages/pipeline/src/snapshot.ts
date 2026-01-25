@@ -9,13 +9,11 @@
  * Follows the SnapshotReconstructor<S, E> interface from @alfred/type/reconstruct.
  */
 
-import {
-  type Snapshot,
-  type SnapshotReconstructor,
-} from "@alfred/type/reconstruct";
+import type { Snapshot, SnapshotReconstructor } from "@alfred/type/reconstruct";
 
-import { type PipelineEvent } from "./events";
-import { type StageName } from "./pipeline";
+import type { PipelineEvent } from "./events";
+import type { StageName } from "./pipeline";
+
 import { STAGE_ORDER } from "./pipeline";
 
 /**
@@ -63,11 +61,11 @@ export interface PipelineSnapshot {
   /** Context entries as array of tuples (Map not JSON-serializable) */
   contextEntries: [string, SerializableValue][];
   /** Stage execution results */
-  stageResults: Array<{
+  stageResults: {
     name: StageName;
     durationMs: number;
     status: "success" | "failure" | "skipped";
-  }>;
+  }[];
   /** Timestamp when pipeline started */
   startedAt: number;
   /** Timestamp of last event processed */

@@ -7,14 +7,14 @@ import { coerceNonEmptyString } from "./coerce";
 
 type MessagePart = UIMessage["parts"][number];
 
-type ToolCallShape = {
+interface ToolCallShape {
   id?: string;
   toolCallId?: string;
   toolName?: string;
   name?: string;
   args?: unknown;
   input?: unknown;
-};
+}
 
 export type ToolResultShape = ToolCallShape & {
   result?: unknown;
@@ -115,7 +115,7 @@ function isDataCacheEvent(
   return event._ === "data-cache-handoff";
 }
 
-export type NormalizableGenerate = {
+export interface NormalizableGenerate {
   text?: string | null;
   toolCalls?: Array<{
     id?: string;
@@ -129,7 +129,7 @@ export type NormalizableGenerate = {
     result?: unknown;
     output?: unknown;
   }> | null;
-};
+}
 
 /**
  * Convert a non-stream generateText result into canonical AI SDK v6 UIMessage parts.
@@ -268,7 +268,7 @@ function normalizeDataCacheEvent(
 function normalizeFileEvent(event: FileEventPayload): UIMessage[] | null {
   let url: string | undefined;
   if (typeof event.url === "string") {
-    url = event.url;
+    ({ url } = event);
   } else if (typeof event.data === "string") {
     url = event.data;
   }
@@ -337,9 +337,9 @@ function coerceReceipt(value: unknown): SearchReceipt | null {
   const createdDate =
     createdRaw instanceof Date
       ? createdRaw
-      : typeof createdRaw === "string"
+      : (typeof createdRaw === "string"
         ? new Date(createdRaw)
-        : new Date();
+        : new Date());
   if (Number.isNaN(createdDate.getTime())) {
     return null;
   }

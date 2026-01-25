@@ -116,7 +116,7 @@ export class EmbedProcess {
 
     // Handle stderr (errors)
     if (this.process.stderr && typeof this.process.stderr !== "number") {
-      const stderr = this.process.stderr;
+      const { stderr } = this.process;
       (async () => {
         const reader = stderr.getReader();
         const decoder = new TextDecoder();
@@ -159,7 +159,7 @@ export class EmbedProcess {
         try {
           const response: EmbedResponse = JSON.parse(line);
           this.handleResponse(response);
-        } catch (_error) {}
+        } catch {}
       }
     }
   }
@@ -258,7 +258,7 @@ export class EmbedProcess {
       try {
         await this.ping();
         this.lastPing = Date.now();
-      } catch (_error) {}
+      } catch {}
     }, 30_000); // Check every 30 seconds
   }
 
@@ -305,9 +305,9 @@ export class EmbedProcess {
       status:
         this.errorCount > 5
           ? "error"
-          : this.pendingRequests.size > 0
+          : (this.pendingRequests.size > 0
             ? "busy"
-            : "idle",
+            : "idle"),
       lastActive: this.lastPing ?? 0,
     };
   }

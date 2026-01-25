@@ -1,5 +1,6 @@
+import type { WorkflowEvent } from "@alfred/type";
+
 import { logger } from "@alfred/metrics";
-import { type WorkflowEvent } from "@alfred/type";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -207,9 +208,9 @@ export function runPlanV6(
   const linear = input.linear ?? null;
   const issueId = linear?.issueId
     ? linear.issueId
-    : linear?.sessionId
+    : (linear?.sessionId
       ? extractIssueIdFromSession(linear.sessionId)
-      : null;
+      : null);
   const externalUrlBase =
     process.env.PUBLIC_URL ??
     process.env.VITE_APP_URL ??

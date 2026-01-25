@@ -161,7 +161,7 @@ describe("Plan Critique", () => {
     mockGenerateObject.mockResolvedValueOnce({
       object: {
         issues: [],
-        overallScore: 1.0,
+        overallScore: 1,
         strengths: ["Added testing"],
         weaknesses: [],
       },
@@ -173,7 +173,7 @@ describe("Plan Critique", () => {
 
     expect(result.iterations).toBe(1);
     expect(result.revisedPlan?.phases.length).toBe(2);
-    expect(result.critique.overallScore).toBe(1.0);
+    expect(result.critique.overallScore).toBe(1);
     expect(mockGenerateObject).toHaveBeenCalledTimes(3);
   });
 });

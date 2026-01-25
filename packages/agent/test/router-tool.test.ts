@@ -198,8 +198,8 @@ describe("router tool", () => {
       });
 
       it("ignores 404 on remove", async () => {
-        mockFetch.mockImplementationOnce(() =>
-          Promise.resolve(new Response("not found", { status: 404 }))
+        mockFetch.mockResolvedValueOnce(
+          new Response("not found", { status: 404 })
         );
 
         const result = await toolRouter.execute({
@@ -267,8 +267,8 @@ describe("router tool", () => {
 
     describe("error handling", () => {
       it("throws on Caddy API error", async () => {
-        mockFetch.mockImplementationOnce(() =>
-          Promise.resolve(new Response("internal error", { status: 500 }))
+        mockFetch.mockResolvedValueOnce(
+          new Response("internal error", { status: 500 })
         );
 
         await expect(

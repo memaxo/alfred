@@ -43,14 +43,14 @@ export const runtimeRouter = router({
         stt: sttPool.getHealth() as unknown[],
         tts: ttsPool.getHealth() as unknown[],
       };
-    } catch (_e) {
+    } catch {
       // Voice pools not initialized yet
     }
 
     let embedStatus: unknown[] = [];
     try {
       embedStatus = getEmbedHealth();
-    } catch (_e) {
+    } catch {
       // Embed pool error
     }
 
@@ -76,8 +76,8 @@ export const runtimeRouter = router({
     if (input.component === "voice" || input.component === "all") {
       try {
         logger.info("runtime_recover_voice_start");
-        await shutdownVoicePools().catch((e) =>
-          logger.error("voice_shutdown_failed", { e })
+        await shutdownVoicePools().catch((error) =>
+          logger.error("voice_shutdown_failed", { error })
         );
         await initializeVoicePools();
         logger.info("runtime_recover_voice_complete");
@@ -91,8 +91,8 @@ export const runtimeRouter = router({
     if (input.component === "embed" || input.component === "all") {
       try {
         logger.info("runtime_recover_embed_start");
-        await shutdownEmbedPool().catch((e) =>
-          logger.error("embed_shutdown_failed", { e })
+        await shutdownEmbedPool().catch((error) =>
+          logger.error("embed_shutdown_failed", { error })
         );
         // Embed pool will re-initialize lazily on next use
         logger.info("runtime_recover_embed_complete");

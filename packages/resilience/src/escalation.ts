@@ -26,7 +26,7 @@ export type EscalationReason =
 /**
  * Escalation event data.
  */
-export type EscalationEvent = {
+export interface EscalationEvent {
   reason: EscalationReason;
   context: {
     runId: string;
@@ -36,7 +36,7 @@ export type EscalationEvent = {
     elapsedMs?: number;
   };
   timestamp: Date;
-};
+}
 
 /**
  * Escalation handler function.
@@ -67,7 +67,7 @@ export class EscalationDetector {
    * @param event - Escalation event to emit
    */
   async escalate(event: EscalationEvent): Promise<void> {
-    const runId = event.context.runId;
+    const { runId } = event.context;
     const history = this.escalations.get(runId) ?? [];
     history.push(event);
     this.escalations.set(runId, history);

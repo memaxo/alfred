@@ -1,7 +1,10 @@
+import type { FileSink } from "bun";
+
 import { logger } from "@alfred/logger";
 import { createOpencodeClient, type OpencodeClient } from "@opencode-ai/sdk";
-import { type FileSink } from "bun";
 import { spawn } from "bun";
+
+import type { OpenCodeToolInput } from "./definition.js";
 
 import {
   type ExecProfile,
@@ -9,7 +12,6 @@ import {
   type ServerHandle,
   serverKey,
 } from "../shared/server.js";
-import { type OpenCodeToolInput } from "./definition.js";
 import { createOpencodeFetch } from "./fetch.js";
 
 type SpawnProc = typeof spawn;

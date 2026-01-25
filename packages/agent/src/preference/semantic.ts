@@ -67,17 +67,17 @@ const FORMAT_PROTOTYPES: Record<ResponseFormat, string[]> = {
   ],
 };
 
-export type PreferenceScores = {
-  verbosity?: Array<{ label: ResponseVerbosity; score: number }>;
-  tone?: Array<{ label: ResponseTone; score: number }>;
-  format?: Array<{ label: ResponseFormat; score: number }>;
-};
+export interface PreferenceScores {
+  verbosity?: { label: ResponseVerbosity; score: number }[];
+  tone?: { label: ResponseTone; score: number }[];
+  format?: { label: ResponseFormat; score: number }[];
+}
 
-type PreferenceCentroids = {
+interface PreferenceCentroids {
   verbosity: Map<ResponseVerbosity, number[]>;
   tone: Map<ResponseTone, number[]>;
   format: Map<ResponseFormat, number[]>;
-};
+}
 
 let centroidPromise: Promise<PreferenceCentroids> | null = null;
 
@@ -180,8 +180,8 @@ async function embedSamples(samples: string[]): Promise<number[] | null> {
 function rankScores<T extends string>(
   vector: number[],
   centroids: Map<T, number[]>
-): Array<{ label: T; score: number }> {
-  return Array.from(centroids.entries())
+): { label: T; score: number }[] {
+  return [...centroids.entries()]
     .map(([label, centroid]) => ({
       label,
       score: cosineSimilarity(vector, centroid),

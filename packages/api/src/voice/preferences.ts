@@ -62,7 +62,7 @@ export type VoiceWorkflowUpdates =
 /**
  * All voice workflow preferences.
  */
-export type VoiceWorkflowPreferences = {
+export interface VoiceWorkflowPreferences {
   /** Whether voice workflow is enabled */
   enabled: boolean;
   /** Plan summary verbosity */
@@ -77,7 +77,7 @@ export type VoiceWorkflowPreferences = {
   timeout: number;
   /** Whether to learn patterns from successful workflows */
   learning: boolean;
-};
+}
 
 /**
  * Default preference values.
@@ -100,9 +100,10 @@ export async function getVoiceWorkflowPreferences(
   userId: string
 ): Promise<VoiceWorkflowPreferences> {
   try {
-    const preferences = (await userRepo.getPreferences(
-      userId
-    )) as unknown as Array<{ key: string; value: unknown }>;
+    const preferences = (await userRepo.getPreferences(userId)) as unknown as {
+      key: string;
+      value: unknown;
+    }[];
 
     const getValue = <T>(key: string, defaultValue: T): T => {
       const entry = preferences.find((pref) => pref.key === key);

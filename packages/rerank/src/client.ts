@@ -55,18 +55,18 @@ async function fetchWithTimeout(
   }
 }
 
-type Qwen3VLHttpError = {
+interface Qwen3VLHttpError {
   status: number;
   body: string;
-};
+}
 
 function asQwen3VLHttpError(value: unknown): Qwen3VLHttpError | null {
   if (!value || typeof value !== "object") {
     return null;
   }
   const v = value as Record<string, unknown>;
-  const status = v.status;
-  const body = v.body;
+  const { status } = v;
+  const { body } = v;
   if (typeof status !== "number") {
     return null;
   }
@@ -151,7 +151,7 @@ export async function qwen3vlRerank(
 
       const body = (await response.json()) as Qwen3VLRerankResponse;
       if (!Array.isArray(body.results)) {
-        throw new Error("qwen3vl_rerank_failed:invalid_response");
+        throw new TypeError("qwen3vl_rerank_failed:invalid_response");
       }
 
       const results: RerankResult[] = body.results.map((item) => ({

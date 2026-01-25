@@ -7,14 +7,14 @@
 
 import type { Page } from "@playwright/test";
 
-export type TimeoutContext = {
+export interface TimeoutContext {
   operation: string;
   selector?: string;
   timeout: number;
   elapsed: number;
   pageUrl: string;
   lastActivity?: string;
-};
+}
 
 /**
  * Structured timeout error with operation context
@@ -175,7 +175,7 @@ export async function withSharedTimeout<T>(
   page: Page,
   operation: string,
   timeout: number,
-  actions: Array<() => Promise<T>>
+  actions: (() => Promise<T>)[]
 ): Promise<T[]> {
   const start = Date.now();
   const results: T[] = [];

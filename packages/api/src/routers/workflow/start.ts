@@ -46,41 +46,31 @@ export const workflowStartProcedure = authedProcedure
         { ensureLinearTicket },
         {
           createRequirementMessage,
-          createWorkflowExecutor,
           deriveWorkflowTitle,
           ensureWorkflowConversation,
           persistWorkflowMessages,
         },
         { recordAudit },
-        { registerRunHandle },
       ] = await Promise.all([
         import("@alfred/agent/workflow/linear"),
         import("@alfred/agent/workflow/services"),
         import("@alfred/agent/utils/audit"),
-        import("@alfred/agent/workflow/session-recovery"),
       ]);
 
-      const abortController = new AbortController();
       const { linear: preparedLinear, ticket } = await ensureLinearTicket({
         authzLinear: workflow.authzLinear,
         linear: workflow.linear,
         requirement: workflow.requirement,
       });
+      const runId = workflow.runId ?? crypto.randomUUID();
       const workflowPayload = {
         ...workflow,
+        runId,
         linear: preparedLinear,
       };
 
-      const executor = await createWorkflowExecutor(
-        workflowPayload,
-        abortController,
-        undefined,
-        ctx.runtimeContext
-      );
-
       const storedInput: Record<string, unknown> = {
         ...workflowPayload,
-        executionId: executor.runId,
         reasoningSince: Date.now(),
       };
       const linearIssueId =
@@ -88,20 +78,24 @@ export const workflowStartProcedure = authedProcedure
       const linearIssueUrl =
         ticket?.issueUrl ?? preparedLinear?.issueUrl ?? undefined;
 
-      await workflowRepo.createRun({
-        id: executor.runId,
-        inputData: storedInput,
-        linearIssueId,
-        linearIssueUrl,
-        linearSessionId: preparedLinear?.sessionId,
-        linearSpace: preparedLinear?.space,
-        planId: workflow.planId,
-        projectId: workflow.projectId,
-        requirement: workflow.requirement,
-        status: "running",
-        userId: session.user.id,
-        workflowId: "plan",
-      });
+      // Ensure run exists (idempotent).
+      const existing = await workflowRepo.getRun(runId);
+      if (!existing) {
+        await workflowRepo.createRun({
+          id: runId,
+          inputData: storedInput,
+          linearIssueId,
+          linearIssueUrl,
+          linearSessionId: preparedLinear?.sessionId,
+          linearSpace: preparedLinear?.space,
+          planId: workflow.planId,
+          projectId: workflow.projectId,
+          requirement: workflow.requirement,
+          status: "running",
+          userId: session.user.id,
+          workflowId: "pipeline",
+        });
+      }
 
       // Trigger Linear metadata sync if project is associated
       if (workflow.projectId) {
@@ -114,7 +108,7 @@ export const workflowStartProcedure = authedProcedure
               .catch(() => {});
           }
           const { syncOnWorkflowStart } = await import("@alfred/plan");
-          await syncOnWorkflowStart(projectId as string, executor.runId);
+          await syncOnWorkflowStart(projectId as string, runId);
         })();
       }
 
@@ -122,13 +116,13 @@ export const workflowStartProcedure = authedProcedure
         "user",
         [
           {
-            id: executor.runId,
+            id: runId,
             kind: "workflow_run",
             label: deriveWorkflowTitle(workflowPayload.requirement),
             properties: {
-              entity: { kind: "workflow_run", id: executor.runId },
-              workflowId: "plan",
-              status: "running",
+              entity: { kind: "workflow_run", id: runId },
+              workflowId: "pipeline",
+              status: existing?.status ?? "running",
               linearIssueId,
               linearIssueUrl,
             },
@@ -142,18 +136,16 @@ export const workflowStartProcedure = authedProcedure
           projectId: workflow.projectId,
           title: deriveWorkflowTitle(workflowPayload.requirement),
           userId: session.user.id,
-          workflowId: executor.runId,
+          workflowId: runId,
         });
         if (created) {
           const persisted = await persistWorkflowMessages({
             conversationId: conversation.id,
-            eventId: executor.runId,
+            eventId: runId,
             eventType: "workflow.requirement",
-            messages: [
-              createRequirementMessage(workflowPayload, executor.runId),
-            ],
+            messages: [createRequirementMessage(workflowPayload, runId)],
             persistedKeys: new Set(),
-            runId: executor.runId,
+            runId,
             userId: session.user.id,
           });
           if (persisted > 0) {
@@ -165,7 +157,7 @@ export const workflowStartProcedure = authedProcedure
       } catch (error) {
         logger.warn("workflow_conversation_init_failed", {
           error: error instanceof Error ? error.message : String(error),
-          runId: executor.runId,
+          runId,
         });
       }
 
@@ -174,19 +166,8 @@ export const workflowStartProcedure = authedProcedure
         context: { auto: workflow.auto, mode: workflow.mode },
         decision: "allow",
         projectId: workflow.projectId ?? undefined,
-        resource: { kind: "workflow", id: executor.runId },
+        resource: { kind: "workflow", id: runId },
         userId: session.user.id,
-      });
-
-      await registerRunHandle(executor.runId, {
-        resume: async ({ resumeData }: { resumeData: unknown }) => {
-          await executor.resume(resumeData);
-        },
-        // oxlint-disable useAwait: Cancel is synchronous or returns a promise
-        cancel: async () => {
-          executor.cancel();
-        },
-        abortController,
       });
 
       return {
@@ -194,8 +175,8 @@ export const workflowStartProcedure = authedProcedure
         planArtifact: null,
         report: null,
         results: [],
-        runId: executor.runId,
-        summary: executor.summary,
+        runId,
+        summary: `Pipeline run created for ${workflowPayload.requirement}`,
         ticketId: linearIssueId,
         ticketUrl: linearIssueUrl,
         vcs: null,

@@ -1,8 +1,5 @@
-import { type WorkflowEvent, type WorkflowState } from "@alfred/type/plan";
-import {
-  type Snapshot,
-  type SnapshotReconstructor,
-} from "@alfred/type/reconstruct";
+import type { WorkflowEvent, WorkflowState } from "@alfred/type/plan";
+import type { Snapshot, SnapshotReconstructor } from "@alfred/type/reconstruct";
 
 /**
  * Reconstructs WorkflowState from event streams.

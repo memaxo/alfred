@@ -12,9 +12,9 @@ const DEFAULT_LIMIT = 100;
 const MAX_PREPARED_LIMIT = 200;
 const usePreparedStatements = dbDriver === "postgres";
 
-type PreparedQuery<TParams, TResult> = {
+interface PreparedQuery<TParams, TResult> {
   execute(params: TParams): Promise<TResult>;
-};
+}
 
 const conversationSelection = {
   id: conversations.id,
@@ -36,21 +36,20 @@ const messageSelection = {
   created: messages.created,
 };
 
-const getConversationsStmt: PreparedQuery<
+let getConversationsStmt:
+  | PreparedQuery<{ userId: string }, ConversationRow[]>
+  | undefined;
+
+function ensureGetConversationsStmt(): PreparedQuery<
   { userId: string },
   ConversationRow[]
-> = usePreparedStatements
-  ? (db
-      .select(conversationSelection)
-      .from(conversations)
-      .where(eq(conversations.userId, sql.placeholder("userId")))
-      .orderBy(desc(conversations.updated))
-      .limit(MAX_PREPARED_LIMIT)
-      .prepare("get_user_conversations") as PreparedQuery<
-      { userId: string },
-      ConversationRow[]
-    >)
-  : {
+> {
+  if (getConversationsStmt) {
+    return getConversationsStmt;
+  }
+
+  if (!usePreparedStatements) {
+    getConversationsStmt = {
       execute: async ({ userId }) =>
         db
           .select(conversationSelection)
@@ -59,32 +58,109 @@ const getConversationsStmt: PreparedQuery<
           .orderBy(desc(conversations.updated))
           .limit(MAX_PREPARED_LIMIT),
     };
+    return getConversationsStmt;
+  }
 
-const getMessagesStmt: PreparedQuery<{ conversationId: string }, MessageRow[]> =
-  usePreparedStatements
-    ? (db
-        .select(messageSelection)
-        .from(messages)
-        .where(eq(messages.conversationId, sql.placeholder("conversationId")))
-        .orderBy(messages.created)
-        .prepare("get_conversation_messages") as PreparedQuery<
-        { conversationId: string },
-        MessageRow[]
-      >)
-    : {
-        execute: async ({ conversationId }) =>
-          db
-            .select(messageSelection)
-            .from(messages)
-            .where(eq(messages.conversationId, conversationId))
-            .orderBy(messages.created),
-      };
+  try {
+    getConversationsStmt = db
+      .select(conversationSelection)
+      .from(conversations)
+      .where(eq(conversations.userId, sql.placeholder("userId")))
+      .orderBy(desc(conversations.updated))
+      .limit(MAX_PREPARED_LIMIT)
+      .prepare("get_user_conversations") as PreparedQuery<
+      { userId: string },
+      ConversationRow[]
+    >;
+  } catch {
+    getConversationsStmt = {
+      execute: async ({ userId }) =>
+        db
+          .select(conversationSelection)
+          .from(conversations)
+          .where(eq(conversations.userId, userId))
+          .orderBy(desc(conversations.updated))
+          .limit(MAX_PREPARED_LIMIT),
+    };
+  }
 
-const getMessageStmt: PreparedQuery<
+  return getConversationsStmt;
+}
+
+let getMessagesStmt:
+  | PreparedQuery<{ conversationId: string }, MessageRow[]>
+  | undefined;
+
+function ensureGetMessagesStmt(): PreparedQuery<
+  { conversationId: string },
+  MessageRow[]
+> {
+  if (getMessagesStmt) {
+    return getMessagesStmt;
+  }
+
+  if (!usePreparedStatements) {
+    getMessagesStmt = {
+      execute: async ({ conversationId }) =>
+        db
+          .select(messageSelection)
+          .from(messages)
+          .where(eq(messages.conversationId, conversationId))
+          .orderBy(messages.created),
+    };
+    return getMessagesStmt;
+  }
+
+  try {
+    getMessagesStmt = db
+      .select(messageSelection)
+      .from(messages)
+      .where(eq(messages.conversationId, sql.placeholder("conversationId")))
+      .orderBy(messages.created)
+      .prepare("get_conversation_messages") as PreparedQuery<
+      { conversationId: string },
+      MessageRow[]
+    >;
+  } catch {
+    getMessagesStmt = {
+      execute: async ({ conversationId }) =>
+        db
+          .select(messageSelection)
+          .from(messages)
+          .where(eq(messages.conversationId, conversationId))
+          .orderBy(messages.created),
+    };
+  }
+
+  return getMessagesStmt;
+}
+
+let getMessageStmt:
+  | PreparedQuery<{ messageId: string; userId: string }, MessageRow[]>
+  | undefined;
+
+function ensureGetMessageStmt(): PreparedQuery<
   { messageId: string; userId: string },
   MessageRow[]
-> = usePreparedStatements
-  ? (db
+> {
+  if (getMessageStmt) {
+    return getMessageStmt;
+  }
+
+  if (!usePreparedStatements) {
+    getMessageStmt = {
+      execute: async ({ messageId, userId }) =>
+        db
+          .select(messageSelection)
+          .from(messages)
+          .where(and(eq(messages.id, messageId), eq(messages.userId, userId)))
+          .limit(1),
+    };
+    return getMessageStmt;
+  }
+
+  try {
+    getMessageStmt = db
       .select(messageSelection)
       .from(messages)
       .where(
@@ -97,8 +173,9 @@ const getMessageStmt: PreparedQuery<
       .prepare("get_message_with_ownership") as PreparedQuery<
       { messageId: string; userId: string },
       MessageRow[]
-    >)
-  : {
+    >;
+  } catch {
+    getMessageStmt = {
       execute: async ({ messageId, userId }) =>
         db
           .select(messageSelection)
@@ -106,6 +183,10 @@ const getMessageStmt: PreparedQuery<
           .where(and(eq(messages.id, messageId), eq(messages.userId, userId)))
           .limit(1),
     };
+  }
+
+  return getMessageStmt;
+}
 
 export async function createConversation(
   userId: string,
@@ -192,7 +273,7 @@ export async function getConversations(
       .limit(limit);
   }
 
-  const rows = await getConversationsStmt.execute({ userId });
+  const rows = await ensureGetConversationsStmt().execute({ userId });
   return rows.slice(0, limit);
 }
 
@@ -232,7 +313,7 @@ export async function getMessage(
   messageId: string,
   userId: string
 ): Promise<MessageRow | null> {
-  const [row] = await getMessageStmt.execute({ messageId, userId });
+  const [row] = await ensureGetMessageStmt().execute({ messageId, userId });
   return row ?? null;
 }
 
@@ -245,7 +326,7 @@ export async function getMessages(
     return [];
   }
 
-  return getMessagesStmt.execute({ conversationId });
+  return ensureGetMessagesStmt().execute({ conversationId });
 }
 
 export async function deleteMessagesAfter(
@@ -283,10 +364,10 @@ export function messageRowToUIMessage(row: MessageRow): UIMessage {
   };
 }
 
-export type ConversationHistory = {
+export interface ConversationHistory {
   conversation: ConversationRow;
   messages: UIMessage[];
-};
+}
 
 export async function getConversationHistory(
   conversationId: string,

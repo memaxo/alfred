@@ -1,4 +1,4 @@
-type MemoryOptions = {
+interface MemoryOptions {
   semanticRecall?: {
     topK?: number;
     messageRange?:
@@ -8,24 +8,25 @@ type MemoryOptions = {
           after?: number;
         };
   };
-};
+}
 
-type BuildAssistantContextOptions = {
+interface BuildAssistantContextOptions {
   messages: unknown[];
   memory?: MemoryOptions;
   baseInstructions: string;
-};
+}
 
-type BuildAssistantContextResult = {
+interface BuildAssistantContextResult {
   systemInstruction: string;
   detectedDomains: string[];
-};
+}
 
-type AssistantAdapter = {
+interface AssistantAdapter {
   analyzeContext: (
-    messages: Array<{ role: string; content: string }>
+    messages: { role: string; content: string }[]
   ) => Promise<{ domains: string[] }> | { domains: string[] };
-};
+  getPersonaInstruction?: (domains: string[]) => string | null;
+}
 
 type KnowledgeEngineCtor = new () => {
   retrieveContext: (
@@ -36,7 +37,7 @@ type KnowledgeEngineCtor = new () => {
       useHybrid?: boolean;
       useReranking?: boolean;
     }
-  ) => Promise<Array<{ content: string }>>;
+  ) => Promise<{ content: string }[]>;
 };
 
 function getLastUserQuery(messages: unknown[]): string {
@@ -50,14 +51,16 @@ function getLastUserQuery(messages: unknown[]): string {
 export async function buildAssistantContext(
   options: BuildAssistantContextOptions
 ): Promise<BuildAssistantContextResult> {
-  const [{ analyzeContext }, { KnowledgeEngine }] = await Promise.all([
-    import("@alfred/agent/assistant/src/adapter"),
-    import("@alfred/runtime/engines/knowledge"),
-  ]);
+  const [{ analyzeContext, getPersonaInstruction }, { KnowledgeEngine }] =
+    await Promise.all([
+      import("@alfred/agent/assistant/src/adapter"),
+      import("@alfred/runtime/engines/knowledge"),
+    ]);
 
   return buildAssistantContextWithDeps(options, {
     adapter: {
       analyzeContext,
+      getPersonaInstruction,
     },
     KnowledgeEngine,
   });
@@ -81,9 +84,15 @@ export async function buildAssistantContextWithDeps(
   }
 
   const analysis = await deps.adapter.analyzeContext(
-    messages as Array<{ role: string; content: string }>
+    messages as { role: string; content: string }[]
   );
   detectedDomains = analysis.domains;
+
+  const personaInstruction =
+    deps.adapter.getPersonaInstruction?.(detectedDomains);
+  if (personaInstruction && personaInstruction.trim().length > 0) {
+    systemInstruction += `\n\n${personaInstruction.trim()}`;
+  }
 
   const recallOpts = memory?.semanticRecall;
   if (recallOpts) {

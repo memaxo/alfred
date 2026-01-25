@@ -4,12 +4,12 @@ import type { Context } from "../context";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
-export type SessionUser = {
+export interface SessionUser {
   id: string;
   roles?: string[];
   scopes?: string[];
   [key: string]: unknown;
-};
+}
 
 export function getSessionUser(
   session: AuthSession | null

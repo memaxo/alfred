@@ -10,56 +10,56 @@ import type { KnowledgeInsight, ReviewCheck } from "../events";
 export type { SubTask, AgentOutcome, WavePlan, ReviewCheck };
 
 // File change record
-export type FileChange = {
+export interface FileChange {
   path: string;
   action: "create" | "modify" | "delete";
   diff?: string;
-};
+}
 
 // Chunk from RAG retrieval
-export type Chunk = {
+export interface Chunk {
   content: string;
   source: string;
   score: number;
-};
+}
 
 // ATIF trajectory for observability
-export type ATIFTrajectory = {
+export interface ATIFTrajectory {
   runId: string;
-  stages: Array<{
+  stages: {
     name: string;
-    events: Array<{ type: string; timestamp: number; data?: unknown }>;
-  }>;
-};
+    events: { type: string; timestamp: number; data?: unknown }[];
+  }[];
+}
 
 // Context bundle from runtime
-export type ContextBundle = {
+export interface ContextBundle {
   maxTokens: number;
   estimatedTokens: number;
-  files: Array<{
+  files: {
     path: string;
     startLine: number;
     endLine: number;
     tokens: number;
     content: string;
-  }>;
-  links?: Array<{
+  }[];
+  links?: {
     url: string;
     title?: string;
     score?: number;
-  }>;
+  }[];
   note?: string;
-};
+}
 
 // Search receipt
-export type SearchReceipt = {
+export interface SearchReceipt {
   sources: string[];
   totalResults: number;
-};
+}
 
 // --- Stage Output Types ---
 
-export type PipelineInput = {
+export interface PipelineInput {
   runId: string;
   requirement: string;
   workspace: string;
@@ -72,59 +72,59 @@ export type PipelineInput = {
     issueId?: string;
     authz: string;
   };
-};
+}
 
-export type InitOutput = {
+export interface InitOutput {
   projectId: string;
   linearProjectId?: string;
   linearIssueId?: string;
-};
+}
 
-export type ContextOutput = {
+export interface ContextOutput {
   bundle: ContextBundle;
   receipts: SearchReceipt;
   ragChunks: Chunk[];
   totalTokens: number;
-};
+}
 
-export type PlanOutput = {
+export interface PlanOutput {
   planId: string;
   structuredPlan: StructuredPlan;
   subtasks: SubTask[];
   execPlans: Map<string, string>; // subtaskId -> path to .md file
   rootPlanPath: string;
-};
+}
 
-export type ScheduleOutput = {
+export interface ScheduleOutput {
   waves: WavePlan[];
   executionMode: "sequential" | "parallel";
   estimatedDuration: number;
-};
+}
 
-export type ExecuteOutput = {
+export interface ExecuteOutput {
   outcomes: Map<string, AgentOutcome>;
   fileChanges: FileChange[];
   handoffs: string[];
   dryRun?: boolean;
-};
+}
 
-export type ReviewOutput = {
+export interface ReviewOutput {
   checks: ReviewCheck[];
   allPassed: boolean;
   fixAttempts: number;
-};
+}
 
-export type LearnOutput = {
+export interface LearnOutput {
   insights: KnowledgeInsight[];
-  mistakes: Array<{ type: string; context: string }>;
+  mistakes: { type: string; context: string }[];
   graphUpdates: number;
-};
+}
 
-export type SummarizeOutput = {
+export interface SummarizeOutput {
   summary: string;
   trajectory: ATIFTrajectory;
   linearUpdated: boolean;
-};
+}
 
 // Pipeline result is the final summarize output
 export type PipelineResult = SummarizeOutput;

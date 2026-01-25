@@ -53,22 +53,27 @@ type ExaCategory =
   | "people";
 
 // Text options for SDK
-type TextOptions = { maxCharacters?: number; includeHtmlTags?: boolean };
+interface TextOptions {
+  maxCharacters?: number;
+  includeHtmlTags?: boolean;
+}
 
 // Highlights options for SDK
-type HighlightsOptions = {
+interface HighlightsOptions {
   numSentences?: number;
   highlightsPerUrl?: number;
   query?: string;
-};
+}
 
 // Summary options for SDK
-type SummaryOptions = { query?: string };
+interface SummaryOptions {
+  query?: string;
+}
 
 /**
  * Options for Exa search
  */
-export type ExaSearchOptions = {
+export interface ExaSearchOptions {
   numResults?: number;
   type?: ExaSearchType;
   category?: ExaCategory | string;
@@ -90,12 +95,12 @@ export type ExaSearchOptions = {
   subpages?: number;
   subpageTarget?: string | string[];
   livecrawl?: "never" | "fallback" | "always" | "preferred";
-};
+}
 
 /**
  * Options for Exa research
  */
-export type ExaResearchOptions = {
+export interface ExaResearchOptions {
   model?: "exa-research" | "exa-research-gpt-4o";
   instructions: string;
   outputSchema?: Record<string, unknown>;
@@ -104,7 +109,7 @@ export type ExaResearchOptions = {
   startPublishedDate?: string;
   endPublishedDate?: string;
   numResults?: number;
-};
+}
 
 /**
  * Normalized search result from Exa SDK
@@ -176,7 +181,7 @@ export async function exaSearch(
   } as typeof queryOptions);
 
   // Cast results to access potential fields (SDK v2 structure)
-  type ResultWithContents = {
+  interface ResultWithContents {
     id: string;
     url: string;
     title?: string | null;
@@ -189,7 +194,7 @@ export async function exaSearch(
     highlights?: string[];
     highlightScores?: number[];
     summary?: string | null;
-    subpages?: Array<{
+    subpages?: {
       id?: string;
       url: string;
       title?: string | null;
@@ -199,12 +204,12 @@ export async function exaSearch(
       summary?: string | null;
       highlights?: string[];
       highlightScores?: number[];
-    }>;
+    }[];
     extras?: {
       links?: string[];
       imageLinks?: string[];
     };
-  };
+  }
 
   const rawResults = (response.results ?? []) as ResultWithContents[];
 
@@ -269,7 +274,7 @@ export async function exaGetContents(
     livecrawl?: "never" | "fallback" | "always" | "preferred";
   } = {}
 ): Promise<{
-  contents: Array<{
+  contents: {
     url: string;
     title?: string;
     author?: string;
@@ -278,7 +283,7 @@ export async function exaGetContents(
     summary?: string;
     highlights?: string[];
     highlightScores?: number[];
-  }>;
+  }[];
   cost?: ExaCost;
 }> {
   const client = getExaClient();
@@ -291,7 +296,7 @@ export async function exaGetContents(
   } as Record<string, unknown>);
 
   // Cast to access potential content fields
-  type ContentResult = {
+  interface ContentResult {
     url: string;
     title?: string | null;
     author?: string | null;
@@ -300,7 +305,7 @@ export async function exaGetContents(
     summary?: string | null;
     highlights?: string[];
     highlightScores?: number[];
-  };
+  }
 
   const rawResults = (response.results ?? []) as ContentResult[];
 
@@ -327,19 +332,23 @@ export async function exaGetContents(
  * Generate snippet from Exa result content
  */
 function generateSnippet(
-  result: Record<string, unknown>,
+  result: {
+    summary?: string | null;
+    highlights?: string[] | null;
+    text?: string | null;
+  },
   maxLength = 220
 ): string | undefined {
-  const summary = result.summary as string | undefined;
-  const highlights = result.highlights as string[] | undefined;
-  const text = result.text as string | undefined;
+  const summary = result.summary ?? undefined;
+  const highlights = result.highlights ?? undefined;
+  const text = result.text ?? undefined;
 
   const source = summary ?? highlights?.[0] ?? text;
   if (!source) {
     return;
   }
 
-  const compact = source.replace(/\s+/g, " ").trim();
+  const compact = source.replaceAll(/\s+/g, " ").trim();
   if (compact.length === 0) {
     return;
   }
@@ -443,7 +452,7 @@ export async function exaPollResearch(
       .status,
     results: (result as { results?: ExaSearchResult[] }).results?.map((r) => ({
       ...r,
-      snippet: generateSnippet(r as Record<string, unknown>),
+      snippet: generateSnippet(r),
     })),
     data: (result as { data?: unknown }).data,
     costDollars: (result as { costDollars?: ExaCost }).costDollars,

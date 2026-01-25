@@ -1,9 +1,9 @@
-export type CognitiveLoad = {
+export interface CognitiveLoad {
   tokensIn: number;
   tokensOut: number;
   steps: number;
   tools: string[];
-};
+}
 
 const loadHistory: CognitiveLoad[] = [];
 

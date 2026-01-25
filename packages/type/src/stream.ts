@@ -20,13 +20,13 @@ export type ModelMessage = AISDKModelMessage;
 /**
  * Client-side metadata for UI messages that should not be persisted upstream.
  */
-export type UIMessageClientMeta = {
+export interface UIMessageClientMeta {
   status?: "sending" | "sent" | "error";
   createdAt?: string;
   completeAt?: string;
   agent?: "assistant" | "orchestrator";
   [key: string]: unknown;
-};
+}
 
 export type UIMessageActionStatus =
   | "pending"
@@ -34,7 +34,7 @@ export type UIMessageActionStatus =
   | "completed"
   | "error";
 
-export type UIMessageAction = {
+export interface UIMessageAction {
   id: string;
   name: string;
   args?: Record<string, unknown>;
@@ -42,7 +42,7 @@ export type UIMessageAction = {
   result?: unknown;
   error?: string;
   updatedAt?: string;
-};
+}
 
 /**
  * Stream events for AI SDK v6 structured streams.

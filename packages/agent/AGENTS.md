@@ -134,6 +134,16 @@ Execution outcomes (failures, fixes, patterns) enrich subsequent runs on related
 
 14. **Integration test gating.** Postgres-backed suites must be gated behind `RUN_DB_TESTS=1`; Docker-backed AgentFS suites must `skipIf` Docker/image are unavailable.
 
+15. **Schema versioning.** Persisted enrichment payloads must include `schemaVersion` and `createdAt`; validate on read and drop incompatible payloads.
+
+16. **Redaction and caps.** Redact secrets and cap persisted text fields using `enrichCaps` before writing to KV/DB.
+
+17. **Feature gating.** Gate enrichment persistence and queries behind `ALFRED_ENRICHMENT=1` and enforce bounded timeouts on non-critical paths.
+
+18. **Retention.** Clean up codex execution history older than `ALFRED_ENRICHMENT_DB_RETENTION_DAYS` via a scheduler gated behind `SCHED_ENRICH_CLEANUP=1`.
+
+19. **Similarity hardening.** Validate embedding dimension and finiteness, clamp `limit`, clamp similarity into `[0,1]`, and filter low-similarity matches.
+
 <!-- Source: .ruler/mcp.md -->
 
 ## MCP Integration (Executors)

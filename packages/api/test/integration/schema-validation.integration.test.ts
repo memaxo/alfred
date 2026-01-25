@@ -135,7 +135,7 @@ describe.skipIf(!SHOULD_RUN)("Schema Validation", () => {
           metadata: {},
           resource: "cascade-graph-test",
           toId: nodeId[0]!,
-          weight: 1.0,
+          weight: 1,
         },
       ]);
 

@@ -55,7 +55,7 @@ describe("MemoryRunRegistry", () => {
   beforeAll(async () => {
     // Dynamic import AFTER mocks are set up
     const registryModule = await import("@alfred/agent/workflow/registry");
-    MemoryRunRegistry = registryModule.MemoryRunRegistry;
+    ({ MemoryRunRegistry } = registryModule);
   });
 
   beforeEach(() => {
@@ -79,8 +79,8 @@ describe("MemoryRunRegistry", () => {
     it("registers a run handle", () => {
       const runId = "test-run-id";
       const handle: RunHandleType = {
-        resume: vi.fn().mockResolvedValue(undefined),
-        cancel: vi.fn().mockResolvedValue(undefined),
+        resume: vi.fn().mockResolvedValue(),
+        cancel: vi.fn().mockResolvedValue(),
         abortController: new AbortController(),
       };
 
@@ -127,7 +127,7 @@ describe("MemoryRunRegistry", () => {
   describe("dispatchResume", () => {
     it("dispatches resume to registered handle", async () => {
       const runId = "test-run-id";
-      const resumeMock = vi.fn().mockResolvedValue(undefined);
+      const resumeMock = vi.fn().mockResolvedValue();
       const handle: RunHandleType = {
         resume: resumeMock,
         cancel: vi.fn(),

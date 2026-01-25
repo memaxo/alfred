@@ -52,18 +52,18 @@ function createWorkspace(args: {
 
 describe("AgentFSWorkspace (docker + sdk)", () => {
   const repoRoot = process.cwd();
-  const cleanupFns: Array<() => Promise<void> | void> = [];
+  const cleanupFns: (() => Promise<void> | void)[] = [];
   const dirs: string[] = [];
 
   afterEach(async () => {
-    for (const fn of cleanupFns.splice(0, cleanupFns.length).reverse()) {
+    for (const fn of cleanupFns.splice(0).toReversed()) {
       try {
         await fn();
       } catch {
         // ignore
       }
     }
-    for (const dir of dirs.splice(0, dirs.length)) {
+    for (const dir of dirs.splice(0)) {
       cleanupTestDir(dir);
     }
   });

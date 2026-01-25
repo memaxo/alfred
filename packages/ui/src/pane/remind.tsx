@@ -1,20 +1,20 @@
-export type RemindPaneItem = {
+export interface RemindPaneItem {
   id: string;
   title: string;
   dueAt: string;
   description?: string | null;
-};
+}
 
-export type RemindPaneProps = {
+export interface RemindPaneProps {
   items: RemindPaneItem[];
   onDelete?: (id: string) => void;
   className?: string;
-};
+}
 
-type RenderItem = {
+interface RenderItem {
   item: RemindPaneItem;
   formattedDueAt: string;
-};
+}
 
 function buildRenderItems(items: RemindPaneItem[]): RenderItem[] {
   return items.map((item) => {

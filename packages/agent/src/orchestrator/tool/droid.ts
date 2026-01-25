@@ -3,8 +3,9 @@ import { logger } from "@alfred/logger";
 import path from "node:path";
 import { z } from "zod";
 
+import type { DirectoryHandle } from "../../security/filesystem.js";
+
 import { persistArtifact } from "../../artifact/persist.js";
-import { type DirectoryHandle } from "../../security/filesystem.js";
 import {
   DirectoryAccessError,
   openDirectorySecure,
@@ -327,7 +328,9 @@ export const toolDroid = {
       tool: "droid",
       format: "txt",
       content: resultText,
-    }).catch((err) => logger.debug("droid_persist_artifact_error", { err }));
+    }).catch((error) =>
+      logger.debug("droid_persist_artifact_error", { error })
+    );
 
     return {
       result: resultText,

@@ -11,14 +11,14 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
 import { randomUUID } from "node:crypto";
 
-type FormSubmission = {
+interface FormSubmission {
   userId: string;
   conversationId: string;
   formId: string;
   toolCallId?: string;
   data: Record<string, unknown>;
   schema?: unknown;
-};
+}
 
 /**
  * Inject a form submission as a tool-result part into a conversation.

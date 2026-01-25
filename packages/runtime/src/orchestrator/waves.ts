@@ -1,11 +1,13 @@
-import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
-import { type Workspace } from "@alfred/agent/environment/types";
-import { type SubTask } from "@alfred/agent/orchestrator/multi/decompose";
-import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
-import {
-  type AgentSpec,
-  type WavePlan,
+import type { Workspace } from "@alfred/agent/environment/types";
+import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type {
+  AgentSpec,
+  WavePlan,
 } from "@alfred/agent/orchestrator/multi/spawn";
+import type { WorkflowEvent } from "@alfred/type/plan";
+
+import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
+import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   buildAgentSpec,
   planWaves,
@@ -16,9 +18,10 @@ import {
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { rootPlanPath } from "@alfred/agent/orchestrator/plans";
 import { logger } from "@alfred/logger";
-import { type WorkflowEvent } from "@alfred/type/plan";
 import { realpathSync } from "node:fs";
 import * as path from "node:path";
+
+import type { AgentHandoff, OrchestratorContext } from "./types";
 
 import { ContextBuilder } from "../context";
 import { AsyncQueue, pLimit } from "../utils/concurrency";
@@ -44,7 +47,28 @@ import {
 } from "./handoff.js";
 import { hydrateTrackerContext } from "./hydrate";
 import { suspendWorkflowForClarification } from "./suspend.js";
-import { type AgentHandoff, type OrchestratorContext } from "./types";
+
+function isEnrichmentEnabled(): boolean {
+  return process.env.ALFRED_ENRICHMENT === "1";
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`enrichment_timeout:${ms}ms`));
+    }, ms);
+
+    promise
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((error) => {
+        clearTimeout(t);
+        reject(error);
+      });
+  });
+}
 
 export interface WavesResult {
   trackerContext: TrackerContext;
@@ -415,43 +439,48 @@ export async function* runWaves(
       const agentOutcomes = await allAgentsDone;
 
       // Build structured handoff for enrichment (non-blocking)
-      const nextWaveIndex = waves.indexOf(wave) + 1;
-      const nextWaveId = waves[nextWaveIndex]?.id ?? "final";
-      buildStructuredHandoff(wave.id, nextWaveId, agentOutcomes, workspace)
-        .then(async (handoff) => {
-          logger.debug("structured_handoff_built", {
-            decisionsCount: handoff.decisions.length,
-            filesCount: handoff.filesModified.length,
-            waveId: wave.id,
-          });
+      if (isEnrichmentEnabled()) {
+        const nextWaveIndex = waves.indexOf(wave) + 1;
+        const nextWaveId = waves[nextWaveIndex]?.id ?? "final";
+        buildStructuredHandoff(wave.id, nextWaveId, agentOutcomes, workspace)
+          .then(async (handoff) => {
+            logger.debug("structured_handoff_built", {
+              decisionsCount: handoff.decisions.length,
+              filesCount: handoff.filesModified.length,
+              waveId: wave.id,
+            });
 
-          const agentfsWs = activeWorkspaces.find(isAgentFSWorkspace);
-          if (!agentfsWs) {
-            return;
-          }
+            const agentfsWs = activeWorkspaces.find(isAgentFSWorkspace);
+            if (!agentfsWs) {
+              return;
+            }
 
-          try {
-            const { persistStructuredHandoff } =
-              await import("@alfred/agent/agentfs/enrichment");
-            await persistStructuredHandoff(
-              agentfsWs.getAgent(),
-              wave.id,
-              handoff
-            );
-            logger.debug("structured_handoff_persisted", { waveId: wave.id });
-          } catch (error) {
-            logger.debug("structured_handoff_persist_failed", {
+            try {
+              const { persistStructuredHandoff } =
+                await import("@alfred/agent/agentfs/enrichment");
+              await withTimeout(
+                persistStructuredHandoff(
+                  agentfsWs.getAgent(),
+                  wave.id,
+                  handoff
+                ),
+                500
+              );
+              logger.debug("structured_handoff_persisted", { waveId: wave.id });
+            } catch (error) {
+              logger.debug("structured_handoff_persist_failed", {
+                waveId: wave.id,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          })
+          .catch((error) => {
+            logger.warn("structured_handoff_build_failed", {
               waveId: wave.id,
               error: error instanceof Error ? error.message : String(error),
             });
-          }
-        })
-        .catch((error) => {
-          logger.warn("structured_handoff_build_failed", {
-            waveId: wave.id,
-            error: error instanceof Error ? error.message : String(error),
           });
-        });
+      }
 
       // Check for clarifications
       for (const outcome of agentOutcomes) {

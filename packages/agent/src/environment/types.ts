@@ -1,17 +1,17 @@
 import type { ProjectConfig } from "../utils/project-detector";
 
-export type ExecResult = {
+export interface ExecResult {
   stdout: string;
   stderr: string;
   exitCode: number;
   durationMs: number;
-};
+}
 
-export type ExecOptions = {
+export interface ExecOptions {
   cwd?: string; // Relative to workspace root
   env?: Record<string, string>;
   timeoutMs?: number;
-};
+}
 
 /**
  * Workspace environment kind.
@@ -20,7 +20,7 @@ export type ExecOptions = {
  */
 export type WorkspaceKind = "agentfs";
 
-export type Workspace = {
+export interface Workspace {
   readonly id: string;
   readonly kind: WorkspaceKind;
   readonly root: string; // Absolute path on HOST machine (for file ops)
@@ -61,4 +61,4 @@ export type Workspace = {
   startSession?(command: string, sessionId?: string): Promise<string>;
   stopSession?(sessionId: string): Promise<void>;
   listSessions?(): Promise<string[]>;
-};
+}

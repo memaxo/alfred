@@ -9,16 +9,16 @@ import type { z } from "zod";
 
 // ─── Health Status ────────────────────────────────────────────────────────────
 
-export type HealthStatus = {
+export interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   message?: string;
   latencyMs?: number;
   details?: Record<string, unknown>;
-};
+}
 
 // ─── Command Definition ───────────────────────────────────────────────────────
 
-export type CommandDef = {
+export interface CommandDef {
   /** Command name (e.g., "test-stt", "migrate") */
   name: string;
   /** Human-readable description */
@@ -33,7 +33,7 @@ export type CommandDef = {
   requiresAuth?: boolean;
   /** Whether command requires biometric elevation */
   requiresBiometric?: boolean;
-};
+}
 
 // ─── CLI Manifest (Minimal - No TUI dependencies) ────────────────────────────
 
@@ -42,7 +42,7 @@ export type CommandDef = {
  *
  * Packages export this from `src/manifest.ts` to register commands and health checks.
  */
-export type CliManifest = {
+export interface CliManifest {
   /** Package name (e.g., "@alfred/voice") */
   name: string;
   /** Package version */
@@ -58,7 +58,7 @@ export type CliManifest = {
 
   /** Dependencies on other packages (for load order) */
   dependencies?: string[];
-};
+}
 
 // ─── Manifest Validation ──────────────────────────────────────────────────────
 

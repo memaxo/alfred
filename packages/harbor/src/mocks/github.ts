@@ -2,7 +2,7 @@
  * GitHub CLI mock handler
  */
 
-export type GitHubPR = {
+export interface GitHubPR {
   number: number;
   title: string;
   body?: string;
@@ -12,22 +12,22 @@ export type GitHubPR = {
   url: string;
   additions: number;
   deletions: number;
-};
+}
 
-export type GitHubIssue = {
+export interface GitHubIssue {
   number: number;
   title: string;
   body?: string;
   state: "open" | "closed";
   url: string;
   labels: string[];
-};
+}
 
-export type GithubConfig = {
+export interface GithubConfig {
   prs?: GitHubPR[];
   issues?: GitHubIssue[];
   cliResponses?: Map<string, string>;
-};
+}
 
 /**
  * Create a GitHub handler (for CLI-style responses)
@@ -41,7 +41,10 @@ export function createGithubHandler(config?: GithubConfig) {
   );
   const cliResponses = config?.cliResponses ?? new Map();
 
-  return (_req: Request, body: Record<string, unknown>): Promise<Response> => {
+  return async (
+    _req: Request,
+    body: Record<string, unknown>
+  ): Promise<Response> => {
     const action = body.action as string | undefined;
 
     // Check for pre-configured CLI response
@@ -51,7 +54,7 @@ export function createGithubHandler(config?: GithubConfig) {
 
     switch (action) {
       case "pr-list": {
-        return Response.json(Array.from(prs.values()));
+        return Response.json([...prs.values()]);
       }
 
       case "pr-view": {
@@ -82,7 +85,7 @@ export function createGithubHandler(config?: GithubConfig) {
       }
 
       case "issue-list": {
-        return Response.json(Array.from(issues.values()));
+        return Response.json([...issues.values()]);
       }
 
       case "issue-view": {

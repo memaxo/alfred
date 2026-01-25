@@ -127,8 +127,9 @@ export const toolTimer = {
           ok: count > 0,
         };
       }
-      default:
+      default: {
         throw new Error("timer_action_not_supported");
+      }
     }
   },
 };

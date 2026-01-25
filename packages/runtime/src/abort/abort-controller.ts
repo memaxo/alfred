@@ -5,11 +5,11 @@
  * Ensures cleanup and prevents resource leaks.
  */
 
-export type AbortOptions = {
+export interface AbortOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   onAbort?: (reason: string) => void;
-};
+}
 
 export function createAbortController(timeoutMs: number): AbortController {
   const controller = new AbortController();

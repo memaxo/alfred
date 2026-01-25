@@ -17,7 +17,7 @@ const setInput = z.object({
 
 export const workingsetRouter = router({
   get: authedProcedure.query(({ ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -28,7 +28,7 @@ export const workingsetRouter = router({
   }),
 
   set: authedProcedure.input(setInput).mutation(({ ctx, input }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session) {
       throw new TRPCError({
         code: "UNAUTHORIZED",

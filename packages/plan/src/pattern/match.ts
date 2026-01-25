@@ -5,17 +5,17 @@ import { embed } from "@alfred/rag";
 
 import type { StructuredPlan } from "../types.js";
 
-export type MatchOptions = {
+export interface MatchOptions {
   minSimilarity?: number;
   maxResults?: number;
   requireStructuralMatch?: boolean;
-};
+}
 
-export type CategorizedPatterns = {
-  autoSuggest: Array<WorkflowPattern & { similarity: number }>;
-  requireConfirmation: Array<WorkflowPattern & { similarity: number }>;
-  lowConfidence: Array<WorkflowPattern & { similarity: number }>;
-};
+export interface CategorizedPatterns {
+  autoSuggest: (WorkflowPattern & { similarity: number })[];
+  requireConfirmation: (WorkflowPattern & { similarity: number })[];
+  lowConfidence: (WorkflowPattern & { similarity: number })[];
+}
 
 /**
  * Match relevant workflow patterns for a new intent.
@@ -24,7 +24,7 @@ export async function matchPatterns(
   intent: string,
   projectId?: string,
   options?: MatchOptions
-): Promise<Array<WorkflowPattern & { similarity: number }>> {
+): Promise<(WorkflowPattern & { similarity: number })[]> {
   const minSimilarity = options?.minSimilarity ?? 0.7;
   const maxResults = options?.maxResults ?? 5;
 
@@ -70,7 +70,7 @@ export async function matchPatterns(
  * Categorize matched patterns based on confidence (similarity * successRate).
  */
 export function categorizePatterns(
-  patterns: Array<WorkflowPattern & { similarity: number }>
+  patterns: (WorkflowPattern & { similarity: number })[]
 ): CategorizedPatterns {
   const result: CategorizedPatterns = {
     autoSuggest: [],
@@ -99,9 +99,9 @@ export function categorizePatterns(
  * Checks if the pattern complexity roughly matches intent complexity.
  */
 async function validateStructural(
-  patterns: Array<WorkflowPattern & { score: number }>,
+  patterns: (WorkflowPattern & { score: number })[],
   intent: string
-): Promise<Array<WorkflowPattern & { score: number }>> {
+): Promise<(WorkflowPattern & { score: number })[]> {
   // Simple complexity estimate: number of lines or words
   const intentWordCount = intent.split(/\s+/).length;
 

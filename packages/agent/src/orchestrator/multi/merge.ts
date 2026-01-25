@@ -9,13 +9,13 @@ export type AgentStatus =
   | "stuck"
   | "paused";
 
-export type AgentOutcome = {
+export interface AgentOutcome {
   agentId: AgentId;
   subTaskId: SubTaskId;
   status: AgentStatus;
   result?: {
     summary: string;
-    artifacts: Array<{ path: string; kind: string }>;
+    artifacts: { path: string; kind: string }[];
     changes?: string[];
     notes?: string[];
     branch?: string; // Added: track the branch if worktree was used
@@ -26,22 +26,22 @@ export type AgentOutcome = {
     commandsRun?: number;
     filesChanged?: number;
   };
-};
+}
 
-export type MergePlan = {
+export interface MergePlan {
   summary: string;
   branches: string[];
   expectedFiles: string[];
   strategy: "worktree" | "branch" | "direct";
   targetBranch: string;
   changedPackages: string[];
-};
+}
 
 function collectFiles(outcomes: AgentOutcome[]): string[] {
   const files = new Set<string>();
 
   for (const outcome of outcomes) {
-    const result = outcome.result;
+    const { result } = outcome;
     if (!result) {
       continue;
     }
@@ -61,7 +61,7 @@ function collectFiles(outcomes: AgentOutcome[]): string[] {
     }
   }
 
-  return Array.from(files).sort();
+  return [...files].sort();
 }
 
 function collectBranches(outcomes: AgentOutcome[]): string[] {
@@ -72,7 +72,7 @@ function collectBranches(outcomes: AgentOutcome[]): string[] {
       branches.add(branch);
     }
   }
-  return Array.from(branches).sort();
+  return [...branches].sort();
 }
 
 function inferPackages(files: string[]): string[] {
@@ -90,7 +90,7 @@ function inferPackages(files: string[]): string[] {
       }
     }
   }
-  return Array.from(packages).sort();
+  return [...packages].sort();
 }
 
 export function buildMergePlan(

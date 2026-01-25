@@ -68,7 +68,7 @@ export const DEFAULT_ALLOW_PREFIXES = (() => {
     }
   }
 
-  return Array.from(prefixes);
+  return [...prefixes];
 })();
 
 /**
@@ -162,11 +162,11 @@ export function resolveExecutable(
 /**
  * Output accumulator for capturing stdout/stderr
  */
-export type OutputAccumulator = {
+export interface OutputAccumulator {
   chunks: string[];
   storedBytes: number;
   truncated: boolean;
-};
+}
 
 /**
  * Create a fresh output accumulator
@@ -228,11 +228,11 @@ export function getAccumulatedOutput(acc: OutputAccumulator): string {
 /**
  * Timeout context for managing subprocess timeout
  */
-export type TimeoutContext = {
+export interface TimeoutContext {
   timer: ReturnType<typeof setNodeTimeout>;
   didTimeout: boolean;
   clear: () => void;
-};
+}
 
 /**
  * Create a timeout context for subprocess execution

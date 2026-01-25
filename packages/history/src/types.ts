@@ -3,16 +3,16 @@ import type { Tool } from "ai";
 
 export type HistoryTier = "anchor" | "high" | "medium" | "low";
 
-export type HistoryBudget = {
+export interface HistoryBudget {
   modelId: string;
   maxContextTokens: number;
   historyRatio?: number;
   minSystemReserveTokens?: number;
   minHeadroomTokens?: number;
   reservedToolingTokens?: number;
-};
+}
 
-export type BuildHistoryContextOptions = {
+export interface BuildHistoryContextOptions {
   messages: readonly UIMessage[];
   modelId: string;
   system?: string;
@@ -21,9 +21,9 @@ export type BuildHistoryContextOptions = {
   source?: string;
   forceKeepIds?: Set<string> | readonly string[];
   aggressive?: boolean;
-};
+}
 
-export type HistorySelection = {
+export interface HistorySelection {
   kept: UIMessage[];
   dropped: UIMessage[];
   tiers: Map<string, HistoryTier>;
@@ -37,13 +37,13 @@ export type HistorySelection = {
     systemTokens: number;
     headroomTokens: number;
   };
-};
+}
 
-export type BuildHistoryContextResult = {
+export interface BuildHistoryContextResult {
   uiMessages: UIMessage[];
   modelMessages: ModelMessage[];
   droppedMessages: number;
   keptTokens: number;
   droppedTokens: number;
   selection: HistorySelection;
-};
+}

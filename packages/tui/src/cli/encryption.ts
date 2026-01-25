@@ -61,13 +61,13 @@ function deriveMachineKey(salt: Uint8Array): Uint8Array<ArrayBuffer> {
  * - 16 bytes: Auth tag
  * - Rest: Ciphertext
  */
-type EncryptedData = {
+interface EncryptedData {
   salt: string; // Base64
   iv: string; // Base64
   tag: string; // Base64
   data: string; // Base64
   version: 1;
-};
+}
 
 /**
  * Encrypt credentials using AES-256-GCM.

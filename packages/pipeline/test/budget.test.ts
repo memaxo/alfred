@@ -35,7 +35,7 @@ describe("Budget Enforcement", () => {
     it("returns default budget when not set", () => {
       const ctx = createTestContext();
       const budget = getBudgetUsd(ctx);
-      expect(budget).toBe(10.0);
+      expect(budget).toBe(10);
     });
 
     it("returns custom budget when set", () => {
@@ -47,8 +47,8 @@ describe("Budget Enforcement", () => {
 
     it("stores budget in context", () => {
       const ctx = createTestContext();
-      setBudgetUsd(ctx, 15.0);
-      expect(ctx.get<number>("budget:limit")).toBe(15.0);
+      setBudgetUsd(ctx, 15);
+      expect(ctx.get<number>("budget:limit")).toBe(15);
     });
   });
 
@@ -64,12 +64,12 @@ describe("Budget Enforcement", () => {
     });
 
     it("emits budget:warning when approaching limit", () => {
-      const events: Array<{ type: string; percentUsed?: number }> = [];
+      const events: { type: string; percentUsed?: number }[] = [];
       const ctx = createTestContext({
         emit: (event) => events.push(event),
       });
 
-      setBudgetUsd(ctx, 1.0);
+      setBudgetUsd(ctx, 1);
       recordPipelineCost(ctx, "openai", "gpt-4o-mini", 0, 1_600_000);
 
       const warningEvent = events.find((e) => e.type === "budget:warning");
@@ -78,17 +78,17 @@ describe("Budget Enforcement", () => {
     });
 
     it("emits budget:exceeded when limit reached", () => {
-      const events: Array<{ type: string; costUsd?: number }> = [];
+      const events: { type: string; costUsd?: number }[] = [];
       const ctx = createTestContext({
         emit: (event) => events.push(event),
       });
 
-      setBudgetUsd(ctx, 1.0);
+      setBudgetUsd(ctx, 1);
       recordPipelineCost(ctx, "openai", "gpt-4o-mini", 0, 2_000_000);
 
       const exceededEvent = events.find((e) => e.type === "budget:exceeded");
       expect(exceededEvent).toBeDefined();
-      expect(exceededEvent?.costUsd ?? 0).toBeGreaterThan(1.0);
+      expect(exceededEvent?.costUsd ?? 0).toBeGreaterThan(1);
     });
   });
 

@@ -42,16 +42,16 @@ export async function getPlanRecord(id: string): Promise<WorkflowPlan | null> {
 /**
  * List plans with optional filters
  */
-export type PlanFilters = {
+export interface PlanFilters {
   userId: string;
   status?: "pending" | "approved" | "rejected" | "executed";
   limit?: number;
   offset?: number;
-};
+}
 
 export async function listPlans(
   filters: PlanFilters
-): Promise<Array<{ id: string; plan: StructuredPlan; status: string }>> {
+): Promise<{ id: string; plan: StructuredPlan; status: string }[]> {
   const savedList = await planRepo.getPlansByUserId(filters.userId);
 
   let filtered = savedList;

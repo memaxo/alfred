@@ -196,7 +196,7 @@ describe("Workflow Pipeline Integration", () => {
       const sub = observable.subscribe({
         next: (event) => {
           if (event.type === "pipeline:start") {
-            runId = event.runId;
+            ({ runId } = event);
           }
         },
         error: (error) => {
@@ -255,7 +255,7 @@ describe("Workflow Pipeline Integration", () => {
       const sub = observable.subscribe({
         next: (event) => {
           if (event.type === "pipeline:start") {
-            runId = event.runId;
+            ({ runId } = event);
             sub.unsubscribe?.();
             resolve();
           }

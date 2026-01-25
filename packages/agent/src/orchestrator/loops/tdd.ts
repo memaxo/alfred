@@ -8,7 +8,7 @@ import { openDirectorySecure } from "../../security/filesystem.js";
 import { toolCodex } from "../tool/codex/index";
 import { toolRunner } from "../tool/runner";
 
-export type TDDContext = {
+export interface TDDContext {
   agentId: string;
   sessionId: string;
   workingDirectory: string;
@@ -21,7 +21,7 @@ export type TDDContext = {
   agentfsDbPath?: string;
   context?: Record<string, unknown>;
   userId?: string;
-};
+}
 
 export async function runTDDLoop(
   context: TDDContext,

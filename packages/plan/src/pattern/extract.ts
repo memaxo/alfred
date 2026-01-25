@@ -7,14 +7,14 @@ import type { StructuredPlan } from "../generate/types.js";
 import { syncPatternToKnowledgeGraph } from "./knowledge.js";
 import { extractTrigger } from "./trigger.js";
 
-export type WorkflowRunLike = {
+export interface WorkflowRunLike {
   id: string;
   userId: string;
   status: string;
   projectId?: string | null;
   created: Date | null;
   completedAt: Date | null;
-};
+}
 
 /**
  * Extract a WorkflowPattern from a successful run and plan.

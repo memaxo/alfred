@@ -1,4 +1,4 @@
-import { type StreamChunk, type UIMessage } from "./sse";
+import type { StreamChunk, UIMessage } from "./sse";
 
 export interface MLXChatOptions {
   baseUrl: string; // e.g., http://localhost:8000/v1

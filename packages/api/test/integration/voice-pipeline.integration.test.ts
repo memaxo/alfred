@@ -40,8 +40,8 @@ beforeAll(async () => {
   // Initialize voice pools for local models
   try {
     const pools = await import("../../src/voice/pools");
-    initializeVoicePools = pools.initializeVoicePools;
-    shutdownVoicePools = pools.shutdownVoicePools;
+    ({ initializeVoicePools } = pools);
+    ({ shutdownVoicePools } = pools);
     await initializeVoicePools();
     voicePoolsInitialized = true;
     console.log("Voice pools initialized for local models");

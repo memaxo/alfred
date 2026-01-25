@@ -96,7 +96,7 @@ export const toolRemind = {
         const dueIso = ensure(input.due, "reminder_due_required");
         const due = new Date(dueIso);
         if (Number.isNaN(due.getTime())) {
-          throw new Error("reminder_due_invalid");
+          throw new TypeError("reminder_due_invalid");
         }
         const created = await createReminder(
           input.userId,
@@ -129,7 +129,7 @@ export const toolRemind = {
         const beforeIso = ensure(input.before, "reminder_before_required");
         const before = new Date(beforeIso);
         if (Number.isNaN(before.getTime())) {
-          throw new Error("reminder_before_invalid");
+          throw new TypeError("reminder_before_invalid");
         }
         const rows = await getDueReminders(input.userId, before);
         return {
@@ -157,8 +157,9 @@ export const toolRemind = {
           ok: count > 0,
         };
       }
-      default:
+      default: {
         throw new Error("reminder_action_not_supported");
+      }
     }
   },
 };

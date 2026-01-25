@@ -1,14 +1,15 @@
 import { logger } from "@alfred/logger";
 
-import { createEvent } from "../events";
-import { type PipelineContext, type PipelineStage } from "../pipeline";
-import {
-  type AgentOutcome,
-  type ATIFTrajectory,
-  type ExecuteOutput,
-  type LearnOutput,
-  type SummarizeOutput,
+import type { PipelineContext, PipelineStage } from "../pipeline";
+import type {
+  AgentOutcome,
+  ATIFTrajectory,
+  ExecuteOutput,
+  LearnOutput,
+  SummarizeOutput,
 } from "./types";
+
+import { createEvent } from "../events";
 
 export class SummarizeStage implements PipelineStage<
   LearnOutput,

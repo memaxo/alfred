@@ -4,16 +4,16 @@ import type { SubTask, SubTaskId } from "./decompose";
 
 import { createLinearBlockingRelation } from "../linear";
 
-export type LinearSyncConfig = {
+export interface LinearSyncConfig {
   space: string;
   authz: string;
-};
+}
 
-export type LinearSyncResult = {
+export interface LinearSyncResult {
   synced: number;
   failed: number;
-  errors: Array<{ from: SubTaskId; to: SubTaskId; error: string }>;
-};
+  errors: { from: SubTaskId; to: SubTaskId; error: string }[];
+}
 
 /**
  * Sync SubTask dependencies to Linear as blocking relations.

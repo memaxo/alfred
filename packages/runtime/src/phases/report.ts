@@ -3,12 +3,12 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
 
-export type ReportArtifacts = {
+export interface ReportArtifacts {
   events: WorkflowEvent[];
   scanContext?: ExecutionContext | null;
   planSummary?: string | null;
   startedAt?: number;
-};
+}
 
 export async function* executeReportPhase(
   input: RuntimeInput,

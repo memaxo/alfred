@@ -125,7 +125,7 @@ export async function summarize(
         processingTimeMs: performance.now() - startTime,
       },
     };
-  } catch (_error) {
+  } catch {
     return heuristicSummarize(text, options, startTime);
   }
 }
@@ -149,7 +149,7 @@ export async function chunk(
   try {
     const proc = await getProcess();
     return await proc.chunk(text, options);
-  } catch (_error) {
+  } catch {
     return heuristicChunk(text, options);
   }
 }
@@ -177,7 +177,7 @@ export async function ami(
     const proc = await getProcess();
     const score = await proc.ami(context, options.instruction);
     return { score };
-  } catch (_error) {
+  } catch {
     return heuristicAmi(context, options);
   }
 }
@@ -227,7 +227,7 @@ function heuristicSummarize(
 
   // Score lines by position (first and last are important) and length
   const scored = lines.map((line, i) => {
-    const positionScore = i === 0 ? 10 : i === lines.length - 1 ? 5 : 1;
+    const positionScore = i === 0 ? 10 : (i === lines.length - 1 ? 5 : 1);
     const lengthScore = Math.min(line.length / 100, 3);
     return { line, score: positionScore + lengthScore, index: i };
   });

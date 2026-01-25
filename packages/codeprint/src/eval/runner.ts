@@ -1,3 +1,10 @@
+import type {
+  EvalCase,
+  EvalResult,
+  EvalSummary,
+  EvalDataset,
+} from "./types.js";
+
 import { findRelevantFiles, rebuildIndex } from "../index.js";
 import {
   computePrecision,
@@ -5,12 +12,6 @@ import {
   computeMrr,
   computeNdcg,
 } from "./metrics.js";
-import {
-  type EvalCase,
-  type EvalResult,
-  type EvalSummary,
-  type EvalDataset,
-} from "./types.js";
 
 export interface RunEvalOptions {
   dataset: EvalDataset;
@@ -94,7 +95,7 @@ async function runSingleCase(
     caseId: evalCase.id,
     irrelevantReturned,
     latencyMs,
-    method: results[0]?.method ?? "keyword",
+    method: results[0]?.method === "rerank" ? "rerank" : "keyword",
     mrr: computeMrr(returnedFiles, relevantSet),
     ndcg: computeNdcg(returnedFiles, relevantSet),
     precision: computePrecision(returnedFiles, relevantSet),

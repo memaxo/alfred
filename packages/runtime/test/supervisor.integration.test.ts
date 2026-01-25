@@ -1,5 +1,6 @@
-import { type WorkflowEvent } from "@alfred/type/plan";
-import { type LanguageModel } from "ai";
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { LanguageModel } from "ai";
+
 import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 
 const { createRuntime } = await import("../src/core");

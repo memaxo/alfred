@@ -219,14 +219,14 @@ export async function finalizeRun(
 
 export async function appendEventsBatch(args: {
   runId: string;
-  events: Array<{
+  events: {
     seq: number;
     eventType: string;
     eventData?: unknown;
     text?: string | null;
     createdAt?: Date;
     id?: string;
-  }>;
+  }[];
 }): Promise<{ inserted: number }> {
   if (args.events.length === 0) {
     return { inserted: 0 };
@@ -337,7 +337,7 @@ export async function pruneOldRuns(
   const row =
     (
       result as unknown as {
-        rows?: Array<{ deleted_runs?: unknown; deleted_events?: unknown }>;
+        rows?: { deleted_runs?: unknown; deleted_events?: unknown }[];
       }
     ).rows?.[0] ?? null;
 

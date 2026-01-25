@@ -7,7 +7,7 @@ export const PCM_MIME_TYPE = "audio/raw;codec=pcm_s16le;rate=16000" as const;
 
 function writeString(view: DataView, offset: number, value: string) {
   for (let i = 0; i < value.length; i += 1) {
-    view.setUint8(offset + i, value.charCodeAt(i));
+    view.setUint8(offset + i, value.codePointAt(i) ?? 0);
   }
 }
 

@@ -6,23 +6,27 @@ import type { TTSPool } from "../process/tts";
 import { encodeFromPCM16, sanitizeBase64 } from "../audio/codec";
 import { recordVoiceTts, voiceStreamLatencySeconds } from "../metrics";
 
-export type TtsInput = {
+export interface TtsInput {
   text: string;
   voice: string;
   format: "mp3" | "opus" | "wav";
   model: string;
-};
+}
 
 export function formatToMime(format: TtsInput["format"]) {
   switch (format) {
-    case "mp3":
+    case "mp3": {
       return "audio/mpeg";
-    case "opus":
+    }
+    case "opus": {
       return "audio/ogg";
-    case "wav":
+    }
+    case "wav": {
       return "audio/wav";
-    default:
+    }
+    default: {
       return "audio/mpeg";
+    }
   }
 }
 
@@ -40,7 +44,8 @@ export async function encodeLocalTtsAudio(
     throw new Error(
       `local_codec_encode_failed: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }
@@ -108,7 +113,8 @@ export async function synthesizeLocal(
     throw new Error(
       `local_synthesis_failed: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }

@@ -1,8 +1,8 @@
-type MetaEnv = {
+interface MetaEnv {
   DEV?: boolean;
   MODE?: string;
   PROD?: boolean;
-};
+}
 
 type ImportMetaWithEnv = ImportMeta & {
   env?: MetaEnv;

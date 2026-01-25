@@ -4,10 +4,10 @@ import * as userRepo from "@alfred/db/repo/user";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type PreferenceDecayOptions = {
+export interface PreferenceDecayOptions {
   decayWindowDays?: number;
   decayStep?: number;
-};
+}
 
 export async function decayPreferenceConfidence(
   userId: string,
@@ -60,13 +60,13 @@ export async function decayPreferenceConfidence(
   }
 }
 
-type SchedulerOptions = {
+interface SchedulerOptions {
   intervalMs?: number;
   jitterMs?: number;
   batchSize?: number;
   decayWindowDays?: number;
   logger?: Pick<Console, "info" | "warn" | "error">;
-};
+}
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

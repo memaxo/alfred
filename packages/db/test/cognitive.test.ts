@@ -20,9 +20,9 @@ describeFn("cognitiveRepo.findActivePlans", () => {
       "cognitiveRepo.findActivePlans tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    db = mod.db;
-    cognitiveRepo = mod.cognitiveRepo;
-    cognitiveSnapshots = mod.cognitiveSnapshots;
+    ({ db } = mod);
+    ({ cognitiveRepo } = mod);
+    ({ cognitiveSnapshots } = mod);
   });
 
   beforeEach(async () => {

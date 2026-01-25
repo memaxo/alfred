@@ -1,2 +1,1 @@
-// Environment exports
-export {};
+export const env = {};

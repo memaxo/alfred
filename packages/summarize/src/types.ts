@@ -3,7 +3,7 @@
  */
 
 /** Configuration for the summarize process */
-export type SummarizeConfig = {
+export interface SummarizeConfig {
   /** Model name for compression (default: Qwen/Qwen2.5-Coder-0.5B-Instruct) */
   modelName?: string;
   /** Device to run on: auto, cpu, cuda, mps (default: auto) */
@@ -12,10 +12,10 @@ export type SummarizeConfig = {
   logLevel?: string;
   /** Request timeout in ms (default: 120000) */
   requestTimeout?: number;
-};
+}
 
 /** Process health status */
-export type ProcessHealth = {
+export interface ProcessHealth {
   isHealthy: boolean;
   lastPing: number | null;
   requestCount: number;
@@ -23,17 +23,17 @@ export type ProcessHealth = {
   uptime: number;
   status: "idle" | "busy" | "error";
   lastActive: number;
-};
+}
 
 /** Request to Python subprocess */
-export type CompressRequest = {
+export interface CompressRequest {
   id: string;
   type: "compress" | "chunk" | "ami" | "ping";
   payload: Record<string, unknown>;
-};
+}
 
 /** Response from Python subprocess */
-export type CompressResponse = {
+export interface CompressResponse {
   id: string;
   type: "result" | "error" | "ready" | "pong";
   payload: {
@@ -48,10 +48,10 @@ export type CompressResponse = {
     ami_score?: number;
     status?: string;
   };
-};
+}
 
 /** Options for summarize() function */
-export type SummarizeOptions = {
+export interface SummarizeOptions {
   /** Instruction/query for relevance scoring */
   instruction?: string;
   /** Target compression ratio (0-1) */
@@ -62,10 +62,10 @@ export type SummarizeOptions = {
   useFineGrained?: boolean;
   /** Style hint for summarization */
   style?: "concise" | "detailed" | "technical" | "conversational";
-};
+}
 
 /** Result from summarize() function */
-export type SummarizeResult = {
+export interface SummarizeResult {
   /** Compressed/summarized text */
   text: string;
   /** Original token count */
@@ -80,34 +80,34 @@ export type SummarizeResult = {
     method: "longcodezip" | "heuristic";
     processingTimeMs: number;
   };
-};
+}
 
 /** Options for chunk() function */
-export type ChunkOptions = {
+export interface ChunkOptions {
   /** Method for spike detection: std, robust_std, iqr, mad */
   method?: "std" | "robust_std" | "iqr" | "mad";
   /** Threshold multiplier (default: 0.2) */
   k?: number;
-};
+}
 
 /** Result from chunk() function */
-export type ChunkResult = {
+export interface ChunkResult {
   /** Semantic chunks */
   chunks: string[];
   /** Indices where perplexity spikes occurred */
   spikeIndices: number[];
   /** Perplexity values for each line */
   perplexities: number[];
-};
+}
 
 /** Options for ami() function */
-export type AmiOptions = {
+export interface AmiOptions {
   /** Instruction/query for AMI calculation */
   instruction: string;
-};
+}
 
 /** Result from ami() function */
-export type AmiResult = {
+export interface AmiResult {
   /** AMI score (positive = context helps, negative = context hurts) */
   score: number;
-};
+}

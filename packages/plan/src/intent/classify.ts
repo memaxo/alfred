@@ -39,12 +39,12 @@ const intentClassificationSchema = z.object({
 /**
  * Options for intent classification
  */
-export type ClassifyIntentOptions = {
+export interface ClassifyIntentOptions {
   /** Model to use for classification (required unless ALFRED_CLASSIFY_OFFLINE=1) */
   model?: LanguageModel;
   /** Model key for logging */
   modelKey?: string;
-};
+}
 
 /**
  * Heuristic fallback for intent classification.
@@ -53,7 +53,7 @@ export type ClassifyIntentOptions = {
 function classifyIntentHeuristic(description: string): IntentCategory {
   const lower = description.toLowerCase();
 
-  const patterns: Array<{ category: IntentCategory; regex: RegExp }> = [
+  const patterns: { category: IntentCategory; regex: RegExp }[] = [
     { category: "fix", regex: /\b(fix|bug|issue|error|broken|fail)\b/i },
     {
       category: "feat",
@@ -116,7 +116,7 @@ export async function classifyIntent(
   options: ClassifyIntentOptions = {}
 ): Promise<IntentCategory> {
   const { model, modelKey } = options;
-  const description = intent.description;
+  const { description } = intent;
 
   // Use heuristic in offline mode or if no model provided
   if (OFFLINE_MODE || !model) {
@@ -154,7 +154,7 @@ export async function classifyIntentWithMetadata(
   latencyMs: number;
 }> {
   const { model, modelKey } = options;
-  const description = intent.description;
+  const { description } = intent;
 
   // Use heuristic in offline mode or if no model provided
   if (OFFLINE_MODE || !model) {

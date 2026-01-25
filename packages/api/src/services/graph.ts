@@ -43,12 +43,12 @@ export async function executeContextQuery(
   topK: number | undefined,
   resource: string
 ): Promise<{
-  nodes: Array<{
+  nodes: {
     id: { uiId: string };
     kind: string;
     label: string;
     properties: Record<string, unknown>;
-  }>;
+  }[];
   edges: EdgeRow[];
   meta: {
     graphCount: number;
@@ -99,7 +99,7 @@ export async function executeContextQuery(
 
   // 2. Deep RAG: If 1-hop is sparse (< 3) and we have neighbors, go deeper (2-hop)
   let deepEdges: EdgeRow[] = [];
-  const oneHopIds = Array.from(neighborIds);
+  const oneHopIds = [...neighborIds];
 
   if (edges.length < 3 && oneHopIds.length > 0) {
     try {
@@ -147,7 +147,7 @@ export async function executeContextQuery(
       ? db
           .select({ id: memoryNodes.id, label: memoryNodes.label })
           .from(memoryNodes)
-          .where(inArray(memoryNodes.id, Array.from(neighborIds)))
+          .where(inArray(memoryNodes.id, [...neighborIds]))
       : Promise.resolve([]);
 
   const neighbors = await neighborsPromise;
@@ -199,7 +199,7 @@ export async function executeContextQuery(
   const allEdges = [...edges, ...deepEdges];
 
   const ragNodes = (ragResult.nodes ?? []).flatMap((n) => {
-    const uiId = n.id.uiId;
+    const { uiId } = n.id;
     if (!uiId) {
       return [];
     }

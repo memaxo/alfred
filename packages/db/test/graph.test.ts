@@ -28,8 +28,8 @@ describeFn("graphRepo", () => {
       "graphRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    graphRepo = mod.graphRepo;
-    db = mod.db;
+    ({ graphRepo } = mod);
+    ({ db } = mod);
   });
 
   beforeEach(async () => {
@@ -76,7 +76,7 @@ describeFn("graphRepo", () => {
       { resource: TEST_RESOURCE, hash: "n1", kind: "fact", label: "N1" },
       { resource: TEST_RESOURCE, hash: "n2", kind: "insight", label: "N2" },
     ]);
-    const nodeIds = Array.from(nodes.values()).map((node) => node.id);
+    const nodeIds = [...nodes.values()].map((node) => node.id);
 
     const id1 = nodeIds[0];
     const id2 = nodeIds[1];
@@ -436,13 +436,9 @@ describeFn("graphRepo", () => {
       beforeConfidence + 0.05
     );
     // Node without confidence gets 1.0
-    expect((after2?.properties as Record<string, unknown>)?.confidence).toBe(
-      1.0
-    );
+    expect((after2?.properties as Record<string, unknown>)?.confidence).toBe(1);
     // Confidence capped at 1.0
-    expect((after3?.properties as Record<string, unknown>)?.confidence).toBe(
-      1.0
-    );
+    expect((after3?.properties as Record<string, unknown>)?.confidence).toBe(1);
     // Updated timestamp changed (verify it's a different time)
     expect(after1?.updated).not.toEqual(beforeUpdated);
     // Verify timestamp is actually updated (not null)

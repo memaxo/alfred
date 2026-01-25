@@ -10,31 +10,31 @@ import type { SubscriptionManager } from "./manager";
 import { getApiClient } from "../api/client";
 import { addPollingWithFallback, type DataMode } from "./mode";
 
-export type FocusBoardState = {
+export interface FocusBoardState {
   focusSet: { id: string; title: string | null; wipLimit: number } | null;
-  commitments: Array<{
+  commitments: {
     id: string;
     title: string;
     lane: string;
     status: string;
     priority: number;
     workflowRunId: string | null;
-  }>;
-  attention: Array<{
+  }[];
+  attention: {
     id: string;
     kind: string;
     title: string | null;
     urgency: string;
     workflowRunId: string | null;
-  }>;
-  delta: Array<{
+  }[];
+  delta: {
     id: string;
     scope: string;
     summaryText: string;
     createdAt: string;
-  }>;
+  }[];
   timestamp: number;
-};
+}
 
 function mockFocusState(): FocusBoardState {
   return {
@@ -111,12 +111,12 @@ export class FocusStore {
   }
 }
 
-export type FocusSubscriptionOptions = {
+export interface FocusSubscriptionOptions {
   manager: SubscriptionManager;
   store: FocusStore;
   pollingInterval?: number;
   mode?: DataMode;
-};
+}
 
 export function setupFocusSubscription(
   options: FocusSubscriptionOptions
@@ -136,7 +136,7 @@ export function setupFocusSubscription(
 
       const active = await client.getFocusActive();
       if (active.error) {
-        const code = active.error.code;
+        const { code } = active.error;
         const msg = active.error.message ?? "";
         const isAuth = code === "HTTP_ERROR" && /HTTP (401|403)\b/.test(msg);
         if (code === "NETWORK_ERROR" || isAuth) {
@@ -165,7 +165,7 @@ export function setupFocusSubscription(
 
       for (const res of [commitments, attention, delta]) {
         if (res.error) {
-          const code = res.error.code;
+          const { code } = res.error;
           const msg = res.error.message ?? "";
           const isAuth = code === "HTTP_ERROR" && /HTTP (401|403)\b/.test(msg);
           if (code === "NETWORK_ERROR" || isAuth) {

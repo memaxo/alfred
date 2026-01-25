@@ -3,17 +3,17 @@ import type { NodeId, SubTask, WavePlan } from "@alfred/type/plan";
 /**
  * Pattern: A learned template for workflow execution
  */
-export type Pattern = {
+export interface Pattern {
   id: string;
   trigger: string;
   planTemplate: unknown;
   confidence: number;
-};
+}
 
 /**
  * Phase: Groups SubTasks into PRD-like sections
  */
-export type Phase = {
+export interface Phase {
   id: string;
   name: string; // e.g., "Design System Extension"
   description: string;
@@ -27,12 +27,12 @@ export type Phase = {
     | "research"
     | "review"
     | "orchestrator";
-};
+}
 
 /**
  * StructuredPlan: The AI-generated PRD
  */
-export type StructuredPlan = {
+export interface StructuredPlan {
   id: string;
   title: string;
   intent: string; // Original user request
@@ -44,20 +44,20 @@ export type StructuredPlan = {
     strategy: "sequential" | "parallel" | "topological" | "mixed";
     isolation: "agentfs";
   };
-  evaluationCriteria: Array<
+  evaluationCriteria: (
     | {
         name: string;
         weight: number;
         threshold: string;
       }
     | string
-  >;
-};
+  )[];
+}
 
 /**
  * WorkflowPattern: Learned reusable template
  */
-export type WorkflowPattern = {
+export interface WorkflowPattern {
   id: string;
   trigger: string; // Semantic trigger (e.g., "add-ui-feature")
   planTemplate: Omit<StructuredPlan, "id" | "intent">;
@@ -65,19 +65,19 @@ export type WorkflowPattern = {
   avgDurationMs: number;
   usageCount: number;
   knowledgeNodeId?: NodeId; // Link to hypergraph for semantic queries
-};
+}
 
 /**
  * PlanEvaluation: Best-of-N evaluation result
  */
-export type PlanEvaluation = {
+export interface PlanEvaluation {
   planId: string;
-  scores: Array<{
+  scores: {
     judge: string; // e.g., "claude-sonnet", "gpt-4o"
     criterion: string; // e.g., "completeness", "risk"
     score: number; // 0.0 to 1.0
     reasoning: string;
-  }>;
+  }[];
   aggregateScore: number;
   selected: boolean;
-};
+}

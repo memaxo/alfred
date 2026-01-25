@@ -1,10 +1,10 @@
 import type { UnifiedNodeRef } from "./unified.js";
 
-export type MappingRecord = {
+export interface MappingRecord {
   uiId?: string;
   dbId?: string;
   hgHash?: string;
-};
+}
 
 export class GraphIdMapper {
   private readonly ui2db = new Map<string, string>();

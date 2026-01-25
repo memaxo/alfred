@@ -15,7 +15,7 @@ describe("detectTopics", () => {
 
     expect(result.topics).toContain("Coding");
     expect(result.primaryDomain).toBe("Coding");
-    expect(result.confidenceBoost).toBeGreaterThan(1.0);
+    expect(result.confidenceBoost).toBeGreaterThan(1);
   });
 
   test("detects code blocks with triple backticks", () => {
@@ -111,7 +111,7 @@ describe("detectTopics", () => {
 
     expect(result.topics.length).toBe(0);
     expect(result.primaryDomain).toBeNull();
-    expect(result.confidenceBoost).toBe(1.0);
+    expect(result.confidenceBoost).toBe(1);
   });
 });
 
@@ -137,7 +137,7 @@ describe("applyTopicBoost", () => {
     };
 
     const boosted = applyTopicBoost(0.9, topicResult);
-    expect(boosted).toBe(1.0); // Clamped
+    expect(boosted).toBe(1); // Clamped
   });
 
   test("no boost for no topics", () => {
@@ -145,7 +145,7 @@ describe("applyTopicBoost", () => {
       topics: [],
       hasCodeBlock: false,
       primaryDomain: null,
-      confidenceBoost: 1.0,
+      confidenceBoost: 1,
     };
 
     const boosted = applyTopicBoost(0.8, topicResult);

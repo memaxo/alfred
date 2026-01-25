@@ -24,8 +24,7 @@ export async function deriveCausalityFromText(
 ): Promise<KnowledgeEntry[]> {
   const doc = nlp(text);
   const sentences = doc.sentences().out("array");
-  const candidates: Array<{ cause: string; effect: string; evidence: string }> =
-    [];
+  const candidates: { cause: string; effect: string; evidence: string }[] = [];
 
   for (const sentence of sentences) {
     const clauseDoc = nlp(sentence);

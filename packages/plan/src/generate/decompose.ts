@@ -1,11 +1,12 @@
-import { logger } from "@alfred/logger";
-import { type FailureContext, type StructuredHandoff } from "@alfred/type";
-import {
-  type ContextBundle,
-  type DecomposeContext,
-  type SubTask,
-  type SubTaskId,
+import type { FailureContext, StructuredHandoff } from "@alfred/type";
+import type {
+  ContextBundle,
+  DecomposeContext,
+  SubTask,
+  SubTaskId,
 } from "@alfred/type/plan";
+
+import { logger } from "@alfred/logger";
 
 import { classifyPath, type PathBucket } from "../classify/index.js";
 import {
@@ -63,7 +64,7 @@ function stableId(seed: string): SubTaskId {
   // FNV-1a hash (32-bit)
   let h = 2_166_136_261; // FNV offset basis
   for (let i = 0; i < seed.length; i++) {
-    h ^= seed.codePointAt(i);
+    h ^= seed.codePointAt(i) ?? 0;
     h = (h * 16_777_619) >>> 0; // FNV prime, ensure unsigned 32-bit
   }
   // Convert to hex and take first 8 characters (matching previous format)
@@ -425,12 +426,15 @@ export async function decomposeTaskWithEnrichment(
   // Apply handoff context to all tasks if provided
   if (options.handoff) {
     tasks = tasks.map((task) => {
+      const ts = Date.now();
       // Query existing enrichment or create minimal one
       const existingEnrichment = {
+        createdAt: ts,
         relevantHeuristics: [],
+        schemaVersion: 1,
         similarExecutions: [],
         taskId: task.id,
-        ts: Date.now(),
+        ts,
         upstreamFailures: (task.metadata?.upstreamFailures as any[]) ?? [],
       };
 

@@ -81,9 +81,9 @@ export function serverKey(args: {
   return `agentfs:${args.containerName}:${args.executor}:${args.profile}`;
 }
 
-export type ServerHandle = {
+export interface ServerHandle {
   stop: (reason?: string) => Promise<void> | void;
-};
+}
 
 type ServerCheck = (handle: ServerHandle) => Promise<boolean> | boolean;
 
@@ -161,12 +161,12 @@ export async function stopServer(key: string, reason?: string): Promise<void> {
 }
 
 export async function stopAllServers(reason?: string): Promise<void> {
-  const pending = Array.from(inflight.values());
+  const pending = [...inflight.values()];
   if (pending.length > 0) {
     await Promise.allSettled(pending);
   }
 
-  const entries = Array.from(handles.entries());
+  const entries = [...handles.entries()];
   handles.clear();
   inflight.clear();
 

@@ -17,9 +17,9 @@ export const generatePlanInputSchema = z.object({
       .trim()
       .transform((val) => {
         const sanitized = val
-          .replace(/[<>]/g, "")
-          .replace(/javascript:/gi, "")
-          .replace(/on\w+\s*=/gi, "");
+          .replaceAll(/[<>]/g, "")
+          .replaceAll("javascript:", "")
+          .replaceAll(/on\w+\s*=/gi, "");
         if (sanitized !== val) {
           throw new Error("Invalid characters detected in intent");
         }

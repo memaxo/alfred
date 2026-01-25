@@ -1,9 +1,10 @@
-import { type StructuredHandoff, type UpstreamFailure } from "@alfred/type";
+import type { StructuredHandoff, UpstreamFailure } from "@alfred/type";
 
-import { type WorkspaceKind } from "../../environment/types.js";
+import type { WorkspaceKind } from "../../environment/types.js";
+import type { SubTask, SubTaskId } from "./decompose";
+
 import { openDirectorySecure } from "../../security/filesystem.js";
 import { subtaskPlanPath } from "../plans.js";
-import { type SubTask, type SubTaskId } from "./decompose";
 import { buildFixerSubTask } from "./review";
 
 export type AgentId = string;
@@ -35,7 +36,7 @@ export interface AgentSpec {
     handoff?: string; // Textual handoff from previous wave (legacy)
     structuredHandoff?: StructuredHandoff; // Rich handoff with decisions, files, blockers
     upstreamFailures?: UpstreamFailure[]; // Failures from dependent tasks
-    clarifications?: Array<{ response: string }>; // User clarifications
+    clarifications?: { response: string }[]; // User clarifications
   };
 }
 
@@ -258,7 +259,7 @@ export function planWaves(
 
     waves.push({
       agents: currentWaveTasks,
-      dependsOn: Array.from(dependsOnSet),
+      dependsOn: [...dependsOnSet],
       id: waveId,
     });
     waveIndex++;
@@ -281,7 +282,7 @@ export function planWaves(
       const remaining = readyQueue
         .slice(readyIndex)
         .filter((id) => !scheduled.has(id));
-      readyQueue = [...remaining, ...newReady].toSorted(compareTasks);
+      readyQueue = [...remaining, ...newReady].sort(compareTasks);
       readyIndex = 0;
     }
   }

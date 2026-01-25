@@ -124,9 +124,7 @@ describe("RAG Retrieval Integration", () => {
         }
       }
 
-      const results = Array.from(merged.values()).sort(
-        (a, b) => b.score - a.score
-      );
+      const results = [...merged.values()].sort((a, b) => b.score - a.score);
 
       expect(results.length).toBe(3);
       expect(results[0]?.id).toBe("doc-1");

@@ -12,7 +12,7 @@ import type { LODLevel, Rect, Vec2 } from "./types";
  */
 const LOD_CONFIG = {
   /** Zoom level thresholds */
-  thresholds: [0.3, 0.6, 1.0, 2.0] as const,
+  thresholds: [0.3, 0.6, 1, 2] as const,
 
   /** Particle counts per LOD level */
   particles: [500, 1500, 3000, 5000, 8000] as const,
@@ -161,7 +161,7 @@ export class SpatialIndex<T extends { position: Vec2 }> {
     const cell = this.grid.get(key);
     if (cell) {
       const index = cell.indexOf(item);
-      if (index >= 0) {
+      if (index !== -1) {
         cell.splice(index, 1);
       }
     }

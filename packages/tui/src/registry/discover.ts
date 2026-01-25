@@ -80,7 +80,10 @@ export async function discoverPackages(
       } catch {}
     }
   } catch (error) {
-    throw new Error(`Failed to discover packages: ${(error as Error).message}`);
+    throw new Error(
+      `Failed to discover packages: ${(error as Error).message}`,
+      { cause: error }
+    );
   }
 
   return packages;

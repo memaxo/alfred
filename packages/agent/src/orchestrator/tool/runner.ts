@@ -5,12 +5,12 @@ import type { ProjectConfig } from "../../utils/project-detector";
 
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 
-export type RunnerOutput = {
+export interface RunnerOutput {
   stdout: string;
   stderr: string;
   exitCode: number;
   durationMs: number;
-};
+}
 
 const DEFAULT_HEARTBEAT_MS = 60_000; // 60s default silence limit
 
@@ -135,18 +135,21 @@ export const toolRunner = {
         exitCode,
         durationMs: Date.now() - start,
       };
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       // Ensure cleanup if promise.all fails
       proc.kill();
       if (timedOut) {
-        throw new Error(`Command timed out after ${timeoutMs}ms`);
+        throw new Error(`Command timed out after ${timeoutMs}ms`, {
+          cause: error,
+        });
       }
       if (heartbeatFailed) {
         throw new Error(
-          `Command killed due to inactivity (heartbeat) > ${DEFAULT_HEARTBEAT_MS}ms`
+          `Command killed due to inactivity (heartbeat) > ${DEFAULT_HEARTBEAT_MS}ms`,
+          { cause: error }
         );
       }
-      throw err;
+      throw error;
     } finally {
       clearTimeout(totalTimeoutTimer);
       clearInterval(heartbeatInterval);

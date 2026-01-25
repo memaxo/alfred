@@ -10,11 +10,11 @@ const MAX_AGE_MS = Number(
 );
 const SCAN_COUNT = Number(process.env.DROID_PENDING_SCAN_COUNT ?? 200);
 
-type PendingRunRecord = {
+interface PendingRunRecord {
   type: "run" | "stream";
   input: Record<string, unknown>;
   createdAt: number;
-};
+}
 
 async function scanKeys(
   redis: NonNullable<ReturnType<typeof getRedis>>

@@ -2,13 +2,13 @@ import { createHash } from "node:crypto";
 
 import type { SubTask } from "./decompose";
 
-export type ExecPlanSnapshot = {
+export interface ExecPlanSnapshot {
   title: string;
   progressSection: string;
   surprisesSection: string;
   decisionLogSection: string;
   outcomesSection: string;
-};
+}
 
 function sliceSection(markdown: string, heading: string): string {
   const pattern = new RegExp(`^## ${heading}\\s*$`, "m");
@@ -39,11 +39,11 @@ export function interpretExecPlan(markdown: string): ExecPlanSnapshot {
   };
 }
 
-export type PlanProgressUpdate = {
+export interface PlanProgressUpdate {
   timestampIso: string;
   message: string;
   completed: boolean;
-};
+}
 
 export function planProgressUpdate(
   existing: string,
@@ -58,7 +58,7 @@ export function planProgressUpdate(
 }
 
 function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return input.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 function updatePlanSection(
@@ -98,13 +98,13 @@ export function applyProgressUpdate(
   );
 }
 
-export type DecisionLogEntry = {
+export interface DecisionLogEntry {
   decision: string;
   rationale?: string;
   author?: string;
   dateIso?: string;
   note?: string;
-};
+}
 
 export function appendDecisionLogEntry(
   markdown: string,
@@ -124,12 +124,12 @@ export function appendDecisionLogEntry(
   });
 }
 
-export type SurpriseEntry = {
+export interface SurpriseEntry {
   observation: string;
   evidence?: string;
   action?: string;
   dateIso?: string;
-};
+}
 
 export function appendSurpriseEntry(
   markdown: string,

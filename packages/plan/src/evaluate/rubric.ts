@@ -8,8 +8,8 @@ export async function applyRubric(
   plan: StructuredPlan,
   rubric: EvaluationRubric
 ): Promise<number> {
-  let weightedSum = 0.0;
-  let totalWeight = 0.0;
+  let weightedSum = 0;
+  let totalWeight = 0;
 
   for (const criterion of rubric.criteria) {
     const score = await criterion.evaluate(plan);
@@ -17,7 +17,7 @@ export async function applyRubric(
     totalWeight += criterion.weight;
   }
 
-  return totalWeight > 0 ? weightedSum / totalWeight : 0.0;
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
 
 /**
@@ -34,7 +34,7 @@ export const defaultRubric: EvaluationRubric = {
           (sum, p) => sum + p.tasks.length,
           0
         );
-        return Math.min(1.0, taskCount / 10);
+        return Math.min(1, taskCount / 10);
       },
     },
     {
@@ -43,10 +43,10 @@ export const defaultRubric: EvaluationRubric = {
       evaluate: (plan) => {
         // Higher score for parallel strategy
         return plan.resources.strategy === "parallel"
-          ? 1.0
-          : plan.resources.strategy === "mixed"
+          ? 1
+          : (plan.resources.strategy === "mixed"
             ? 0.7
-            : 0.4;
+            : 0.4);
       },
     },
     {
@@ -54,7 +54,7 @@ export const defaultRubric: EvaluationRubric = {
       weight: 0.3,
       evaluate: (plan) => {
         // Lower score for high agent count (heuristic for complexity/risk)
-        return Math.max(0.0, 1.0 - (plan.resources.agentCount - 1) * 0.2);
+        return Math.max(0, 1 - (plan.resources.agentCount - 1) * 0.2);
       },
     },
   ],

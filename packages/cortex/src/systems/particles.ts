@@ -12,11 +12,11 @@ import { DoubleBuffer, UniformBuffer } from "../buffer";
 import particleShaderSource from "../shaders/particles.wgsl?raw";
 
 /** Particle system configuration */
-export type ParticleSystemConfig = {
+export interface ParticleSystemConfig {
   maxParticles: number;
   spawnRadius: number;
   orbCenter: Vec2;
-};
+}
 
 /** Bytes per particle (must match WGSL struct) */
 const PARTICLE_STRIDE = 32; // 2 vec2f + 2 f32 + 2 f32 pad = 32 bytes
@@ -56,8 +56,7 @@ export class ParticleSystem implements RenderSystem {
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
-      if (message.type === "error") {
-      }
+      if (message.type === "error") {}
     }
 
     // Create uniform buffer
@@ -193,7 +192,7 @@ export class ParticleSystem implements RenderSystem {
       data[offset + 3] = Math.cos(angle) * speed;
 
       // Life
-      data[offset + 4] = 0.5 + Math.random() * 1.0;
+      data[offset + 4] = 0.5 + Math.random() * 1;
 
       // Size
       data[offset + 5] = 1 + Math.random() * 2;

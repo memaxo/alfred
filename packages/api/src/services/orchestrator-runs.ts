@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 
 type AgentStatus = "pending" | "spawning" | "running" | "completed" | "failed";
 
-type ComputedAgent = {
+export interface ComputedAgent {
   id: string;
   name: string;
   type: "codex" | "droid" | "claude" | "roo";
@@ -12,17 +12,17 @@ type ComputedAgent = {
   wave: number;
   parentId?: string;
   output?: string;
-};
+}
 
-type ComputedWave = {
+export interface ComputedWave {
   id: number;
   status: "pending" | "running" | "completed";
   agents: string[];
   startTime?: string;
   endTime?: string;
-};
+}
 
-type RunWithDetails = {
+export interface RunWithDetails {
   id: string;
   workflowId: string;
   requirement: string;
@@ -33,9 +33,9 @@ type RunWithDetails = {
   waves: ComputedWave[];
   agents: ComputedAgent[];
   progress: number;
-};
+}
 
-type RunListItem = {
+export interface RunListItem {
   id: string;
   workflowId: string;
   requirement: string;
@@ -45,16 +45,16 @@ type RunListItem = {
   agents: ComputedAgent[];
   agentCount: number;
   progress: number;
-};
+}
 
-type LogEntry = {
+export interface LogEntry {
   id: string;
   timestamp: string;
   type: "info" | "warning" | "error" | "success";
   agentId: string | null;
   message: string;
   metadata: Record<string, unknown> | null;
-};
+}
 
 /**
  * Orchestrator runs domain service
@@ -114,9 +114,9 @@ function computeWavesFromEvents(
         status:
           runStatus === "running"
             ? "running"
-            : runStatus === "completed"
+            : (runStatus === "completed"
               ? "completed"
-              : "pending",
+              : "pending"),
         agents: [],
       },
     ];
@@ -207,7 +207,7 @@ function computeAgentsFromEvents(
     }
   }
 
-  return Array.from(agents.values());
+  return [...agents.values()];
 }
 
 function computeOverallProgress(waves: ComputedWave[]): number {
@@ -253,40 +253,55 @@ function formatEventMessage(
 
   if (agentEvent) {
     switch (agentEvent) {
-      case "spawn":
+      case "spawn": {
         return `Agent ${data.name ?? agentId} spawned (wave ${data.wave ?? 1})`;
-      case "progress":
+      }
+      case "progress": {
         return `Agent ${agentId} progress: ${data.progress ?? 0}%`;
-      case "complete":
+      }
+      case "complete": {
         return `Agent ${agentId} completed`;
-      case "error":
+      }
+      case "error": {
         return `Agent ${agentId} error: ${data.error ?? "unknown"}`;
+      }
     }
   }
 
   switch (eventType) {
-    case "run":
+    case "run": {
       return "Workflow started";
-    case "progress":
+    }
+    case "progress": {
       return (data.message as string) ?? `Progress: ${data.progress ?? 0}%`;
-    case "stdout":
+    }
+    case "stdout": {
       return (data.text as string) ?? "Output";
-    case "stderr":
+    }
+    case "stderr": {
       return (data.text as string) ?? "Error output";
-    case "droid":
+    }
+    case "droid": {
       return `Droid: ${data.name ?? agentId ?? "agent"}`;
-    case "notice":
+    }
+    case "notice": {
       return (data.message as string) ?? "Notice";
-    case "error":
+    }
+    case "error": {
       return (data.message as string) ?? (data.error as string) ?? "Error";
-    case "ui-message":
+    }
+    case "ui-message": {
       return "UI message";
-    case "text-delta":
+    }
+    case "text-delta": {
       return (data.text as string) ?? "Text delta";
-    case "tool-call":
+    }
+    case "tool-call": {
       return `Tool: ${data.toolName ?? "unknown"}`;
-    default:
+    }
+    default: {
       return (data.message as string) ?? eventType;
+    }
   }
 }
 

@@ -6,12 +6,12 @@ function encodeBase64(binary: string): string {
   if (typeof btoa === "function") {
     return btoa(binary);
   }
-  type BufferLike = {
+  interface BufferLike {
     from: (
       value: string,
       encoding: string
     ) => { toString: (encoding: string) => string };
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (B) {
     return B.from(binary, "binary").toString("base64") as string;
@@ -23,12 +23,12 @@ function decodeBase64(base64: string): string {
   if (typeof atob === "function") {
     return atob(base64);
   }
-  type BufferLike = {
+  interface BufferLike {
     from: (
       value: string,
       encoding: string
     ) => { toString: (encoding: string) => string };
-  };
+  }
   const B = (globalThis as unknown as { Buffer?: BufferLike }).Buffer;
   if (B) {
     return B.from(base64, "base64").toString("binary") as string;
@@ -46,7 +46,7 @@ export function base64ToBuffer(base64: string): ArrayBuffer {
   const binaryString = decodeBase64(base64Data);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+    bytes[i] = binaryString.codePointAt(i) ?? 0;
   }
   return bytes.buffer;
 }
@@ -58,7 +58,7 @@ export function bufferToBase64(buffer: ArrayBuffer, mimeType?: string): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
   for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
+    binary += String.fromCodePoint(byte);
   }
   const base64 = encodeBase64(binary);
 

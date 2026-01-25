@@ -28,7 +28,7 @@ import { describe, expect, it } from "bun:test";
 
 import { classifyAiSdkError } from "../src/aierror";
 
-type Case = {
+interface Case {
   label: string;
   error: unknown;
   expect: {
@@ -38,7 +38,7 @@ type Case = {
     trpcCode: string;
     safeCode: string;
   };
-};
+}
 
 function namedError(name: string): Error {
   const err = new Error(name);

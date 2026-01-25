@@ -9,7 +9,7 @@ import { toolTicket } from "./tool/ticket";
 
 export type LinearActivityType = "thought" | "action" | "response" | "error";
 
-export type LinearActivityParams = {
+export interface LinearActivityParams {
   sessionId: string;
   space: string;
   authz: string;
@@ -18,14 +18,14 @@ export type LinearActivityParams = {
   parameter?: string;
   result?: string;
   ephemeral?: boolean;
-};
+}
 
-export type LinearSessionParams = {
+export interface LinearSessionParams {
   space: string;
   issueId: string;
   authz: string;
   delegateId?: string;
-};
+}
 
 export async function emitLinearActivity(
   type: LinearActivityType,

@@ -1,11 +1,11 @@
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import type { UIMessage } from "@alfred/type/stream";
 
-export type CodexNotice = {
+export interface CodexNotice {
   code?: string;
   message: string;
   correlationId?: string;
-};
+}
 
 /**
  * Convert AlfredCodexEvent stream to AI SDK v6 UIMessage parts
@@ -15,27 +15,32 @@ export function codexEventToUiMessagePart(
   event: AlfredCodexEvent
 ): UIMessage["parts"][number] | null {
   switch (event.type) {
-    case "thought":
+    case "thought": {
       return { type: "reasoning", text: event.content };
-    case "command":
+    }
+    case "command": {
       return {
         type: "text",
         text: `[Command: ${event.command}] Status: ${event.status}`,
       };
-    case "output":
+    }
+    case "output": {
       return {
         type: "text",
         text: event.content,
       };
-    case "artifact":
+    }
+    case "artifact": {
       return {
         type: "file",
         mediaType: event.kind === "image" ? "image/*" : "text/plain",
         url: `file://${event.path}`,
         filename: event.path,
       };
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 

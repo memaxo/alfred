@@ -78,13 +78,13 @@ export const dbModuleStub = {
     getDeploymentById: vi.fn().mockResolvedValue(null),
     getDeploymentByApp: vi.fn().mockResolvedValue(null),
     createDeployment: vi.fn().mockResolvedValue(null),
-    removeDeployment: vi.fn().mockResolvedValue(undefined),
+    removeDeployment: vi.fn().mockResolvedValue(),
     upsertDeployment: vi.fn().mockResolvedValue({ id: "deploy-123" }),
-    setDeploymentStatus: vi.fn().mockResolvedValue(undefined),
-    recordHealthCheck: vi.fn().mockResolvedValue(undefined),
+    setDeploymentStatus: vi.fn().mockResolvedValue(),
+    recordHealthCheck: vi.fn().mockResolvedValue(),
   },
   linearRepo: {
-    upsertLinear: vi.fn().mockResolvedValue(undefined),
+    upsertLinear: vi.fn().mockResolvedValue(),
     getLinearByOAuth: vi.fn().mockResolvedValue(null),
   },
   conversationRepo: {
@@ -111,7 +111,7 @@ export const dbModuleStub = {
     getPreferences: vi.fn(),
     setPreference: vi.fn(),
     deletePreference: vi.fn(),
-    addFeedback: vi.fn().mockResolvedValue(undefined),
+    addFeedback: vi.fn().mockResolvedValue(),
     getFeedback: vi.fn().mockResolvedValue([]),
     getProfile: vi.fn().mockImplementation((userId: string) =>
       Promise.resolve({
@@ -163,7 +163,7 @@ export const dbModuleStub = {
   workflowSchema: {},
 };
 
-type FocusSetRow = {
+interface FocusSetRow {
   id: string;
   userId: string;
   title: string | null;
@@ -174,9 +174,9 @@ type FocusSetRow = {
   lastTouchedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-type FocusCommitmentRow = {
+interface FocusCommitmentRow {
   id: string;
   userId: string;
   focusSetId: string;
@@ -190,9 +190,9 @@ type FocusCommitmentRow = {
   metadata: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-type AttentionItemRow = {
+interface AttentionItemRow {
   id: string;
   userId: string;
   focusSetId: string | null;
@@ -207,9 +207,9 @@ type AttentionItemRow = {
   resolvedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-type DeltaBriefRow = {
+interface DeltaBriefRow {
   id: string;
   userId: string;
   focusSetId: string | null;
@@ -221,7 +221,7 @@ type DeltaBriefRow = {
   summaryText: string;
   data: Record<string, unknown> | null;
   createdAt: Date;
-};
+}
 
 let focusSetSeq = 0;
 let commitmentSeq = 0;
@@ -469,7 +469,7 @@ dbModuleStub.deltaRepo = {
   }),
 };
 
-type PrefRow = {
+interface PrefRow {
   id: string;
   userId: string;
   projectId: string | null;
@@ -479,7 +479,7 @@ type PrefRow = {
   source: string;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 const prefStore = new Map<string, PrefRow>();
 

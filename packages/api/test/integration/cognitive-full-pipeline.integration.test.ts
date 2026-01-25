@@ -15,11 +15,8 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
-import {
-  type CognitiveState,
-  type Event,
-  type Outcome,
-} from "@alfred/cognitive/state";
+import type { CognitiveState, Event, Outcome } from "@alfred/cognitive/state";
+
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   afterAll,
@@ -780,7 +777,7 @@ describe("Bayesian Autonomy Updates", () => {
       _: "feedback" as const,
       positive: true,
       reliability: 0,
-      strength: 1.0, // Zero reliability
+      strength: 1, // Zero reliability
     };
 
     const updated = updateAutonomy(ts, auto, evidence, physiology);

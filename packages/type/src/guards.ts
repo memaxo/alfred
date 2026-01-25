@@ -11,7 +11,7 @@ export function isUIMessage(value: unknown): value is UIMessage {
   const hasValidRole =
     typeof msg.role === "string" &&
     ["system", "user", "assistant"].includes(msg.role);
-  const parts = msg.parts;
+  const { parts } = msg;
   const hasValidParts =
     parts === undefined ||
     Array.isArray(parts) ||
@@ -27,14 +27,14 @@ export function isModelMessage(value: unknown): value is ModelMessage {
     return false;
   }
   const msg = value as Record<string, unknown>;
-  const role = msg.role;
+  const { role } = msg;
   if (
     typeof role !== "string" ||
     !["system", "user", "assistant", "tool"].includes(role)
   ) {
     return false;
   }
-  const content = msg.content;
+  const { content } = msg;
   return (
     typeof content === "string" ||
     Array.isArray(content) ||

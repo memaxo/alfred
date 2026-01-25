@@ -85,7 +85,7 @@ async function applyConfidenceDecay(
   const insights = await findNodesByConfidence(0, 1, "insight", 10_000);
   const nodes = [...facts, ...insights];
 
-  const updates: Array<{ id: string; confidence: number }> = [];
+  const updates: { id: string; confidence: number }[] = [];
   const now = Date.now();
 
   for (const node of nodes) {

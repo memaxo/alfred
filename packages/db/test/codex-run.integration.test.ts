@@ -20,8 +20,8 @@ describeFn("codexRunRepo (integration)", () => {
       "codexRunRepo integration tests need Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    db = mod.db;
-    codexRunRepo = mod.codexRunRepo;
+    ({ db } = mod);
+    ({ codexRunRepo } = mod);
   });
 
   beforeEach(async () => {

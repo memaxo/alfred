@@ -10,19 +10,19 @@
 /**
  * Quantization metadata stored alongside quantized embeddings
  */
-export type QuantizationMetadata = {
+export interface QuantizationMetadata {
   scale: number;
   dimensions: number;
-};
+}
 
 /**
  * Quantized embedding with metadata for reconstruction
  */
-export type QuantizedEmbedding = {
+export interface QuantizedEmbedding {
   data: Int8Array;
   scale: number;
   dimensions: number;
-};
+}
 
 /**
  * Compute scale factor for symmetric quantization
@@ -188,7 +188,7 @@ export function serializeQuantized(quantized: QuantizedEmbedding): Uint8Array {
   for (let i = 0; i < quantized.dimensions; i++) {
     // Convert signed int8 to unsigned for storage
     const val = quantized.data[i] ?? 0;
-    uint8View[i] = (val + 128) & 0xff;
+    uint8View[i] = (val + 128) & 0xFF;
   }
 
   return new Uint8Array(buffer);

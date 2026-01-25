@@ -13,14 +13,14 @@ import { makeEventId } from "@alfred/type/id";
 /**
  * Trace span representing a single operation
  */
-export type TraceSpan = {
+export interface TraceSpan {
   id: string;
   name: string;
   startNs: bigint;
   endNs?: bigint;
   parent?: string;
   tags: Record<string, string | number>;
-};
+}
 
 /**
  * RuntimeTracer manages trace spans for a workflow execution
@@ -88,7 +88,7 @@ export class RuntimeTracer {
    * Returns spans in chronological order (by start time)
    */
   getSpans(): TraceSpan[] {
-    const spans = Array.from(this.spans.values());
+    const spans = [...this.spans.values()];
     return spans.sort((a, b) => Number(a.startNs - b.startNs));
   }
 

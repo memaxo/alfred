@@ -265,7 +265,7 @@ export function resetPreferenceCache(): void {
 function serializePreferences(
   prefs: Map<PreferenceKey, PreferenceDetail>
 ): string {
-  return JSON.stringify(Array.from(prefs.entries()));
+  return JSON.stringify([...prefs.entries()]);
 }
 
 function deserializePreferences(

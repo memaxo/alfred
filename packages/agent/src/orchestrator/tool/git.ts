@@ -7,7 +7,9 @@ import {
 } from "node:timers";
 import { z } from "zod";
 
-import { type DirectoryHandle } from "../../security/filesystem.js";
+import type { DirectoryHandle } from "../../security/filesystem.js";
+import type { ToolWriter } from "./shared/context.js";
+
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
@@ -15,7 +17,6 @@ import {
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { withPolicyApproval, type AITool } from "./approval.js";
-import { type ToolWriter } from "./shared/context.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -510,8 +511,9 @@ export const toolGit = {
           return { ok: true };
         }
 
-        default:
+        default: {
           throw new Error("git_action_not_supported");
+        }
       }
     } finally {
       cwdHandle.close();

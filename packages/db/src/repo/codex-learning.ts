@@ -1,3 +1,4 @@
+import { EMBEDDING_DIM } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
@@ -421,7 +422,7 @@ export async function findHeuristicsBySourceRun(
         nodeId: node.id,
         rule: typeof props?.rule === "string" ? props.rule : null,
         severity: typeof props?.severity === "string" ? props.severity : null,
-        similarity: 1.0,
+        similarity: 1,
       };
     });
 }
@@ -487,9 +488,24 @@ export async function findSimilarByEmbedding(
   embedding: number[],
   limit = 5
 ): Promise<SimilarTaskResult[]> {
+  const safeLimit = Math.max(1, Math.min(limit, 10));
   if (!embedding || embedding.length === 0) {
     logger.warn("findSimilarByEmbedding called without embedding");
     return [];
+  }
+
+  if (embedding.length !== EMBEDDING_DIM) {
+    logger.warn("findSimilarByEmbedding called with wrong embedding size", {
+      len: embedding.length,
+    });
+    return [];
+  }
+
+  for (const v of embedding) {
+    if (!Number.isFinite(v)) {
+      logger.warn("findSimilarByEmbedding called with non-finite embedding");
+      return [];
+    }
   }
 
   try {
@@ -514,21 +530,24 @@ export async function findSimilarByEmbedding(
         )
       )
       .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
-      .limit(limit);
+      .limit(safeLimit);
 
-    return results.map((row) => {
-      const props = row.properties as Record<string, unknown> | null;
-      return {
-        auto: typeof props?.auto === "string" ? props.auto : null,
-        createdAt: row.created ?? null,
-        nodeId: row.id,
-        result: typeof props?.result === "string" ? props.result : null,
-        sessionId:
-          typeof props?.sessionId === "string" ? props.sessionId : null,
-        similarity: row.similarity ?? 0,
-        threadId: typeof props?.threadId === "string" ? props.threadId : null,
-      };
-    });
+    return results
+      .map((row) => {
+        const props = row.properties as Record<string, unknown> | null;
+        const similarity = Math.max(0, Math.min(1, row.similarity ?? 0));
+        return {
+          auto: typeof props?.auto === "string" ? props.auto : null,
+          createdAt: row.created ?? null,
+          nodeId: row.id,
+          result: typeof props?.result === "string" ? props.result : null,
+          sessionId:
+            typeof props?.sessionId === "string" ? props.sessionId : null,
+          similarity,
+          threadId: typeof props?.threadId === "string" ? props.threadId : null,
+        };
+      })
+      .filter((r) => r.similarity >= 0.2);
   } catch (error) {
     logger.warn("embedding_similarity_search_failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -567,5 +586,38 @@ export async function findSimilarWithFallback(
   }
 
   // Fallback to keyword-based search
-  return findSimilarCodexExecutions(resource, requirement, limit);
+  try {
+    return await findSimilarCodexExecutions(resource, requirement, limit);
+  } catch (error) {
+    logger.warn("keyword_similarity_search_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      resource,
+    });
+    return [];
+  }
+}
+
+export async function cleanupOldCodexExecutions(args: {
+  olderThan: Date;
+  maxDeletes?: number;
+}): Promise<number> {
+  const maxDeletes = Math.max(1, Math.min(args.maxDeletes ?? 500, 5000));
+
+  const result = await db.execute(
+    sql`
+      WITH doomed AS (
+        SELECT id
+        FROM memory_nodes
+        WHERE kind = 'codex_execution'
+          AND created_at < ${args.olderThan}
+        ORDER BY created_at ASC
+        LIMIT ${maxDeletes}
+      )
+      DELETE FROM memory_nodes
+      WHERE id IN (SELECT id FROM doomed)
+      RETURNING id;
+    `
+  );
+
+  return result.rows?.length ?? 0;
 }

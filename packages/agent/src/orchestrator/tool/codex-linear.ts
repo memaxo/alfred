@@ -14,20 +14,20 @@ const timingConfig = {
   windowMs: WINDOW_MS,
 };
 
-type Histogram = {
+interface Histogram {
   startTimer: (labels: { event_type: string }) => () => void;
-};
+}
 
-type Counter = {
+interface Counter {
   inc: (labels: Record<string, string>) => void;
-};
+}
 
-type MetricsBag = {
+interface MetricsBag {
   histogram?: Histogram;
   activitiesEmitted?: Counter;
   activitiesDropped?: Counter;
   activityBatches?: Counter;
-};
+}
 
 type CodexLinearMetricsConfig =
   | Histogram
@@ -96,26 +96,26 @@ Issue URL: ${issueUrl}
 ${prompt}`;
 }
 
-type PendingEvent = {
+interface PendingEvent {
   eventType: AlfredCodexEvent["type"];
   linearType: LinearActivityType;
   title?: string;
   body?: string;
   ephemeral?: boolean;
   raw: AlfredCodexEvent;
-};
+}
 
 type RateLimitReason = "window" | "total";
 
-type RateLimitedAggregate = {
+interface RateLimitedAggregate {
   total: number;
   types: Record<string, number>;
   reasons: Record<RateLimitReason, number>;
   since: number;
   lastAt: number;
-};
+}
 
-type SessionLimiterState = {
+interface SessionLimiterState {
   activityCount: number;
   windowStart: number;
   totalEmitted: number;
@@ -130,11 +130,11 @@ type SessionLimiterState = {
   rateLimitTimer?: ReturnType<typeof setTimeout>;
   rateLimited?: RateLimitedAggregate;
   exhausted?: boolean;
-};
+}
 
 const sessionStates = new Map<string, SessionLimiterState>();
 
-type FinalActivityDraft = {
+interface FinalActivityDraft {
   eventTypeLabel: string;
   linearType: LinearActivityType;
   title?: string;
@@ -142,7 +142,7 @@ type FinalActivityDraft = {
   ephemeral?: boolean;
   mode: "single" | "batch" | "rate_limit";
   count: number;
-};
+}
 
 export function mapCodexEventToLinearActivity(
   event: AlfredCodexEvent,
@@ -226,7 +226,7 @@ async function flushPendingNow(sessionId: string): Promise<void> {
     return;
   }
 
-  const pending = state.pending.splice(0, state.pending.length);
+  const pending = state.pending.splice(0);
   const groups = buildGroups(pending);
 
   for (const group of groups) {
@@ -253,10 +253,10 @@ async function flushPendingNow(sessionId: string): Promise<void> {
   cleanupState(sessionId, state);
 }
 
-type EventGroup = {
+interface EventGroup {
   eventType: AlfredCodexEvent["type"];
   events: PendingEvent[];
-};
+}
 
 function buildGroups(queue: PendingEvent[]): EventGroup[] {
   const groups: EventGroup[] = [];
@@ -327,17 +327,19 @@ function buildSummaryBody(
         },
         {}
       );
-      const commands = Array.from(
-        new Set(
+      const commands = [
+        ...new Set(
           events.map((item) => {
             const commandEvent = item.raw as Extract<
               AlfredCodexEvent,
-              { type: "command" }
+              {
+                type: "command";
+              }
             >;
             return commandEvent.command;
           })
-        )
-      );
+        ),
+      ];
       return `Commands: ${commands.slice(0, 3).join(", ")}${
         commands.length > 3 ? "…" : ""
       }\nStatuses: ${Object.entries(statusCounts)
@@ -356,8 +358,9 @@ function buildSummaryBody(
         paths.length > 5 ? "…" : ""
       }`;
     }
-    default:
+    default: {
       return `${events.length} ${eventType} events aggregated.`;
+    }
   }
 }
 
@@ -566,14 +569,15 @@ function cleanupState(sessionId: string, state: SessionLimiterState): void {
 
 function convertEventToPending(event: AlfredCodexEvent): PendingEvent | null {
   switch (event.type) {
-    case "thought":
+    case "thought": {
       return {
         eventType: event.type,
         linearType: "thought",
         body: event.content,
         raw: event,
       };
-    case "command":
+    }
+    case "command": {
       if (event.status === "running") {
         return null;
       }
@@ -585,7 +589,8 @@ function convertEventToPending(event: AlfredCodexEvent): PendingEvent | null {
         ephemeral: true,
         raw: event,
       };
-    case "artifact":
+    }
+    case "artifact": {
       return {
         eventType: event.type,
         linearType: "action",
@@ -594,8 +599,10 @@ function convertEventToPending(event: AlfredCodexEvent): PendingEvent | null {
         ephemeral: true,
         raw: event,
       };
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -620,7 +627,7 @@ export function resetCodexLinearLimiter(): void {
 }
 
 export async function flushCodexLinearBatches(): Promise<void> {
-  await Promise.all(Array.from(sessionStates.keys()).map(queueFlush));
+  await Promise.all([...sessionStates.keys()].map(queueFlush));
 }
 
 function truncate(value: string, max = 400): string {

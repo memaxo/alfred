@@ -122,8 +122,9 @@ export const toolBook = {
           ok: count > 0,
         };
       }
-      default:
+      default: {
         throw new Error("bookmark_action_not_supported");
+      }
     }
   },
 };

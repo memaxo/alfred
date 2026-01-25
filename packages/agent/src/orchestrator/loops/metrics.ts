@@ -9,31 +9,31 @@
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RalphIterationCounter = {
+interface RalphIterationCounter {
   labels: (
     executor: string,
     iteration: string
   ) => { inc: (value?: number) => void };
-};
+}
 
-type RalphCompletionCounter = {
+interface RalphCompletionCounter {
   labels: (executor: string) => { inc: (value?: number) => void };
-};
+}
 
-type RalphStuckCounter = {
+interface RalphStuckCounter {
   labels: (
     executor: string,
     reason: string
   ) => { inc: (value?: number) => void };
-};
+}
 
-type RalphTimeoutCounter = {
+interface RalphTimeoutCounter {
   labels: (executor: string) => { inc: (value?: number) => void };
-};
+}
 
-type RalphDurationHistogram = {
+interface RalphDurationHistogram {
   startTimer: (labels: { executor: string }) => () => void;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Counter References

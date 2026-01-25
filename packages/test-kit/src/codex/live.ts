@@ -15,22 +15,22 @@ export type CodexLiveWorkspaceKind = "agentfs";
  * Codex live workspace configuration.
  * Contains workspace instance and AgentFS-specific metadata.
  */
-export type CodexLiveWorkspace = {
+export interface CodexLiveWorkspace {
   id: string;
   runId: string;
   kind: CodexLiveWorkspaceKind;
   root: string;
   workspace: Workspace;
   agentfsDbPath?: string;
-};
+}
 
 export type CodexLiveChunk = unknown;
 
-export type CodexLiveRunResult = {
+export interface CodexLiveRunResult {
   result: string;
-  artifacts?: Array<{ path: string; kind: string }>;
+  artifacts?: { path: string; kind: string }[];
   chunks: CodexLiveChunk[];
-};
+}
 
 /**
  * Create a Codex live workspace for testing.

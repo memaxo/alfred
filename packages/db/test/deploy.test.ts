@@ -23,8 +23,8 @@ describeFn("deployRepo", () => {
       "deployRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
     );
     const mod = await import("@alfred/db");
-    deployRepo = mod.deployRepo;
-    db = mod.db;
+    ({ deployRepo } = mod);
+    ({ db } = mod);
   });
 
   beforeEach(async () => {

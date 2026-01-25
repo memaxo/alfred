@@ -2,10 +2,10 @@ declare module "@opentui/react" {
   import type { CliRenderer, KeyEvent } from "@opentui/core";
   import type React from "react";
 
-  export type Root = {
+  export interface Root {
     render: (node: React.ReactNode) => void;
     unmount: () => void;
-  };
+  }
 
   export function createRoot(renderer: CliRenderer): Root;
 

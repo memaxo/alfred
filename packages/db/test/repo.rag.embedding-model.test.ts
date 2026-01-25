@@ -12,14 +12,14 @@ import { describe, expect, test } from "bun:test";
 describe("RAG Repository - Embedding Model Types", () => {
   test("SearchChunksOptions accepts modelId", () => {
     // Type-level test - verify the interface accepts modelId
-    type Options = {
+    interface Options {
       embedding: number[];
       limit?: number;
       threshold?: number;
       documentId?: string;
       efSearch?: number;
       modelId?: string;
-    };
+    }
 
     const options: Options = {
       embedding: [0.1, 0.2, 0.3],
@@ -30,11 +30,11 @@ describe("RAG Repository - Embedding Model Types", () => {
   });
 
   test("HybridSearchOptions accepts modelId", () => {
-    type Options = {
+    interface Options {
       embedding: number[];
       query: string;
       modelId?: string;
-    };
+    }
 
     const options: Options = {
       embedding: [0.1, 0.2, 0.3],

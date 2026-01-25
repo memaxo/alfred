@@ -54,7 +54,7 @@ export const bloomConfigSchema = z.object({
   enabled: z.boolean().default(true),
   threshold: z.number().min(0).max(2).default(0.8),
   intensity: z.number().min(0).max(2).default(0.5),
-  blurRadius: z.number().min(0.5).max(5).default(2.0),
+  blurRadius: z.number().min(0.5).max(5).default(2),
 });
 
 export type BloomConfig = z.infer<typeof bloomConfigSchema>;

@@ -64,16 +64,21 @@ export type StatusType = "success" | "warning" | "error" | "info" | "neutral";
 
 export function statusColor(status: StatusType): string {
   switch (status) {
-    case "success":
+    case "success": {
       return colors.success;
-    case "warning":
+    }
+    case "warning": {
       return colors.warning;
-    case "error":
+    }
+    case "error": {
       return colors.error;
-    case "info":
+    }
+    case "info": {
       return colors.primary;
-    case "neutral":
+    }
+    case "neutral": {
       return colors.muted;
+    }
   }
 }
 
@@ -100,18 +105,24 @@ export function phaseColor(
     | "reflecting"
 ): string {
   switch (phase) {
-    case "idle":
+    case "idle": {
       return colors.muted;
-    case "capturing":
+    }
+    case "capturing": {
       return colors.primary;
-    case "thinking":
+    }
+    case "thinking": {
       return colors.warning;
-    case "deciding":
+    }
+    case "deciding": {
       return colors.primary;
-    case "executing":
+    }
+    case "executing": {
       return colors.success;
-    case "reflecting":
+    }
+    case "reflecting": {
       return colors.textMuted;
+    }
   }
 }
 

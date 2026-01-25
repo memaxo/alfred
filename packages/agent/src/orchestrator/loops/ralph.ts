@@ -39,7 +39,7 @@ import {
 /**
  * Configuration for Ralph loop execution
  */
-export type RalphConfig = {
+export interface RalphConfig {
   /** Maximum iterations before forced termination (default: 10) */
   maxIterations: number;
   /** Text to detect in <promise>TEXT</promise> tag for completion */
@@ -48,7 +48,7 @@ export type RalphConfig = {
   stallMs?: number;
   /** Override LoopDetector similarity threshold (default: 0.92) */
   similarityThreshold?: number;
-};
+}
 
 const DEFAULT_RALPH_CONFIG: Required<Omit<RalphConfig, "completionPromise">> & {
   completionPromise?: string;
@@ -62,7 +62,7 @@ const DEFAULT_RALPH_CONFIG: Required<Omit<RalphConfig, "completionPromise">> & {
 /**
  * Result of Ralph loop execution
  */
-export type RalphResult = {
+export interface RalphResult {
   /** Whether task completed successfully (promise detected) */
   completed: boolean;
   /** Number of iterations executed */
@@ -74,13 +74,13 @@ export type RalphResult = {
   /** Reason for termination if stuck or max iterations */
   stuckReason?: string;
   /** All artifacts collected across iterations */
-  artifacts: Array<{ path: string; kind: string }>;
-};
+  artifacts: { path: string; kind: string }[];
+}
 
 /**
  * State persisted between iterations
  */
-export type RalphState = {
+export interface RalphState {
   /** Current iteration number (0-indexed) */
   iteration: number;
   /** Original prompt being fed repeatedly */
@@ -93,12 +93,12 @@ export type RalphState = {
   startedAt: number;
   /** Whether loop is active */
   active: boolean;
-};
+}
 
 /**
  * Input parameters for Ralph loop
  */
-export type RalphInput = {
+export interface RalphInput {
   /** Which executor to use */
   executor: "codex" | "droid" | "opencode";
   /** The prompt to feed repeatedly */
@@ -114,7 +114,7 @@ export type RalphInput = {
   writer?: ToolWriter;
   /** Optional abort signal for cancellation */
   signal?: AbortSignal;
-};
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -143,7 +143,7 @@ export const ralphConfigSchema = z.object({
   similarityThreshold: z
     .number()
     .min(0.5)
-    .max(1.0)
+    .max(1)
     .optional()
     .describe("Semantic similarity threshold for loop detection"),
 });
@@ -281,7 +281,7 @@ async function executeIteration(
   signal?: AbortSignal
 ): Promise<{
   result: string;
-  artifacts: Array<{ path: string; kind: string }>;
+  artifacts: { path: string; kind: string }[];
 }> {
   const execProfileStrict =
     process.env.ORCH_EXEC_PROFILE_STRICT?.trim() === "1";
@@ -407,7 +407,7 @@ export async function runRalphLoop(params: RalphInput): Promise<RalphResult> {
     windowSize: 8,
   });
 
-  const allArtifacts: Array<{ path: string; kind: string }> = [];
+  const allArtifacts: { path: string; kind: string }[] = [];
   let lastResult = "";
   let stuckReason: string | undefined;
 
@@ -655,7 +655,7 @@ export const toolRalph = {
             containerName: toolInputRest.containerName,
             containerCw: toolInputRest.containerCw,
           }
-        : executor === "droid"
+        : (executor === "droid"
           ? {
               out: "text" as const,
               auto: toolInputRest.auto,
@@ -676,7 +676,7 @@ export const toolRalph = {
               args: toolInputRest.args,
               containerName: toolInputRest.containerName,
               containerCw: toolInputRest.containerCw,
-            };
+            });
 
     return await runRalphLoop({
       executor,

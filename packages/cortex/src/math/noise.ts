@@ -130,7 +130,7 @@ export function fbm(
   y: number,
   octaves: number,
   persistence = 0.5,
-  lacunarity = 2.0
+  lacunarity = 2
 ): number {
   let value = 0;
   let amplitude = 1;

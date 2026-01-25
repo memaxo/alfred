@@ -12,13 +12,13 @@ import { StorageBuffer, UniformBuffer } from "../buffer";
 import coronaShaderSource from "../shaders/corona.wgsl?raw";
 
 /** Corona system configuration */
-export type CoronaSystemConfig = {
+export interface CoronaSystemConfig {
   fiberCount: number;
   segmentsPerFiber: number;
   innerRadius: number;
   outerRadius: number;
   orbCenter: Vec2;
-};
+}
 
 /** Default corona configuration */
 export const DEFAULT_CORONA_CONFIG: CoronaSystemConfig = {
@@ -72,8 +72,7 @@ export class CoronaSystem implements RenderSystem {
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
-      if (message.type === "error") {
-      }
+      if (message.type === "error") {}
     }
 
     // Create uniform buffer

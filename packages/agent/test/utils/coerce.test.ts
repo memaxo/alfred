@@ -15,7 +15,7 @@ describe("coerce utilities", () => {
     });
 
     it("returns empty object for undefined", () => {
-      expect(coerceRecord(undefined)).toEqual({});
+      expect(coerceRecord()).toEqual({});
     });
 
     it("returns empty object for empty string", () => {
@@ -75,7 +75,7 @@ describe("coerce utilities", () => {
     });
 
     it("returns null for undefined input", () => {
-      expect(coerceNonEmptyString(undefined)).toBeNull();
+      expect(coerceNonEmptyString()).toBeNull();
     });
 
     it("returns null for empty string", () => {

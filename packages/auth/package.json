@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@alfred/db": "workspace:*",
+    "@alfred/logger": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@better-auth/expo": "1.4.7",
     "@better-auth/passkey": "1.4.7",

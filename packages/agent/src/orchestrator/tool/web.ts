@@ -15,11 +15,11 @@ import {
 
 type WebProvider = "ddg" | "serpapi" | "tavily" | "exa";
 
-type CostInfo = {
+interface CostInfo {
   total?: number;
   search?: number;
   contents?: number;
-};
+}
 
 const HAS_EXA = hasExaApiKey();
 const DEFAULT_SEARCH_PROVIDER = (process.env.ORCH_WEB_PROVIDER ??
@@ -200,11 +200,11 @@ async function enforcePolicy(input: WebInput) {
 
 function decodeEntities(value: string) {
   return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -224,7 +224,7 @@ function compressSnippet(value: string | undefined, limit = 220) {
   if (!value) {
     return;
   }
-  const compact = value.replace(/\s+/g, " ").trim();
+  const compact = value.replaceAll(/\s+/g, " ").trim();
   if (compact.length === 0) {
     return;
   }
@@ -235,14 +235,14 @@ function compressSnippet(value: string | undefined, limit = 220) {
 }
 
 function extractQueryTokens(query: string) {
-  return Array.from(
-    new Set(
+  return [
+    ...new Set(
       query
         .toLowerCase()
         .split(/[^a-z0-9]+/u)
         .filter((token) => token.length >= 3)
-    )
-  );
+    ),
+  ];
 }
 
 function scoreExaResult(params: {
@@ -351,12 +351,12 @@ async function performSerpApiSearch(
     throw new Error(`web_search_failed:${response.status}`);
   }
   const payload = (await response.json()) as {
-    organic_results?: Array<{
+    organic_results?: {
       link: string;
       title?: string;
       snippet?: string;
       position?: number;
-    }>;
+    }[];
   };
   const organic = payload.organic_results ?? [];
   return organic.slice(0, topK).map((entry) => ({
@@ -542,9 +542,9 @@ async function performExaContents(
   const textOpts =
     typeof exaOpts?.text === "undefined"
       ? { maxCharacters }
-      : typeof exaOpts.text === "boolean"
+      : (typeof exaOpts.text === "boolean"
         ? exaOpts.text
-        : { maxCharacters: exaOpts.text.maxCharacters ?? maxCharacters };
+        : { maxCharacters: exaOpts.text.maxCharacters ?? maxCharacters });
 
   // Use SDK for content fetching
   const { contents, cost } = await exaGetContents([url], {
@@ -584,20 +584,24 @@ async function performSearch(
   context?: string;
 }> {
   switch (provider) {
-    case "exa":
+    case "exa": {
       return {
         ...(await performExaSearch(query, topK, exaOpts, timeoutSec)),
         provider,
       };
-    case "serpapi":
+    }
+    case "serpapi": {
       return { results: await performSerpApiSearch(query, topK), provider };
-    case "tavily":
+    }
+    case "tavily": {
       throw new Error("web_provider_tavily_unavailable");
-    default:
+    }
+    default: {
       return {
         results: await performDuckDuckGoSearch(query, topK),
         provider: "ddg",
       };
+    }
   }
 }
 
@@ -612,7 +616,7 @@ async function performFetch(
   url: string,
   timeoutSec: number,
   provider: WebProvider,
-  exaOpts: ExaConfig | undefined
+  exaOpts?: ExaConfig
 ): Promise<{
   details: WebOutput["details"];
   cost?: CostInfo;
@@ -810,7 +814,7 @@ export const toolWeb = {
       } satisfies WebOutput;
     } catch (error) {
       if (resolvedProvider === "exa") {
-        const fallback = await performFetch(url, timeoutSec, "ddg", undefined);
+        const fallback = await performFetch(url, timeoutSec, "ddg", input.exa);
         return {
           ok: true,
           action: "fetch",

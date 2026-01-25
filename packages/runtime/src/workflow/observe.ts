@@ -66,12 +66,12 @@ export function observeEvent(args: {
         const status = coerceNonEmptyString(data.status) ?? "completed";
         multiAgentWavesTotal.inc({ status });
 
-        const agents: Array<{
+        const agents: {
           role?: string;
           status?: string;
           stuck?: boolean;
           durationSeconds?: number;
-        }> = Array.isArray(data.agents)
+        }[] = Array.isArray(data.agents)
           ? (data.agents as Record<string, unknown>[]).map(coerceRecord)
           : [];
 
@@ -81,9 +81,9 @@ export function observeEvent(args: {
           const outcome: "ok" | "error" | "stuck" =
             rawStatus === "stuck" || agent.stuck
               ? "stuck"
-              : rawStatus === "failed"
+              : (rawStatus === "failed"
                 ? "error"
-                : "ok";
+                : "ok");
 
           const dur = agent.durationSeconds;
           if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
@@ -150,9 +150,9 @@ export function observeEvent(args: {
         const outcome: "ok" | "error" | "stuck" =
           rawStatus === "stuck"
             ? "stuck"
-            : rawStatus === "failed"
+            : (rawStatus === "failed"
               ? "error"
-              : "ok";
+              : "ok");
         const dur = data.durationSeconds;
         if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
           multiAgentAgentDurationSeconds.observe({ role, outcome }, dur);

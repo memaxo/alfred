@@ -27,14 +27,14 @@ const notificationPrefsInput = z.object({
   vacationEnd: dateInput.nullable().optional(),
 });
 
-type NotificationPrefs = {
+export interface NotificationPrefs {
   agentCompletions: boolean;
   workflowEvents: boolean;
   systemAlerts: boolean;
   snoozeUntil: Date | null;
   vacationStart: Date | null;
   vacationEnd: Date | null;
-};
+}
 
 const notificationPrefsSchema = z.object({
   agentCompletions: z.boolean(),
@@ -89,7 +89,7 @@ function toStored(
 export const notificationRouter = router({
   // Get notification preferences
   getPreferences: authedProcedure.query(async ({ ctx }) => {
-    const session = ctx.session;
+    const { session } = ctx;
     if (!session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -107,7 +107,7 @@ export const notificationRouter = router({
   setPreferences: authedProcedure
     .input(notificationPrefsInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
+      const { session } = ctx;
       if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -146,7 +146,7 @@ export const notificationRouter = router({
         session.user.id,
         PREF_KEY,
         toStored(merged),
-        1.0,
+        1,
         "user",
         undefined
       );

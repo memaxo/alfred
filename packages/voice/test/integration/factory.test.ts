@@ -68,7 +68,7 @@ describe("TTS Factory Integration (skipped: causes C++ exception in Bun runner)"
               proc.kill();
               break;
             }
-          } catch (_e) {
+          } catch {
             // ignore parse errors
           }
         }
@@ -76,9 +76,9 @@ describe("TTS Factory Integration (skipped: causes C++ exception in Bun runner)"
           break;
         }
       }
-    } catch (e) {
+    } catch (error) {
       proc.kill();
-      throw e;
+      throw error;
     }
 
     await proc.exited;

@@ -89,14 +89,14 @@ export class PackageRegistry {
    * Get all registered packages
    */
   getAll(): RegisteredPackage[] {
-    return Array.from(this.packages.values());
+    return [...this.packages.values()];
   }
 
   /**
    * Get all registered commands across packages
    */
-  getAllCommands(): Array<CommandDef & { package: string }> {
-    const commands: Array<CommandDef & { package: string }> = [];
+  getAllCommands(): (CommandDef & { package: string })[] {
+    const commands: (CommandDef & { package: string })[] = [];
 
     for (const [packageName, pkg] of this.packages) {
       for (const cmd of pkg.manifest.commands ?? []) {
@@ -110,8 +110,8 @@ export class PackageRegistry {
   /**
    * Get all registered TUI panels across packages
    */
-  getAllPanels(): Array<TuiPanelDef & { package: string }> {
-    const panels: Array<TuiPanelDef & { package: string }> = [];
+  getAllPanels(): (TuiPanelDef & { package: string })[] {
+    const panels: (TuiPanelDef & { package: string })[] = [];
 
     for (const [packageName, pkg] of this.packages) {
       for (const panel of pkg.manifest.panels ?? []) {
@@ -125,8 +125,8 @@ export class PackageRegistry {
   /**
    * Get all registered shortcuts across packages
    */
-  getAllShortcuts(): Array<ShortcutDef & { package: string }> {
-    const shortcuts: Array<ShortcutDef & { package: string }> = [];
+  getAllShortcuts(): (ShortcutDef & { package: string })[] {
+    const shortcuts: (ShortcutDef & { package: string })[] = [];
 
     for (const [packageName, pkg] of this.packages) {
       for (const shortcut of pkg.manifest.shortcuts ?? []) {
@@ -140,8 +140,8 @@ export class PackageRegistry {
   /**
    * Get all registered subscriptions across packages
    */
-  getAllSubscriptions(): Array<SubscriptionDef & { package: string }> {
-    const subscriptions: Array<SubscriptionDef & { package: string }> = [];
+  getAllSubscriptions(): (SubscriptionDef & { package: string })[] {
+    const subscriptions: (SubscriptionDef & { package: string })[] = [];
 
     for (const [packageName, pkg] of this.packages) {
       for (const sub of pkg.manifest.subscriptions ?? []) {

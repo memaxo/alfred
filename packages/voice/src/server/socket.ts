@@ -1,15 +1,19 @@
-import { logger } from "@alfred/logger";
-import {
-  type VoiceStreamAudioChunkPayload,
-  type VoiceStreamServerEvent,
-  type VoiceStreamStartPayload,
-  type VoiceStreamStopPayload,
+import type {
+  VoiceStreamAudioChunkPayload,
+  VoiceStreamServerEvent,
+  VoiceStreamStartPayload,
+  VoiceStreamStopPayload,
 } from "@alfred/type/voice";
+import type { ServerWebSocket } from "bun";
+
+import { logger } from "@alfred/logger";
 import { parseVoiceAssistantRaw } from "@alfred/type/voice.zod";
-import { type ServerWebSocket } from "bun";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
+
+import type { VoiceRegistry } from "./registry";
+import type { VoiceSession } from "./session";
 
 import {
   decodeToPCM16,
@@ -28,8 +32,6 @@ import {
   voiceWebSocketMessageLatencySeconds,
   voiceWebSocketPayloadTooLargeTotal,
 } from "../metrics";
-import { type VoiceRegistry } from "./registry";
-import { type VoiceSession } from "./session";
 
 const MAX_WS_BINARY_BYTES = 64 * 1024;
 
@@ -91,7 +93,7 @@ export interface VoiceSocketHooks {
 }
 
 type StreamCodec = "pcm" | "mp3" | "opus" | "wav";
-const SUPPORTED_STREAM_CODECS: StreamCodec[] = new Set([
+const SUPPORTED_STREAM_CODECS = new Set<StreamCodec>([
   "pcm",
   "mp3",
   "opus",

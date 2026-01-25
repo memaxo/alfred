@@ -1,7 +1,8 @@
-import { type ContextBundle } from "@alfred/type/plan";
+import type { ContextBundle } from "@alfred/type/plan";
+
 import { parseSync } from "oxc-parser";
 
-import { type SubTask } from "../multi/decompose";
+import type { SubTask } from "../multi/decompose";
 
 /**
  * Analyze dependency graph from file contents
@@ -189,9 +190,9 @@ export function decomposeSemantically(
     tasks.push({
       acceptance: [`${name} changes implemented and verified`],
       deps: [],
-      filesHint: Array.from(files)
+      filesHint: [...files]
         .map((f) => {
-          const dir = f.substring(0, f.lastIndexOf("/"));
+          const dir = f.slice(0, f.lastIndexOf("/"));
           return dir;
         })
         .filter((v, i, a) => a.indexOf(v) === i),
@@ -224,7 +225,7 @@ export function decomposeSemantically(
     }
   }
 
-  return tasks.toSorted((a, b) => b.priority - a.priority);
+  return tasks.sort((a, b) => b.priority - a.priority);
 }
 
 /**

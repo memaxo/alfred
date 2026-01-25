@@ -19,13 +19,13 @@ import { createElement } from "react";
 // Types
 // ============================================================================
 
-export type OutputLine = {
+export interface OutputLine {
   type: "stdout" | "stderr" | "system" | "command";
   content: string;
   timestamp?: string;
-};
+}
 
-export type StreamingTerminalProps = {
+export interface StreamingTerminalProps {
   title: string;
   output: OutputLine[];
   autoScroll?: boolean;
@@ -34,9 +34,9 @@ export type StreamingTerminalProps = {
   onCancel?: () => void;
   onExport?: () => void;
   onClear?: () => void;
-};
+}
 
-export type ProgressWindowProps = {
+export interface ProgressWindowProps {
   title: string;
   operation: string;
   progress: number;
@@ -48,25 +48,25 @@ export type ProgressWindowProps = {
   onMinimize?: () => void;
   onViewLogs?: () => void;
   backgroundable?: boolean;
-};
+}
 
-export type WorkflowPhase = {
+export interface WorkflowPhase {
   id: string;
   name: string;
   status: "pending" | "running" | "completed" | "error";
   progress: number;
   tasks: WorkflowTask[];
-};
+}
 
-export type WorkflowTask = {
+export interface WorkflowTask {
   id: string;
   name: string;
   status: "pending" | "running" | "completed" | "error";
   duration?: number;
   dependencies?: string[];
-};
+}
 
-export type WorkflowTimelineProps = {
+export interface WorkflowTimelineProps {
   workflowId: string;
   title?: string;
   phases: WorkflowPhase[];
@@ -75,9 +75,9 @@ export type WorkflowTimelineProps = {
   onViewLogs?: (taskId: string) => void;
   onCancel?: () => void;
   onSuspend?: () => void;
-};
+}
 
-export type TaskTrackerProps = {
+export interface TaskTrackerProps {
   taskId: string;
   operation: string;
   progress?: number;
@@ -88,16 +88,16 @@ export type TaskTrackerProps = {
   onWait?: () => void;
   onCancel?: () => void;
   onViewLogs?: () => void;
-};
+}
 
-export type ErrorContext = {
+export interface ErrorContext {
   operation: string;
   inputs?: Record<string, unknown>;
   step?: string;
   exitCode?: number;
-};
+}
 
-export type ErrorPanelProps = {
+export interface ErrorPanelProps {
   message: string;
   code?: string;
   stack?: string;
@@ -106,16 +106,16 @@ export type ErrorPanelProps = {
   onViewLogs?: () => void;
   onFix?: () => void;
   onDismiss?: () => void;
-};
+}
 
-export type Artifact = {
+export interface Artifact {
   path: string;
   kind: string;
   size?: number;
   preview?: string;
-};
+}
 
-export type ArtifactBrowserProps = {
+export interface ArtifactBrowserProps {
   title?: string;
   artifacts: Artifact[];
   executionId?: string;
@@ -124,9 +124,9 @@ export type ArtifactBrowserProps = {
   onDownloadAll?: () => void;
   onCopyPath?: (path: string) => void;
   onOpenInEditor?: (path: string) => void;
-};
+}
 
-export type ResourceInfo = {
+export interface ResourceInfo {
   id: string;
   name: string;
   type: "container" | "vm" | "lxc";
@@ -134,16 +134,16 @@ export type ResourceInfo = {
   cpu: number;
   memory: number;
   network?: { in: number; out: number };
-  ports?: Array<{ host: number; container: number }>;
-};
+  ports?: { host: number; container: number }[];
+}
 
-export type ResourceMonitorProps = {
+export interface ResourceMonitorProps {
   title?: string;
   resources: ResourceInfo[];
   autoRefresh?: boolean;
   refreshInterval?: number;
   onAction?: (id: string, action: "logs" | "restart" | "stop" | "exec") => void;
-};
+}
 
 // ============================================================================
 // Components
