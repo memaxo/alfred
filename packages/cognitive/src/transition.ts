@@ -167,6 +167,18 @@ export const applyTransition = (
               autonomy,
             };
           }
+        } else if (event._ === "interrupt") {
+          // Interrupt while deciding should cancel the decision and return to thinking.
+          result = {
+            state: thinking(
+              eventTimestamp,
+              `interrupted: ${event.reason}`,
+              1,
+              undefined,
+              nextPhysiology
+            ),
+            autonomy,
+          };
         } else if (event._ === "timeout") {
           // Decision timeout - use first option or return to thinking
           const selectedOption = state.options[0];

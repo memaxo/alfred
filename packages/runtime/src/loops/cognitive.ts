@@ -15,7 +15,12 @@ import {
   unwrapEventEnvelope,
   wrapEventEnvelope,
 } from "@alfred/agent/utils/envelope";
-import { idle, initialAutonomy, updateAutonomy } from "@alfred/cognitive/state";
+import {
+  idle,
+  initialAutonomy,
+  timestamp,
+  updateAutonomy,
+} from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import {
@@ -164,6 +169,67 @@ export async function runCognitiveLoop(
     }
   }
 
+  // Permission pre-check: before resolving a decision into execution.
+  // If denied/asked, we convert the event into an interrupt so the cognitive
+  // state machine does not enter executing.
+  if (hooks && state._ === "deciding") {
+    try {
+      const now = Date.now();
+      const inputContent =
+        eventToApply._ === "input" ? eventToApply.content : null;
+      const selected = inputContent
+        ? (state.options.find(
+            (opt) => opt.id === inputContent || opt.id.includes(inputContent)
+          ) ?? state.options[0])
+        : (eventToApply._ === "timeout"
+          ? state.options[0]
+          : undefined);
+
+      if (selected) {
+        const riskMax = selected.risks
+          .map((r) => r.severity)
+          .reduce<"low" | "medium" | "high">((acc, cur) => {
+            if (acc === "high" || cur === "high") {
+              return "high";
+            }
+            if (acc === "medium" || cur === "medium") {
+              return "medium";
+            }
+            return "low";
+          }, "low");
+
+        const ctxForHook = createHookContext(hooks.ctx, state, autonomy);
+        const gate = await hooks.registry.emit(
+          {
+            type: "cognitive:deciding",
+            action: {
+              type: "decision",
+              risk: riskMax,
+              description: selected.description,
+            },
+          },
+          ctxForHook
+        );
+
+        if (gate.decision === "deny" || gate.decision === "ask") {
+          eventToApply = {
+            _: "interrupt",
+            reason:
+              gate.userMessage ??
+              gate.reason ??
+              `cognitive_gate:${gate.decision}`,
+            priority: 2,
+            ts: timestamp(now),
+          };
+        }
+      }
+    } catch (error) {
+      hooks.ctx.log.warn("hooks_cognitive_deciding_gate_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   const beforeState = state;
   const beforeAutonomy = autonomy;
 
@@ -187,27 +253,71 @@ export async function runCognitiveLoop(
     autonomy = newAutonomy;
   }
 
+  // The state visible to hooks/persistence for this turn (may be further gated).
+  state = newState;
+
+  let gatedMessage: string | null = null;
+  let gateInterrupt: Event | null = null;
+  let emittedActingGate = false;
+
+  // Permission check: entering execution. If denied, we immediately interrupt
+  // execution (persisting an interrupt event) and ask the assistant to explain.
+  if (hooks && beforeState._ !== "executing" && newState._ === "executing") {
+    try {
+      const step = newState.plan.steps[newState.step];
+      const ctxForHook = createHookContext(hooks.ctx, newState, autonomy);
+      const out = await hooks.registry.emit(
+        {
+          type: "cognitive:acting",
+          action: step?.action ?? "execute",
+        },
+        ctxForHook
+      );
+      emittedActingGate = true;
+
+      if (out.decision === "deny" || out.decision === "ask") {
+        const ts = timestamp(Date.now());
+        gateInterrupt = {
+          _: "interrupt",
+          reason:
+            out.userMessage ?? out.reason ?? `cognitive_gate:${out.decision}`,
+          priority: 2,
+          ts,
+        };
+        gatedMessage = out.userMessage ?? out.reason ?? "action_blocked";
+
+        const interrupted = applyTransition(newState, autonomy, gateInterrupt);
+        ({ state } = interrupted);
+        ({ autonomy } = interrupted);
+      }
+    } catch (error) {
+      hooks.ctx.log.warn("hooks_cognitive_acting_gate_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   if (hooks) {
-    const ctxForHook = createHookContext(hooks.ctx, newState, autonomy);
+    const ctxForHook = createHookContext(hooks.ctx, state, autonomy);
 
     try {
-      if (beforeState._ !== newState._) {
+      if (beforeState._ !== state._) {
         await hooks.registry.emit(
           {
             type: "cognitive:transition",
             fromState: beforeState._,
-            toState: newState._,
+            toState: state._,
             trigger: eventToApply._,
           },
           ctxForHook
         );
       }
 
-      switch (newState._) {
+      switch (state._) {
         case "thinking": {
           if (beforeState._ !== "thinking") {
             await hooks.registry.emit(
-              { type: "cognitive:thinking", context: newState.about },
+              { type: "cognitive:thinking", context: state.about },
               ctxForHook
             );
           }
@@ -215,7 +325,7 @@ export async function runCognitiveLoop(
         }
         case "deciding": {
           if (beforeState._ !== "deciding") {
-            const best = [...newState.options].sort(
+            const best = [...state.options].sort(
               (a, b) => b.score - a.score
             )[0];
             const riskMax = best?.risks
@@ -245,13 +355,10 @@ export async function runCognitiveLoop(
           break;
         }
         case "executing": {
-          if (beforeState._ !== "executing") {
-            const step = newState.plan.steps[newState.step];
+          if (beforeState._ !== "executing" && !emittedActingGate) {
+            const step = state.plan.steps[state.step];
             await hooks.registry.emit(
-              {
-                type: "cognitive:acting",
-                action: step?.action ?? "execute",
-              },
+              { type: "cognitive:acting", action: step?.action ?? "execute" },
               ctxForHook
             );
           }
@@ -259,7 +366,7 @@ export async function runCognitiveLoop(
         }
         case "reflecting": {
           if (beforeState._ !== "reflecting") {
-            const out = newState.outcome;
+            const out = state.outcome;
             const outcome: "success" | "failure" =
               out._ === "success"
                 ? "success"
@@ -301,7 +408,7 @@ export async function runCognitiveLoop(
       }
 
       const prevPhys = beforeState.physiology;
-      const nextPhys = newState.physiology;
+      const nextPhys = state.physiology;
       const energyTh = physiologyThresholds.energy;
       if (prevPhys.energy > energyTh && nextPhys.energy <= energyTh) {
         await hooks.registry.emit(
@@ -346,7 +453,7 @@ export async function runCognitiveLoop(
   }
 
   const stateWithAutonomy: SnapshotState = {
-    ...(newState as SnapshotState),
+    ...(state as SnapshotState),
     autonomy,
   };
 
@@ -366,7 +473,31 @@ export async function runCognitiveLoop(
     data: envelope.data,
   });
 
-  const effects = computeEffects(newState);
+  if (gateInterrupt) {
+    const gateEnvelope = wrapEventEnvelope({
+      id: crypto.randomUUID(),
+      type: gateInterrupt._,
+      resource: "user",
+      data: gateInterrupt,
+    });
+    await cognitiveRepo.appendEvent(streamId, gateInterrupt._, {
+      v: gateEnvelope.v,
+      id: gateEnvelope.id,
+      type: gateEnvelope.type,
+      createdAt: gateEnvelope.createdAt,
+      resource: gateEnvelope.resource,
+      data: gateEnvelope.data,
+    });
+  }
+
+  const effects = gatedMessage
+    ? [
+        {
+          type: "generate_response",
+          input: gatedMessage,
+        } satisfies CognitiveEffect,
+      ]
+    : computeEffects(state);
 
   return { state: stateWithAutonomy, effects };
 }

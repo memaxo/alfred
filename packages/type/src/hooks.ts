@@ -104,6 +104,122 @@ export interface WorkflowErrorEvent {
   readonly recoverable: boolean;
 }
 
+// -----------------------------------------------------------------------------
+// Workflow Pipeline Hook Events (Stages/Review/Learn/Budget/Context)
+// -----------------------------------------------------------------------------
+
+export interface WorkflowStageEnterEvent {
+  readonly type: "workflow:stage:enter";
+  readonly workflowId: string;
+  readonly stage: string;
+}
+
+export interface WorkflowStageExitEvent {
+  readonly type: "workflow:stage:exit";
+  readonly workflowId: string;
+  readonly stage: string;
+  readonly durationMs: number;
+}
+
+export interface WorkflowStageErrorEvent {
+  readonly type: "workflow:stage:error";
+  readonly workflowId: string;
+  readonly stage: string;
+  readonly error: string;
+}
+
+export interface WorkflowStageProgressEvent {
+  readonly type: "workflow:stage:progress";
+  readonly workflowId: string;
+  readonly stage: string;
+  readonly message: string;
+}
+
+export interface WorkflowReviewCheckEvent {
+  readonly type: "workflow:review:check";
+  readonly workflowId: string;
+  readonly check: {
+    readonly name: string;
+    readonly passed: boolean;
+    readonly message?: string;
+  };
+}
+
+export interface WorkflowReviewFixStartEvent {
+  readonly type: "workflow:review:fix:start";
+  readonly workflowId: string;
+  readonly attempt: number;
+  readonly maxAttempts: number;
+}
+
+export interface WorkflowReviewFixCompleteEvent {
+  readonly type: "workflow:review:fix:complete";
+  readonly workflowId: string;
+  readonly attempt: number;
+  readonly success: boolean;
+}
+
+export interface WorkflowLearnInsightEvent {
+  readonly type: "workflow:learn:insight";
+  readonly workflowId: string;
+  readonly insight: {
+    readonly type: "heuristic" | "mistake" | "pattern";
+    readonly content: string;
+    readonly confidence: number;
+  };
+}
+
+export interface WorkflowWaveAbortedEvent {
+  readonly type: "workflow:wave:aborted";
+  readonly workflowId: string;
+  readonly waveId: string;
+  readonly waveFailRate: number;
+  readonly overallFailRate: number;
+}
+
+export interface WorkflowContextSetEvent {
+  readonly type: "workflow:context:set";
+  readonly workflowId: string;
+  readonly key: string;
+  readonly value: unknown;
+}
+
+export interface WorkflowContextCacheHitEvent {
+  readonly type: "workflow:context:cache-hit";
+  readonly workflowId: string;
+  readonly cacheKey: string;
+}
+
+export interface WorkflowBudgetWarningEvent {
+  readonly type: "workflow:budget:warning";
+  readonly workflowId: string;
+  readonly costUsd: number;
+  readonly budgetUsd: number;
+  readonly percentUsed: number;
+}
+
+export interface WorkflowBudgetExceededEvent {
+  readonly type: "workflow:budget:exceeded";
+  readonly workflowId: string;
+  readonly costUsd: number;
+  readonly budgetUsd: number;
+}
+
+export type WorkflowPipelineHookEvent =
+  | WorkflowStageEnterEvent
+  | WorkflowStageExitEvent
+  | WorkflowStageErrorEvent
+  | WorkflowStageProgressEvent
+  | WorkflowReviewCheckEvent
+  | WorkflowReviewFixStartEvent
+  | WorkflowReviewFixCompleteEvent
+  | WorkflowLearnInsightEvent
+  | WorkflowWaveAbortedEvent
+  | WorkflowContextSetEvent
+  | WorkflowContextCacheHitEvent
+  | WorkflowBudgetWarningEvent
+  | WorkflowBudgetExceededEvent;
+
 export type LifecycleHookEvent =
   | SessionStartEvent
   | SessionEndEvent
@@ -311,6 +427,7 @@ export interface MemoryRetrieveEvent {
   readonly type: "memory:retrieve";
   readonly memoryId: string;
   readonly expandNeighbors: boolean;
+  readonly depth?: number;
 }
 
 export interface MemoryCreateEvent {
@@ -343,6 +460,7 @@ export interface MemoryForgetEvent {
   readonly type: "memory:forget";
   readonly memoryId: string;
   readonly deleteType: "soft" | "hard";
+  readonly reason?: string;
 }
 
 export interface MemoryTraverseEvent {
@@ -350,6 +468,10 @@ export interface MemoryTraverseEvent {
   readonly startNodeId: string;
   readonly traversalType: "bfs" | "dfs" | "semantic";
   readonly maxDepth: number;
+  readonly query?: string;
+  readonly direction?: "in" | "out" | "both";
+  readonly kind?: string;
+  readonly limit?: number;
 }
 
 export interface MemoryConsolidateEvent {
@@ -586,6 +708,7 @@ export type PolicyHookEvent =
 /** All possible hook events */
 export type HookEvent =
   | LifecycleHookEvent
+  | WorkflowPipelineHookEvent
   | CognitiveHookEvent
   | AgentHookEvent
   | MemoryHookEvent

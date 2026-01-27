@@ -1,7 +1,7 @@
 # ALFRED Hooks System
 
 > **Owner:** platform
-> **Status:** Implementation (Phase 1 complete, Phase 2 partial)
+> **Status:** Implementation (Phases 1-4 complete, Phase 5 partial, Phases 6-7 complete)
 > **Inspired by:** [Cursor Agent Hooks](https://cursor.com/docs/agent/hooks)
 
 ## Purpose
@@ -629,7 +629,7 @@ print(json.dumps({
 ### Phase 2: Pipeline Integration
 
 - [x] Create `HooksObserver` for pipeline events
-- [ ] Map pipeline events to hook events (partial: workflow lifecycle + basic agent lifecycle)
+- [x] Map pipeline events to hook events (workflow lifecycle + stage/review/learn/budget/wave/context)
 - [x] Implement fail-mode handling
 - [x] Add hook execution metrics
 - [x] Wire `HooksObserver` into pipeline runner construction sites
@@ -638,36 +638,54 @@ print(json.dumps({
 
 - [x] Hook into cognitive state transitions
 - [x] Expose autonomy and physiology in hook context
-- [ ] Implement cognitive-aware permission model
+- [x] Implement cognitive-aware permission model
 
 ### Phase 4: Memory Integration
 
-- [ ] Hook into memory operations (create, update, decay, forget)
-- [ ] Support transformation hooks for PII/redaction
-- [ ] Integrate with knowledge graph traversal
+- [x] Hook into memory operations (search, retrieve, update, forget, traverse)
+- [x] Support transformation hooks for PII/redaction
+- [x] Integrate with knowledge graph traversal
 
 ### Phase 5: Learning Integration
 
-- [ ] Hook into pattern extraction
+- [x] Hook into explicit learning tools (pattern/feedback/mistake)
 - [ ] Enable hook-suggested learning
 - [ ] Track hook execution patterns for meta-learning
 
 ### Phase 6: Voice Integration
 
-- [ ] Hook into STT/TTS pipeline
-- [ ] Real-time hooks with strict latency budget
-- [ ] Barge-in awareness in hooks
+- [x] Hook into STT/TTS pipeline
+- [x] Real-time hooks with strict latency budget
+- [x] Barge-in awareness in hooks
 
 ### Phase 7: CLI & Developer Experience
 
-- [ ] Create `alfred hooks create` scaffolding
-- [ ] Add `alfred hooks test` for local testing
-- [ ] Add `alfred hooks validate` for config validation
-- [ ] Add `alfred hooks debug` for execution tracing
+- [x] Create `alfred hooks create` scaffolding
+- [x] Add `alfred hooks test` for local testing
+- [x] Add `alfred hooks validate` for config validation
+- [x] Add `alfred hooks debug` for execution tracing
 
 ---
 
 ## Progress
+
+### 2026-01-27
+
+- Phase 2 pipeline mapping:
+  - Added workflow pipeline hook event types in `packages/type/src/hooks.ts`.
+  - Extended `packages/hookpipe/src/pipeline.ts` mapping and added `packages/hookpipe/test/pipeline.test.ts`.
+- Phase 3 cognitive permission gating:
+  - Enforced `deny|ask` decisions via `interrupt` events in `packages/runtime/src/loops/cognitive.ts` and `packages/cognitive/src/transition.ts`.
+- Phase 6 voice hooks:
+  - Added `voice:*` hooks to `packages/voice/src/server/session.ts` and threaded hooks through WebRTC voice sessions in `packages/api/src/voice/webrtcsession.ts`.
+- Phase 7 CLI:
+  - Added `alfred hooks {create,validate,test,debug}` in `packages/tui/src/commands/hooks.ts` and wired into `packages/tui/src/cli/index.ts`.
+  - Tests: `packages/tui/test/hooks.test.ts`.
+
+- Validation (scoped):
+  - `bunx tsgo -b packages/type/tsconfig.json packages/hooks/tsconfig.json packages/hookpipe/tsconfig.json packages/runtime/tsconfig.json packages/voice/tsconfig.json`
+  - `bun scripts/test-bun.ts packages/hookpipe/test/pipeline.test.ts packages/runtime/test/cognitive-hooks.test.ts packages/voice/test/utils/audio-resample.test.ts`
+  - `bun scripts/test-bun.ts packages/tui/test/cli.test.ts packages/tui/test/hooks.test.ts`
 
 ### 2026-01-25
 
@@ -722,3 +740,22 @@ print(json.dumps({
 
 - Phase 1 complete: core hooks registry + config loader + command executor + unit tests.
 - Phase 2 started: pipeline observer exists but is not yet wired into pipeline runner call sites.
+
+- Added Phase 4 memory tool hooks (AI SDK v6 `ToolCallOptions.experimental_context`):
+  - `packages/agent/assistant/src/tool/memory/{retrieve,update,remove,boost,traverse,search}.ts`: emits `memory:*` hook events with allow/deny/ask gating and transform support.
+  - `packages/agent/src/v6.ts`: threads tool `options` into legacy tool execute signature.
+  - `packages/api/src/{routers/assistant.ts,services/orchestrator.ts,voice/assistant.ts}`: constructs hook runtime per request and passes it to `generateText()` via `experimental_context`.
+  - Tests: `packages/agent/test/tool/memory.test.ts` (hook transform + deny).
+
+- Fixed unrelated typecheck regressions:
+  - `packages/history/src/history-context.ts`: import + timing fix.
+  - `packages/pipeline/src/snapshot.ts`: explicit default return in reducer.
+
+- Validation:
+  - `bun test packages/agent/test/tool/memory.test.ts`
+  - `bun test packages/pipeline/test/snapshot.test.ts packages/history/test/history-context.test.ts`
+  - `bun run typecheck`
+
+- Added Phase 5 learning tool hooks:
+  - `packages/agent/src/orchestrator/tool/learning/index.ts`: emits `learn:{pattern:detected,feedback:{positive,negative},heuristic:proposed}` with gating + transform.
+  - Tests: `packages/agent/test/learning.test.ts`.

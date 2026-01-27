@@ -1,14 +1,8 @@
 import type { PipelineEvent, PipelineObserver } from "@alfred/pipeline";
 import type {
-  AgentEscalateEvent,
-  AgentSpawnEvent,
-  AgentStuckEvent,
   HookContext,
+  HookEvent,
   HookRegistry,
-  WorkflowCompleteEvent,
-  WorkflowErrorEvent,
-  WorkflowResumeEvent,
-  WorkflowStartEvent,
   WorkflowSuspendEvent,
 } from "@alfred/type";
 
@@ -61,16 +55,9 @@ export class HooksObserver implements PipelineObserver {
 function mapPipelineEvent(
   event: PipelineEvent,
   currentWorkflowId: string | undefined
-):
-  | WorkflowStartEvent
-  | WorkflowSuspendEvent
-  | WorkflowResumeEvent
-  | WorkflowCompleteEvent
-  | WorkflowErrorEvent
-  | AgentSpawnEvent
-  | AgentStuckEvent
-  | AgentEscalateEvent
-  | null {
+): HookEvent | null {
+  const workflowId = currentWorkflowId ?? "unknown";
+
   switch (event.type) {
     case "pipeline:start": {
       return {
@@ -84,7 +71,7 @@ function mapPipelineEvent(
     case "pipeline:suspend": {
       return {
         type: "workflow:suspend",
-        workflowId: currentWorkflowId ?? "unknown",
+        workflowId,
         reason: mapSuspendReason(event.reason),
       };
     }
@@ -92,7 +79,7 @@ function mapPipelineEvent(
     case "pipeline:resume": {
       return {
         type: "workflow:resume",
-        workflowId: currentWorkflowId ?? "unknown",
+        workflowId,
         bioTicketValid: true,
       };
     }
@@ -110,10 +97,45 @@ function mapPipelineEvent(
     case "pipeline:failed": {
       return {
         type: "workflow:error",
-        workflowId: currentWorkflowId ?? "unknown",
+        workflowId,
         error: event.error,
         stage: event.lastStage,
         recoverable: false,
+      };
+    }
+
+    case "stage:enter": {
+      return {
+        type: "workflow:stage:enter",
+        workflowId,
+        stage: event.stage,
+      };
+    }
+
+    case "stage:exit": {
+      return {
+        type: "workflow:stage:exit",
+        workflowId,
+        stage: event.stage,
+        durationMs: event.durationMs,
+      };
+    }
+
+    case "stage:error": {
+      return {
+        type: "workflow:stage:error",
+        workflowId,
+        stage: event.stage,
+        error: event.error,
+      };
+    }
+
+    case "stage:progress": {
+      return {
+        type: "workflow:stage:progress",
+        workflowId,
+        stage: event.stage,
+        message: event.message,
       };
     }
 
@@ -153,6 +175,86 @@ function mapPipelineEvent(
         details: event.reason,
         suggestions: [],
         severity: "medium",
+      };
+    }
+
+    case "review:check": {
+      return {
+        type: "workflow:review:check",
+        workflowId,
+        check: event.check,
+      };
+    }
+
+    case "review:fix-start": {
+      return {
+        type: "workflow:review:fix:start",
+        workflowId,
+        attempt: event.attempt,
+        maxAttempts: event.maxAttempts,
+      };
+    }
+
+    case "review:fix-complete": {
+      return {
+        type: "workflow:review:fix:complete",
+        workflowId,
+        attempt: event.attempt,
+        success: event.success,
+      };
+    }
+
+    case "learn:insight": {
+      return {
+        type: "workflow:learn:insight",
+        workflowId,
+        insight: event.insight,
+      };
+    }
+
+    case "wave:aborted": {
+      return {
+        type: "workflow:wave:aborted",
+        workflowId,
+        waveId: event.waveId,
+        waveFailRate: event.waveFailRate,
+        overallFailRate: event.overallFailRate,
+      };
+    }
+
+    case "context:set": {
+      return {
+        type: "workflow:context:set",
+        workflowId,
+        key: event.key,
+        value: event.value,
+      };
+    }
+
+    case "context:cache-hit": {
+      return {
+        type: "workflow:context:cache-hit",
+        workflowId,
+        cacheKey: event.cacheKey,
+      };
+    }
+
+    case "budget:warning": {
+      return {
+        type: "workflow:budget:warning",
+        workflowId,
+        costUsd: event.costUsd,
+        budgetUsd: event.budgetUsd,
+        percentUsed: event.percentUsed,
+      };
+    }
+
+    case "budget:exceeded": {
+      return {
+        type: "workflow:budget:exceeded",
+        workflowId,
+        costUsd: event.costUsd,
+        budgetUsd: event.budgetUsd,
       };
     }
 

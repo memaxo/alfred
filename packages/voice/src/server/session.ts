@@ -1,3 +1,5 @@
+import type { HookContext, HookRegistry } from "@alfred/type";
+
 import { logger as globalLogger } from "@alfred/logger";
 import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
@@ -28,16 +30,23 @@ export interface VoiceSessionConfig {
   logger?: VoiceLogger;
   /** Default chunk size for STT latency/accuracy tradeoff */
   defaultChunkSize?: ChunkSize;
+  hooks?: {
+    readonly registry: HookRegistry;
+    readonly ctx: HookContext;
+  };
 }
 
 export class VoiceSession {
   private readonly config: VoiceSessionConfig;
   private readonly audioBuffer: Buffer[] = [];
+  private readonly createdAt = Date.now();
   private lastActivity: number = Date.now();
   private transcriptBuffer = "";
   private readonly logger: VoiceLogger;
   private readonly sttProvider: string;
   private readonly ttsProvider: string;
+
+  private utteranceCount = 0;
 
   /** Track if we've cleared the STT cache for this session */
   private sttCacheCleared = false;
@@ -70,7 +79,32 @@ export class VoiceSession {
     }
   ): Promise<STTResult | null> {
     this.lastActivity = Date.now();
-    this.audioBuffer.push(Buffer.from(audioBase64, "base64"));
+    const audioBuf = Buffer.from(audioBase64, "base64");
+    this.audioBuffer.push(audioBuf);
+
+    const {hooks} = this.config;
+    if (hooks) {
+      const sampleRate = mimeType.includes("pcm") ? 16_000 : 0;
+      const audioLengthMs =
+        sampleRate > 0
+          ? Math.round((audioBuf.byteLength / 2 / sampleRate) * 1000)
+          : 0;
+      try {
+        const out = await hooks.registry.emit(
+          {
+            type: "voice:stt:before",
+            audioLengthMs,
+            sampleRate,
+          },
+          hooks.ctx
+        );
+        if (out.decision === "deny" || out.decision === "ask") {
+          return null;
+        }
+      } catch {
+        // best-effort
+      }
+    }
 
     // Process audio chunk for transcription
     const timerStart = performance.now();
@@ -101,8 +135,44 @@ export class VoiceSession {
         durationSeconds,
       });
 
-      if (result.text) {
-        this.transcriptBuffer += `${result.text} `;
+      const transcript = result.text;
+      if (transcript) {
+        let finalTranscript = transcript;
+
+        if (hooks) {
+          try {
+            const confidence =
+              typeof result.vadConfidence === "number"
+                ? Math.max(0, Math.min(1, result.vadConfidence))
+                : (transcript.trim().length > 0
+                  ? 0.8
+                  : 0);
+            const out = await hooks.registry.emit(
+              {
+                type: "voice:stt:after",
+                transcript,
+                confidence,
+                durationMs: Math.round(durationSeconds * 1000),
+              },
+              hooks.ctx
+            );
+            const t = out.transformed;
+            if (
+              t &&
+              t.type === "voice:stt:after" &&
+              typeof t.transcript === "string"
+            ) {
+              finalTranscript = t.transcript;
+            }
+          } catch {
+            // best-effort
+          }
+        }
+
+        if (finalTranscript.trim().length > 0) {
+          this.utteranceCount++;
+          this.transcriptBuffer += `${finalTranscript} `;
+        }
       }
       return result;
     } catch (error) {
@@ -170,16 +240,51 @@ export class VoiceSession {
     this.lastActivity = Date.now();
     const audioChunks: Buffer[] = [];
 
+    const {hooks} = this.config;
+    let finalText = text;
+    let finalVoice = voice;
+    if (hooks) {
+      try {
+        const out = await hooks.registry.emit(
+          { type: "voice:tts:before", text, voice },
+          hooks.ctx
+        );
+        if (out.decision === "deny" || out.decision === "ask") {
+          return [];
+        }
+        const t = out.transformed;
+        if (t) {
+          if (typeof t.text === "string") {
+            finalText = t.text;
+          }
+          if (
+            "voice" in t &&
+            (t.voice === undefined || typeof t.voice === "string")
+          ) {
+            finalVoice = t.voice;
+          }
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    let outBytes = 0;
+    let outSampleRate = 24_000;
+
     const timerStart = performance.now();
     try {
       await this.config.ttsPool.synthesize(
         {
-          text,
-          voice,
+          text: finalText,
+          voice: finalVoice,
           streaming: true,
         },
         (chunk) => {
-          audioChunks.push(Buffer.from(chunk.audioBase64, "base64"));
+          outSampleRate = chunk.sampleRate ?? outSampleRate;
+          const buf = Buffer.from(chunk.audioBase64, "base64");
+          outBytes += buf.byteLength;
+          audioChunks.push(buf);
         }
       );
       const wallSeconds = (performance.now() - timerStart) / 1000;
@@ -192,6 +297,26 @@ export class VoiceSession {
         status: "ok",
         durationSeconds: wallSeconds,
       });
+
+      if (hooks) {
+        try {
+          const audioLengthMs =
+            outBytes > 0
+              ? Math.round((outBytes / 2 / outSampleRate) * 1000)
+              : 0;
+          await hooks.registry.emit(
+            {
+              type: "voice:tts:after",
+              text: finalText,
+              audioLengthMs,
+              durationMs: Math.round(wallSeconds * 1000),
+            },
+            hooks.ctx
+          );
+        } catch {
+          // best-effort
+        }
+      }
     } catch (error) {
       const wallSeconds = (performance.now() - timerStart) / 1000;
       voiceStreamLatencySeconds.observe(
@@ -219,16 +344,51 @@ export class VoiceSession {
     onChunk: (chunk: Buffer) => void
   ): Promise<void> {
     this.lastActivity = Date.now();
+
+    const {hooks} = this.config;
+    let finalText = text;
+    let finalVoice = voice;
+    if (hooks) {
+      try {
+        const out = await hooks.registry.emit(
+          { type: "voice:tts:before", text, voice },
+          hooks.ctx
+        );
+        if (out.decision === "deny" || out.decision === "ask") {
+          return;
+        }
+        const t = out.transformed;
+        if (t) {
+          if (typeof t.text === "string") {
+            finalText = t.text;
+          }
+          if (
+            "voice" in t &&
+            (t.voice === undefined || typeof t.voice === "string")
+          ) {
+            finalVoice = t.voice;
+          }
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    let outBytes = 0;
+    let outSampleRate = 24_000;
     const timerStart = performance.now();
     try {
       await this.config.ttsPool.synthesize(
         {
-          text,
-          voice,
+          text: finalText,
+          voice: finalVoice,
           streaming: true,
         },
         (chunk) => {
-          onChunk(Buffer.from(chunk.audioBase64, "base64"));
+          outSampleRate = chunk.sampleRate ?? outSampleRate;
+          const buf = Buffer.from(chunk.audioBase64, "base64");
+          outBytes += buf.byteLength;
+          onChunk(buf);
         }
       );
       const wallSeconds = (performance.now() - timerStart) / 1000;
@@ -241,6 +401,26 @@ export class VoiceSession {
         status: "ok",
         durationSeconds: wallSeconds,
       });
+
+      if (hooks) {
+        try {
+          const audioLengthMs =
+            outBytes > 0
+              ? Math.round((outBytes / 2 / outSampleRate) * 1000)
+              : 0;
+          await hooks.registry.emit(
+            {
+              type: "voice:tts:after",
+              text: finalText,
+              audioLengthMs,
+              durationMs: Math.round(wallSeconds * 1000),
+            },
+            hooks.ctx
+          );
+        } catch {
+          // best-effort
+        }
+      }
     } catch (error) {
       const wallSeconds = (performance.now() - timerStart) / 1000;
       voiceStreamLatencySeconds.observe(
@@ -290,6 +470,20 @@ export class VoiceSession {
     this.lastActivity = Date.now();
     // Clear STT cache on activation for fresh start
     this.sttCacheCleared = false;
+
+    const {hooks} = this.config;
+    if (hooks) {
+      void hooks.registry
+        .emit(
+          {
+            type: "voice:session:start",
+            voiceSessionId: this.config.sessionId,
+            device: undefined,
+          },
+          hooks.ctx
+        )
+        .catch(() => {});
+    }
   }
 
   /**
@@ -304,6 +498,21 @@ export class VoiceSession {
     this.logger.info("voice_session_deactivated", {
       sessionId: this.config.sessionId,
     });
+
+    const {hooks} = this.config;
+    if (hooks) {
+      void hooks.registry
+        .emit(
+          {
+            type: "voice:session:end",
+            voiceSessionId: this.config.sessionId,
+            durationMs: Math.max(0, Date.now() - this.createdAt),
+            utteranceCount: this.utteranceCount,
+          },
+          hooks.ctx
+        )
+        .catch(() => {});
+    }
   }
 
   getSessionId(): string {

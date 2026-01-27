@@ -1,3 +1,4 @@
+import type { HookContext, HookRegistry } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type {
   VoiceStreamServerEvent,
@@ -27,6 +28,7 @@ import {
   RtpPacket,
 } from "werift";
 
+import { ensureHooksRuntime } from "../workflow/hooks";
 import { runAssistantForVoice } from "./assistant";
 import { getVoicePools } from "./pools";
 import {
@@ -53,13 +55,17 @@ interface WebrtcSession {
   rtpTimestamp: number;
   registryId: string;
   runtime: RuntimeContext;
+  hooks?: { readonly registry: HookRegistry; readonly ctx: HookContext };
   vadThreshold: number;
   sttChunkSize: "fast" | "low" | "medium" | "accurate";
   autoStop: boolean;
   maxUtteranceMs: number;
   utteranceStartedAt: number | null;
+  lastSpeechAt: number | null;
   ttsInProgress: boolean;
   ttsAbort: boolean;
+  lastTtsText: string | null;
+  ttsPlaybackPositionMs: number;
   sttInProgress: boolean;
   needsClearCache: boolean;
   pcm16Queue: Buffer[];
@@ -152,13 +158,17 @@ export async function createWebrtcSession(input: {
     rtpTimestamp: Math.floor(Math.random() * 0xFF_FF_FF_FF),
     registryId: "",
     runtime: input.runtime,
+    hooks: undefined,
     vadThreshold: 0.5,
     sttChunkSize: "medium",
     autoStop: true,
     maxUtteranceMs: 20_000,
     utteranceStartedAt: null,
+    lastSpeechAt: now,
     ttsInProgress: false,
     ttsAbort: false,
+    lastTtsText: null,
+    ttsPlaybackPositionMs: 0,
     sttInProgress: false,
     needsClearCache: true,
     pcm16Queue: [],
@@ -328,6 +338,18 @@ export async function createWebrtcSession(input: {
     };
   };
 
+  try {
+    const hooks = await ensureHooksRuntime(input.runtime, {
+      sessionId: input.sessionId,
+      workflowId: input.sessionId,
+      workspace: process.cwd(),
+      signal: new AbortController().signal,
+    });
+    sess.hooks = hooks;
+  } catch {
+    // best-effort
+  }
+
   sessions.set(input.sessionId, sess);
   logger.info("voice_webrtc_session_created", {
     sessionId: input.sessionId,
@@ -411,6 +433,15 @@ export async function closeWebrtcSession(
     return;
   }
   sessions.delete(sessionId);
+
+  const pools = safeGetVoicePools();
+  if (pools) {
+    try {
+      pools.voiceRegistry.removeSession(sessionId);
+    } catch {
+      // ignore
+    }
+  }
   try {
     await sess.pc.close();
   } catch {
@@ -497,12 +528,30 @@ async function handleInboundRtp(sess: WebrtcSession, packet: unknown) {
     Math.floor(pcm48.byteLength / 2)
   );
 
+  const energy = avgAbsPcm16(pcm48i16);
+  if (energy >= 250) {
+    sess.lastSpeechAt = Date.now();
+  }
+
   if (sess.ttsInProgress) {
     // Barge-in: only interrupt if we detect non-trivial input energy.
-    if (avgAbsPcm16(pcm48i16) < 250) {
+    if (energy < 250) {
       return;
     }
     sess.ttsAbort = true;
+    const {hooks} = sess;
+    if (hooks) {
+      void hooks.registry
+        .emit(
+          {
+            type: "voice:bargein",
+            interruptedText: sess.lastTtsText ?? "",
+            playbackPositionMs: sess.ttsPlaybackPositionMs,
+          },
+          hooks.ctx
+        )
+        .catch(() => {});
+    }
     sendEvent(sess, { _: "interrupt", sessionId: sess.sessionId });
   }
 
@@ -562,7 +611,12 @@ async function flushQueuedAudio(sess: WebrtcSession) {
   const { voiceRegistry } = pools;
   const voiceSession =
     voiceRegistry.getSession(sess.sessionId) ??
-    voiceRegistry.createSession(sess.userId, sess.sessionId);
+    voiceRegistry.createSession(
+      sess.userId,
+      sess.sessionId,
+      undefined,
+      sess.hooks
+    );
 
   sess.sttInProgress = true;
   updateStatus(sess, "processing");
@@ -598,6 +652,25 @@ async function flushQueuedAudio(sess: WebrtcSession) {
         endOfUtterance: result.endOfUtterance ?? null,
       });
       if (sess.autoStop && result.endOfUtterance) {
+        const {hooks} = sess;
+        if (hooks) {
+          const now = Date.now();
+          const last = sess.lastSpeechAt;
+          const silenceDurationMs =
+            typeof last === "number" && Number.isFinite(last)
+              ? Math.max(0, now - last)
+              : 0;
+          void hooks.registry
+            .emit(
+              {
+                type: "voice:silence",
+                silenceDurationMs,
+                threshold: sess.vadThreshold,
+              },
+              hooks.ctx
+            )
+            .catch(() => {});
+        }
         sendEvent(sess, {
           _: "auto_stop",
           sessionId: sess.sessionId,
@@ -702,6 +775,8 @@ async function streamTtsAsOpus(sess: WebrtcSession, text: string) {
   if (!text.trim()) {
     return;
   }
+  sess.lastTtsText = text;
+  sess.ttsPlaybackPositionMs = 0;
   sess.ttsInProgress = true;
   updateStatus(sess, "responding");
   try {
@@ -711,11 +786,33 @@ async function streamTtsAsOpus(sess: WebrtcSession, text: string) {
     }
     const { ttsPool } = pools;
 
+    const {hooks} = sess;
+    let finalText = text;
+    if (hooks) {
+      try {
+        const out = await hooks.registry.emit(
+          { type: "voice:tts:before", text, voice: undefined },
+          hooks.ctx
+        );
+        if (out.decision === "deny" || out.decision === "ask") {
+          return;
+        }
+        const t = out.transformed;
+        if (t && typeof t.text === "string") {
+          finalText = t.text;
+          sess.lastTtsText = finalText;
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
     // Collect PCM chunks from the TTS pool; we then resample to 48k and stream
     // as Opus RTP packets in 20ms frames.
     const pcmChunks: { audio: Buffer; sampleRate: number }[] = [];
+    const ttsStart = performance.now();
     await ttsPool.synthesize(
-      { text, streaming: true },
+      { text: finalText, streaming: true },
       (chunk: { audioBase64: string; sampleRate?: number }) => {
         pcmChunks.push({
           audio: Buffer.from(chunk.audioBase64, "base64"),
@@ -723,6 +820,29 @@ async function streamTtsAsOpus(sess: WebrtcSession, text: string) {
         });
       }
     );
+    const ttsDurationMs = Math.round(performance.now() - ttsStart);
+
+    if (hooks) {
+      try {
+        let audioLengthMs = 0;
+        for (const chunk of pcmChunks) {
+          const samples = chunk.sampleRate > 0 ? chunk.audio.byteLength / 2 : 0;
+          audioLengthMs +=
+            chunk.sampleRate > 0 ? (samples / chunk.sampleRate) * 1000 : 0;
+        }
+        await hooks.registry.emit(
+          {
+            type: "voice:tts:after",
+            text: finalText,
+            audioLengthMs: Math.round(audioLengthMs),
+            durationMs: Math.max(0, ttsDurationMs),
+          },
+          hooks.ctx
+        );
+      } catch {
+        // best-effort
+      }
+    }
 
     for (const chunk of pcmChunks) {
       if (sess.ttsAbort) {
@@ -768,4 +888,5 @@ async function sendOpusRtp(sess: WebrtcSession, opus: Buffer) {
   }
   await (sendRtp as (rtp: RtpPacket) => Promise<void>)(packet);
   voiceWebrtcRtpPacketsSentTotal.inc();
+  sess.ttsPlaybackPositionMs += 20;
 }

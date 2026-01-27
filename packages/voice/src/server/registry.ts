@@ -1,3 +1,5 @@
+import type { HookContext, HookRegistry } from "@alfred/type";
+
 import { logger as globalLogger } from "@alfred/logger";
 
 import type { STTPool } from "../process/stt";
@@ -24,7 +26,8 @@ export class VoiceRegistry {
   createSession(
     userId: string,
     sessionId: string,
-    language?: string
+    language?: string,
+    hooks?: { readonly registry: HookRegistry; readonly ctx: HookContext }
   ): VoiceSession {
     const defaultChunkSize = (() => {
       const raw = (process.env.VOICE_STT_CHUNK_SIZE ?? "").toLowerCase();
@@ -44,6 +47,7 @@ export class VoiceRegistry {
       ttsPool: this.ttsPool,
       logger: this.logger,
       defaultChunkSize,
+      hooks,
     });
 
     this.sessions.set(sessionId, session);

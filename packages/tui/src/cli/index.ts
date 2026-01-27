@@ -41,6 +41,11 @@ export async function runCli(args: string[]): Promise<void> {
       return await voiceCommands(args.slice(1));
     }
 
+    if (args[0] === "hooks") {
+      const { hooksCommands } = await import("../commands/hooks");
+      return await hooksCommands(args.slice(1));
+    }
+
     // Phase commands (kept outside registry init for fast UX).
     if (args[0] === "plan") {
       const { handlePlanCommand } = await import("./phase");
