@@ -1,5 +1,5 @@
 import "@/test/dom";
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 import type { ReactNode } from "react";
 
 import { act, fireEvent, waitFor } from "@testing-library/react";
@@ -125,6 +125,34 @@ describe("ChatContainer integration", () => {
 
     await waitFor(() => {
       expect(getByText("Agent state")).toBeTruthy();
+    });
+  });
+
+  it("swaps chat transport endpoint when switching agents", async () => {
+    const { getAllByRole } = renderRoute(<ChatContainer agent="assistant" />, {
+      trpcClient,
+    });
+
+    expect(assistantChatMock.lastTransportOptions?.api).toBe("/api/assistant");
+
+    const orchestratorSwitches = getAllByRole("tab", {
+      name: /orchestrator/i,
+    });
+    fireEvent.click(orchestratorSwitches.at(-1));
+
+    await waitFor(() => {
+      expect(assistantChatMock.lastTransportOptions?.api).toBe(
+        "/api/orchestrator"
+      );
+    });
+
+    const assistantSwitches = getAllByRole("tab", { name: /^assistant$/i });
+    fireEvent.click(assistantSwitches.at(-1));
+
+    await waitFor(() => {
+      expect(assistantChatMock.lastTransportOptions?.api).toBe(
+        "/api/assistant"
+      );
     });
   });
 

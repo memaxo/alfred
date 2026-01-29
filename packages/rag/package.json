@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "build": "tsgo -b --clean && tsgo -b --emitDeclarationOnly",
+    "build": "tsgo -b --emitDeclarationOnly",
     "dev": "tsgo -b --watch",
     "lint": "oxlint -c ../../.oxlintrc.json .",
     "lint:fix": "oxlint -c ../../.oxlintrc.json --fix .",

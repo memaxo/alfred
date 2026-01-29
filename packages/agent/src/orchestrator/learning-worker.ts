@@ -9,7 +9,7 @@ import {
   upsertNodes,
 } from "@alfred/db/repo/graph/index";
 import { memoryNodes } from "@alfred/db/schema/graph";
-import { workflowRuns } from "@alfred/db/schema/workflow";
+import { workflowEvents, workflowRuns } from "@alfred/db/schema/workflow";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import { type Knowledge, knowledgeHash } from "@alfred/knowledge/hypergraph";
 import {
@@ -577,11 +577,14 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   const input = JSON.stringify(run.inputData ?? "");
   const state = JSON.stringify(run.stateData ?? "");
 
+  const signalsText = await buildSignalsSummaryText(run.id);
+
   // Simple heuristic: combine input and output/state to extract facts
   // In a real scenario, we might want to parse specific fields based on workflowId
   const textToAnalyze = `
     Input: ${input}
     Result: ${state}
+    ${signalsText}
   `.trim();
 
   if (textToAnalyze.length < 50) {
@@ -708,5 +711,66 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
 
   if (edgesToInsert.length > 0) {
     await upsertEdges(edgesToInsert);
+  }
+}
+
+async function buildSignalsSummaryText(runId: string): Promise<string> {
+  try {
+    const events = await db
+      .select({
+        eventType: workflowEvents.eventType,
+        eventData: workflowEvents.eventData,
+      })
+      .from(workflowEvents)
+      .where(eq(workflowEvents.runId, runId));
+
+    const signals = events
+      .filter((e) => e.eventType === "report")
+      .map((e) => (e.eventData as unknown as Record<string, unknown>) ?? {})
+      .filter((d) => d.kind === "agent_signal")
+      .map((d) => d.signals)
+      .filter((s) => s && typeof s === "object") as Record<string, unknown>[];
+
+    if (signals.length === 0) {
+      return "";
+    }
+
+    // Abstracted: only include signal types/severities and intervention actions.
+    const lines: string[] = [];
+    lines.push("Signals:");
+    for (const s of signals) {
+      const friction = Array.isArray((s as any).friction)
+        ? (s as any).friction
+        : [];
+      const interventions = Array.isArray((s as any).interventions)
+        ? (s as any).interventions
+        : [];
+      for (const f of friction) {
+        if (f && typeof f === "object") {
+          const { type } = f as any;
+          const sev = (f as any).severity;
+          if (typeof type === "string") {
+            lines.push(
+              `- friction:${type}${typeof sev === "string" ? `:${sev}` : ""}`
+            );
+          }
+        }
+      }
+      for (const i of interventions) {
+        if (i && typeof i === "object") {
+          const { action } = i as any;
+          if (typeof action === "string") {
+            lines.push(`- intervention:${action}`);
+          }
+        }
+      }
+    }
+    return lines.join("\n");
+  } catch (error) {
+    logger.debug("learning_worker_signals_fetch_failed", {
+      runId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return "";
   }
 }

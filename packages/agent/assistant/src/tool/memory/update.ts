@@ -5,6 +5,9 @@
  * Enables the agent to correct or enhance memory metadata.
  */
 
+import type { MemoryUpdateEvent } from "@alfred/type";
+import type { ToolCallOptions } from "ai";
+
 import { getNode } from "@alfred/db/repo/graph/read";
 import { updateNode, updateNodeConfidence } from "@alfred/db/repo/graph/write";
 import { z } from "zod";
@@ -13,6 +16,7 @@ import {
   recordAssistantToolCall,
   recordMemoryToolCall,
 } from "../../../../src/metrics";
+import { getHooksRuntime } from "./hook";
 
 const updateInputSchema = z.object({
   id: z.string().uuid().describe("Memory node ID to update"),
@@ -46,15 +50,47 @@ export const toolMemoryUpdate = {
     }),
     message: z.string(),
   }),
-  execute: async ({ input }: { input: UpdateInput }) => {
+  execute: async (
+    { input }: { input: UpdateInput },
+    options?: ToolCallOptions
+  ) => {
     recordAssistantToolCall("memory_update");
 
+    const hooks = getHooksRuntime(options);
+    let { id } = input;
+    let { confidence } = input;
+    let { properties } = input;
+    let { label } = input;
+
+    if (hooks) {
+      const hookEvent: MemoryUpdateEvent = {
+        type: "memory:update",
+        memoryId: id,
+        changes: {
+          ...(confidence !== undefined ? { confidence } : {}),
+          ...(properties !== undefined ? { properties } : {}),
+          ...(label !== undefined ? { label } : {}),
+        },
+      };
+
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ?? hookEvent) as MemoryUpdateEvent;
+      id = next.memoryId;
+      ({ confidence } = next.changes);
+      ({ properties } = next.changes);
+      ({ label } = next.changes);
+    }
+
     // Verify node exists
-    const existing = await getNode(input.id);
+    const existing = await getNode(id);
     if (!existing) {
       return {
         success: false,
-        id: input.id,
+        id,
         changes: {},
         message: "Memory not found",
       };
@@ -67,29 +103,28 @@ export const toolMemoryUpdate = {
     } = {};
 
     // Update confidence if provided
-    if (input.confidence !== undefined) {
-      const result = await updateNodeConfidence(input.id, input.confidence);
+    if (confidence !== undefined) {
+      const result = await updateNodeConfidence(id, confidence);
       changes.confidence = result !== null;
     }
 
     // Build updates object for other fields
     const updates: Parameters<typeof updateNode>[1] = {};
 
-    if (input.label !== undefined) {
-      updates.label = input.label;
+    if (label !== undefined) {
+      updates.label = label;
       changes.label = true;
     }
 
-    if (input.properties !== undefined) {
+    if (properties !== undefined) {
       // Merge with existing properties
       const existingProps =
         (existing.properties as Record<string, unknown>) ?? {};
       updates.properties = {
         ...existingProps,
-        ...input.properties,
+        ...properties,
         // Preserve system fields
-        ...(existingProps.confidence !== undefined &&
-        input.confidence === undefined
+        ...(existingProps.confidence !== undefined && confidence === undefined
           ? { confidence: existingProps.confidence }
           : {}),
       };
@@ -98,11 +133,11 @@ export const toolMemoryUpdate = {
 
     // Apply other updates if any
     if (Object.keys(updates).length > 0) {
-      const result = await updateNode(input.id, updates);
+      const result = await updateNode(id, updates);
       if (!result) {
         return {
           success: false,
-          id: input.id,
+          id,
           changes,
           message: "Failed to apply updates",
         };
@@ -117,7 +152,7 @@ export const toolMemoryUpdate = {
 
     return {
       success: true,
-      id: input.id,
+      id,
       changes,
       message:
         changedFields.length > 0

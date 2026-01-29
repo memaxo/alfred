@@ -1,14 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  View,
-  Pressable,
-  Modal,
-  FlatList,
-  TextInput,
-} from "react-native";
+import React, { useCallback, useState } from "react";
+import { StyleSheet, View, Pressable, Modal, TextInput } from "react-native";
 import Animated, {
   FadeIn,
   FadeOut,
@@ -64,12 +58,54 @@ export function Select({
         )
       : options;
 
-  const handleSelect = (optionValue: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onChange(optionValue);
-    setModalVisible(false);
-    setSearchQuery("");
-  };
+  const handleSelect = useCallback(
+    (optionValue: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onChange(optionValue);
+      setModalVisible(false);
+      setSearchQuery("");
+    },
+    [onChange]
+  );
+
+  const renderOptionItem = useCallback(
+    ({ item }: { item: SelectOption }) => {
+      const isSelected = item.value === value;
+
+      return (
+        <Pressable
+          onPress={() => handleSelect(item.value)}
+          style={[
+            styles.optionItem,
+            isSelected && { backgroundColor: theme.colors.glass.hover },
+          ]}
+        >
+          <View style={styles.optionContent}>
+            <BiolumText
+              variant="body"
+              size="medium"
+              color={isSelected ? "full" : "standard"}
+            >
+              {item.label}
+            </BiolumText>
+            {item.description && (
+              <CaptionText size="small" color="dim">
+                {item.description}
+              </CaptionText>
+            )}
+          </View>
+          {isSelected && (
+            <Ionicons
+              name="checkmark"
+              size={20}
+              color={theme.colors.semantic.success}
+            />
+          )}
+        </Pressable>
+      );
+    },
+    [value, theme, handleSelect]
+  );
 
   return (
     <>
@@ -162,43 +198,13 @@ export function Select({
                 </View>
               )}
 
-              <FlatList
+              <FlashList
                 data={filteredOptions}
                 keyExtractor={(item) => item.value}
                 style={styles.optionsList}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => handleSelect(item.value)}
-                    style={[
-                      styles.optionItem,
-                      item.value === value && {
-                        backgroundColor: theme.colors.glass.hover,
-                      },
-                    ]}
-                  >
-                    <View style={styles.optionContent}>
-                      <BiolumText
-                        variant="body"
-                        size="medium"
-                        color={item.value === value ? "full" : "standard"}
-                      >
-                        {item.label}
-                      </BiolumText>
-                      {item.description && (
-                        <CaptionText size="small" color="dim">
-                          {item.description}
-                        </CaptionText>
-                      )}
-                    </View>
-                    {item.value === value && (
-                      <Ionicons
-                        name="checkmark"
-                        size={20}
-                        color={theme.colors.semantic.success}
-                      />
-                    )}
-                  </Pressable>
-                )}
+                // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+                estimatedItemSize={50}
+                renderItem={renderOptionItem}
                 ListEmptyComponent={
                   <View style={styles.emptyContainer}>
                     <CaptionText size="medium" color="dim">

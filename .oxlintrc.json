@@ -54,6 +54,7 @@
   "rules": {
     "jest/require-hook": "off",
     "no-void": "warn",
+    "no-template-curly-in-string": "error",
     "no-promise-executor-return": "warn",
     "import/first": "warn",
     "promise/avoid-new": "warn",
@@ -108,6 +109,7 @@
         "no-explicit-any": "off",
         "no-empty-function": "off",
         "no-inline-comments": "off",
+        "no-template-curly-in-string": "off",
         "no-non-null-assertion": "off",
         "promise/prefer-await-to-callbacks": "off",
         "promise/prefer-await-to-then": "off",

@@ -6,4 +6,5 @@ export * from "./logger";
 export * from "./performance";
 export * from "./pricing";
 export * from "./shared";
+export * from "./signals";
 export * from "./token";

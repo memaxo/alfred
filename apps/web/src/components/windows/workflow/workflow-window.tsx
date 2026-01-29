@@ -6,10 +6,12 @@ import { skipToken } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
+  FileText,
   LayoutGrid,
   List,
   Loader2,
   RefreshCw,
+  ScrollText,
   Workflow,
   X,
 } from "lucide-react";
@@ -43,7 +45,10 @@ import {
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 
+import { CompilationView } from "./compilation-view";
+import { EventInspector } from "./event-inspector";
 import { ExecutionPanel } from "./execution-panel";
+import { RunList } from "./run-list";
 import { WorkflowCanvas } from "./workflow-canvas";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
@@ -70,7 +75,10 @@ const workflowWindowDataSchema = z.object({
   runId: z.string().optional(),
   planId: z.string().optional(),
   plan: structuredPlanSchema.optional(),
-  activeView: z.enum(["list", "canvas"]).default("list").optional(),
+  activeView: z
+    .enum(["list", "canvas", "compilation", "events", "runs"])
+    .default("list")
+    .optional(),
   steps: z.array(z.any()).optional(),
   executionStartTime: z.number().optional(),
   lastEventTime: z.number().optional(),
@@ -283,6 +291,29 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     { enabled: Boolean(runId) && !plan }
   );
 
+  // Fetch events for the event inspector
+  const eventsQuery = trpc.workflow.events.useQuery(
+    runId ? { runId } : skipToken,
+    { enabled: Boolean(runId) && activeView === "events" }
+  );
+
+  // Fetch runs for the run list
+  const runsQuery = trpc.workflow.listRuns.useQuery(
+    { limit: 50 },
+    { enabled: activeView === "runs" }
+  );
+
+  // Cancel mutation for run list actions
+  const cancelMutation = trpc.workflow.cancel.useMutation({
+    onSuccess: () => {
+      toast.success("Workflow cancelled");
+      runsQuery.refetch();
+    },
+    onError: (err) => {
+      toast.error(`Failed to cancel: ${err.message}`);
+    },
+  });
+
   useEffect(() => {
     const { data } = persistedPlanQuery;
     if (!data || plan) {
@@ -333,10 +364,19 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     startPlanning();
   };
 
-  const toggleView = () => {
+  const setView = (view: typeof activeView) => {
+    updateWindowData(id, { activeView: view });
+  };
+
+  const handleSelectRun = (selectedRunId: string) => {
     updateWindowData(id, {
-      activeView: activeView === "list" ? "canvas" : "list",
+      runId: selectedRunId,
+      activeView: "list",
     });
+  };
+
+  const handleCancelRun = (cancelRunId: string) => {
+    cancelMutation.mutate({ runId: cancelRunId });
   };
 
   const handlePlanChange = (updatedPlan: StructuredPlan) => {
@@ -397,24 +437,60 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
 
   const headerIcon = (
     <div className="flex items-center gap-1">
-      {plan && (
+      {/* View switcher */}
+      <div className="flex items-center rounded-lg border border-white/10 bg-white/5">
         <Button
-          className="h-6 w-6 text-biolum-dim hover:text-biolum"
-          onClick={toggleView}
+          className={`h-6 w-6 ${activeView === "list" ? "text-biolum" : "text-biolum-dim"}`}
+          onClick={() => setView("list")}
           size="icon"
-          title={activeView === "list" ? "Switch to Canvas" : "Switch to List"}
+          title="Execution View"
           variant="ghost"
         >
-          {activeView === "list" ? (
-            <LayoutGrid className="h-3.5 w-3.5" />
-          ) : (
-            <List className="h-3.5 w-3.5" />
-          )}
+          <List className="h-3.5 w-3.5" />
         </Button>
-      )}
-      <Workflow
-        className={`h-4 w-4 ${status === "running" ? "animate-spin text-biolum" : "text-biolum-dim"}`}
-      />
+        {plan && (
+          <Button
+            className={`h-6 w-6 ${activeView === "canvas" ? "text-biolum" : "text-biolum-dim"}`}
+            onClick={() => setView("canvas")}
+            size="icon"
+            title="Canvas View"
+            variant="ghost"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {runId && (
+          <Button
+            className={`h-6 w-6 ${activeView === "compilation" ? "text-biolum" : "text-biolum-dim"}`}
+            onClick={() => setView("compilation")}
+            size="icon"
+            title="Compilation"
+            variant="ghost"
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {runId && (
+          <Button
+            className={`h-6 w-6 ${activeView === "events" ? "text-biolum" : "text-biolum-dim"}`}
+            onClick={() => setView("events")}
+            size="icon"
+            title="Event Inspector"
+            variant="ghost"
+          >
+            <ScrollText className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        <Button
+          className={`h-6 w-6 ${activeView === "runs" ? "text-biolum" : "text-biolum-dim"}`}
+          onClick={() => setView("runs")}
+          size="icon"
+          title="All Runs"
+          variant="ghost"
+        >
+          <Workflow className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 
@@ -473,6 +549,43 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                 </Button>
               </div>
             )}
+          </div>
+        ) : activeView === "compilation" && runId ? (
+          <div className="h-full p-4">
+            <CompilationView runId={runId} />
+          </div>
+        ) : activeView === "events" && runId ? (
+          <div className="h-full p-4">
+            <EventInspector
+              events={(eventsQuery.data ?? []).map((e) => ({
+                id: e.eventId,
+                type: e.eventType,
+                timestamp: e.timestamp ?? new Date().toISOString(),
+                data: e.eventData as Record<string, unknown> | undefined,
+              }))}
+              isLoading={eventsQuery.isLoading}
+            />
+          </div>
+        ) : activeView === "runs" ? (
+          <div className="h-full p-4">
+            <RunList
+              onCancelRun={handleCancelRun}
+              onSelectRun={handleSelectRun}
+              runs={(runsQuery.data ?? []).map((r) => ({
+                id: r.id,
+                requirement: r.requirement ?? "Untitled",
+                status: r.status as
+                  | "running"
+                  | "suspended"
+                  | "completed"
+                  | "failed"
+                  | "cancelled",
+                createdAt: r.created ?? new Date().toISOString(),
+                updatedAt: r.updated ?? new Date().toISOString(),
+                projectId: r.projectId,
+              }))}
+              selectedRunId={runId}
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-3 p-4">

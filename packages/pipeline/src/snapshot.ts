@@ -277,130 +277,121 @@ export class PipelineReconstructor implements SnapshotReconstructor<
    * Must be deterministic and side-effect free.
    */
   reduce(state: PipelineSnapshot, event: PipelineEvent): PipelineSnapshot {
-    const next: PipelineSnapshot = {
+    const base: PipelineSnapshot = {
       ...state,
-      contextEntries: [...state.contextEntries],
-      stageResults: [...state.stageResults],
       lastEventAt: event.timestamp,
       lastEventId: generateEventId(event),
     };
 
     switch (event.type) {
       case "pipeline:start": {
-        next.runId = event.runId;
-        next.requirement = event.requirement;
-        next.status = "running";
-        next.startedAt = event.timestamp;
-        break;
+        return {
+          ...base,
+          runId: event.runId,
+          requirement: event.requirement,
+          status: "running",
+          startedAt: event.timestamp,
+        };
       }
 
       case "stage:enter": {
-        // Stage entered, status remains running
-        next.status = "running";
-        break;
+        return {
+          ...base,
+          status: "running",
+        };
       }
 
       case "stage:exit": {
-        // Stage completed successfully
         const stageIndex = STAGE_ORDER.indexOf(event.stage);
-        next.lastCompletedStage = event.stage;
-        next.lastCompletedStageIndex = stageIndex;
-        next.stageResults.push({
-          durationMs: event.durationMs,
-          name: event.stage,
-          status: "success",
-        });
-        break;
+        return {
+          ...base,
+          lastCompletedStage: event.stage,
+          lastCompletedStageIndex: stageIndex,
+          stageResults: [
+            ...state.stageResults,
+            {
+              durationMs: event.durationMs,
+              name: event.stage,
+              status: "success" as const,
+            },
+          ],
+        };
       }
 
       case "stage:error": {
-        // Stage failed
-        next.stageResults.push({
-          durationMs: 0,
-          name: event.stage,
-          status: "failure",
-        });
-        next.status = "failed";
-        next.error = event.error;
-        break;
+        return {
+          ...base,
+          status: "failed",
+          error: event.error,
+          stageResults: [
+            ...state.stageResults,
+            {
+              durationMs: 0,
+              name: event.stage,
+              status: "failure" as const,
+            },
+          ],
+        };
       }
 
       case "context:set": {
-        // Update context entry (replace if exists)
-        next.contextEntries = next.contextEntries.filter(
-          ([key]) => key !== event.key
-        );
-        next.contextEntries.push([event.key, event.value]);
-        break;
+        // Keep append-only entries for O(1) writes; Map reconstruction keeps the last value.
+        return {
+          ...base,
+          contextEntries: [...state.contextEntries, [event.key, event.value]],
+        };
       }
 
       case "pipeline:suspend": {
-        next.status = "suspended";
-        break;
+        return {
+          ...base,
+          status: "suspended",
+        };
       }
 
       case "pipeline:resume": {
-        next.status = "running";
-        break;
+        return {
+          ...base,
+          status: "running",
+        };
       }
 
       case "pipeline:complete": {
-        next.status = "completed";
-        break;
+        return {
+          ...base,
+          status: "completed",
+        };
       }
 
       case "pipeline:failed": {
-        next.status = "failed";
-        next.error = event.error;
-        break;
+        return {
+          ...base,
+          status: "failed",
+          error: event.error,
+        };
       }
 
-      // Agent events don't change snapshot state directly
-      // They are tracked via context:set for TrackerContext
+      // Events that don't change snapshot state beyond timestamps.
       case "agent:spawn":
       case "agent:progress":
       case "agent:complete":
       case "agent:stuck":
       case "agent:escalated":
-      case "agent:retry": {
-        // No snapshot state change
-        break;
-      }
-
-      // Review events
+      case "agent:retry":
       case "review:check":
       case "review:fix-start":
-      case "review:fix-complete": {
-        // No snapshot state change (tracked via context)
-        break;
-      }
-
-      // Learning events
-      case "learn:insight": {
-        // No snapshot state change
-        break;
-      }
-
-      // Wave events
-      case "wave:aborted": {
-        // No snapshot state change (tracked via context)
-        break;
-      }
-
-      // Context cache events
-      case "context:cache-hit": {
-        // No snapshot state change
-        break;
-      }
-
-      // Progress events
+      case "review:fix-complete":
+      case "learn:insight":
+      case "wave:aborted":
+      case "context:cache-hit":
       case "stage:progress": {
-        // No snapshot state change
-        break;
+        return base;
+      }
+
+      default: {
+        return base;
       }
     }
-
-    return next;
   }
 
   /**

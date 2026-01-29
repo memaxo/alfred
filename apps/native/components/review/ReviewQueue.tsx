@@ -1,10 +1,10 @@
-import { useCallback, useState } from "react";
+import { FlashList } from "@shopify/flash-list";
+import { memo, useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -70,14 +70,13 @@ export function ReviewQueue({
     ({ key, label, icon }: (typeof FILTER_OPTIONS)[number]) => {
       const isActive = filter === key;
       return (
-        <TouchableOpacity
+        <Pressable
           key={key}
           onPress={() => setFilter(key)}
-          style={[
+          style={({ pressed }) => [
             styles.filterPill,
-            isActive && {
-              backgroundColor: theme.colors.glass.active,
-            },
+            isActive && { backgroundColor: theme.colors.glass.active },
+            pressed && { opacity: 0.7 },
           ]}
         >
           <BiolumText
@@ -87,7 +86,7 @@ export function ReviewQueue({
           >
             {icon} {label}
           </BiolumText>
-        </TouchableOpacity>
+        </Pressable>
       );
     },
     [filter, theme]
@@ -95,68 +94,7 @@ export function ReviewQueue({
 
   const renderReviewItem = useCallback(
     ({ item }: { item: Review }) => (
-      <TouchableOpacity activeOpacity={0.7} onPress={() => onReviewPress(item)}>
-        <HUDSurface elevation={2} style={styles.reviewItem}>
-          <View style={styles.reviewItemHeader}>
-            <BiolumText color="bright" size="large" variant="body">
-              {REVIEW_TYPE_ICONS[item.reviewType]} {getReviewTitle(item)}
-            </BiolumText>
-            {(item.priority === "critical" || item.priority === "high") && (
-              <View
-                style={[
-                  styles.priorityBadge,
-                  {
-                    backgroundColor:
-                      item.priority === "critical"
-                        ? `${theme.colors.semantic.error}40`
-                        : `${theme.colors.semantic.warning}40`,
-                  },
-                ]}
-              >
-                <BiolumText color="bright" size="small" variant="caption">
-                  {item.priority.toUpperCase()}
-                </BiolumText>
-              </View>
-            )}
-          </View>
-
-          <BiolumText
-            color="dim"
-            numberOfLines={2}
-            size="medium"
-            style={styles.reviewItemSummary}
-            variant="caption"
-          >
-            {getReviewSummary(item)}
-          </BiolumText>
-
-          <View style={styles.reviewItemFooter}>
-            <BiolumText color="faint" size="small" variant="caption">
-              {formatRelativeTime(item.createdAt)}
-            </BiolumText>
-            {item.confidence !== undefined && (
-              <BiolumText color="faint" size="small" variant="caption">
-                Confidence: {Math.round(item.confidence * 100)}%
-              </BiolumText>
-            )}
-          </View>
-
-          {item.reviewType === "code" &&
-            item.subjectData.bugCount !== undefined && (
-              <View style={styles.bugIndicator}>
-                <BiolumText
-                  color={item.subjectData.bugCount > 0 ? "full" : "dim"}
-                  size="small"
-                  variant="caption"
-                >
-                  {item.subjectData.bugCount > 0
-                    ? `🔴 ${item.subjectData.bugCount} bugs`
-                    : "✓ No bugs"}
-                </BiolumText>
-              </View>
-            )}
-        </HUDSurface>
-      </TouchableOpacity>
+      <MemoizedReviewItem item={item} onPress={onReviewPress} theme={theme} />
     ),
     [theme, onReviewPress]
   );
@@ -207,10 +145,12 @@ export function ReviewQueue({
 
       {/* Review List */}
       {filteredReviews.length > 0 ? (
-        <FlatList
+        <FlashList
           contentContainerStyle={styles.listContent}
           data={filteredReviews}
           keyExtractor={(item) => item.id}
+          // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+          estimatedItemSize={120}
           refreshControl={
             onRefresh ? (
               <RefreshControl
@@ -320,6 +260,88 @@ function formatRelativeTime(date: Date): string {
   }
   return `${days}d ago`;
 }
+
+interface ReviewItemProps {
+  item: Review;
+  onPress: (review: Review) => void;
+  theme: ReturnType<typeof useVoidTheme>;
+}
+
+function ReviewItem({ item, onPress, theme }: ReviewItemProps) {
+  const priorityBadgeStyle =
+    item.priority === "critical"
+      ? { backgroundColor: `${theme.colors.semantic.error}40` }
+      : (item.priority === "high"
+        ? { backgroundColor: `${theme.colors.semantic.warning}40` }
+        : undefined);
+
+  return (
+    <Pressable
+      onPress={() => onPress(item)}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+    >
+      <HUDSurface elevation={2} style={styles.reviewItem}>
+        <View style={styles.reviewItemHeader}>
+          <BiolumText color="bright" size="large" variant="body">
+            {REVIEW_TYPE_ICONS[item.reviewType]} {getReviewTitle(item)}
+          </BiolumText>
+          {(item.priority === "critical" || item.priority === "high") && (
+            <View style={[styles.priorityBadge, priorityBadgeStyle]}>
+              <BiolumText color="bright" size="small" variant="caption">
+                {item.priority.toUpperCase()}
+              </BiolumText>
+            </View>
+          )}
+        </View>
+
+        <BiolumText
+          color="dim"
+          numberOfLines={2}
+          size="medium"
+          style={styles.reviewItemSummary}
+          variant="caption"
+        >
+          {getReviewSummary(item)}
+        </BiolumText>
+
+        <View style={styles.reviewItemFooter}>
+          <BiolumText color="faint" size="small" variant="caption">
+            {formatRelativeTime(item.createdAt)}
+          </BiolumText>
+          {item.confidence !== undefined && (
+            <BiolumText color="faint" size="small" variant="caption">
+              Confidence: {Math.round(item.confidence * 100)}%
+            </BiolumText>
+          )}
+        </View>
+
+        {item.reviewType === "code" &&
+          item.subjectData.bugCount !== undefined && (
+            <View style={styles.bugIndicator}>
+              <BiolumText
+                color={item.subjectData.bugCount > 0 ? "full" : "dim"}
+                size="small"
+                variant="caption"
+              >
+                {item.subjectData.bugCount > 0
+                  ? `🔴 ${item.subjectData.bugCount} bugs`
+                  : "✓ No bugs"}
+              </BiolumText>
+            </View>
+          )}
+      </HUDSurface>
+    </Pressable>
+  );
+}
+
+const MemoizedReviewItem = memo(
+  ReviewItem,
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item === next.item &&
+    prev.onPress === next.onPress &&
+    prev.theme === next.theme
+);
 
 const styles = StyleSheet.create({
   container: {

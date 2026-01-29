@@ -1,5 +1,4 @@
 import tailwindcss from "@tailwindcss/vite";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import mdx from "fumadocs-mdx/vite";
 import { execSync } from "node:child_process";
@@ -8,12 +7,57 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { z } from "zod";
 
 import * as fumadocsConfig from "./fumadocs.config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isTestMode =
   process.env.VITE_TEST_MODE === "true" || process.env.MINDSCAPE_TEST === "1";
+
+// TanStack Start currently uses Zod v3-style ZodFunction APIs (`args`/`returns`).
+// Our workspace uses Zod v4, so add a small compat shim before importing TanStack.
+function installZodFunctionCompat(): void {
+  const g = globalThis as unknown as { __alfredZodFnCompat?: boolean };
+  if (g.__alfredZodFnCompat) {
+    return;
+  }
+  g.__alfredZodFnCompat = true;
+
+  const fn = z.function();
+  const proto = Object.getPrototypeOf(fn) as Record<string, unknown> | null;
+  if (!proto || typeof proto !== "object") {
+    return;
+  }
+
+  if (typeof proto.args !== "function") {
+    Object.defineProperty(proto, "args", {
+      value(this: { input?: (a: unknown) => unknown }, args: unknown) {
+        if (typeof this.input !== "function") {
+          throw new TypeError("zod_function_missing_input");
+        }
+        return this.input(args);
+      },
+      configurable: true,
+      enumerable: false,
+      writable: true,
+    });
+  }
+
+  if (typeof proto.returns !== "function") {
+    Object.defineProperty(proto, "returns", {
+      value(this: { output?: (a: unknown) => unknown }, out: unknown) {
+        if (typeof this.output !== "function") {
+          throw new TypeError("zod_function_missing_output");
+        }
+        return this.output(out);
+      },
+      configurable: true,
+      enumerable: false,
+      writable: true,
+    });
+  }
+}
 
 /**
  * Extract build-time constants for Vite define configuration
@@ -83,6 +127,7 @@ function getBuildConstants(): Record<string, string> {
 const serverOnlyRegex = [
   /^@alfred\/agent(?:\/.*)?$/,
   /^@alfred\/api(?:\/.*)?$/,
+  /^@alfred\/auth(?:\/.*)?$/,
   /^@alfred\/cognitive(?:\/.*)?$/,
   /^@alfred\/metrics(?:\/.*)?$/,
   /^@alfred\/policy(?:\/.*)?$/,
@@ -217,49 +262,82 @@ const useEffectEventShimPlugin = {
   },
 };
 
-export default defineConfig({
-  define: {
-    ...getBuildConstants(),
-  },
-  server: isTestMode
-    ? {
-        hmr: false,
-        watch: {
-          // Prevent external processes (formatters/agents) from triggering HMR during e2e.
-          ignored: ["**/*"],
+export default defineConfig(async () => {
+  installZodFunctionCompat();
+  const { tanstackStart } = await import("@tanstack/react-start/plugin/vite");
+
+  return {
+    define: {
+      ...getBuildConstants(),
+    },
+    server: isTestMode
+      ? {
+          hmr: false,
+          watch: {
+            // Prevent external processes (formatters/agents) from triggering HMR during e2e.
+            ignored: ["**/*"],
+          },
+        }
+      : undefined,
+    optimizeDeps: {
+      exclude: [
+        "@alfred/agent",
+        "@alfred/api",
+        "@alfred/agent/preference/prompt",
+        "@alfred/policy",
+        "@alfred/db",
+        "fumadocs-mdx:collections/browser",
+        "fumadocs-mdx:collections/server",
+        ...serverOnlyDeps,
+      ],
+    },
+    ssr: {
+      external: [
+        ...serverOnlyDeps,
+        ...serverOnlyPackages,
+        ...serverOnlyRegex,
+        // Browser-only packages (WebGPU) - externalize from SSR
+        ...browserOnlyPackages,
+        ...browserOnlyRegex,
+      ] as unknown as string[],
+      noExternal: [/^fumadocs-mdx:collections\/.*/, "fumadocs-mdx"],
+    },
+    build: {
+      // Enable tree shaking and minification
+      minify: "esbuild" as const,
+      target: "esnext",
+      rollupOptions: {
+        external: [...serverOnlyDeps, ...serverOnlyRegex],
+        onwarn: (warning: any, warn: any) => {
+          // Unused external imports are harmless but noisy in build logs.
+          if (warning.code === "UNUSED_EXTERNAL_IMPORT") {
+            return;
+          }
+          warn(warning);
         },
-      }
-    : undefined,
-  optimizeDeps: {
-    exclude: [
-      "@alfred/agent",
-      "@alfred/api",
-      "@alfred/agent/preference/prompt",
-      "@alfred/policy",
-      "@alfred/db",
-      "fumadocs-mdx:collections/browser",
-      "fumadocs-mdx:collections/server",
-      ...serverOnlyDeps,
-    ],
-  },
-  ssr: {
-    // @ts-expect-error - Vite SSR external accepts RegExp but types are strict
-    external: [
-      ...serverOnlyDeps,
-      ...serverOnlyPackages,
-      ...serverOnlyRegex,
-      // Browser-only packages (WebGPU) - externalize from SSR
-      ...browserOnlyPackages,
-      ...browserOnlyRegex,
-    ],
-    noExternal: [/^fumadocs-mdx:collections\/.*/, "fumadocs-mdx"],
+        output: {
+          // Enable tree shaking for better dead code elimination
+          // Conservative manualChunks to avoid circular dependencies that break CSS manifest plugin
+          manualChunks: (id: string) => {
+            // Only split truly independent, large libraries to avoid circular chunk dependencies
+            // Tree shaking still works via sideEffects configuration in package.json files
+            // Shiki (syntax highlighting) - largest bundle, completely independent
+            if (id.includes("node_modules") && id.includes("shiki")) {
+              return "shiki-vendor";
+            }
+            // All other vendors stay together to avoid circular deps
+            // Vite's default chunking will still optimize
+          },
+        },
+      },
+      // Optimize chunk size warnings
+      chunkSizeWarningLimit: 20_000,
+    },
     resolve: {
-      // @ts-expect-error - Vite resolve alias types
+      conditions: ["bun", "module", "import", "default"],
       alias: {
         ...(isTestMode
           ? {
-              // Ensure SSR keeps real Node builtins even in test mode.
-              "node:module": "node:module",
               "prom-client": resolve(__dirname, "./src/stubs/prom-client.ts"),
             }
           : {}),
@@ -288,91 +366,27 @@ export default defineConfig({
         "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
       },
     },
-  },
-  build: {
-    // Enable tree shaking and minification
-    minify: "esbuild",
-    target: "esnext",
-    rollupOptions: {
-      external: [...serverOnlyDeps, ...serverOnlyRegex],
-      onwarn: (warning, warn) => {
-        // Unused external imports are harmless but noisy in build logs.
-        if (warning.code === "UNUSED_EXTERNAL_IMPORT") {
-          return;
-        }
-        warn(warning);
-      },
-      output: {
-        // Enable tree shaking for better dead code elimination
-        // Conservative manualChunks to avoid circular dependencies that break CSS manifest plugin
-        manualChunks: (id) => {
-          // Only split truly independent, large libraries to avoid circular chunk dependencies
-          // Tree shaking still works via sideEffects configuration in package.json files
-          // Shiki (syntax highlighting) - largest bundle, completely independent
-          if (id.includes("node_modules") && id.includes("shiki")) {
-            return "shiki-vendor";
-          }
-          // All other vendors stay together to avoid circular deps
-          // Vite's default chunking will still optimize
+    plugins: [
+      fumadocsVirtualPlugin,
+      useEffectEventShimPlugin,
+      tsconfigPaths({
+        // `turbo -F web dev` runs with cwd at repo root. Without an explicit root,
+        // vite-tsconfig-paths may traverse unrelated tsconfig files in the monorepo
+        // (e.g. under `vendor/`), producing noisy tsconfck parse errors.
+        root: __dirname,
+        projects: [resolve(__dirname, "tsconfig.json")],
+        ignoreConfigErrors: true,
+      }),
+      tailwindcss(),
+      mdx(fumadocsConfig),
+      tanstackStart({
+        prerender: {
+          enabled: false,
+          autoStaticPathsDiscovery: true,
+          crawlLinks: true,
         },
-      },
-    },
-    // Optimize chunk size warnings
-    chunkSizeWarningLimit: 20_000,
-  },
-  resolve: {
-    conditions: ["bun", "module", "import", "default"],
-    alias: {
-      ...(isTestMode
-        ? {
-            "prom-client": resolve(__dirname, "./src/stubs/prom-client.ts"),
-          }
-        : {}),
-      "@alfred/db/repo": resolve(__dirname, "../../packages/db/src/repo"),
-      "@alfred/db/schema": resolve(__dirname, "../../packages/db/src/schema"),
-      "@alfred/db/metrics": resolve(
-        __dirname,
-        "../../packages/db/src/metrics.ts"
-      ),
-      "@alfred/db/client": resolve(
-        __dirname,
-        "../../packages/db/src/client.ts"
-      ),
-      "@alfred/db/testing": resolve(
-        __dirname,
-        "../../packages/db/src/testing.ts"
-      ),
-      "@alfred/rerank": resolve(
-        __dirname,
-        "../../packages/rerank/src/index.ts"
-      ),
-      "@alfred/rerank/cohere": resolve(
-        __dirname,
-        "../../packages/rerank/src/cohere.ts"
-      ),
-      "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
-    },
-  },
-  plugins: [
-    fumadocsVirtualPlugin,
-    useEffectEventShimPlugin,
-    tsconfigPaths({
-      // `turbo -F web dev` runs with cwd at repo root. Without an explicit root,
-      // vite-tsconfig-paths may traverse unrelated tsconfig files in the monorepo
-      // (e.g. under `vendor/`), producing noisy tsconfck parse errors.
-      root: __dirname,
-      projects: [resolve(__dirname, "tsconfig.json")],
-      ignoreConfigErrors: true,
-    }),
-    tailwindcss(),
-    mdx(fumadocsConfig),
-    tanstackStart({
-      prerender: {
-        enabled: false,
-        autoStaticPathsDiscovery: true,
-        crawlLinks: true,
-      },
-    }),
-    viteReact(),
-  ],
+      }),
+      viteReact(),
+    ],
+  };
 });

@@ -48,6 +48,7 @@ import { AdminAppWindow } from "@/components/apps/admin";
 import { AgentFSAppWindow } from "@/components/apps/agentfs";
 import { AgentsAppWindow } from "@/components/apps/agents";
 import { BookmarksAppWindow } from "@/components/apps/bookmarks";
+import { CapabilityAppWindow } from "@/components/apps/capability";
 import { ChatAppWindow } from "@/components/apps/chat";
 import { ComponentsAppWindow } from "@/components/apps/components";
 import { CortexAppWindow } from "@/components/apps/cortex";
@@ -273,6 +274,20 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
     metadata: {
       label: "Components",
       icon: LayoutGrid,
+      defaultSize: { width: 900, height: 650 },
+      minSize: { width: 500, height: 400 },
+      resizable: true,
+      singleton: true,
+      tier: "tertiary",
+    },
+    isLegacy: false,
+  },
+  capability: {
+    type: "capability",
+    component: CapabilityAppWindow,
+    metadata: {
+      label: "Capabilities",
+      icon: Layers,
       defaultSize: { width: 900, height: 650 },
       minSize: { width: 500, height: 400 },
       resizable: true,

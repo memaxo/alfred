@@ -5,8 +5,15 @@ import {
   AGENT_ESCALATION_REASONS,
   type AgentEscalationReason,
 } from "@alfred/agent/orchestrator/tool/shared/context";
+import { getClassificationModel } from "@alfred/agent/selector";
+import { judgeSignals } from "@alfred/agent/signals/judge";
 import { logger } from "@alfred/logger";
 import { RuntimeMcpServer } from "@alfred/mcp";
+import {
+  signalsDetectedTotal,
+  signalsInterventionsTotal,
+  signalsJudgeLatencySeconds,
+} from "@alfred/metrics";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -483,6 +490,7 @@ export class ExecuteStage implements PipelineStage<
           // Execute with retry logic
           let lastResult: Awaited<ReturnType<typeof runAgent>> | null = null;
           let lastError: Error | null = null;
+          const signalEvents: Record<string, unknown>[] = [];
 
           for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
@@ -491,6 +499,28 @@ export class ExecuteStage implements PipelineStage<
               const drainQueue = (async () => {
                 for await (const event of queue) {
                   const payload = event as unknown as Record<string, unknown>;
+                  // Record fact-only event traces for Signals judge.
+                  // Do NOT include raw text/code; keep structured keys only.
+                  const traceEntry: Record<string, unknown> = {
+                    type: payload.type,
+                  };
+                  if (typeof payload.toolName === "string") {
+                    traceEntry.toolName = payload.toolName;
+                  }
+                  if (typeof payload.tool === "string") {
+                    traceEntry.tool = payload.tool;
+                  }
+                  if (typeof payload.status === "string") {
+                    traceEntry.status = payload.status;
+                  }
+                  if (typeof payload.error === "string") {
+                    traceEntry.error = true;
+                  }
+                  signalEvents.push(traceEntry);
+                  if (signalEvents.length > 60) {
+                    signalEvents.shift();
+                  }
+
                   if (payload.type === "agent:escalate-request") {
                     ctx.emit(
                       createEvent("agent:escalate-request", {
@@ -630,6 +660,77 @@ export class ExecuteStage implements PipelineStage<
 
               lastResult = result;
               lastError = null;
+
+              // Emit LLM-judged signals for this agent attempt (abstract output).
+              if (process.env.ALFRED_SIGNALS === "1") {
+                try {
+                  const selection = await getClassificationModel({
+                    userId: ctx.userId,
+                    projectId: ctx.get<string>("projectId"),
+                  });
+                  const stopTimer = signalsJudgeLatencySeconds.startTimer({
+                    surface: "pipeline",
+                    model: selection.modelKey ?? "unknown",
+                  });
+                  const trace = {
+                    runId: ctx.runId,
+                    agentId: agentSpec.agentId,
+                    subTaskId: agentSpec.subTaskId,
+                    attempt,
+                    status: result.status,
+                    stuck: !!result.stuck,
+                    escalation: result.escalation ?? null,
+                    events: signalEvents,
+                  };
+                  const judged = await judgeSignals(
+                    { trace: trace as Record<string, unknown> },
+                    {
+                      model: selection.model,
+                      abortSignal: stageAbortController.signal,
+                    }
+                  );
+                  stopTimer();
+
+                  for (const s of judged.friction) {
+                    signalsDetectedTotal.inc({
+                      surface: "pipeline",
+                      kind: "friction",
+                      type: s.type,
+                      severity: s.severity,
+                      timing: s.timing,
+                    });
+                  }
+                  for (const s of judged.delight) {
+                    signalsDetectedTotal.inc({
+                      surface: "pipeline",
+                      kind: "delight",
+                      type: s.type,
+                      severity: "na",
+                      timing: "na",
+                    });
+                  }
+                  for (const i of judged.interventions) {
+                    signalsInterventionsTotal.inc({
+                      surface: "pipeline",
+                      action: i.action,
+                      timing: i.timing,
+                    });
+                  }
+                  ctx.emit(
+                    createEvent("agent:signal", {
+                      agentId: agentSpec.agentId,
+                      signals: judged,
+                    })
+                  );
+                } catch (error) {
+                  logger.warn("pipeline_signals_judge_failed", {
+                    agentId: agentSpec.agentId,
+                    runId: ctx.runId,
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  });
+                }
+              }
 
               // Check if we should retry
               const shouldRetry =

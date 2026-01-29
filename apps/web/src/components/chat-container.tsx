@@ -9,8 +9,9 @@
  * - Fast failure: clear error states
  */
 
-import type { AssistantUIMessage } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
+
+type AssistantUIMessage = UIMessage;
 
 import { Chat } from "@alfred/ui";
 import { useCallback, useMemo, useState } from "react";
@@ -322,7 +323,7 @@ export function ChatContainer({
           <div className="flex h-full flex-col lg:flex-row">
             <div className="flex-1 overflow-hidden">
               <Chat
-                disabled={currentAgent !== "assistant"}
+                disabled={status === "streaming"}
                 itemContent={renderMessage}
                 ListComponent={Virtuoso}
                 messages={messages}
@@ -334,7 +335,9 @@ export function ChatContainer({
                     ? (focused.label
                       ? `Ask about ${focused.label}...`
                       : "Ask Alfred how to help…")
-                    : "Switch to the assistant agent to chat."
+                    : (focused.label
+                      ? `Ask the orchestrator about ${focused.label}...`
+                      : "Ask the orchestrator to plan or coordinate…")
                 }
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}

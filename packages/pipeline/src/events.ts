@@ -1,4 +1,5 @@
 import type { AgentEscalationReason } from "@alfred/agent/orchestrator/tool/shared/context";
+import type { SignalsJudgeOutput } from "@alfred/type";
 
 import type { StageName } from "./pipeline";
 import type { SerializableValue } from "./snapshot";
@@ -97,6 +98,16 @@ export type PipelineEvent =
       agentId: string;
       attempt: number;
       maxAttempts: number;
+      timestamp: number;
+    }
+  | {
+      /**
+       * LLM-judged signals emitted from agent traces.
+       * Contains abstract citations only (no raw content/code/PII).
+       */
+      type: "agent:signal";
+      agentId: string;
+      signals: SignalsJudgeOutput;
       timestamp: number;
     }
   // Review events

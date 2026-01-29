@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 
 import {
   mockPolicyAudit,
+  policyEvaluateMock,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
@@ -14,7 +15,7 @@ let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
   caller = await createTestCaller({
-    scopes: ["home.read", "home.control"],
+    scopes: ["home.read", "home.control", "home.act"],
   });
 });
 
@@ -59,6 +60,25 @@ describe("home router", () => {
       });
       expect(typeof (result as { updatedAt?: unknown }).updatedAt).toBe(
         "number"
+      );
+    });
+
+    it("uses home.act for lock/unlock/delete services", async () => {
+      await caller.home.set({
+        entity: "lock.front_door",
+        state: { service: "unlock" },
+        authz: "token",
+      });
+
+      expect(policyEvaluateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "home.act",
+          resource: { kind: "home", id: "lock.front_door" },
+          context: expect.objectContaining({
+            entity: "lock",
+            service: "unlock",
+          }),
+        })
       );
     });
   });

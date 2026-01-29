@@ -139,9 +139,10 @@ describe("ReminderWindow", () => {
     ) as HTMLInputElement | null;
     expect(dueInput).toBeTruthy();
     fireEvent.change(dueInput as HTMLInputElement, {
-      target: { value: "2026-01-19T10:00:00.000Z" },
+      target: { value: "2026-01-19T10:00" },
     });
     await user.click(getByText("Save"));
+    await Promise.resolve();
 
     expect(insertReminderMock).toHaveBeenCalledTimes(1);
     const arg = insertReminderMock.mock.calls[0]?.[0] as {

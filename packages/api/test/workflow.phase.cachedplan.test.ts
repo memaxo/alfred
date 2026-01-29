@@ -20,6 +20,8 @@ describe("workflow.phase.cachedPlan", () => {
 
     mock.module("@alfred/pipeline/cache", () => ({
       computeFileTreeHash: async () => "treehash",
+      invalidatePlanCache: async () => {},
+      cachePlan: async () => {},
       getCachedPlan: async () => cached,
       getPlanCacheKey: () => "plan:cache:key",
     }));

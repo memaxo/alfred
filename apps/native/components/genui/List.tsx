@@ -1,12 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import {
-  StyleSheet,
-  View,
-  FlatList,
-  Pressable,
-  RefreshControl,
-} from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import React, { memo, useCallback } from "react";
+import { StyleSheet, View, Pressable, RefreshControl } from "react-native";
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -72,33 +67,38 @@ export function List({
     );
   }
 
-  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
-    const isLast = index === items.length - 1;
+  const renderItem = useCallback(
+    ({ item, index }: { item: ListItem; index: number }) => {
+      const isLast = index === items.length - 1;
 
-    return (
-      <Animated.View
-        entering={
-          animated && !reduceMotion ? FadeIn.delay(index * 50) : undefined
-        }
-        exiting={animated && !reduceMotion ? FadeOut : undefined}
-      >
-        <ListItemRow
-          item={item}
-          onPress={onItemPress ? () => onItemPress(item) : undefined}
-          theme={theme}
-        />
-        {showDividers && !isLast && (
-          <SignalDivider animate={false} color={theme.colors.glass.border} />
-        )}
-      </Animated.View>
-    );
-  };
+      return (
+        <Animated.View
+          entering={
+            animated && !reduceMotion ? FadeIn.delay(index * 50) : undefined
+          }
+          exiting={animated && !reduceMotion ? FadeOut : undefined}
+        >
+          <MemoizedListItemRow
+            item={item}
+            onPress={onItemPress ? () => onItemPress(item) : undefined}
+            theme={theme}
+          />
+          {showDividers && !isLast && (
+            <SignalDivider animate={false} color={theme.colors.glass.border} />
+          )}
+        </Animated.View>
+      );
+    },
+    [items.length, animated, reduceMotion, onItemPress, theme, showDividers]
+  );
 
   return (
-    <FlatList
+    <FlashList
       data={items}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+      estimatedItemSize={60}
       showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
@@ -119,81 +119,88 @@ interface ListItemRowProps {
   theme: ReturnType<typeof useVoidTheme>;
 }
 
-function ListItemRow({ item, onPress, theme }: ListItemRowProps) {
-  const reduceMotion = useReducedMotion();
-  const bgOpacity = useSharedValue(0);
+const MemoizedListItemRow = memo(
+  function ListItemRow({ item, onPress, theme }: ListItemRowProps) {
+    const reduceMotion = useReducedMotion();
+    const bgOpacity = useSharedValue(0);
 
-  const handlePressIn = () => {
-    if (!reduceMotion) {
-      bgOpacity.value = withTiming(1, { duration: 100 });
-    }
-  };
+    const handlePressIn = () => {
+      if (!reduceMotion) {
+        bgOpacity.value = withTiming(1, { duration: 100 });
+      }
+    };
 
-  const handlePressOut = () => {
-    bgOpacity.value = withTiming(0, { duration: 200 });
-  };
+    const handlePressOut = () => {
+      bgOpacity.value = withTiming(0, { duration: 200 });
+    };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(255, 255, 255, ${0.05 * bgOpacity.value})`,
-  }));
+    const animatedStyle = useAnimatedStyle(() => ({
+      backgroundColor: `rgba(255, 255, 255, ${0.05 * bgOpacity.value})`,
+    }));
 
-  const content = (
-    <Animated.View style={[styles.itemRow, animatedStyle]}>
-      {item.icon && (
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name={item.icon}
-            size={20}
-            color={theme.colors.biolum.dim}
-          />
+    const content = (
+      <Animated.View style={[styles.itemRow, animatedStyle]}>
+        {item.icon && (
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name={item.icon}
+              size={20}
+              color={theme.colors.biolum.dim}
+            />
+          </View>
+        )}
+        <View style={styles.textContainer}>
+          <BiolumText
+            variant="body"
+            size="medium"
+            color="standard"
+            numberOfLines={1}
+          >
+            {item.title}
+          </BiolumText>
+          {item.subtitle && (
+            <CaptionText size="medium" color="dim" numberOfLines={1}>
+              {item.subtitle}
+            </CaptionText>
+          )}
         </View>
-      )}
-      <View style={styles.textContainer}>
-        <BiolumText
-          variant="body"
-          size="medium"
-          color="standard"
-          numberOfLines={1}
-        >
-          {item.title}
-        </BiolumText>
-        {item.subtitle && (
-          <CaptionText size="medium" color="dim" numberOfLines={1}>
-            {item.subtitle}
-          </CaptionText>
-        )}
-      </View>
-      <View style={styles.rightContainer}>
-        {item.rightText && (
-          <CaptionText size="medium" color="faint">
-            {item.rightText}
-          </CaptionText>
-        )}
-        {item.rightIcon && (
-          <Ionicons
-            name={item.rightIcon}
-            size={16}
-            color={theme.colors.biolum.faint}
-          />
-        )}
-      </View>
-    </Animated.View>
-  );
-
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
-        {content}
-      </Pressable>
+        <View style={styles.rightContainer}>
+          {item.rightText && (
+            <CaptionText size="medium" color="faint">
+              {item.rightText}
+            </CaptionText>
+          )}
+          {item.rightIcon && (
+            <Ionicons
+              name={item.rightIcon}
+              size={16}
+              color={theme.colors.biolum.faint}
+            />
+          )}
+        </View>
+      </Animated.View>
     );
-  }
 
-  return content;
-}
+    if (onPress) {
+      return (
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
+          {content}
+        </Pressable>
+      );
+    }
+
+    return content;
+  },
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item === next.item &&
+    prev.onPress === next.onPress &&
+    prev.theme === next.theme
+);
 
 const styles = StyleSheet.create({
   emptyContainer: {

@@ -34,6 +34,8 @@
       "@alfred/history/*": ["./packages/history/src/*"],
       "@alfred/hooks": ["./packages/hooks/src/index.ts"],
       "@alfred/hooks/*": ["./packages/hooks/src/*"],
+      "@alfred/home": ["./packages/home/src/index.ts"],
+      "@alfred/home/*": ["./packages/home/src/*"],
       "@alfred/hookpipe": ["./packages/hookpipe/src/index.ts"],
       "@alfred/hookpipe/*": ["./packages/hookpipe/src/*"],
       "@alfred/knowledge": ["./packages/knowledge/src/index.ts"],

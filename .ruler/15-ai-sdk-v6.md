@@ -52,6 +52,14 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 
 12. **Runtime reliability.** Implement caching, rate limiting, back-pressure, abort handling, and error hooks with the prescribed middleware (`wrapLanguageModel`, `simulateReadableStream`, Upstash KV/Ratelimit patterns, `onAbort`, `onError`) before adding custom infra.
 
+13. **Transport parity.** When switching between assistant and orchestrator modes, the chat transport must swap to the matching HTTP endpoint (e.g., `/api/assistant` ↔ `/api/orchestrator`). Both endpoints must produce AI SDK v6-compatible UIMessage streams.
+
+14. **Endpoint validation.** Add tests verifying that both assistant and orchestrator endpoints:
+    - Accept the same UIMessage format
+    - Return `no-store` cache headers
+    - Produce compatible streaming responses
+    - Handle tool-call/tool-result parts identically
+
 ## ALFRED's Custom UIMessage Format
 
 ALFRED uses explicit `type: "tool-call"` and `type: "tool-result"` discriminants for persistence and validation benefits. These use `input`/`output` properties (matching v6 naming) but separate the call from the result.

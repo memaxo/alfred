@@ -1,4 +1,4 @@
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";

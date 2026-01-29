@@ -67,12 +67,12 @@ function WaveformBar({
   theme,
   reduceMotion,
 }: WaveformBarProps) {
-  const animatedHeight = useSharedValue(4);
   const baseHeight = 4;
+  const animatedScale = useSharedValue(1);
 
   useEffect(() => {
     if (!active || reduceMotion) {
-      animatedHeight.value = withTiming(baseHeight, { duration: 200 });
+      animatedScale.value = withTiming(1, { duration: 200 });
       return;
     }
 
@@ -82,12 +82,13 @@ function WaveformBar({
       baseHeight,
       maxHeight * audioLevel * variation
     );
+    const scaleY = targetHeight / baseHeight;
 
-    animatedHeight.value = withTiming(targetHeight, { duration: 100 });
+    animatedScale.value = withTiming(scaleY, { duration: 100 });
   }, [audioLevel, active, reduceMotion, index, maxHeight]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    height: animatedHeight.value,
+    transform: [{ scaleY: animatedScale.value }],
   }));
 
   return (
@@ -96,6 +97,7 @@ function WaveformBar({
         styles.bar,
         {
           backgroundColor: theme.colors.biolum.standard,
+          height: baseHeight,
         },
         animatedStyle,
       ]}

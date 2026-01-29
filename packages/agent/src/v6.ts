@@ -2,7 +2,7 @@ import type { ZodTypeAny, z } from "zod";
 
 import { createGatewayProvider } from "@ai-sdk/gateway";
 import { createOpenAI } from "@ai-sdk/openai";
-import { type Tool, tool } from "ai";
+import { type Tool, type ToolCallOptions, tool } from "ai";
 
 import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";
@@ -27,6 +27,7 @@ import { toolBrowser } from "./orchestrator/tool/browser";
 import { toolCodex } from "./orchestrator/tool/codex/index";
 import { toolCodexlog } from "./orchestrator/tool/codexlog";
 import { toolCognitiveState } from "./orchestrator/tool/cognitive";
+import { toolContext } from "./orchestrator/tool/context";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
 import { toolGit } from "./orchestrator/tool/git";
@@ -71,7 +72,7 @@ interface LegacyTool {
   inputSchema: ZodTypeAny;
   outputSchema?: ZodTypeAny;
   // oxlint-disable noExplicitAny: Legacy migration bridge - see type comment above
-  execute: (args: any) => any;
+  execute: (args: any, options?: ToolCallOptions) => any;
 }
 
 // Type for the wrapped tool - preserves schema information through the AI SDK tool() function
@@ -159,9 +160,12 @@ export function wrapLegacyToolToAISDK(legacy: LegacyTool): WrappedTool {
     description: legacy.description,
     inputSchema: legacy.inputSchema,
     ...(outputSchema ? { outputSchema } : {}),
-    async execute(input: z.infer<typeof legacy.inputSchema>) {
+    async execute(
+      input: z.infer<typeof legacy.inputSchema>,
+      options: ToolCallOptions
+    ) {
       const args = { input };
-      return await legacy.execute(args);
+      return await legacy.execute(args, options);
     },
   });
 
@@ -191,6 +195,7 @@ const assistantToolSources: LegacyTool[] = [
   toolWebAssistant,
   toolMindscapeRead,
   toolMindscapeConnect,
+  toolContext,
   ...memoryTools,
 ];
 
@@ -201,6 +206,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolBrowser,
   toolDocker,
   toolDroid,
+  toolContext,
   toolOpenCode,
   toolGit,
   toolKnowledgeQuery,

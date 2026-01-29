@@ -16,7 +16,8 @@
     "typecheck": "tsgo -b",
     "test": "bun test --preload ./test/preload.ts test/*.test.ts",
     "eval": "bun run scripts/eval.ts",
-    "profile": "bun run scripts/profile.ts"
+    "profile": "bun run scripts/profile.ts",
+    "ranker": "bun run scripts/ranker.ts"
   },
   "dependencies": {
     "@alfred/logger": "workspace:*",

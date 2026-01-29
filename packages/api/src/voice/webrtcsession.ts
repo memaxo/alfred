@@ -539,7 +539,7 @@ async function handleInboundRtp(sess: WebrtcSession, packet: unknown) {
       return;
     }
     sess.ttsAbort = true;
-    const {hooks} = sess;
+    const { hooks } = sess;
     if (hooks) {
       void hooks.registry
         .emit(
@@ -652,7 +652,7 @@ async function flushQueuedAudio(sess: WebrtcSession) {
         endOfUtterance: result.endOfUtterance ?? null,
       });
       if (sess.autoStop && result.endOfUtterance) {
-        const {hooks} = sess;
+        const { hooks } = sess;
         if (hooks) {
           const now = Date.now();
           const last = sess.lastSpeechAt;
@@ -786,7 +786,7 @@ async function streamTtsAsOpus(sess: WebrtcSession, text: string) {
     }
     const { ttsPool } = pools;
 
-    const {hooks} = sess;
+    const { hooks } = sess;
     let finalText = text;
     if (hooks) {
       try {

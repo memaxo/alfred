@@ -13,6 +13,11 @@ import type {
 } from "./types";
 
 import { BUDGET_RATIOS } from "./calculator";
+import {
+  historyContextSelectionDurationSeconds,
+  historyContextTierDropsTotal,
+  historyContextTokensTotal,
+} from "./metrics";
 import { getModelContextInfo } from "./model";
 
 /**
@@ -77,6 +82,7 @@ export async function buildHistoryContext(
 ): Promise<BuildHistoryContextResult> {
   const sourceLabel = options.source ?? "history";
   return withBudget(`build_history_context_${sourceLabel}`, 10, async () => {
+    const start = performance.now();
     await Promise.resolve();
     const messages = (
       Array.isArray(options.messages) ? options.messages : []
@@ -296,7 +302,7 @@ export async function buildHistoryContext(
             messages: modelMessagesRaw,
           });
 
-    return {
+    const result = {
       droppedMessages: droppedMessages.length,
       droppedTokens,
       keptTokens,
@@ -304,6 +310,25 @@ export async function buildHistoryContext(
       selection,
       uiMessages,
     } satisfies BuildHistoryContextResult;
+
+    historyContextSelectionDurationSeconds.observe(
+      { source: sourceLabel },
+      (performance.now() - start) / 1000
+    );
+
+    historyContextTokensTotal.inc(
+      { action: "selection", model: options.modelId, source: sourceLabel },
+      keptTokens
+    );
+
+    if (droppedMessages.length > 0) {
+      historyContextTierDropsTotal.inc(
+        { source: sourceLabel, tier: "unknown" },
+        droppedMessages.length
+      );
+    }
+
+    return result;
   });
 }
 

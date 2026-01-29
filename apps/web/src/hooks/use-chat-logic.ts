@@ -1,4 +1,6 @@
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
+
+type AssistantUIMessage = UIMessage;
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -25,9 +27,77 @@ export function useChatLogic({
     "assistant" | "orchestrator"
   >(initialAgent);
   const contextsRef = useRef<Map<string, AssistantUIMessage[]>>(new Map());
+  const conversationIdsRef = useRef(
+    new Map<"assistant" | "orchestrator", string | null>([
+      [initialAgent, initialConversationId ?? null],
+    ])
+  );
+  const [seedConversationId, setSeedConversationId] = useState<string | null>(
+    initialConversationId ?? null
+  );
   const pendingReloadRef = useRef(false);
   const apiBase =
     currentAgent === "assistant" ? "/api/assistant" : "/api/orchestrator";
+
+  const handleResponse = useCallback((response: Response) => {
+    const header = response.headers.get("x-mindscape-activation");
+    if (header) {
+      try {
+        const data = JSON.parse(header);
+        if (data && Array.isArray(data.paths)) {
+          const paths = data.paths as string[][];
+          const state = useDesktopStore.getState();
+
+          const resolveId = (dbId: string) => {
+            const window = state.windows.find(
+              (w) => w.data?.resourceRef?.id === dbId || w.id === dbId
+            );
+            return window?.id;
+          };
+
+          paths.forEach((path, pathIndex) => {
+            const pathDelay = pathIndex * 200;
+
+            path.forEach((nodeId, i) => {
+              const uiId = resolveId(nodeId);
+              if (!uiId) {
+                return;
+              }
+
+              setTimeout(
+                () => {
+                  dispatchDesktopEvent({
+                    type: "context-cache",
+                    sourceId: uiId,
+                  });
+                },
+                pathDelay + i * 150
+              );
+
+              if (i < path.length - 1) {
+                const nextNodeId = path[i + 1];
+                const nextUiId = nextNodeId ? resolveId(nextNodeId) : undefined;
+                if (nextUiId) {
+                  setTimeout(
+                    () => {
+                      dispatchDesktopEvent({
+                        type: "rag-retrieval",
+                        sourceId: uiId,
+                        targetId: nextUiId,
+                      });
+                    },
+                    pathDelay + i * 150
+                  );
+                }
+              }
+            });
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   const {
     messages,
@@ -47,75 +117,14 @@ export function useChatLogic({
       // Error is already displayed in the error state
       // Additional logging handled by error boundaries
     },
-    onResponse: (response) => {
-      const header = response.headers.get("x-mindscape-activation");
-      if (header) {
-        try {
-          const data = JSON.parse(header);
-          if (data && Array.isArray(data.paths)) {
-            const paths = data.paths as string[][];
-            const state = useDesktopStore.getState();
-
-            // Helper to resolve DB ID to UI Window ID
-            const resolveId = (dbId: string) => {
-              const window = state.windows.find(
-                (w) => w.data?.resourceRef?.id === dbId || w.id === dbId
-              );
-              return window?.id;
-            };
-
-            // Visualize each path sequentially
-            paths.forEach((path, pathIndex) => {
-              // Stagger paths slightly if multiple
-              const pathDelay = pathIndex * 200;
-
-              path.forEach((nodeId, i) => {
-                const uiId = resolveId(nodeId);
-                if (!uiId) {
-                  return;
-                }
-
-                // Pulse the window's connected edges
-                setTimeout(
-                  () => {
-                    dispatchDesktopEvent({
-                      type: "context-cache",
-                      sourceId: uiId,
-                    });
-                  },
-                  pathDelay + i * 150
-                );
-
-                // If there is a next node, pulse the edge between them
-                if (i < path.length - 1) {
-                  const nextNodeId = path[i + 1];
-                  const nextUiId = nextNodeId
-                    ? resolveId(nextNodeId)
-                    : undefined;
-                  if (nextUiId) {
-                    setTimeout(
-                      () => {
-                        dispatchDesktopEvent({
-                          type: "rag-retrieval",
-                          sourceId: uiId,
-                          targetId: nextUiId,
-                        });
-                      },
-                      pathDelay + i * 150
-                    );
-                  }
-                }
-              });
-            });
-          }
-        } catch {
-          // ignore
-        }
-      }
-    },
+    onResponse: handleResponse,
     initialMessages,
-    initialConversationId,
+    initialConversationId: seedConversationId,
   });
+
+  useEffect(() => {
+    conversationIdsRef.current.set(currentAgent, conversationId);
+  }, [conversationId, currentAgent]);
 
   // Handle pending reload after message edit
   useEffect(() => {
@@ -151,10 +160,6 @@ export function useChatLogic({
 
   const handleSend = useCallback(
     (input: string) => {
-      if (currentAgent !== "assistant") {
-        return;
-      }
-
       // Inject context if available
       if (focused.content) {
         const contextBlock = `\n\n[System: User is focusing on ${focused.nodeType} "${focused.label}"]\nContext:\n${focused.content}`;
@@ -170,7 +175,7 @@ export function useChatLogic({
         send(input);
       }
     },
-    [currentAgent, send, focused]
+    [send, focused]
   );
 
   const handleAgentChange = useCallback(
@@ -178,15 +183,17 @@ export function useChatLogic({
       if (nextAgent === currentAgent) {
         return;
       }
+      conversationIdsRef.current.set(currentAgent, conversationId);
       contextsRef.current.set(currentAgent, messages);
       clear();
       setCurrentAgent(nextAgent);
+      setSeedConversationId(conversationIdsRef.current.get(nextAgent) ?? null);
       const snapshot = contextsRef.current.get(nextAgent);
       if (snapshot) {
         hydrate(snapshot);
       }
     },
-    [clear, currentAgent, hydrate, messages]
+    [clear, conversationId, currentAgent, hydrate, messages]
   );
 
   const toggleVoice = useCallback(() => {
@@ -198,18 +205,11 @@ export function useChatLogic({
   }, [isRecording, startRecording, stopRecording]);
 
   const handleRegenerate = useCallback(() => {
-    if (currentAgent !== "assistant") {
-      return;
-    }
     reload();
-  }, [currentAgent, reload]);
+  }, [reload]);
 
   const handleEdit = useCallback(
     (messageId: string, newText: string) => {
-      if (currentAgent !== "assistant") {
-        return;
-      }
-
       const index = messages.findIndex((m) => m.id === messageId);
       if (index === -1) {
         return;
@@ -235,7 +235,7 @@ export function useChatLogic({
       // Trigger regeneration in useEffect after state sync
       pendingReloadRef.current = true;
     },
-    [currentAgent, messages, setMessages]
+    [messages, setMessages]
   );
 
   return {

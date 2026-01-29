@@ -27,6 +27,8 @@
       "@alfred/hooks/*": ["../hooks/src/*"],
       "@alfred/hookpipe": ["../hookpipe/src/index.ts"],
       "@alfred/hookpipe/*": ["../hookpipe/src/*"],
+      "@alfred/home": ["../home/src/index.ts"],
+      "@alfred/home/*": ["../home/src/*"],
       "@alfred/pacer": ["../pacer/src/index.ts"],
       "@alfred/pacer/react": ["../pacer/src/react.ts"],
       "@alfred/pacer/*": ["../pacer/src/*"],

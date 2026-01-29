@@ -5,10 +5,11 @@
  * Follows AI SDK v6 patterns: data parts, tool-result extraction, part rendering.
  */
 
-import type { AssistantUIMessage } from "@alfred/agent";
 import type { UIComponent } from "@alfred/type/genui";
 import type { UIMessage } from "@alfred/type/stream";
 import type { ReactNode } from "react";
+
+type AssistantUIMessage = UIMessage;
 
 import {
   extractStructuredData,

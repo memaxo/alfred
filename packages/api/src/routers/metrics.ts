@@ -4,7 +4,6 @@ import { parseModelKey } from "@alfred/type/model";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { getMetricsJSON } from "../metrics";
 import { protectedProcedure, router } from "../trpc";
 
 export const metricsRouter = router({
@@ -102,5 +101,8 @@ export const metricsRouter = router({
       return tracker?.getBudgetStatus() ?? null;
     }),
 
-  getSnapshot: protectedProcedure.query(async () => await getMetricsJSON()),
+  getSnapshot: protectedProcedure.query(async () => {
+    const { getMetricsJSON } = await import("../metrics");
+    return await getMetricsJSON();
+  }),
 });

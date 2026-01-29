@@ -40,7 +40,7 @@ describe("dev-noise", () => {
       };
 
       const proc = Bun.spawn(
-        ["bunx", "--bun", "vite", "dev", "--port", String(preferredPort)],
+        ["bunx", "vite", "dev", "--port", String(preferredPort)],
         {
           cwd: webDir,
           stdin: "ignore",

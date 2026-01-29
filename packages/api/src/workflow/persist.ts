@@ -67,6 +67,16 @@ export function mapPipelineEventToWorkflowEvent(
         },
       };
     }
+    case "agent:signal": {
+      return {
+        eventType: "report",
+        data: {
+          kind: "agent_signal",
+          agentId: event.agentId,
+          signals: event.signals,
+        },
+      };
+    }
     case "agent:escalate-request": {
       return {
         eventType: "notice",

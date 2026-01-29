@@ -20,6 +20,9 @@ describe("agentfs cas", () => {
     const runDirAbs = path.resolve(process.cwd(), runDirRel);
     await mkdir(runDirAbs, { recursive: true });
     await writeFile(path.join(runDirAbs, "agentfs.db"), "db", "utf8");
+    await writeFile(path.join(runDirAbs, "a.txt"), "a", "utf8");
+    await mkdir(path.join(runDirAbs, "sub"), { recursive: true });
+    await writeFile(path.join(runDirAbs, "sub", "b.txt"), "b", "utf8");
 
     const a = await exportAgentfsRunToCas({
       relDir: runDirRel,

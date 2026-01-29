@@ -6,6 +6,8 @@
  */
 
 import type { NodeRow } from "@alfred/db/repo/graph/types";
+import type { MemoryTraverseEvent } from "@alfred/type";
+import type { ToolCallOptions } from "ai";
 
 import { type DsaBfsOptions, dsaBfs } from "@alfred/db/repo/graph/dsa-bfs";
 import {
@@ -21,6 +23,7 @@ import {
   recordMemoryTraverseDepth,
 } from "../../../../src/metrics";
 import { embedQuery } from "./embed";
+import { getHooksRuntime } from "./hook";
 
 const traverseInputSchema = z.object({
   startId: z.string().uuid().describe("Starting node ID for traversal"),
@@ -87,15 +90,48 @@ export const toolMemoryTraverse = {
     count: z.number(),
     message: z.string(),
   }),
-  execute: async ({ input }: { input: TraverseInput }) => {
+  execute: async (
+    { input }: { input: TraverseInput },
+    options?: ToolCallOptions
+  ) => {
     recordAssistantToolCall("memory_traverse");
 
-    const maxDepth = input.maxDepth ?? 3;
-    const direction = input.direction ?? "both";
-    const limit = input.limit ?? 20;
+    const hooks = getHooksRuntime(options);
+
+    let { startId } = input;
+    let { query } = input;
+    let maxDepth = input.maxDepth ?? 3;
+    let direction = input.direction ?? "both";
+    let { kind } = input;
+    let limit = input.limit ?? 20;
+
+    if (hooks) {
+      const hookEvent: MemoryTraverseEvent = {
+        type: "memory:traverse",
+        startNodeId: startId,
+        traversalType: query ? "semantic" : "bfs",
+        maxDepth,
+        query,
+        direction,
+        kind,
+        limit,
+      };
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ?? hookEvent) as MemoryTraverseEvent;
+      startId = next.startNodeId;
+      ({ maxDepth } = next);
+      ({ query } = next);
+      direction = next.direction ?? direction;
+      kind = next.kind ?? kind;
+      limit = next.limit ?? limit;
+    }
 
     // Get start node
-    const startNode = await getNode(input.startId);
+    const startNode = await getNode(startId);
     if (!startNode) {
       return {
         success: false,
@@ -108,15 +144,15 @@ export const toolMemoryTraverse = {
 
     const traversedNodes: TraversedNode[] = [];
 
-    if (input.query) {
+    if (query) {
       // Semantic traversal using DSA-BFS
-      const queryEmbedding = await embedQuery(input.query);
+      const queryEmbedding = await embedQuery(query);
 
       // Build neighbor fetcher
       const getNeighborNodes = async (nodeId: string) => {
         const neighbors = await getNeighbors(nodeId, {
           direction,
-          kind: input.kind,
+          kind,
           limit: 50,
         });
 
@@ -171,9 +207,9 @@ export const toolMemoryTraverse = {
       }
     } else {
       // Simple BFS traversal
-      const visited = new Set<string>([input.startId]);
+      const visited = new Set<string>([startId]);
       const queue: { nodeId: string; depth: number; path: string[] }[] = [
-        { nodeId: input.startId, depth: 0, path: [input.startId] },
+        { nodeId: startId, depth: 0, path: [startId] },
       ];
 
       while (queue.length > 0 && traversedNodes.length < limit) {
@@ -200,7 +236,7 @@ export const toolMemoryTraverse = {
         if (current.depth < maxDepth) {
           const neighbors = await getNeighbors(current.nodeId, {
             direction,
-            kind: input.kind,
+            kind,
             limit: 20,
           });
 

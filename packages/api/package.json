@@ -32,6 +32,7 @@
     "@alfred/auth": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/embed": "workspace:*",
+    "@alfred/home": "workspace:*",
     "@alfred/hookpipe": "workspace:*",
     "@alfred/hooks": "workspace:*",
     "@alfred/logger": "workspace:*",

@@ -38,3 +38,4 @@ Heuristic lists are a maintenance trap for complex decision logic. When agents f
 - **Intent classification:** `packages/plan/src/intent/classify.ts` — Uses `classify()` with schema and heuristic fallback
 - **Phase grouping:** `packages/plan/src/generate/group.ts` — Uses `classifyBatch()` for batch assignment
 - **Path classification:** `packages/plan/src/classify/path.ts` — Canonical path bucketing with batch LLM support
+- **Tool routing:** `packages/agent/src/routing/intent.ts` — Intent-based tool catalog selection

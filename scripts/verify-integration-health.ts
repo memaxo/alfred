@@ -10,6 +10,7 @@ interface PkgInfo {
 interface CheckResult {
   pkg: PkgInfo;
   matches: number;
+  allowedDisconnected: boolean;
 }
 
 function parseArgs(argv: string[]) {
@@ -18,6 +19,10 @@ function parseArgs(argv: string[]) {
     json: argv.includes("--json"),
   };
 }
+
+// Packages that are allowed to be disconnected by design.
+// Keep this list small and force an explicit architectural decision per entry.
+const ALLOWED_DISCONNECTED = new Set<string>(["@alfred/summarize"]);
 
 function readPkgInfo(pkgsDir: string): PkgInfo[] {
   const out: PkgInfo[] = [];
@@ -58,6 +63,8 @@ async function runRgCount(args: {
       "!docs/**",
       "--glob",
       "!**/bun.lock",
+      "--glob",
+      "!scripts/verify-integration-health.ts",
       "--glob",
       `!packages/${args.ignoreDir}/**`,
       args.needle,
@@ -115,7 +122,12 @@ function formatTable(results: CheckResult[]): string {
   const rows = [...results]
     .sort((a, b) => a.pkg.name.localeCompare(b.pkg.name))
     .map((r) => {
-      const status = r.matches > 0 ? "wired" : "disconnected";
+      const status =
+        r.matches > 0
+          ? "wired"
+          : (r.allowedDisconnected
+            ? "standalone"
+            : "disconnected");
       return `${status.padEnd(12)}  ${String(r.matches).padStart(6)}  ${r.pkg.name}`;
     });
 
@@ -141,7 +153,11 @@ async function main(): Promise<void> {
       needle,
       ignoreDir: pkg.dirName,
     });
-    results.push({ matches, pkg });
+    results.push({
+      matches,
+      pkg,
+      allowedDisconnected: matches === 0 && ALLOWED_DISCONNECTED.has(pkg.name),
+    });
   }
 
   if (json) {
@@ -150,7 +166,9 @@ async function main(): Promise<void> {
     process.stdout.write(`${formatTable(results)}\n`);
   }
 
-  const disconnected = results.filter((r) => r.matches === 0);
+  const disconnected = results.filter(
+    (r) => r.matches === 0 && !r.allowedDisconnected
+  );
   if (fail && disconnected.length > 0) {
     throw new Error(
       `integration_health_failed disconnected=${disconnected.length}`

@@ -31,6 +31,10 @@ import {
   startReminderScheduler,
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
+import {
+  startReviewSlaScheduler,
+  stopReviewSlaScheduler,
+} from "@alfred/api/scheduler/review-sla";
 import { initEmbedding, shutdownEmbedding } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 
@@ -45,6 +49,7 @@ import {
   getSchedProjectLifecycle,
   getSchedReembed,
   getSchedRemind,
+  getSchedReviewSla,
 } from "@/lib/env/server-only";
 
 let initialized = false;
@@ -223,6 +228,24 @@ export function initServer() {
     });
   }
 
+  // Initialize review SLA scheduler (if enabled)
+  try {
+    if (getSchedReviewSla() === "1") {
+      startReviewSlaScheduler({ logger });
+      logger.info("review_sla_scheduler_init", {
+        message: "Review SLA scheduler started (SCHED_REVIEW_SLA=1)",
+      });
+    } else {
+      logger.info("review_sla_scheduler_disabled", {
+        message: "Set SCHED_REVIEW_SLA=1 to enable review SLA monitoring",
+      });
+    }
+  } catch (error) {
+    logger.error("review_sla_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   // Initialize API services (compression worker, voice pools)
   initApiServices();
 
@@ -243,6 +266,7 @@ export function initServer() {
         stopProjectLifecycleScheduler();
         stopPatternLifecycleScheduler();
         stopReembedScheduler();
+        stopReviewSlaScheduler();
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "before_reload",
@@ -262,6 +286,7 @@ export function initServer() {
         stopProjectLifecycleScheduler();
         stopPatternLifecycleScheduler();
         stopReembedScheduler();
+        stopReviewSlaScheduler();
         void shutdownEmbedding(logger);
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
@@ -355,6 +380,16 @@ export async function shutdown() {
     logger.info("reembed_scheduler_stopped");
   } catch (error) {
     logger.error("reembed_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Stop review SLA scheduler
+  try {
+    stopReviewSlaScheduler();
+    logger.info("review_sla_scheduler_stopped");
+  } catch (error) {
+    logger.error("review_sla_scheduler_stop_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

@@ -108,12 +108,14 @@ function normalizeRow(
 ): void {
   let sum = 0;
   for (let i = 0; i < length; i++) {
-    sum += basis[start + i] * basis[start + i];
+    const v = basis[start + i] ?? 0;
+    sum += v * v;
   }
   const norm = Math.sqrt(sum);
   if (norm > 0) {
     for (let i = 0; i < length; i++) {
-      basis[start + i] /= norm;
+      const idx = start + i;
+      basis[idx] = (basis[idx] ?? 0) / norm;
     }
   }
 }
@@ -125,12 +127,13 @@ function orthogonalize(basis: Float32Array, dimensions: number): void {
   // Compute dot product of row 0 and row 1
   let dot = 0;
   for (let i = 0; i < dimensions; i++) {
-    dot += basis[i] * basis[dimensions + i];
+    dot += (basis[i] ?? 0) * (basis[dimensions + i] ?? 0);
   }
 
   // Subtract projection of row 1 onto row 0 from row 1
   for (let i = 0; i < dimensions; i++) {
-    basis[dimensions + i] -= dot * basis[i];
+    const idx = dimensions + i;
+    basis[idx] = (basis[idx] ?? 0) - dot * (basis[i] ?? 0);
   }
 
   // Renormalize row 1
@@ -155,8 +158,9 @@ export function projectEmbedding(
   let y = 0;
 
   for (let i = 0; i < n; i++) {
-    x += embedding[i] * basis[i];
-    y += embedding[i] * basis[config.dimensions + i];
+    const e = embedding[i] ?? 0;
+    x += e * (basis[i] ?? 0);
+    y += e * (basis[config.dimensions + i] ?? 0);
   }
 
   return {
@@ -246,18 +250,21 @@ export function computeCentroid(embeddings: number[][]): number[] {
     return [];
   }
 
-  const dims = embeddings[0].length;
+  const dims = embeddings[0]?.length ?? 0;
+  if (dims === 0) {
+    return [];
+  }
   const centroid = new Array(dims).fill(0);
 
   for (const embedding of embeddings) {
     for (let i = 0; i < dims; i++) {
-      centroid[i] += embedding[i];
+      centroid[i] = (centroid[i] ?? 0) + (embedding[i] ?? 0);
     }
   }
 
   const n = embeddings.length;
   for (let i = 0; i < dims; i++) {
-    centroid[i] /= n;
+    centroid[i] = (centroid[i] ?? 0) / n;
   }
 
   return centroid;

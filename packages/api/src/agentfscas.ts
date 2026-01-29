@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 export interface AgentfsCasMeta {
@@ -9,6 +17,7 @@ export interface AgentfsCasMeta {
   projectId: string | null;
   createdAt: string;
   sizeBytes: number;
+  lastAccessedAt?: string;
 }
 
 async function sha256File(absPath: string): Promise<string> {
@@ -31,6 +40,34 @@ async function sha256File(absPath: string): Promise<string> {
   return hash.digest("hex");
 }
 
+async function listTarInputs(relDir: string): Promise<string[]> {
+  const rootRelPosix = relDir.replaceAll("\\", "/");
+  const rootAbs = path.resolve(process.cwd(), relDir);
+  const out: string[] = [];
+
+  const walk = async (absDir: string, relDirPosix: string): Promise<void> => {
+    const ents = await readdir(absDir, { withFileTypes: true });
+    ents.sort((a, b) => (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
+
+    for (const ent of ents) {
+      const childRel = path.posix.join(relDirPosix, ent.name);
+      const childAbs = path.join(absDir, ent.name);
+
+      if (ent.isDirectory()) {
+        await walk(childAbs, childRel);
+        continue;
+      }
+
+      // We intentionally omit explicit directory entries (including empty dirs)
+      // to avoid tar's recursive directory traversal ordering differences.
+      out.push(childRel);
+    }
+  };
+
+  await walk(rootAbs, rootRelPosix);
+  return out;
+}
+
 export async function exportAgentfsRunToCas(args: {
   runId: string;
   relDir: string;
@@ -48,26 +85,72 @@ export async function exportAgentfsRunToCas(args: {
   );
   const tmpTarAbs = `${tmpBase}.tar`;
   const tmpAbs = `${tmpBase}.tar.gz`;
+  const tmpListAbs = `${tmpBase}.list`;
 
   try {
-    const tar = Bun.spawn({
-      cmd: ["tar", "-cf", tmpTarAbs, args.relDir],
-      cwd: process.cwd(),
-      stderr: "pipe",
-      stdin: "ignore",
-      stdout: "ignore",
-    });
+    let tarCmd: string[] = ["tar", "-cf", tmpTarAbs, args.relDir];
+    let tarCmdFallback: string[] | null = null;
+    try {
+      const inputs = await listTarInputs(args.relDir);
+      if (inputs.length > 0) {
+        await writeFile(tmpListAbs, `${inputs.join("\n")}\n`, "utf8");
+        const common = [
+          "--no-acls",
+          "--no-xattrs",
+          "--numeric-owner",
+          "--owner=0",
+          "--group=0",
+          "-cf",
+          tmpTarAbs,
+          "-T",
+          tmpListAbs,
+        ];
 
-    const [tarStderr, tarExit] = await Promise.all([
-      new Response(tar.stderr).text().catch(() => ""),
-      tar.exited,
-    ]);
-
-    if (tarExit !== 0) {
-      throw new Error(
-        `tar_failed exit=${tarExit} relDir=${args.relDir} stderr=${tarStderr.slice(0, 200)}`
-      );
+        // Prefer ustar to avoid pax headers that can capture unstable metadata.
+        tarCmd = ["tar", "--format", "ustar", ...common];
+        tarCmdFallback = ["tar", "--format", "pax", ...common];
+      }
+    } catch {
+      // Best-effort: fall back to directory tar if listing fails.
+      await rm(tmpListAbs, { force: true });
+      tarCmd = ["tar", "-cf", tmpTarAbs, args.relDir];
     }
+
+    const runTar = async (cmd: string[]) => {
+      const tar = Bun.spawn({
+        cmd,
+        cwd: process.cwd(),
+        stderr: "pipe",
+        stdin: "ignore",
+        stdout: "ignore",
+      });
+
+      const [tarStderr, tarExit] = await Promise.all([
+        new Response(tar.stderr).text().catch(() => ""),
+        tar.exited,
+      ]);
+
+      return { tarExit, tarStderr };
+    };
+
+    const a = await runTar(tarCmd);
+    if (a.tarExit !== 0) {
+      if (tarCmdFallback) {
+        await rm(tmpTarAbs, { force: true });
+        const b = await runTar(tarCmdFallback);
+        if (b.tarExit !== 0) {
+          throw new Error(
+            `tar_failed exit=${b.tarExit} relDir=${args.relDir} stderr=${b.tarStderr.slice(0, 200)}`
+          );
+        }
+      } else {
+        throw new Error(
+          `tar_failed exit=${a.tarExit} relDir=${args.relDir} stderr=${a.tarStderr.slice(0, 200)}`
+        );
+      }
+    }
+
+    await rm(tmpListAbs, { force: true });
 
     try {
       const st = await stat(tmpTarAbs);
@@ -153,19 +236,7 @@ export async function exportAgentfsRunToCas(args: {
     };
 
     try {
-      if (!existsSync(metaAbs)) {
-        await writeFile(metaAbs, JSON.stringify(nextMeta, null, 2), "utf8");
-      } else {
-        const prev = await readAgentfsCasMeta({ rootAbs, sha });
-        const merged: AgentfsCasMeta = {
-          createdAt: prev?.createdAt ?? nextMeta.createdAt,
-          projectId: prev?.projectId ?? nextMeta.projectId,
-          runId: prev?.runId ?? nextMeta.runId,
-          sha,
-          sizeBytes: nextMeta.sizeBytes,
-        };
-        await writeFile(metaAbs, JSON.stringify(merged, null, 2), "utf8");
-      }
+      await writeAgentfsCasMetaAtomic({ metaAbs, meta: nextMeta });
     } catch {
       // ignore
     }
@@ -174,6 +245,21 @@ export async function exportAgentfsRunToCas(args: {
   } catch (error) {
     await rm(tmpAbs, { force: true });
     await rm(tmpTarAbs, { force: true });
+    await rm(tmpListAbs, { force: true });
+    throw error;
+  }
+}
+
+async function writeAgentfsCasMetaAtomic(args: {
+  metaAbs: string;
+  meta: AgentfsCasMeta;
+}): Promise<void> {
+  const tmpAbs = `${args.metaAbs}.tmp.${Date.now()}.${Math.random().toString(16).slice(2)}`;
+  try {
+    await writeFile(tmpAbs, JSON.stringify(args.meta, null, 2), "utf8");
+    await rename(tmpAbs, args.metaAbs);
+  } catch (error) {
+    await rm(tmpAbs, { force: true });
     throw error;
   }
 }
@@ -199,6 +285,8 @@ export async function readAgentfsCasMeta(args: {
     }
     return {
       createdAt: rec.createdAt,
+      lastAccessedAt:
+        typeof rec.lastAccessedAt === "string" ? rec.lastAccessedAt : undefined,
       projectId: typeof rec.projectId === "string" ? rec.projectId : null,
       runId: rec.runId,
       sha: rec.sha,
@@ -206,5 +294,28 @@ export async function readAgentfsCasMeta(args: {
     };
   } catch {
     return null;
+  }
+}
+
+export async function touchAgentfsCasLastAccessed(args: {
+  sha: string;
+  rootAbs?: string;
+  now?: Date;
+}): Promise<void> {
+  const rootAbs = args.rootAbs ?? path.resolve(process.cwd(), ".agentfs");
+  const metaAbs = path.join(rootAbs, "cas", `${args.sha}.json`);
+
+  try {
+    const existing = await readAgentfsCasMeta({ rootAbs, sha: args.sha });
+    if (!existing) {
+      return;
+    }
+    const updated: AgentfsCasMeta = {
+      ...existing,
+      lastAccessedAt: (args.now ?? new Date()).toISOString(),
+    };
+    await writeAgentfsCasMetaAtomic({ metaAbs, meta: updated });
+  } catch {
+    // ignore
   }
 }

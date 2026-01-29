@@ -1,5 +1,5 @@
 import "@/test/dom";
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 import type { ReactNode } from "react";
 
 import { Chat } from "@alfred/ui";

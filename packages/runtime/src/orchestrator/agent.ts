@@ -20,6 +20,11 @@ import {
 } from "@alfred/agent/orchestrator/tool/shared/context";
 import { issueMcpSessionToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
+import {
+  signalsDetectedTotal,
+  signalsInterventionsTotal,
+  signalsJudgeLatencySeconds,
+} from "@alfred/metrics";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setTimeout as setNodeTimeout } from "node:timers";
@@ -1114,6 +1119,98 @@ export async function runAgent({
             runId,
           });
         }
+      }
+    }
+
+    // Persist LLM-judged signals into AgentFS KV (fact-only trace -> judge output).
+    // This is independent of failure status; signals can include delight and recovery.
+    if (
+      process.env.ALFRED_SIGNALS === "1" &&
+      isAgentFSWorkspace(workspaceEnv)
+    ) {
+      try {
+        const agent = workspaceEnv.getAgent();
+        const [
+          { getClassificationModel },
+          { judgeSignals },
+          { persistSignals },
+        ] = await Promise.all([
+          import("@alfred/agent/selector"),
+          import("@alfred/agent/signals/judge"),
+          import("@alfred/agent/agentfs/signals"),
+        ]);
+
+        const selection = await getClassificationModel({ userId });
+        const stopTimer = signalsJudgeLatencySeconds.startTimer({
+          surface: "agentfs",
+          model: selection.modelKey ?? "unknown",
+        });
+        const trace = {
+          runId,
+          agentId: spec.agentId,
+          taskId: spec.subTaskId,
+          status: outcome.status,
+          stuck: outcome.stuck,
+          escalation: outcome.escalation ?? null,
+          escalationData: outcome.escalationData ?? null,
+          // FailureContext is already aggregated + redacted by enrichment system.
+          failureContext: outcome.failureContext ?? null,
+        };
+
+        const judged = await judgeSignals(
+          { trace: trace as Record<string, unknown> },
+          { model: selection.model, abortSignal: signal }
+        );
+        stopTimer();
+
+        for (const s of judged.friction) {
+          signalsDetectedTotal.inc({
+            surface: "agentfs",
+            kind: "friction",
+            type: s.type,
+            severity: s.severity,
+            timing: s.timing,
+          });
+        }
+        for (const s of judged.delight) {
+          signalsDetectedTotal.inc({
+            surface: "agentfs",
+            kind: "delight",
+            type: s.type,
+            severity: "na",
+            timing: "na",
+          });
+        }
+        for (const i of judged.interventions) {
+          signalsInterventionsTotal.inc({
+            surface: "agentfs",
+            action: i.action,
+            timing: i.timing,
+          });
+        }
+
+        await persistSignals(agent, {
+          taskId: spec.subTaskId,
+          friction: judged.friction,
+          delight: judged.delight,
+          interventions: judged.interventions,
+          ts: Date.now(),
+        });
+
+        if (outcome.failureContext) {
+          outcome.failureContext = {
+            ...outcome.failureContext,
+            signals: judged.friction,
+            delight: judged.delight,
+            interventions: judged.interventions,
+          };
+        }
+      } catch (error) {
+        logger.debug("agent_signals_persist_failed", {
+          agentId: spec.agentId,
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 

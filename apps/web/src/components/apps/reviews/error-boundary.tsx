@@ -37,7 +37,7 @@ export class ReviewErrorBoundary extends Component<Props, State> {
     this.props.onRetry?.();
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div

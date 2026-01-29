@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 mock.module("@alfred/auth", () => ({
@@ -105,6 +105,7 @@ describe("agentfs export/restore routes", () => {
     );
     expect(shaRes?.status).toBe(200);
 
+    const restoreStartMs = Date.now();
     const restoreReq = new Request("http://localhost/api/agentfs/restore", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,6 +123,10 @@ describe("agentfs export/restore routes", () => {
     };
     expect(typeof restoreJson?.runId).toBe("string");
     expect(typeof restoreJson?.dbPath).toBe("string");
+
+    const restoredDbPath = restoreJson?.dbPath ?? "";
+    const st = await stat(path.resolve(process.cwd(), restoredDbPath));
+    expect(st.mtimeMs).toBeGreaterThanOrEqual(restoreStartMs - 5000);
 
     const restoredRunId = restoreJson?.runId ?? "";
     const projectFile = path.join(root, restoredRunId, ".project");

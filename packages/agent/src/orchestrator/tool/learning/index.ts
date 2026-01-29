@@ -3,6 +3,14 @@
  * Exposes explicit learning/feedback capabilities as agent tools.
  */
 
+import type {
+  LearnFeedbackNegativeEvent,
+  LearnFeedbackPositiveEvent,
+  LearnHeuristicProposedEvent,
+  LearnPatternDetectedEvent,
+} from "@alfred/type";
+import type { ToolCallOptions } from "ai";
+
 import type { ToolExecuteArgs } from "../shared/context.js";
 import type {
   LearnMistakeInput,
@@ -10,6 +18,7 @@ import type {
   LearnRecordInput,
 } from "./definition.js";
 
+import { getHooksRuntime } from "../../../../assistant/src/tool/memory/hook";
 import { withPolicyApproval, type AITool } from "../approval.js";
 import {
   learnMistakeInputSchema,
@@ -55,9 +64,46 @@ export {
 export const toolLearnRecord = {
   description:
     "Record a workflow outcome (expected vs actual) to improve future behavior. Persists a learning outcome and optional insights to the knowledge graph.",
-  execute: async ({ input }: ToolExecuteArgs<LearnRecordInput>) => {
+  execute: async (
+    { input }: ToolExecuteArgs<LearnRecordInput>,
+    options?: ToolCallOptions
+  ) => {
     const { userId } = await enforceLearnRecordPolicy(input);
-    return executeLearnRecord({ input, userId });
+
+    const hooks = getHooksRuntime(options);
+    let { actual } = input;
+
+    if (hooks) {
+      const base = {
+        context: input.workflowId,
+        action: actual,
+      };
+
+      const hookEvent: LearnFeedbackPositiveEvent | LearnFeedbackNegativeEvent =
+        input.outcome === "success"
+          ? {
+              type: "learn:feedback:positive",
+              ...base,
+              reinforcement: 1,
+            }
+          : {
+              type: "learn:feedback:negative",
+              ...base,
+              reason: input.outcome,
+            };
+
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ?? hookEvent) as
+        | LearnFeedbackPositiveEvent
+        | LearnFeedbackNegativeEvent;
+      actual = next.action;
+    }
+
+    return executeLearnRecord({ input: { ...input, actual }, userId });
   },
   inputSchema: learnRecordInputSchema,
   name: "learn_record",
@@ -95,9 +141,43 @@ export const aiToolLearnRecord: AITool<LearnRecordInput, any> =
 export const toolLearnPattern = {
   description:
     "Store a successful tool sequence as a reusable pattern. Optionally refines a concise rule using a fast/low-cost language model when available.",
-  execute: async ({ input }: ToolExecuteArgs<LearnPatternInput>) => {
+  execute: async (
+    { input }: ToolExecuteArgs<LearnPatternInput>,
+    options?: ToolCallOptions
+  ) => {
     const { userId } = await enforceLearnPatternPolicy(input);
-    return executeLearnPattern({ input, userId });
+
+    const hooks = getHooksRuntime(options);
+    let { description } = input;
+    let { confidence } = input;
+
+    if (hooks) {
+      const hookEvent: LearnPatternDetectedEvent = {
+        type: "learn:pattern:detected",
+        pattern: {
+          type: input.domain
+            ? `tool_sequence:${input.domain}`
+            : "tool_sequence",
+          description,
+          confidence,
+          examples: [input.toolSequence.join(" → ")],
+        },
+      };
+
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ?? hookEvent) as LearnPatternDetectedEvent;
+      ({ description } = next.pattern);
+      ({ confidence } = next.pattern);
+    }
+
+    return executeLearnPattern({
+      input: { ...input, description, confidence },
+      userId,
+    });
   },
   inputSchema: learnPatternInputSchema,
   name: "learn_pattern",
@@ -136,9 +216,49 @@ export const aiToolLearnPattern: AITool<LearnPatternInput, any> =
 export const toolLearnMistake = {
   description:
     "Record a mistake and its correction for future avoidance. Persists a heuristic-style rule into the knowledge graph.",
-  execute: async ({ input }: ToolExecuteArgs<LearnMistakeInput>) => {
+  execute: async (
+    { input }: ToolExecuteArgs<LearnMistakeInput>,
+    options?: ToolCallOptions
+  ) => {
     const { userId } = await enforceLearnMistakePolicy(input);
-    return executeLearnMistake({ input, userId });
+
+    const hooks = getHooksRuntime(options);
+    let { mistake } = input;
+    let { correction } = input;
+
+    if (hooks) {
+      const baseConfidence =
+        input.severity === "high"
+          ? 0.9
+          : (input.severity === "medium"
+            ? 0.7
+            : 0.5);
+
+      const hookEvent: LearnHeuristicProposedEvent = {
+        type: "learn:heuristic:proposed",
+        heuristic: {
+          condition: mistake,
+          action: correction,
+          confidence: baseConfidence,
+          source: "feedback",
+        },
+      };
+
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ??
+        hookEvent) as LearnHeuristicProposedEvent;
+      mistake = next.heuristic.condition;
+      correction = next.heuristic.action;
+    }
+
+    return executeLearnMistake({
+      input: { ...input, mistake, correction },
+      userId,
+    });
   },
   inputSchema: learnMistakeInputSchema,
   name: "learn_mistake",

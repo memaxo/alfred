@@ -1,10 +1,8 @@
-import type { appRouter } from "@alfred/api/src/routers/index";
+import type { AppRouter } from "@alfred/api";
 
 import { QueryClient } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
-
-type AppRouter = typeof appRouter;
 
 export type TRPCAppRouter = AppRouter;
 

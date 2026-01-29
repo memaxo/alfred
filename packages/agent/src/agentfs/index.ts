@@ -14,6 +14,7 @@ export * from "./enrichment.js";
 export * from "./keys.js";
 export * from "./learning-bridge.js";
 export * from "./metrics.js";
+export * from "./signals.js";
 export {
   buildLiveErrorContext,
   clearOldLiveErrors,

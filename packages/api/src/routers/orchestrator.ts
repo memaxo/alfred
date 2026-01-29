@@ -3,10 +3,6 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { requirePolicy } from "../gate";
-import {
-  orchestratorGenerateDurationSeconds,
-  orchestratorGenerateRequestsTotal,
-} from "../metrics";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 
@@ -47,6 +43,11 @@ export const orchestratorRouter = router({
           message: "session_required",
         });
       }
+
+      const {
+        orchestratorGenerateDurationSeconds,
+        orchestratorGenerateRequestsTotal,
+      } = await import("../metrics");
       const stopTimer = orchestratorGenerateDurationSeconds.startTimer();
       orchestratorGenerateRequestsTotal.inc({ status: "started" });
       try {

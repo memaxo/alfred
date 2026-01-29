@@ -3,6 +3,7 @@ import { stepCountIs } from "ai";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { sanitizeResult } from "../utils/generate";
+import { ensureHooksRuntime } from "../workflow/hooks";
 
 function coerceUsage(value: unknown): {
   inputTokens: number;
@@ -96,12 +97,20 @@ export async function generateOrchestratorText(
         }
       : {};
 
+  const hooks = await ensureHooksRuntime(null, {
+    sessionId: input.userId,
+    signal: new AbortController().signal,
+    workspace: process.cwd(),
+    workflowId: input.projectId,
+  });
+
   const result = await generateText({
     ...defaults,
     model: selection.model,
     messages: modelMessages,
     toolChoice: input.toolChoice,
     stopWhen,
+    experimental_context: { hooks },
     ...telemetry,
   });
 

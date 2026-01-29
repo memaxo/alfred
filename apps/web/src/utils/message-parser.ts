@@ -5,7 +5,10 @@
  * Pure functions following AI SDK v6 part patterns.
  */
 
-import type { AssistantUIMessage, OrchestratorUIMessage } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
+
+type AssistantUIMessage = UIMessage;
+type OrchestratorUIMessage = UIMessage;
 
 import {
   extractStructuredData,

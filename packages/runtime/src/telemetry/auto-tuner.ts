@@ -5,6 +5,8 @@
  * Adjusts timeouts, cache sizes, and resource allocations.
  */
 
+import { telemetryMetrics } from "@alfred/metrics/metrics-registry";
+
 interface TelemetryMetrics {
   queryHistogramValues: (
     metric: string,
@@ -34,11 +36,23 @@ const metrics: TelemetryMetrics = {
     return [];
   },
   tuningApplied: {
-    record() {},
-    inc() {},
+    record() {
+      // prom-client counters don't support arbitrary payload records,
+      // they just support incrementing.
+      telemetryMetrics.tuningApplied.inc();
+    },
+    inc(labels) {
+      telemetryMetrics.tuningApplied.inc(labels as any);
+    },
   },
   tuningCycle: {
-    record() {},
+    record(payload) {
+      telemetryMetrics.recommendationsGenerated.inc(
+        payload.total_recommendations
+      );
+      telemetryMetrics.recommendationsApplied.inc(payload.applied);
+      telemetryMetrics.recommendationsSkipped.inc(payload.skipped);
+    },
   },
 };
 
@@ -178,6 +192,7 @@ export class TelemetryAutoTuner {
   }
 
   async runTuningCycle(): Promise<void> {
+    const start = performance.now();
     const recommendations = await this.analyzeAndTune();
     await this.applyTuning(recommendations);
 
@@ -186,6 +201,8 @@ export class TelemetryAutoTuner {
       applied: recommendations.filter((r) => r.confidence > 0.8).length,
       skipped: recommendations.filter((r) => r.confidence <= 0.8).length,
     });
+
+    telemetryMetrics.tuningCycleDuration.observe(performance.now() - start);
   }
 }
 

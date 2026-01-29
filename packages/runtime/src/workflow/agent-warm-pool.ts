@@ -5,6 +5,8 @@
  * Reduces cold start latency from 5-8s to 2-3s.
  */
 
+import { warmPoolMetrics } from "@alfred/metrics/metrics-registry";
+
 export type AgentType = "codex" | "research" | "review";
 
 export interface ContainerConfig {
@@ -35,8 +37,11 @@ export class AgentWarmPool {
 
     if (config?.isReady) {
       config.lastUsedAt = new Date();
+      warmPoolMetrics.poolHitRate.inc({ agent_type: agentType });
       return config;
     }
+
+    warmPoolMetrics.poolMissRate.inc({ agent_type: agentType });
 
     if (config && !config.isReady) {
       await this.waitForReady(config);
@@ -50,6 +55,7 @@ export class AgentWarmPool {
   private async spawnWarmContainer(
     agentType: AgentType
   ): Promise<ContainerConfig> {
+    const start = performance.now();
     const containerId = `warm-${agentType}-${crypto.randomUUID()}`;
     const config: ContainerConfig = {
       agentType,
@@ -63,6 +69,8 @@ export class AgentWarmPool {
       await this.warmupContainer(containerId, agentType);
       config.isReady = true;
       this.pool.set(agentType, config);
+      warmPoolMetrics.warmupDuration.observe(performance.now() - start);
+      warmPoolMetrics.poolSize.set(this.pool.size);
     } catch (error) {
       throw new Error(
         `Failed to spawn warm container for ${agentType}: ${error}`,

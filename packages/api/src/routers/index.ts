@@ -1,9 +1,12 @@
+import { lazy } from "@trpc/server";
+
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { adminRouter } from "./admin";
 import { agentfsRouter } from "./agentfs";
 import { assistantRouter } from "./assistant";
 import { attentionRouter } from "./attention";
 import { bookRouter } from "./book";
+import { capabilityRouter } from "./capability";
 import { captureRouter } from "./capture";
 import { codexRouter } from "./codex";
 import { codexIntentRouter } from "./codex-intent";
@@ -49,7 +52,6 @@ import { tuneRouter } from "./tune";
 import { userRouter } from "./user";
 import { visualRouter } from "./visual";
 import { voiceRouter } from "./voice";
-import { workflowRouter } from "./workflow";
 import { workingsetRouter } from "./workingset";
 
 export const appRouter = router({
@@ -59,6 +61,7 @@ export const appRouter = router({
   attention: attentionRouter,
   book: bookRouter,
   capture: captureRouter,
+  capability: capabilityRouter,
   codex: codexRouter,
   codexIntent: codexIntentRouter,
   cognitive: cognitiveRouter,
@@ -108,7 +111,7 @@ export const appRouter = router({
   user: userRouter,
   visual: visualRouter,
   voice: voiceRouter,
-  workflow: workflowRouter,
+  workflow: lazy(() => import("./workflow").then((m) => m.workflowRouter)),
   workingset: workingsetRouter,
 });
 export type AppRouter = typeof appRouter;

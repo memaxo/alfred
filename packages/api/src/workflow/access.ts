@@ -9,7 +9,6 @@ import { consumeRouteRateLimit } from "@alfred/api/trpc";
 import * as policyRepo from "@alfred/db/repo/policy";
 import { evaluate } from "@alfred/policy";
 
-import { policyDecisionsTotal, policyObligationsTotal } from "../metrics";
 import {
   getSessionUser,
   getSessionUserId,
@@ -68,13 +67,19 @@ export async function enforceWorkflowPlanPolicy({
     context: {},
   });
 
-  policyDecisionsTotal
-    .labels("workflow.plan", decision.allow ? "allow" : "deny")
-    .inc();
-  if (decision.obligations && decision.obligations.length > 0) {
-    for (const obligation of decision.obligations) {
-      policyObligationsTotal.labels("workflow.plan", obligation.type).inc();
+  try {
+    const { policyDecisionsTotal, policyObligationsTotal } =
+      await import("@alfred/api/metrics");
+    policyDecisionsTotal
+      .labels("workflow.plan", decision.allow ? "allow" : "deny")
+      .inc();
+    if (decision.obligations && decision.obligations.length > 0) {
+      for (const obligation of decision.obligations) {
+        policyObligationsTotal.labels("workflow.plan", obligation.type).inc();
+      }
     }
+  } catch {
+    // Metrics failures must never affect authorization.
   }
 
   if (!decision.allow) {

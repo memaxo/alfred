@@ -1,0 +1,32 @@
+{
+  "name": "@alfred/home",
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo -b",
+    "typecheck": "tsgo -b",
+    "test": "bun ../../scripts/test-bun.ts --timeout 60000 --preload ../test-kit/src/bun/preload.ts"
+  },
+  "dependencies": {
+    "@alfred/logger": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}

@@ -99,11 +99,11 @@ export class GenUIErrorBoundary extends Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.props.onError?.(error, errorInfo, this.props.schema);
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError && this.state.error) {
       if (this.props.fallback) {
         return this.props.fallback;

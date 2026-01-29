@@ -302,7 +302,7 @@ export const componentUsage: Record<ComponentName, readonly ComponentUse[]> = {
   ],
   list: [
     {
-      file: "src/components/apps/settings/index.tsx",
+      file: "src/components/apps/settings/sections/keyboard.tsx",
       match: 'from "@/components/list"',
     },
   ],
@@ -360,25 +360,25 @@ export const componentUsage: Record<ComponentName, readonly ComponentUse[]> = {
   ],
   date: [
     {
-      file: "src/components/apps/settings/index.tsx",
+      file: "src/components/apps/settings/sections/notifications.tsx",
       match: 'from "@/components/date"',
     },
   ],
   daterange: [
     {
-      file: "src/components/apps/settings/index.tsx",
+      file: "src/components/apps/settings/sections/notifications.tsx",
       match: 'from "@/components/daterange"',
     },
   ],
   checkbox: [
     {
-      file: "src/components/apps/settings/index.tsx",
+      file: "src/components/apps/settings/sections/notifications.tsx",
       match: 'from "@/components/checkbox"',
     },
   ],
   choice: [
     {
-      file: "src/components/apps/settings/index.tsx",
+      file: "src/components/apps/settings/sections/keyboard.tsx",
       match: 'from "@/components/choice"',
     },
   ],

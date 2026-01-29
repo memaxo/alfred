@@ -29,18 +29,17 @@
 - `persona` - Client-only (web app)
 - `ui` - Native-only
 - `pacer` - Not used in core runtime
-- `summarize` - Python subprocess, may not be tested
+- `summarize` - Intentionally standalone context-compression utility (allowed disconnected)
 - `code-analysis` - Integrated via review router; only `raw_diff` supported
 
-**Disconnected** (9 packages):
+**Intentionally Standalone / Tooling / Client-only**:
 
-- `cortex` - Client-only (web app hooks)
-- `tune` - Standalone service, not in learning loops
-- `protocol` - Client protocol only
-- `mcp` - External MCP server integration
-- `harbor` - Standalone scripts
-- `util` - Empty (just docs)
-- `tui` - Terminal UI, standalone
+- `cortex` - Client-only rendering engine + presets; referenced by web + API visual helpers
+- `tune` - Tooling service exposed via API router (not wired into learning loops by default)
+- `protocol` - Core shared protocol schemas (agent + clients)
+- `mcp` - Core runtime MCP integration surface (gated by env)
+- `harbor` - Tooling for trajectory inspection (scripts)
+- `tui` - Tooling UI (terminal mode + scripts)
 
 ## Critical Issues
 
@@ -65,11 +64,10 @@
 1. **Audit unused packages**:
    - [x] `@alfred/resilience` - Integrated into pipeline runner safeguards
    - [x] `@alfred/code-analysis` - Integrated into review router (raw diff analysis)
-   - [ ] `@alfred/util` - Delete (empty)
+   - [x] `@alfred/util` - Deleted (package no longer exists)
 
 2. **Document disconnected packages**:
-   - [ ] Add README explaining client-only usage (`cortex`, `protocol`)
-   - [ ] Document external integrations (`mcp`)
+   - [x] Document boundaries in `docs/architecture/integration-audit.md` (no new READMEs required)
 
 ### This Month
 

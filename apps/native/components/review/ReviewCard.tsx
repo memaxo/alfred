@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
-import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Dimensions, Pressable, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -215,10 +215,12 @@ export function ReviewCard({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.cardContainer, cardStyle]}>
-        <TouchableOpacity
-          activeOpacity={0.9}
+        <Pressable
           onPress={handlePress}
-          style={styles.touchable}
+          style={({ pressed }) => [
+            styles.touchable,
+            pressed && { opacity: 0.9 },
+          ]}
         >
           <HUDSurface elevation={3} style={styles.card}>
             {/* Left Glow (Reject) */}
@@ -338,7 +340,7 @@ export function ReviewCard({
               </View>
             </View>
           </HUDSurface>
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
     </GestureDetector>
   );

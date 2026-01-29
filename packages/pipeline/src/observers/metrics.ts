@@ -1,32 +1,35 @@
-import * as client from "prom-client";
+import {
+  safeRegisterCounter,
+  safeRegisterHistogram,
+} from "@alfred/metrics/registry";
 
 import type { PipelineEvent } from "../events";
 import type { StageName } from "../pipeline";
 import type { PipelineObserver } from "../runner";
 
-const pipelineStageTotal = new client.Counter({
+const pipelineStageTotal = safeRegisterCounter({
   name: "pipeline_stage_total",
   help: "Total pipeline stage executions",
-  labelNames: ["stage", "status"],
+  labelNames: ["stage", "status"] as const,
 });
 
-const pipelineStageDuration = new client.Histogram({
+const pipelineStageDuration = safeRegisterHistogram({
   name: "pipeline_stage_duration_seconds",
   help: "Pipeline stage duration in seconds",
-  labelNames: ["stage"],
+  labelNames: ["stage"] as const,
   buckets: [0.1, 0.5, 1, 5, 10, 30, 60, 120, 300],
 });
 
-const pipelineAgentTotal = new client.Counter({
+const pipelineAgentTotal = safeRegisterCounter({
   name: "pipeline_agent_total",
   help: "Total agents spawned",
-  labelNames: ["status"],
+  labelNames: ["status"] as const,
 });
 
-const pipelineTotal = new client.Counter({
+const pipelineTotal = safeRegisterCounter({
   name: "pipeline_total",
   help: "Total pipeline executions",
-  labelNames: ["status"],
+  labelNames: ["status"] as const,
 });
 
 export class MetricsObserver implements PipelineObserver {

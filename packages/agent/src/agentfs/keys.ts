@@ -27,6 +27,9 @@ export const AGENTFS_KV_KEYS = {
 
   /** Tools that failed repeatedly (for avoidance hints) */
   failedTools: (taskId: string) => `failed-tools:${taskId}`,
+
+  /** LLM-judged signals for a task/run (privacy-preserving summaries) */
+  signals: (taskId: string) => `signals:${taskId}`,
 } as const;
 
 /** Prefix for listing live errors */
@@ -40,3 +43,6 @@ export const RETRY_PREFIX = "retry:";
 
 /** Prefix for listing handoffs */
 export const HANDOFF_PREFIX = "handoff:";
+
+/** Prefix for listing signals */
+export const SIGNALS_PREFIX = "signals:";

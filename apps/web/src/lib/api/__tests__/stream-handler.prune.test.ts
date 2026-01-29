@@ -83,6 +83,14 @@ const buildHistoryContextMock = vi.fn(({ messages }) => {
 
 mock.module("@alfred/history", () => ({
   buildHistoryContext: buildHistoryContextMock,
+  calculateBudget: () => ({
+    effectiveContextTokens: 4096,
+    historyRatio: 0.7,
+    systemReserveTokens: 512,
+    headroomTokens: 256,
+    toolingReserveTokens: 256,
+  }),
+  getOrCreateTracker: () => ({ record: vi.fn() }),
   getHistoryBudgetDefaults: () => ({}),
   historyContextSelectionDurationSeconds: {
     startTimer: vi.fn(() => vi.fn()),

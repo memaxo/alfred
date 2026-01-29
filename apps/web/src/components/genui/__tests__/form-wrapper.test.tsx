@@ -27,21 +27,6 @@ const mockSubmit = {
   error: null,
 };
 
-// Mock the form hook
-const mockForm = {
-  AppForm: ({ children }: { children: React.ReactNode }) => (
-    <form>{children}</form>
-  ),
-  Subscribe: ({
-    children,
-  }: {
-    children: (state: {
-      canSubmit: boolean;
-      isSubmitting: boolean;
-    }) => React.ReactNode;
-  }) => <>{children({ canSubmit: true, isSubmitting: false })}</>,
-};
-
 beforeEach(() => {
   // Reset mocks
   mockSubmit.isLoading = false;
@@ -50,10 +35,6 @@ beforeEach(() => {
   // Mock modules
   mock.module("@/hooks/submit", () => ({
     useSubmit: () => mockSubmit,
-  }));
-
-  mock.module("@/form", () => ({
-    useAppForm: () => mockForm,
   }));
 });
 
@@ -79,7 +60,7 @@ describe("GenUIFormWrapper", () => {
     );
 
     // Form should render (basic check)
-    expect(screen.getByRole("form")).toBeDefined();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeDefined();
   });
 
   it("displays error when submission fails", () => {
@@ -119,7 +100,9 @@ describe("GenUIFormWrapper", () => {
       />
     );
 
-    expect(screen.getByText(/Submitting/i)).toBeDefined();
+    const btn = screen.getByRole("button", { name: /submitting/i });
+    expect(btn).toBeDefined();
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("generates formId when not provided", () => {
@@ -133,7 +116,7 @@ describe("GenUIFormWrapper", () => {
     );
 
     // Should render without error (formId generated internally)
-    expect(screen.getByRole("form")).toBeDefined();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeDefined();
   });
 
   it("handles formData with default values", () => {
@@ -157,6 +140,6 @@ describe("GenUIFormWrapper", () => {
       />
     );
 
-    expect(screen.getByRole("form")).toBeDefined();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeDefined();
   });
 });

@@ -34,11 +34,14 @@ export const Route = createFileRoute("/api/conversation/$")({
           });
         }
 
-        const conversationRepo = await import("@alfred/db/repo/conversation");
-        const history = await conversationRepo.getConversationHistory(
-          conversationId,
-          userId
+        const apiConversationPkg = "@alfred/api/conversation";
+        const { getConversationHistory } = await import(
+          /* @vite-ignore */ apiConversationPkg
         );
+        const history = await getConversationHistory({
+          conversationId,
+          userId,
+        });
 
         if (!history) {
           return new Response(JSON.stringify({ error: "not_found" }), {

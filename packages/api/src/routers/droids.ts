@@ -13,7 +13,6 @@ import {
   StreamNotAttachedError,
   unregisterRunHandle,
 } from "@alfred/agent/workflow/session-recovery";
-import { droidExecRunsTotal } from "@alfred/api/metrics";
 import { getRedis } from "@alfred/auth/redis";
 import {
   requireToolScopesAndPolicy,
@@ -321,7 +320,13 @@ async function executeDroidRun(input: DroidRunInput): Promise<DroidRunResult> {
   }
 
   const exitCode = await proc.exited;
-  droidExecRunsTotal.labels(input.auto, String(exitCode)).inc();
+  try {
+    const { droidExecRunsTotal } =
+      await import("@alfred/agent/orchestrator/tool/droid/metrics");
+    droidExecRunsTotal.labels(input.auto, String(exitCode)).inc();
+  } catch {
+    // Metrics must never break execution.
+  }
 
   return {
     exitCode,
@@ -595,13 +600,21 @@ const droidProcedures = {
           }
 
           proc.exited
-            .then((code) => {
+            .then(async (code) => {
               if (closed) {
                 return;
               }
-              droidExecRunsTotal
-                .labels(execInput.auto, String(code ?? 0))
-                .inc();
+
+              try {
+                const { droidExecRunsTotal } =
+                  await import("@alfred/agent/orchestrator/tool/droid/metrics");
+                droidExecRunsTotal
+                  .labels(execInput.auto, String(code ?? 0))
+                  .inc();
+              } catch {
+                // Metrics must never break streaming.
+              }
+
               emit.next({ type: "exit", code: code ?? 0 });
               emit.complete();
             })

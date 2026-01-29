@@ -46,45 +46,41 @@ const graphRecordAccessMock = vi.fn().mockResolvedValue({ id: "node-1" });
 const graphUpdateNodeMock = vi.fn().mockResolvedValue({ id: "node-1" });
 const graphDeleteNodeMock = vi.fn().mockResolvedValue(1);
 
-function applyReviewDbMocks(): void {
-  mock.module("@alfred/db", () => ({
-    graphRepo: {
-      createNode: graphCreateNodeMock,
-      recordAccess: graphRecordAccessMock,
-      updateNode: graphUpdateNodeMock,
-      deleteNode: graphDeleteNodeMock,
-    },
-    reviewRepo: {
-      getReviewQueue: getReviewQueueMock,
-      getPendingReviewCount: getPendingReviewCountMock,
-      getReviewById: getReviewByIdMock,
-      createReview: createReviewMock,
-      submitReview: submitReviewMock,
-      getAnalytics: getAnalyticsMock,
-      shouldAutoApprove: shouldAutoApproveMock,
-      getBlockedReviews: getBlockedReviewsMock,
-      getRiskCounts: getRiskCountsMock,
-      getCycleTimeStats: getCycleTimeStatsMock,
-      getActivityFeed: getActivityFeedMock,
-      getAutoApproveProgress: getAutoApproveProgressMock,
-      getReviewWithContext: getReviewWithContextMock,
-      // New PM endpoint mocks
-      getReviewDependencyGraph: getReviewDependencyGraphMock,
-      addReviewDependency: addReviewDependencyMock,
-      delegateReview: delegateReviewMock,
-      getDelegatedReviews: getDelegatedReviewsMock,
-      getReviewAuditLog: getReviewAuditLogMock,
-      getUserAuditLog: getUserAuditLogMock,
-      getReviewTemplates: getReviewTemplatesMock,
-      createReviewTemplate: createReviewTemplateMock,
-      updateReviewTemplate: updateReviewTemplateMock,
-      deleteReviewTemplate: deleteReviewTemplateMock,
-      recordTemplateUsage: recordTemplateUsageMock,
-    },
-  }));
-}
-
-applyReviewDbMocks();
+mock.module("@alfred/db", () => ({
+  graphRepo: {
+    createNode: graphCreateNodeMock,
+    recordAccess: graphRecordAccessMock,
+    updateNode: graphUpdateNodeMock,
+    deleteNode: graphDeleteNodeMock,
+  },
+  reviewRepo: {
+    getReviewQueue: getReviewQueueMock,
+    getPendingReviewCount: getPendingReviewCountMock,
+    getReviewById: getReviewByIdMock,
+    createReview: createReviewMock,
+    submitReview: submitReviewMock,
+    getAnalytics: getAnalyticsMock,
+    shouldAutoApprove: shouldAutoApproveMock,
+    getBlockedReviews: getBlockedReviewsMock,
+    getRiskCounts: getRiskCountsMock,
+    getCycleTimeStats: getCycleTimeStatsMock,
+    getActivityFeed: getActivityFeedMock,
+    getAutoApproveProgress: getAutoApproveProgressMock,
+    getReviewWithContext: getReviewWithContextMock,
+    // New PM endpoint mocks
+    getReviewDependencyGraph: getReviewDependencyGraphMock,
+    addReviewDependency: addReviewDependencyMock,
+    delegateReview: delegateReviewMock,
+    getDelegatedReviews: getDelegatedReviewsMock,
+    getReviewAuditLog: getReviewAuditLogMock,
+    getUserAuditLog: getUserAuditLogMock,
+    getReviewTemplates: getReviewTemplatesMock,
+    createReviewTemplate: createReviewTemplateMock,
+    updateReviewTemplate: updateReviewTemplateMock,
+    deleteReviewTemplate: deleteReviewTemplateMock,
+    recordTemplateUsage: recordTemplateUsageMock,
+  },
+}));
 
 const TEST_USER_ID = "review-test-user";
 // Valid v4 UUIDs (version 4, variant 8/9/a/b)
@@ -142,7 +138,6 @@ function createMockReview(
 
 describe("reviewRouter", () => {
   beforeEach(() => {
-    applyReviewDbMocks();
     vi.clearAllMocks();
   });
 
@@ -622,7 +617,6 @@ describe("reviewRouter", () => {
 
 describe("reviewRouter - learning integration", () => {
   beforeEach(() => {
-    applyReviewDbMocks();
     vi.clearAllMocks();
   });
 
@@ -671,7 +665,6 @@ describe("reviewRouter - learning integration", () => {
 
 describe("reviewRouter - batchReject", () => {
   beforeEach(() => {
-    applyReviewDbMocks();
     vi.clearAllMocks();
   });
 
@@ -738,7 +731,6 @@ describe("reviewRouter - batchReject", () => {
 
 describe("reviewRouter - auto-approve", () => {
   beforeEach(() => {
-    applyReviewDbMocks();
     vi.clearAllMocks();
   });
 
@@ -762,7 +754,6 @@ describe("reviewRouter - auto-approve", () => {
 
 describe("reviewRouter - PM-focused endpoints", () => {
   beforeEach(() => {
-    applyReviewDbMocks();
     vi.clearAllMocks();
   });
 

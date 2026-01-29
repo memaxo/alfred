@@ -1,3 +1,5 @@
+import { calculateBudget, calculateUsageCost } from "@alfred/history";
+import { planMetrics } from "@alfred/metrics/metrics-registry";
 import { generateObject } from "ai";
 import * as z from "zod";
 
@@ -147,16 +149,38 @@ export async function generatePhasedPlan(
   options?: { variantHint?: string; signal?: AbortSignal }
 ): Promise<GeneratePlanResult> {
   const model = "gpt-4o";
+  const start = performance.now();
 
-  const result = await generateObject({
-    model,
-    schema: generatePlanOutputSchema,
-    prompt: buildPlanPrompt(intent, research, options),
-    abortSignal: options?.signal,
-    temperature: 0.7,
-  });
+  try {
+    const result = await generateObject({
+      model,
+      schema: generatePlanOutputSchema,
+      prompt: buildPlanPrompt(intent, research, options),
+      abortSignal: options?.signal,
+      temperature: 0.7,
+    });
 
-  return result.object;
+    planMetrics.generationDuration.observe((performance.now() - start) / 1000);
+    planMetrics.successRate.set(1);
+
+    if (result.usage) {
+      const budget = calculateBudget({ modelId: model });
+      const inputTokens = result.usage.inputTokens ?? 0;
+      const outputTokens = result.usage.outputTokens ?? 0;
+      const cost = calculateUsageCost(budget, inputTokens, outputTokens);
+      planMetrics.tokenCost.observe(cost);
+    }
+
+    return result.object;
+  } catch (error) {
+    planMetrics.errorRate.inc({
+      error_type: error instanceof Error ? error.name : "unknown",
+    });
+    if (error instanceof Error && error.message.includes("timeout")) {
+      planMetrics.timeoutRate.inc();
+    }
+    throw error;
+  }
 }
 
 export async function generatePlanVariants(
@@ -228,9 +252,9 @@ export async function generatePlan(
   const strategy =
     options?.preferParallel === true
       ? "parallel"
-      : options?.preferParallel === false
+      : (options?.preferParallel === false
         ? "sequential"
-        : raw.resources?.strategy || "sequential";
+        : raw.resources?.strategy || "sequential");
 
   return {
     id,

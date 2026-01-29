@@ -148,6 +148,7 @@ export class NodeSystem implements RenderSystem {
         topology: "triangle-list",
       },
     });
+    void _focusedPipeline;
 
     this.createBindGroup();
   }
@@ -200,6 +201,9 @@ export class NodeSystem implements RenderSystem {
 
     for (let i = 0; i < Math.min(this.nodes.length, this.maxNodes); i++) {
       const node = this.nodes[i];
+      if (!node) {
+        continue;
+      }
       const offset = i * 8;
 
       data[offset + 0] = node.position.x;
@@ -244,7 +248,7 @@ export class NodeSystem implements RenderSystem {
     }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
-      this.uniformBuffer.setFloat(i, uniforms[i]);
+      this.uniformBuffer.setFloat(i, uniforms[i] ?? 0);
     }
     this.uniformBuffer.upload();
   }

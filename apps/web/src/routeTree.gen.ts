@@ -25,13 +25,10 @@ import { Route as ApiOrchestratorRouteImport } from './routes/api/orchestrator'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ApiGenuiRouteImport } from './routes/api/genui'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
-import { Route as ApiAgentfsDownloadRouteImport } from './routes/api/agentfs/download'
-import { Route as ApiAgentfsExportRouteImport } from './routes/api/agentfs/export'
-import { Route as ApiAgentfsRestoreRouteImport } from './routes/api/agentfs/restore'
-import { Route as ApiAgentfsHandoffRouteImport } from './routes/api/agentfs/handoff'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
+import { Route as ProtectedReviewsRouteImport } from './routes/_protected/reviews'
 import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
 import { Route as ProtectedComponentsRouteImport } from './routes/_protected/components'
 import { Route as ProtectedBookRouteImport } from './routes/_protected/book'
@@ -49,6 +46,10 @@ import { Route as ApiAuthRevokeRouteImport } from './routes/api/auth/revoke'
 import { Route as ApiAuthIntrospectRouteImport } from './routes/api/auth/introspect'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
+import { Route as ApiAgentfsRestoreRouteImport } from './routes/api/agentfs/restore'
+import { Route as ApiAgentfsHandoffRouteImport } from './routes/api/agentfs/handoff'
+import { Route as ApiAgentfsExportRouteImport } from './routes/api/agentfs/export'
+import { Route as ApiAgentfsDownloadRouteImport } from './routes/api/agentfs/download'
 import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
 import { Route as ProtectedComponentsNameRouteImport } from './routes/_protected/components.$name'
@@ -135,26 +136,6 @@ const ApiAssistantRoute = ApiAssistantRouteImport.update({
   path: '/api/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAgentfsDownloadRoute = ApiAgentfsDownloadRouteImport.update({
-  id: '/api/agentfs/download',
-  path: '/api/agentfs/download',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentfsExportRoute = ApiAgentfsExportRouteImport.update({
-  id: '/api/agentfs/export',
-  path: '/api/agentfs/export',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentfsRestoreRoute = ApiAgentfsRestoreRouteImport.update({
-  id: '/api/agentfs/restore',
-  path: '/api/agentfs/restore',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentfsHandoffRoute = ApiAgentfsHandoffRouteImport.update({
-  id: '/api/agentfs/handoff',
-  path: '/api/agentfs/handoff',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProtectedVoiceS2sRoute = ProtectedVoiceS2sRouteImport.update({
   id: '/voice-s2s',
   path: '/voice-s2s',
@@ -168,6 +149,11 @@ const ProtectedTimerRoute = ProtectedTimerRouteImport.update({
 const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedReviewsRoute = ProtectedReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedDriveRoute = ProtectedDriveRouteImport.update({
@@ -257,6 +243,26 @@ const ApiAssistantSplatRoute = ApiAssistantSplatRouteImport.update({
   path: '/$',
   getParentRoute: () => ApiAssistantRoute,
 } as any)
+const ApiAgentfsRestoreRoute = ApiAgentfsRestoreRouteImport.update({
+  id: '/api/agentfs/restore',
+  path: '/api/agentfs/restore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsHandoffRoute = ApiAgentfsHandoffRouteImport.update({
+  id: '/api/agentfs/handoff',
+  path: '/api/agentfs/handoff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsExportRoute = ApiAgentfsExportRouteImport.update({
+  id: '/api/agentfs/export',
+  path: '/api/agentfs/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentfsDownloadRoute = ApiAgentfsDownloadRouteImport.update({
+  id: '/api/agentfs/download',
+  path: '/api/agentfs/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProtectedWorkflowRunIdRoute = ProtectedWorkflowRunIdRouteImport.update({
   id: '/workflow/$runId',
   path: '/workflow/$runId',
@@ -303,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/book': typeof ProtectedBookRoute
   '/components': typeof ProtectedComponentsRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
+  '/reviews': typeof ProtectedReviewsRoute
   '/settings': typeof ProtectedSettingsRoute
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
@@ -311,10 +318,6 @@ export interface FileRoutesByFullPath {
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
-  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
-  '/api/agentfs/export': typeof ApiAgentfsExportRoute
-  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
-  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/healthz/embed': typeof HealthzEmbedRoute
@@ -325,6 +328,10 @@ export interface FileRoutesByFullPath {
   '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
+  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
+  '/api/agentfs/export': typeof ApiAgentfsExportRoute
+  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
+  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
@@ -349,6 +356,7 @@ export interface FileRoutesByTo {
   '/book': typeof ProtectedBookRoute
   '/components': typeof ProtectedComponentsRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
+  '/reviews': typeof ProtectedReviewsRoute
   '/settings': typeof ProtectedSettingsRoute
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
@@ -357,10 +365,6 @@ export interface FileRoutesByTo {
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
-  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
-  '/api/agentfs/export': typeof ApiAgentfsExportRoute
-  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
-  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/healthz/embed': typeof HealthzEmbedRoute
@@ -371,6 +375,10 @@ export interface FileRoutesByTo {
   '/components/$name': typeof ProtectedComponentsNameRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
+  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
+  '/api/agentfs/export': typeof ApiAgentfsExportRoute
+  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
+  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
@@ -398,6 +406,7 @@ export interface FileRoutesById {
   '/_protected/book': typeof ProtectedBookRoute
   '/_protected/components': typeof ProtectedComponentsRouteWithChildren
   '/_protected/drive': typeof ProtectedDriveRoute
+  '/_protected/reviews': typeof ProtectedReviewsRoute
   '/_protected/settings': typeof ProtectedSettingsRoute
   '/_protected/timer': typeof ProtectedTimerRoute
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
@@ -406,10 +415,6 @@ export interface FileRoutesById {
   '/api/metrics': typeof ApiMetricsRoute
   '/api/orchestrator': typeof ApiOrchestratorRouteWithChildren
   '/api/search': typeof ApiSearchRoute
-  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
-  '/api/agentfs/export': typeof ApiAgentfsExportRoute
-  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
-  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/healthz/embed': typeof HealthzEmbedRoute
@@ -420,6 +425,10 @@ export interface FileRoutesById {
   '/_protected/components/$name': typeof ProtectedComponentsNameRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
+  '/api/agentfs/download': typeof ApiAgentfsDownloadRoute
+  '/api/agentfs/export': typeof ApiAgentfsExportRoute
+  '/api/agentfs/handoff': typeof ApiAgentfsHandoffRoute
+  '/api/agentfs/restore': typeof ApiAgentfsRestoreRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/introspect': typeof ApiAuthIntrospectRoute
@@ -447,6 +456,7 @@ export interface FileRouteTypes {
     | '/book'
     | '/components'
     | '/drive'
+    | '/reviews'
     | '/settings'
     | '/timer'
     | '/voice-s2s'
@@ -455,10 +465,6 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
-    | '/api/agentfs/download'
-    | '/api/agentfs/export'
-    | '/api/agentfs/restore'
-    | '/api/agentfs/handoff'
     | '/docs/$'
     | '/healthz/deps'
     | '/healthz/embed'
@@ -469,6 +475,10 @@ export interface FileRouteTypes {
     | '/components/$name'
     | '/experimental/tune'
     | '/workflow/$runId'
+    | '/api/agentfs/download'
+    | '/api/agentfs/export'
+    | '/api/agentfs/handoff'
+    | '/api/agentfs/restore'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/auth/introspect'
@@ -493,6 +503,7 @@ export interface FileRouteTypes {
     | '/book'
     | '/components'
     | '/drive'
+    | '/reviews'
     | '/settings'
     | '/timer'
     | '/voice-s2s'
@@ -501,10 +512,6 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
-    | '/api/agentfs/download'
-    | '/api/agentfs/export'
-    | '/api/agentfs/restore'
-    | '/api/agentfs/handoff'
     | '/docs/$'
     | '/healthz/deps'
     | '/healthz/embed'
@@ -515,6 +522,10 @@ export interface FileRouteTypes {
     | '/components/$name'
     | '/experimental/tune'
     | '/workflow/$runId'
+    | '/api/agentfs/download'
+    | '/api/agentfs/export'
+    | '/api/agentfs/handoff'
+    | '/api/agentfs/restore'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/auth/introspect'
@@ -541,6 +552,7 @@ export interface FileRouteTypes {
     | '/_protected/book'
     | '/_protected/components'
     | '/_protected/drive'
+    | '/_protected/reviews'
     | '/_protected/settings'
     | '/_protected/timer'
     | '/_protected/voice-s2s'
@@ -549,10 +561,6 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/api/orchestrator'
     | '/api/search'
-    | '/api/agentfs/download'
-    | '/api/agentfs/export'
-    | '/api/agentfs/restore'
-    | '/api/agentfs/handoff'
     | '/docs/$'
     | '/healthz/deps'
     | '/healthz/embed'
@@ -563,6 +571,10 @@ export interface FileRouteTypes {
     | '/_protected/components/$name'
     | '/_protected/experimental/tune'
     | '/_protected/workflow/$runId'
+    | '/api/agentfs/download'
+    | '/api/agentfs/export'
+    | '/api/agentfs/handoff'
+    | '/api/agentfs/restore'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/auth/introspect'
@@ -591,11 +603,11 @@ export interface RootRouteChildren {
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiOrchestratorRoute: typeof ApiOrchestratorRouteWithChildren
   ApiSearchRoute: typeof ApiSearchRoute
+  DocsSplatRoute: typeof DocsSplatRoute
   ApiAgentfsDownloadRoute: typeof ApiAgentfsDownloadRoute
   ApiAgentfsExportRoute: typeof ApiAgentfsExportRoute
-  ApiAgentfsRestoreRoute: typeof ApiAgentfsRestoreRoute
   ApiAgentfsHandoffRoute: typeof ApiAgentfsHandoffRoute
-  DocsSplatRoute: typeof DocsSplatRoute
+  ApiAgentfsRestoreRoute: typeof ApiAgentfsRestoreRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthIntrospectRoute: typeof ApiAuthIntrospectRoute
   ApiAuthRevokeRoute: typeof ApiAuthRevokeRoute
@@ -692,34 +704,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/agentfs/download': {
-      id: '/api/agentfs/download'
-      path: '/api/agentfs/download'
-      fullPath: '/api/agentfs/download'
-      preLoaderRoute: typeof ApiAgentfsDownloadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agentfs/export': {
-      id: '/api/agentfs/export'
-      path: '/api/agentfs/export'
-      fullPath: '/api/agentfs/export'
-      preLoaderRoute: typeof ApiAgentfsExportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agentfs/restore': {
-      id: '/api/agentfs/restore'
-      path: '/api/agentfs/restore'
-      fullPath: '/api/agentfs/restore'
-      preLoaderRoute: typeof ApiAgentfsRestoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agentfs/handoff': {
-      id: '/api/agentfs/handoff'
-      path: '/api/agentfs/handoff'
-      fullPath: '/api/agentfs/handoff'
-      preLoaderRoute: typeof ApiAgentfsHandoffRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/orchestrator': {
       id: '/api/orchestrator'
       path: '/api/orchestrator'
@@ -767,6 +751,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ProtectedSettingsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/reviews': {
+      id: '/_protected/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ProtectedReviewsRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/drive': {
@@ -888,6 +879,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssistantSplatRouteImport
       parentRoute: typeof ApiAssistantRoute
     }
+    '/api/agentfs/restore': {
+      id: '/api/agentfs/restore'
+      path: '/api/agentfs/restore'
+      fullPath: '/api/agentfs/restore'
+      preLoaderRoute: typeof ApiAgentfsRestoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/handoff': {
+      id: '/api/agentfs/handoff'
+      path: '/api/agentfs/handoff'
+      fullPath: '/api/agentfs/handoff'
+      preLoaderRoute: typeof ApiAgentfsHandoffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/export': {
+      id: '/api/agentfs/export'
+      path: '/api/agentfs/export'
+      fullPath: '/api/agentfs/export'
+      preLoaderRoute: typeof ApiAgentfsExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agentfs/download': {
+      id: '/api/agentfs/download'
+      path: '/api/agentfs/download'
+      fullPath: '/api/agentfs/download'
+      preLoaderRoute: typeof ApiAgentfsDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_protected/workflow/$runId': {
       id: '/_protected/workflow/$runId'
       path: '/workflow/$runId'
@@ -967,6 +986,7 @@ interface ProtectedRouteChildren {
   ProtectedBookRoute: typeof ProtectedBookRoute
   ProtectedComponentsRoute: typeof ProtectedComponentsRouteWithChildren
   ProtectedDriveRoute: typeof ProtectedDriveRoute
+  ProtectedReviewsRoute: typeof ProtectedReviewsRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRoute
   ProtectedTimerRoute: typeof ProtectedTimerRoute
   ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
@@ -980,6 +1000,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedBookRoute: ProtectedBookRoute,
   ProtectedComponentsRoute: ProtectedComponentsRouteWithChildren,
   ProtectedDriveRoute: ProtectedDriveRoute,
+  ProtectedReviewsRoute: ProtectedReviewsRoute,
   ProtectedSettingsRoute: ProtectedSettingsRoute,
   ProtectedTimerRoute: ProtectedTimerRoute,
   ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
@@ -1046,11 +1067,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetricsRoute: ApiMetricsRoute,
   ApiOrchestratorRoute: ApiOrchestratorRouteWithChildren,
   ApiSearchRoute: ApiSearchRoute,
+  DocsSplatRoute: DocsSplatRoute,
   ApiAgentfsDownloadRoute: ApiAgentfsDownloadRoute,
   ApiAgentfsExportRoute: ApiAgentfsExportRoute,
-  ApiAgentfsRestoreRoute: ApiAgentfsRestoreRoute,
   ApiAgentfsHandoffRoute: ApiAgentfsHandoffRoute,
-  DocsSplatRoute: DocsSplatRoute,
+  ApiAgentfsRestoreRoute: ApiAgentfsRestoreRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthIntrospectRoute: ApiAuthIntrospectRoute,
   ApiAuthRevokeRoute: ApiAuthRevokeRoute,

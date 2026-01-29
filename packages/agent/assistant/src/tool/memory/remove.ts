@@ -5,6 +5,9 @@
  * Soft delete is preferred as it preserves history for audit.
  */
 
+import type { MemoryForgetEvent } from "@alfred/type";
+import type { ToolCallOptions } from "ai";
+
 import { getNode } from "@alfred/db/repo/graph/read";
 import { archiveNodes, deleteNode } from "@alfred/db/repo/graph/write";
 import { z } from "zod";
@@ -14,6 +17,7 @@ import {
   recordMemoryRemoval,
   recordMemoryToolCall,
 } from "../../../../src/metrics";
+import { getHooksRuntime } from "./hook";
 
 const removeInputSchema = z.object({
   id: z.string().uuid().describe("Memory node ID to remove"),
@@ -40,15 +44,39 @@ export const toolMemoryRemove = {
     action: z.enum(["archived", "deleted", "not_found"]),
     message: z.string(),
   }),
-  execute: async ({ input }: { input: RemoveInput }) => {
+  execute: async (
+    { input }: { input: RemoveInput },
+    options?: ToolCallOptions
+  ) => {
     recordAssistantToolCall("memory_remove");
 
+    const hooks = getHooksRuntime(options);
+    let { id } = input;
+    let permanent = input.permanent ?? false;
+
+    if (hooks) {
+      const hookEvent: MemoryForgetEvent = {
+        type: "memory:forget",
+        memoryId: id,
+        deleteType: permanent ? "hard" : "soft",
+        ...(input.reason ? { reason: input.reason } : {}),
+      };
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ?? hookEvent) as MemoryForgetEvent;
+      id = next.memoryId;
+      permanent = next.deleteType === "hard";
+    }
+
     // Verify node exists
-    const existing = await getNode(input.id);
+    const existing = await getNode(id);
     if (!existing) {
       return {
         success: false,
-        id: input.id,
+        id,
         action: "not_found" as const,
         message: "Memory not found",
       };
@@ -57,12 +85,12 @@ export const toolMemoryRemove = {
     // Check if already archived
     const props = existing.properties as Record<string, unknown> | null;
     if (props?.archived) {
-      if (input.permanent) {
+      if (permanent) {
         // Permanently delete an already archived node
-        const count = await deleteNode(input.id);
+        const count = await deleteNode(id);
         return {
           success: count > 0,
-          id: input.id,
+          id,
           action: "deleted" as const,
           message:
             count > 0
@@ -72,22 +100,22 @@ export const toolMemoryRemove = {
       }
       return {
         success: false,
-        id: input.id,
+        id,
         action: "archived" as const,
         message: "Memory is already archived",
       };
     }
 
-    if (input.permanent) {
+    if (permanent) {
       // Hard delete
-      const count = await deleteNode(input.id);
+      const count = await deleteNode(id);
       if (count > 0) {
         recordMemoryRemoval("deleted");
         recordMemoryToolCall("memory_remove", "success");
       }
       return {
         success: count > 0,
-        id: input.id,
+        id,
         action: "deleted" as const,
         message: count > 0 ? "Memory permanently deleted" : "Failed to delete",
       };
@@ -95,7 +123,7 @@ export const toolMemoryRemove = {
 
     // Soft delete (archive)
     const reason = input.reason ?? "agent_requested";
-    const count = await archiveNodes([input.id], reason);
+    const count = await archiveNodes([id], reason);
 
     if (count > 0) {
       recordMemoryRemoval("archived");
@@ -104,7 +132,7 @@ export const toolMemoryRemove = {
 
     return {
       success: count > 0,
-      id: input.id,
+      id,
       action: "archived" as const,
       message:
         count > 0

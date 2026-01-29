@@ -5,7 +5,9 @@
  */
 
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
+import { Choice } from "@/components/choice";
 import { List } from "@/components/list";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
@@ -13,6 +15,7 @@ import { trpc } from "@/utils/trpc";
 export function KeyboardSection() {
   const { data: shortcuts, isLoading } = trpc.shortcuts.list.useQuery();
   const reset = trpc.shortcuts.reset.useMutation();
+  const [mode, setMode] = useState("default");
 
   const handleReset = () => {
     reset.mutate(undefined, {
@@ -64,6 +67,27 @@ export function KeyboardSection() {
       <p className="text-amber-400 text-xs">
         Shortcut customization UI coming soon. Currently showing defaults.
       </p>
+
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-2 font-medium">Editing mode</div>
+        <Choice
+          onValueChange={setMode}
+          options={[
+            {
+              value: "default",
+              label: "Default",
+              description: "Standard keyboard shortcuts",
+            },
+            {
+              value: "vim",
+              label: "Vim",
+              description: "Vim-style navigation (coming soon)",
+              disabled: true,
+            },
+          ]}
+          value={mode}
+        />
+      </div>
     </div>
   );
 }

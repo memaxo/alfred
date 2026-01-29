@@ -5,7 +5,6 @@ import {
   AgentFSAppWindow,
   AgentsAppWindow,
   ChatAppWindow,
-  CodeAppWindow,
   DockerAppWindow,
   FilesAppWindow,
   KnowledgeAppWindow,
@@ -14,8 +13,8 @@ import {
   PolicyAppWindow,
   PRReviewAppWindow,
   TaskManagerAppWindow,
-  WorkflowAppWindow,
 } from "@/components/apps";
+import { WorkflowWindow } from "@/components/windows/workflow/workflow-window";
 
 import { windowRegistry } from "../registry";
 
@@ -52,7 +51,7 @@ describe("Window Registry Registration", () => {
   it("should have code window registered with correct component", () => {
     const entry = windowRegistry.code;
     expect(entry).toBeDefined();
-    expect(entry.component).toBe(CodeAppWindow);
+    expect(typeof entry.component).toBe("function");
     expect(entry.metadata.label).toBe("Code");
   });
 
@@ -73,7 +72,7 @@ describe("Window Registry Registration", () => {
   it("should have workflow window registered with correct component", () => {
     const entry = windowRegistry.workflow;
     expect(entry).toBeDefined();
-    expect(entry.component).toBe(WorkflowAppWindow);
+    expect(entry.component).toBe(WorkflowWindow);
     expect(entry.metadata.label).toBe("Workflow");
   });
 

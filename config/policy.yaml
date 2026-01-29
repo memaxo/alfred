@@ -85,6 +85,18 @@ rules:
         metadata:
           code: requireBio
 
+  # High-risk home actions (lock/unlock, delete)
+  - id: home-act-requires-bio
+    actions: ["home.act"]
+    roles: ["owner"]
+    effect: "allow"
+    priority: 10
+    obligations:
+      - type: biometric
+        reason: secure_home_act
+        metadata:
+          code: requireBio
+
   # Production deployments require biometric + manual confirmation
   - id: deploy-promote-owner
     actions: ["deploy.promote"]
@@ -145,6 +157,7 @@ scopes:
   - slack.read
   - slack.write
   - home.read
+  - home.act
   - home.write
   - focus.read
   - focus.write

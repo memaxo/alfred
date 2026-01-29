@@ -99,7 +99,7 @@ for (const match of metricsSource.matchAll(exportStarRegex)) {
         continue;
       }
       if (typeof value === "function") {
-        metricsStub[name] = vi.fn();
+        vi.spyOn(metricsStub, name).mockImplementation();
         continue;
       }
       metricsStub[name] = createMetricStub();
@@ -110,13 +110,13 @@ for (const match of metricsSource.matchAll(exportStarRegex)) {
 }
 
 metricsStub.metricsRegistry = {};
-metricsStub.recordVoiceStt = vi.fn();
-metricsStub.recordVoiceTts = vi.fn();
-metricsStub.recordStreamEvent = vi.fn();
-metricsStub.startStreamTimer = vi.fn(() => vi.fn());
-metricsStub.getMetricsSnapshot = vi.fn(() => "metrics");
-metricsStub.getMetricsJSON = vi.fn(() => []);
-metricsStub.initMetricsHooks = vi.fn();
+vi.spyOn(metricsStub, "recordVoiceStt").mockImplementation();
+vi.spyOn(metricsStub, "recordVoiceTts").mockImplementation();
+vi.spyOn(metricsStub, "recordStreamEvent").mockImplementation();
+vi.spyOn(metricsStub, "startStreamTimer").mockImplementation(() => vi.fn());
+vi.spyOn(metricsStub, "getMetricsSnapshot").mockImplementation(() => "metrics");
+vi.spyOn(metricsStub, "getMetricsJSON").mockImplementation(() => []);
+vi.spyOn(metricsStub, "initMetricsHooks").mockImplementation();
 
 // Workflow runner metrics commonly needed by workflow tests
 metricsStub.runnerStepsTotal = createMetricStub();
@@ -159,7 +159,7 @@ export const aiStub = {
   }),
   generateObject: vi.fn().mockResolvedValue({ object: {} }),
   streamText: vi.fn(() => ({
-    fullStream: (async function* () {
+    fullStream: (async function* fullStream() {
       await Promise.resolve();
       yield { type: "finish", finishReason: "stop" };
     })(),

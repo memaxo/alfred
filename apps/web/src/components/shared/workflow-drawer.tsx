@@ -42,13 +42,13 @@ class DrawerErrorBoundary extends React.Component<
   DrawerErrorBoundaryProps,
   DrawerErrorBoundaryState
 > {
-  state: DrawerErrorBoundaryState = { error: null };
+  override state: DrawerErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): DrawerErrorBoundaryState {
     return { error };
   }
 
-  componentDidUpdate(prevProps: DrawerErrorBoundaryProps) {
+  override componentDidUpdate(prevProps: DrawerErrorBoundaryProps) {
     const prevKey = prevProps.resetKeys?.map(String).join("|") ?? "__no_key__";
     const nextKey = this.props.resetKeys?.map(String).join("|") ?? "__no_key__";
     if (prevKey !== nextKey && this.state.error) {
@@ -61,7 +61,7 @@ class DrawerErrorBoundary extends React.Component<
     this.setState({ error: null });
   };
 
-  render() {
+  override render() {
     if (this.state.error) {
       return this.props.fallback({
         error: this.state.error,

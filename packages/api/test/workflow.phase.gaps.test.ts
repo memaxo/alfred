@@ -70,6 +70,7 @@ describe("workflow.phase gap closure", () => {
         }
       },
       registerDefaultStages(): void {},
+      toSerializable: (value: unknown) => value as unknown,
     }));
 
     mock.module("@alfred/pipeline/observers", () => ({

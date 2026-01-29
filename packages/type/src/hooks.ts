@@ -8,6 +8,8 @@
  * @see docs/execplans/alfred-hooks-system.md
  */
 
+import type { LanguageModel } from "ai";
+
 // -----------------------------------------------------------------------------
 // Core Types
 // -----------------------------------------------------------------------------
@@ -879,6 +881,12 @@ export interface HookContext {
   readonly emit: (event: unknown) => Promise<void>;
   /** Abort signal for cancellation */
   readonly signal: AbortSignal;
+  /** Optional LLM handle for prompt-based hooks (LLM-as-logic-circuit). */
+  readonly llm?: {
+    readonly model: LanguageModel;
+    /** Optional identifier for logging/metrics (LanguageModel may not expose id). */
+    readonly modelKey?: string;
+  };
   /** Logger */
   readonly log: {
     readonly debug: (msg: string, data?: unknown) => void;

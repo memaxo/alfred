@@ -55,23 +55,24 @@ These packages have some integration but gaps exist:
 | `@alfred/persona`       | Web app (`apps/web/package.json`)                              | Not used by runtime/API                               | ⚠️ Client-only |
 | `@alfred/ui`            | Native app (`apps/native/package.json`)                        | Not used by web app                                   | ⚠️ Native-only |
 | `@alfred/pacer`         | Web app, API observers                                         | Not used in core runtime                              | ⚠️ Partial     |
-| `@alfred/summarize`     | Pipeline stage (`packages/pipeline/src/stages/summarize.ts`)   | Python subprocess, may not be tested                  | ⚠️ Partial     |
 | `@alfred/code-analysis` | API review router (`packages/api/src/routers/review.ts`)       | Only `raw_diff` supported; PR/local diff fetch TODO   | ⚠️ Partial     |
 
-### 🔴 Disconnected/Orphaned
+### 🟣 Tooling / Intentionally Standalone
 
-These packages exist but are not integrated into core workflows (or have code but aren't imported):
+These packages are **intentionally not on the main Pipeline/Runtime execution path**.
+They are kept because they support developer workflows, offline analysis, or client-only UX.
 
-| Package             | Current Usage                                                    | Recommendation                                                      |
-| ------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `@alfred/codeprint` | Used by `packages/plan/src/research/codebase.ts` → `internal.ts` | **Status**: ✅ Integrated via plan package, used in research flows  |
-| `@alfred/cortex`    | Web app hooks only (`apps/web/src/hooks/use-cortex-*.ts`)        | **Audit**: Integrate with backend or keep client-only               |
-| `@alfred/tune`      | Has router (`packages/api/src/routers/tune.ts`)                  | **Audit**: Integrate into learning loops or keep standalone         |
-| `@alfred/protocol`  | Web app codex client (`apps/web/src/lib/codex/stream-client.ts`) | **Audit**: Client protocol only, document as intentional            |
-| `@alfred/mcp`       | Has router (`packages/api/src/routers/mcp.ts`)                   | **Audit**: External MCP server integration, document as intentional |
-| `@alfred/harbor`    | Standalone scripts only (`scripts/harbor*.ts`)                   | **Audit**: Keep as scripts or integrate into API                    |
-| `@alfred/util`      | Only docs/rules, no code                                         | **Delete**: Empty package, just documentation                       |
-| `@alfred/tui`       | Terminal UI package                                              | **Audit**: Standalone tool or integrate with API                    |
+| Package             | Integration Points                                                               | Classification     | Status             |
+| ------------------- | -------------------------------------------------------------------------------- | ------------------ | ------------------ |
+| `@alfred/evals`     | `scripts/verify-executors-live.ts` (wrapper), `bun run @alfred/evals/cli -- ...` | Tooling (dev/CI)   | ✅ Wired (scripts) |
+| `@alfred/harbor`    | `scripts/harbor-*.ts`, `scripts/harbor-verifiers/*`                              | Tooling (analysis) | ✅ Wired (scripts) |
+| `@alfred/tui`       | `scripts/verify-tui.ts`, web terminal “TUI mode” UI                              | Tooling (UI)       | ✅ Wired           |
+| `@alfred/summarize` | **No callsites** (allowed disconnected)                                          | Standalone utility | 🟣 Standalone      |
+
+### ✅ No Unapproved Orphans (per integration-health)
+
+Per `scripts/verify-integration-health.ts`, there are **no packages with zero callsites**
+except those explicitly declared **standalone** (see table above).
 
 ---
 
@@ -180,8 +181,8 @@ apps/native┘
 
 @alfred/sense ──→ @alfred/db (via repos) [⚠️ Partial]
 @alfred/graph ──→ @alfred/db (via repos) [⚠️ Partial]
-@alfred/cortex ──→ (client-only) [🔴 Disconnected]
-@alfred/codeprint ──→ (standalone) [🔴 Disconnected]
+@alfred/cortex ──→ (client-only) [🟣 Client-only]
+@alfred/codeprint ──→ (tooling via plan research) [🟣 Tooling]
 ```
 
 ---
@@ -193,12 +194,12 @@ apps/native┘
 1. **Audit Unused Packages**
    - [x] `@alfred/resilience` - Integrated into pipeline runner (`packages/pipeline/src/runner.ts`)
    - [x] `@alfred/code-analysis` - Integrated into review router (`packages/api/src/routers/review.ts`)
-   - [ ] `@alfred/util` - Only docs/rules, no code. **Delete**: Empty package
+   - [x] `@alfred/util` - Deleted (package no longer exists)
 
 2. **Document Disconnected Packages**
-   - [ ] Add README to `@alfred/cortex` explaining client-only usage
-   - [ ] Add README to `@alfred/protocol` explaining client protocol purpose
-   - [ ] Add README to `@alfred/mcp` explaining external MCP integration
+   - [x] Document `@alfred/cortex` as client-only (plus API preset helpers)
+   - [x] Document `@alfred/protocol` as core shared protocol
+   - [x] Document `@alfred/mcp` as core runtime integration surface
 
 ### Short-Term (This Month)
 
@@ -219,18 +220,13 @@ apps/native┘
 ### Medium-Term (Next Quarter)
 
 6. **Integrate Codeprint**
-   - [ ] Decision: Integrate into workflow execution or keep standalone
-   - [ ] If integrate: Add codeprint analysis to pipeline context stage
-   - [ ] If standalone: Document as developer tool
+   - [x] Decision: Keep as tooling via plan research (`packages/plan/src/research/*`)
 
 7. **Integrate Cortex Backend**
-   - [ ] Decision: Add backend integration or keep client-only
-   - [ ] If integrate: Add cortex router to API, wire to runtime
-   - [ ] If client-only: Document as intentional architecture decision
+   - [x] Decision: Client-only rendering/engine; server uses only presets/config via API
 
 8. **Integrate Tune into Learning**
-   - [ ] Wire tune into learning loops (`packages/runtime/src/engines/learning.ts`)
-   - [ ] Or document as standalone fine-tuning service
+   - [x] Decision: Keep as API-exposed tooling; do not wire into learning loops by default
 
 ---
 
@@ -238,11 +234,12 @@ apps/native┘
 
 **Package Count**: 30+ packages
 
-- ✅ Fully integrated: 17 packages (including codeprint via plan)
-- ⚠️ Partially integrated: 7 packages
-- 🔴 Disconnected: 9 packages (resilience, code-analysis have code but unused)
+- ✅ Fully integrated: (see integration-health scan)
+- ⚠️ Partially integrated: (see integration-health scan)
+- 🔴 Disconnected (unapproved): **0**
+- 🟣 Standalone (approved disconnected): **`@alfred/summarize`**
 
-**Integration Health**: 57% fully integrated, 23% partial, 30% disconnected
+**Integration Health**: run `bun run scripts/verify-integration-health.ts --json` for the source-of-truth numbers.
 
 **Architectural Debt**:
 

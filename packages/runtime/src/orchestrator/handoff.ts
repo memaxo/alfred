@@ -209,6 +209,9 @@ export async function buildStructuredHandoff(
     filesCreated: changes.created,
     filesDeleted: changes.deleted,
     decisions,
+    signals: [],
+    delight: [],
+    interventions: [],
     toolsAvoided,
     openQuestions: [], // TODO: Extract from agent outputs if they surface questions
     blockers,

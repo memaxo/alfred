@@ -12,6 +12,7 @@ import type { LanguageModel } from "ai";
 import { BrainstemSupervisor } from "@alfred/cognitive/brainstem";
 import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
+import { abortMetrics } from "@alfred/metrics/metrics-registry";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { randomUUID } from "node:crypto";
 
@@ -296,6 +297,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           auto: this._input.auto ?? "low",
           status: "cancelled",
         });
+        abortMetrics.userAborts.inc({ operation: "workflow_initialization" });
         stopWorkflow({ status: "cancelled" });
 
         logger.info("runtime_execution_cancelled", {
@@ -334,6 +336,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           runtimeExecutionsTotal.inc({
             auto: this._input.auto ?? "low",
             status: "cancelled",
+          });
+          abortMetrics.userAborts.inc({
+            operation: `workflow_${pipelineState.currentPhaseId}`,
           });
           stopWorkflow({ status: "cancelled" });
           logger.info("runtime_execution_cancelled", {
@@ -379,6 +384,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           runtimeExecutionsTotal.inc({
             auto: this._input.auto ?? "low",
             status: "cancelled",
+          });
+          abortMetrics.userAborts.inc({
+            operation: `workflow_${pipelineState.currentPhaseId}`,
           });
           stopWorkflow({ status: "cancelled" });
           logger.info("runtime_execution_cancelled", {

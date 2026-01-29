@@ -7,6 +7,7 @@
 
 - `@alfred/resilience` is now imported by `@alfred/pipeline` (`packages/pipeline/src/runner.ts`) for MAX_TRANSITIONS safeguards.
 - `@alfred/code-analysis` is now used by the review router (`packages/api/src/routers/review.ts`) to enrich code reviews when `rawDiff` is provided.
+- `@alfred/evals` is now wired via `scripts/verify-executors-live.ts` (wrapper around `@alfred/evals/cli`).
 - Native voice capture now calls Sense routers (`apps/native/lib/voice/capture.ts`) and has test coverage.
 - Graph vs Knowledge boundaries are documented in `docs/architecture/hypergraph.md` with a boundary test in `packages/knowledge/src/__tests__/boundary.test.ts`.
 
@@ -17,20 +18,21 @@
 ### Immediate Actions
 
 1. **Delete `@alfred/util`** - Empty package with only docs/rules. Remove from `tsconfig.json` references and workspace.
+   - Status: ✅ Done (package no longer exists)
 
 2. **Audit `@alfred/resilience`** - ✅ Integrated into pipeline runner (`packages/pipeline/src/runner.ts`). Follow-up: decide whether to expand usage beyond MAX_TRANSITIONS.
 
 3. **Audit `@alfred/code-analysis`** - ✅ Integrated into review router (`packages/api/src/routers/review.ts`) for `raw_diff` analysis. Follow-up: implement GitHub PR/local diff sources or document as raw-diff-only.
 
-4. **Document `@alfred/cortex` client-only usage** - Add README explaining it's intentionally client-side only (WebGPU/visual engine). No backend integration needed.
+4. **Document `@alfred/cortex` client-only usage** - Document as client-only rendering/engine + presets (with API visual helpers).
 
-5. **Document `@alfred/protocol` client protocol** - Add README explaining it's the Agent Client Protocol SDK for client-side codex communication. Document as intentional architecture.
+5. **Document `@alfred/protocol` scope** - Document as core shared protocol schemas used by executors + clients.
 
-6. **Document `@alfred/mcp` external integration** - Add README explaining it's for external Model Context Protocol servers. Document as intentional external integration point.
+6. **Document `@alfred/mcp` integration** - Document as the runtime MCP surface (gated by env) consumed by runtime/pipeline.
 
-7. **Clarify `@alfred/harbor` purpose** - Either integrate harbor scripts into `packages/api/src/routers/` OR document as standalone evaluation tooling.
+7. **Clarify `@alfred/harbor` purpose** - Decision: keep as standalone analysis tooling (scripts consume it).
 
-8. **Audit `@alfred/tui` integration** - Terminal UI package. **Decision**: Keep standalone OR integrate with API for remote terminal access.
+8. **Audit `@alfred/tui` integration** - Decision: keep as tooling UI (terminal mode + scripts).
 
 9. **Move `@alfred/resilience/abort` patterns** - If keeping resilience patterns, move `abort.ts` utilities into `packages/runtime/src/abort/` where they're actually needed.
 
@@ -71,7 +73,7 @@
 
 23. **Document `@alfred/pacer` usage** - Not used in core runtime. Document intended use cases (debouncing/throttling) and when to use.
 
-24. **Test `@alfred/summarize` Python subprocess** - Verify Python subprocess integration works reliably. Add integration tests for LongCodeZip compression.
+24. **`@alfred/summarize`** - Decision: keep as intentionally standalone context-compression utility (allowed disconnected); keep Python backend tests gated behind availability.
 
 25. **Document `@alfred/codeprint` integration** - Currently used via `packages/plan/src/research/codebase.ts`. Document as integrated tool for fast file relevance.
 

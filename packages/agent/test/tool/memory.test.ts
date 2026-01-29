@@ -4,6 +4,9 @@
  * Comprehensive tests for explicit memory tools.
  */
 
+import type { HookContext } from "@alfred/type";
+
+import { createHookRegistry } from "@alfred/hooks";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Mock the graph repo functions before importing tools
@@ -81,6 +84,35 @@ import { toolMemoryHistory } from "../../assistant/src/tool/memory/history";
 import { toolMemoryRemove } from "../../assistant/src/tool/memory/remove";
 import { toolMemoryRetrieve } from "../../assistant/src/tool/memory/retrieve";
 import { toolMemoryUpdate } from "../../assistant/src/tool/memory/update";
+
+function makeHooks() {
+  const registry = createHookRegistry();
+  const ctx: HookContext = {
+    sessionId: "test",
+    workflowId: "wf",
+    autonomy: 0.5,
+    cognitive: {
+      state: "idle",
+      autonomy: 0.5,
+      physiology: { energy: 1, boredom: 0, frustration: 0 },
+    },
+    alfredVersion: "test",
+    projectDir: "/tmp",
+    emit: async () => {},
+    signal: new AbortController().signal,
+    log: {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    },
+  };
+  return { registry, ctx };
+}
+
+function makeToolOptions(hooks: { registry: any; ctx: any }) {
+  return { experimental_context: { hooks } } as any;
+}
 
 describe("Memory Tools", () => {
   beforeEach(() => {
@@ -250,6 +282,66 @@ describe("Memory Tools", () => {
 
       expect(result.neighbors).toBeDefined();
       expect(mockGetNeighbors).toHaveBeenCalled();
+    });
+  });
+
+  describe("hooks integration", () => {
+    it("applies memory:update transforms before writing", async () => {
+      const id = "11111111-1111-4111-8111-111111111111";
+      const existing = {
+        id,
+        label: "Old",
+        kind: "fact",
+        resource: "user",
+        properties: { confidence: 0.5 },
+        accessCount: 0,
+        lastAccessedAt: new Date(),
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      mockGetNode.mockResolvedValue(existing);
+      mockUpdateNode.mockResolvedValue({ ...existing, label: "Hooked" });
+
+      const hooks = makeHooks();
+      hooks.registry.on("memory:update", (event) => ({
+        transformed: {
+          ...event,
+          changes: {
+            ...event.changes,
+            label: "Hooked",
+          },
+        },
+      }));
+
+      await toolMemoryUpdate.execute(
+        { input: { id, label: "Original" } },
+        makeToolOptions(hooks)
+      );
+
+      expect(mockUpdateNode).toHaveBeenCalledWith(
+        id,
+        expect.objectContaining({ label: "Hooked" })
+      );
+    });
+
+    it("blocks memory:forget when hook denies", async () => {
+      const id = "11111111-1111-4111-8111-111111111111";
+      const hooks = makeHooks();
+      hooks.registry.on("memory:forget", () => ({
+        decision: "deny",
+        reason: "no",
+      }));
+
+      await expect(
+        toolMemoryRemove.execute(
+          { input: { id, permanent: false } },
+          makeToolOptions(hooks)
+        )
+      ).rejects.toThrow("no");
+
+      expect(mockArchiveNodes).not.toHaveBeenCalled();
+      expect(mockDeleteNode).not.toHaveBeenCalled();
     });
   });
 

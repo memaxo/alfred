@@ -188,6 +188,7 @@ export class ContextBuilder {
       const bundle = await buildContextBundle({
         cw: resolvedWorkspace,
         receipts: resolvedReceipts,
+        requirement: input.requirement,
         maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
         writer: overrides?.writer,
       });

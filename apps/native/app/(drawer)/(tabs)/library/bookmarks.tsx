@@ -5,17 +5,18 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Linking,
+  Pressable,
   RefreshControl,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -26,6 +27,10 @@ import {
   useBookmarkList,
 } from "@/hooks/use-trpc";
 import { haptics } from "@/lib/haptics";
+
+type BookmarkItem = NonNullable<
+  ReturnType<typeof useBookmarkList>["data"]
+>[number];
 
 export default function BookmarksListScreen() {
   const _router = useRouter();
@@ -101,6 +106,17 @@ export default function BookmarksListScreen() {
     }
   }, []);
 
+  const renderBookmarkItem = useCallback(
+    ({ item }: { item: BookmarkItem }) => (
+      <MemoizedBookmarkItem
+        item={item}
+        onOpenUrl={handleOpenUrl}
+        onDelete={handleDelete}
+      />
+    ),
+    [handleOpenUrl, handleDelete]
+  );
+
   const filteredBookmarks = bookmarksQuery.data?.filter((bookmark) => {
     if (!searchQuery.trim()) {
       return true;
@@ -135,17 +151,22 @@ export default function BookmarksListScreen() {
               placeholderTextColor="#5A6B7D"
               value={urlInput}
             />
-            <TouchableOpacity
+            <Pressable
               className="rounded-lg bg-primary px-4 py-2"
               disabled={createMutation.isPending || !urlInput.trim()}
               onPress={handleCreate}
+              style={({ pressed }) => [
+                pressed &&
+                  !createMutation.isPending &&
+                  urlInput.trim() && { opacity: 0.7 },
+              ]}
             >
               {createMutation.isPending ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Ionicons color="#FFFFFF" name="add" size={20} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -161,9 +182,12 @@ export default function BookmarksListScreen() {
               value={searchQuery}
             />
             {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Pressable
+                onPress={() => setSearchQuery("")}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
                 <Ionicons color="#5A6B7D" name="close-circle" size={20} />
-              </TouchableOpacity>
+              </Pressable>
             ) : null}
           </View>
         </View>
@@ -174,11 +198,13 @@ export default function BookmarksListScreen() {
             <ActivityIndicator color="#00D9FF" size="large" />
           </View>
         ) : filteredBookmarks && filteredBookmarks.length > 0 ? (
-          <FlatList
+          <FlashList
             className="flex-1"
-            contentContainerStyle={{ padding: 16 }}
+            contentContainerStyle={styles.listContent}
             data={filteredBookmarks}
             keyExtractor={(item) => item.id}
+            // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+            estimatedItemSize={100}
             ListFooterComponent={
               bookmarksQuery.isLoading && offset > 0 ? (
                 <View className="py-4">
@@ -197,47 +223,7 @@ export default function BookmarksListScreen() {
                 refreshing={bookmarksQuery.isRefetching}
               />
             }
-            renderItem={({ item }) => (
-              <View className="mb-3 rounded-lg border border-border bg-card p-4">
-                <View className="mb-2 flex-row items-start justify-between">
-                  <View className="flex-1">
-                    <Text
-                      accessibilityRole="header"
-                      className="mb-1 font-semibold text-foreground text-lg"
-                    >
-                      {item.title || "Untitled Bookmark"}
-                    </Text>
-                    {item.description ? (
-                      <Text
-                        className="mb-2 text-muted-foreground text-sm"
-                        numberOfLines={2}
-                      >
-                        {item.description}
-                      </Text>
-                    ) : null}
-                    <TouchableOpacity
-                      accessibilityLabel={`Open ${item.url}`}
-                      accessibilityRole="link"
-                      className="flex-row items-center gap-1"
-                      onPress={() => handleOpenUrl(item.url)}
-                    >
-                      <Ionicons color="#00D9FF" name="link-outline" size={14} />
-                      <Text className="text-primary text-xs" numberOfLines={1}>
-                        {item.url}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    accessibilityLabel="Delete bookmark"
-                    accessibilityRole="button"
-                    className="ml-2"
-                    onPress={() => handleDelete(item.id)}
-                  >
-                    <Ionicons color="#FF3366" name="trash-outline" size={18} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+            renderItem={renderBookmarkItem}
           />
         ) : (
           <View className="flex-1 items-center justify-center p-8">
@@ -253,3 +239,70 @@ export default function BookmarksListScreen() {
     </Container>
   );
 }
+
+interface BookmarkItemProps {
+  item: BookmarkItem;
+  onOpenUrl: (url: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function BookmarkItem({ item, onOpenUrl, onDelete }: BookmarkItemProps) {
+  return (
+    <View className="mb-3 rounded-lg border border-border bg-card p-4">
+      <View className="mb-2 flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text
+            accessibilityRole="header"
+            className="mb-1 font-semibold text-foreground text-lg"
+          >
+            {item.title || "Untitled Bookmark"}
+          </Text>
+          {item.description ? (
+            <Text
+              className="mb-2 text-muted-foreground text-sm"
+              numberOfLines={2}
+            >
+              {item.description}
+            </Text>
+          ) : null}
+          <Pressable
+            accessibilityLabel={`Open ${item.url}`}
+            accessibilityRole="link"
+            className="flex-row items-center gap-1"
+            onPress={() => onOpenUrl(item.url)}
+            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons color="#00D9FF" name="link-outline" size={14} />
+            <Text className="text-primary text-xs" numberOfLines={1}>
+              {item.url}
+            </Text>
+          </Pressable>
+        </View>
+        <Pressable
+          accessibilityLabel="Delete bookmark"
+          accessibilityRole="button"
+          className="ml-2"
+          onPress={() => onDelete(item.id)}
+          style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons color="#FF3366" name="trash-outline" size={18} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const MemoizedBookmarkItem = memo(
+  BookmarkItem,
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item === next.item &&
+    prev.onOpenUrl === next.onOpenUrl &&
+    prev.onDelete === next.onDelete
+);
+
+const styles = StyleSheet.create({
+  listContent: {
+    padding: 16,
+  },
+});

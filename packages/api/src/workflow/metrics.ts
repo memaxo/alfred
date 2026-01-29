@@ -1,10 +1,3 @@
-import {
-  codexLinearActivitiesDroppedTotal,
-  codexLinearActivitiesEmittedTotal,
-  codexLinearActivityBatchesTotal,
-  codexLinearIntegrationLatencySeconds,
-  codexSessionContinuityTotal,
-} from "@alfred/api/metrics";
 import { logger } from "@alfred/logger";
 
 let workflowMetricsInit = false;
@@ -32,6 +25,13 @@ export async function initWorkflowMetrics(): Promise<void> {
   }
 
   try {
+    const {
+      codexLinearActivitiesDroppedTotal,
+      codexLinearActivitiesEmittedTotal,
+      codexLinearActivityBatchesTotal,
+      codexLinearIntegrationLatencySeconds,
+      codexSessionContinuityTotal,
+    } = await import("@alfred/agent/orchestrator/tool/codex/metrics");
     const [{ configureCodexLinearMetrics }, { sessionManager }] =
       await Promise.all([
         import("@alfred/agent/orchestrator/tool/codex-linear"),

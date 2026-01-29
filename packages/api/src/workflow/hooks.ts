@@ -54,6 +54,16 @@ function isHooksRuntime(value: unknown): value is HooksRuntime {
   return true;
 }
 
+function canUseRuntimeContext(
+  value: RuntimeContext | null | undefined
+): value is RuntimeContext {
+  if (!value) {
+    return false;
+  }
+  const rec = value as unknown as Record<string, unknown>;
+  return typeof rec.get === "function" && typeof rec.set === "function";
+}
+
 async function createHooksRuntime(
   options: EnsureHooksRuntimeOptions
 ): Promise<HooksRuntime> {
@@ -102,13 +112,14 @@ export async function ensureHooksRuntime(
   runtimeContext: RuntimeContext | null | undefined,
   options: EnsureHooksRuntimeOptions
 ): Promise<HooksRuntime> {
-  const existing = runtimeContext?.get("hooks" as any) as unknown;
+  const ctx = canUseRuntimeContext(runtimeContext) ? runtimeContext : null;
+  const existing = ctx?.get("hooks" as any) as unknown;
   if (isHooksRuntime(existing)) {
     return existing;
   }
 
   const created = await createHooksRuntime(options);
-  runtimeContext?.set("hooks", created);
+  ctx?.set("hooks", created);
   return created;
 }
 

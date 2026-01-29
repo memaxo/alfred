@@ -34,11 +34,13 @@ const GRAD3 = [
   for (let i = 255; i > 0; i--) {
     seed = (seed * 16_807) % 2_147_483_647;
     const j = seed % (i + 1);
-    [p[i], p[j]] = [p[j], p[i]];
+    const tmp = p[i] ?? 0;
+    p[i] = p[j] ?? 0;
+    p[j] = tmp;
   }
 
   for (let i = 0; i < 512; i++) {
-    PERM[i] = p[i & 255];
+    PERM[i] = p[i & 255] ?? 0;
   }
 })();
 
@@ -92,23 +94,29 @@ export function simplexNoise2D(x: number, y: number): number {
 
   let t0 = 0.5 - x0 * x0 - y0 * y0;
   if (t0 >= 0) {
-    const gi0 = PERM[ii + PERM[jj]] % 12;
+    const permJ = PERM[jj] ?? 0;
+    const gi0 = (PERM[ii + permJ] ?? 0) % 12;
+    const g0 = GRAD3[gi0] ?? GRAD3[0]!;
     t0 *= t0;
-    n0 = t0 * t0 * (GRAD3[gi0][0] * x0 + GRAD3[gi0][1] * y0);
+    n0 = t0 * t0 * ((g0[0] ?? 0) * x0 + (g0[1] ?? 0) * y0);
   }
 
   let t1 = 0.5 - x1 * x1 - y1 * y1;
   if (t1 >= 0) {
-    const gi1 = PERM[ii + i1 + PERM[jj + j1]] % 12;
+    const permJ = PERM[jj + j1] ?? 0;
+    const gi1 = (PERM[ii + i1 + permJ] ?? 0) % 12;
+    const g1 = GRAD3[gi1] ?? GRAD3[0]!;
     t1 *= t1;
-    n1 = t1 * t1 * (GRAD3[gi1][0] * x1 + GRAD3[gi1][1] * y1);
+    n1 = t1 * t1 * ((g1[0] ?? 0) * x1 + (g1[1] ?? 0) * y1);
   }
 
   let t2 = 0.5 - x2 * x2 - y2 * y2;
   if (t2 >= 0) {
-    const gi2 = PERM[ii + 1 + PERM[jj + 1]] % 12;
+    const permJ = PERM[jj + 1] ?? 0;
+    const gi2 = (PERM[ii + 1 + permJ] ?? 0) % 12;
+    const g2 = GRAD3[gi2] ?? GRAD3[0]!;
     t2 *= t2;
-    n2 = t2 * t2 * (GRAD3[gi2][0] * x2 + GRAD3[gi2][1] * y2);
+    n2 = t2 * t2 * ((g2[0] ?? 0) * x2 + (g2[1] ?? 0) * y2);
   }
 
   // Scale to [-1, 1]

@@ -6,7 +6,9 @@
  * Uses windowing for performance with large conversation histories.
  */
 
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
+
+type AssistantUIMessage = UIMessage;
 
 import { useCallback } from "react";
 import { Virtuoso } from "react-virtuoso";

@@ -15,6 +15,7 @@
     { "path": "../db" },
     { "path": "../hooks" },
     { "path": "../hookpipe" },
+    { "path": "../home" },
     { "path": "../policy" },
     { "path": "../agent" },
     { "path": "../history" },

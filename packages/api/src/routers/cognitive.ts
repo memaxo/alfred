@@ -17,7 +17,6 @@ import { z } from "zod";
 import type { Context } from "../context";
 
 import { requirePolicy } from "../gate";
-import { cognitiveFeedbackSubmissionsTotal } from "../metrics";
 import { authedProcedure, router } from "../trpc";
 import { ensureHooksRuntime } from "../workflow/hooks";
 
@@ -356,7 +355,13 @@ export const cognitiveRouter = router({
       await handleCognitiveEffects(ctx.runtimeContext, input.streamId, effects);
 
       const surface = input.surface ?? "chat";
-      cognitiveFeedbackSubmissionsTotal.labels(surface).inc();
+      try {
+        const { cognitiveFeedbackSubmissionsTotal } =
+          await import("@alfred/metrics/shared");
+        cognitiveFeedbackSubmissionsTotal.labels(surface).inc();
+      } catch {
+        // Metrics failures must never break the route.
+      }
 
       return {
         obligations: ctx.policy?.obligations ?? [],

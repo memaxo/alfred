@@ -76,6 +76,14 @@
       "types": "./dist/history.d.ts",
       "default": "./src/history.ts"
     },
+    "./home": {
+      "types": "./dist/home.d.ts",
+      "default": "./src/home.ts"
+    },
+    "./home.zod": {
+      "types": "./dist/home.zod.d.ts",
+      "default": "./src/home.zod.ts"
+    },
     "./id": {
       "types": "./dist/id.d.ts",
       "default": "./src/id.ts"

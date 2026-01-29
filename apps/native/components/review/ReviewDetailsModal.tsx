@@ -1,9 +1,9 @@
 import {
   Dimensions,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -62,11 +62,7 @@ export function ReviewDetailsModal({
       visible={visible}
     >
       <View style={styles.overlay}>
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={onClose}
-          style={styles.backdrop}
-        />
+        <Pressable onPress={onClose} style={styles.backdrop} />
 
         <View style={styles.modalContainer}>
           <HUDSurface elevation={3} style={styles.modal}>
@@ -78,11 +74,17 @@ export function ReviewDetailsModal({
               <BiolumText color="full" size="large" variant="title">
                 Review Details
               </BiolumText>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
                 <BiolumText color="dim" size="medium" variant="title">
                   ✕
                 </BiolumText>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView
@@ -201,23 +203,31 @@ export function ReviewDetailsModal({
 
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
-              <TouchableOpacity
+              <Pressable
                 onPress={handleReject}
-                style={[styles.actionButton, styles.rejectButton]}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.rejectButton,
+                  pressed && { opacity: 0.7 },
+                ]}
               >
                 <BiolumText color="full" size="large" variant="body">
                   ✕ Reject
                 </BiolumText>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={handleApprove}
-                style={[styles.actionButton, styles.approveButton]}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.approveButton,
+                  pressed && { opacity: 0.7 },
+                ]}
               >
                 <BiolumText color="full" size="large" variant="body">
                   ✓ Approve
                 </BiolumText>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </HUDSurface>
         </View>

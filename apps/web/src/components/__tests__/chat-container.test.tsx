@@ -1,5 +1,5 @@
 import "@/test/dom";
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 
 import { act, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";

@@ -10,7 +10,6 @@ import { z } from "zod";
 import type { EdgeRow } from "../services/graph";
 
 import { requirePolicy } from "../gate";
-import { graphQueriesTotal, graphQueryDurationSeconds } from "../metrics";
 import { authedProcedure, router } from "../trpc";
 
 function mapGraphWriteResource(raw: unknown) {
@@ -313,11 +312,31 @@ export const graphRouter = router({
       const { kind } = input;
       let graphInstance: import("@alfred/knowledge").Hypergraph | undefined;
       let stopTimer: (() => void) | null = null;
+      let metrics: {
+        graphQueryDurationSeconds: {
+          startTimer: (labels: { kind: string }) => () => void;
+        };
+        graphQueriesTotal: {
+          inc: (labels: { kind: string; resource: string }) => void;
+        };
+      } | null = null;
+
+      try {
+        // Lazy-load heavyweight metrics wiring to keep router imports fast.
+        const m = await import("../metrics");
+        metrics = {
+          graphQueryDurationSeconds: m.graphQueryDurationSeconds,
+          graphQueriesTotal: m.graphQueriesTotal,
+        };
+      } catch {
+        metrics = null;
+      }
 
       try {
         const { runQuery: runUnifiedQuery } = await import("@alfred/graph");
         try {
-          stopTimer = graphQueryDurationSeconds.startTimer({ kind });
+          stopTimer =
+            metrics?.graphQueryDurationSeconds.startTimer({ kind }) ?? null;
         } catch {
           stopTimer = null;
         }
@@ -370,7 +389,7 @@ export const graphRouter = router({
         }
 
         try {
-          graphQueriesTotal.inc({ kind, resource });
+          metrics?.graphQueriesTotal.inc({ kind, resource });
         } catch {
           // Metrics failures must not affect query results
         }

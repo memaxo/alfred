@@ -26,7 +26,7 @@ export class WindowErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
 
     logger.error("desktop_window_crashed", {
@@ -43,7 +43,7 @@ export class WindowErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       const maxRetries = 3;
       const canRetry = this.state.errorCount < maxRetries;

@@ -9,6 +9,9 @@ export * from "./agentfs";
 export * from "./enrichment";
 // Build-time constants
 export * from "./build-constants";
+// Capability registry types
+export * from "./capability";
+export * from "./capability.zod";
 // Cognitive domain types
 export * from "./cognitive";
 export * from "./cognitive.zod";
@@ -36,6 +39,9 @@ export * from "./history";
 export * from "./hooks";
 // Identity and ID generation
 export * from "./id";
+// Home Domain types
+export * from "./home";
+export * from "./home.zod";
 // Knowledge graph types
 export * from "./knowledge";
 // CLI Manifest types
@@ -62,6 +68,8 @@ export * from "./ref.zod";
 export { RuntimeContext } from "./runtime-context";
 // OAuth Scopes for MCP integration
 export * from "./scopes";
+// Signals (LLM-judged friction + delight + interventions)
+export * from "./signals";
 // Sense (capture inbox + working set)
 export * from "./sense";
 export * from "./sense.zod";

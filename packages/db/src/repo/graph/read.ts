@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { EdgeRow, NodeRow } from "./types";
 
 import { db } from "../../client";
+import { measureGraphQuery } from "../../metrics";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import { buildEdgeWhere } from "./utils";
 
@@ -14,16 +15,18 @@ import { buildEdgeWhere } from "./utils";
  * @returns The updated node or null if not found
  */
 export async function recordAccess(nodeId: string): Promise<NodeRow | null> {
-  const [row] = await db
-    .update(memoryNodes)
-    .set({
-      accessCount: sql`${memoryNodes.accessCount} + 1`,
-      lastAccessedAt: new Date(),
-    })
-    .where(eq(memoryNodes.id, nodeId))
-    .returning();
+  return await measureGraphQuery("recordAccess", async () => {
+    const [row] = await db
+      .update(memoryNodes)
+      .set({
+        accessCount: sql`${memoryNodes.accessCount} + 1`,
+        lastAccessedAt: new Date(),
+      })
+      .where(eq(memoryNodes.id, nodeId))
+      .returning();
 
-  return row ?? null;
+    return row ?? null;
+  });
 }
 
 /**
@@ -38,15 +41,17 @@ export async function recordAccessBatch(nodeIds: string[]): Promise<number> {
     return 0;
   }
 
-  const result = await db
-    .update(memoryNodes)
-    .set({
-      accessCount: sql`${memoryNodes.accessCount} + 1`,
-      lastAccessedAt: new Date(),
-    })
-    .where(sql`${memoryNodes.id} = ANY(${nodeIds})`);
+  return await measureGraphQuery("recordAccessBatch", async () => {
+    const result = await db
+      .update(memoryNodes)
+      .set({
+        accessCount: sql`${memoryNodes.accessCount} + 1`,
+        lastAccessedAt: new Date(),
+      })
+      .where(inArray(memoryNodes.id, nodeIds));
 
-  return result.rowCount ?? 0;
+    return result.rowCount ?? 0;
+  });
 }
 
 /**

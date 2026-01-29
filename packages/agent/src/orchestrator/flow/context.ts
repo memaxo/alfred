@@ -1,4 +1,5 @@
 import "bun";
+import type { EnrichedEntry, PersistedIndex } from "@alfred/codeprint/types";
 import type {
   ContextBundle,
   ContextFileSlice,
@@ -35,7 +36,30 @@ const DEFAULT_MAX_TOKENS = Number(
   process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000"
 );
 const CONTEXT_CACHE_TTL_MS = 5 * 60_000;
+const CODEPRINT_INDEX_TTL_MS = 5 * 60_000;
 const WEB_SUMMARY_LIMIT = 180;
+
+const QUERY_ALIASES: Record<string, readonly string[]> = {
+  application: ["app"],
+  authentication: ["auth"],
+  authorization: ["auth", "authz"],
+  config: ["configuration"],
+  configuration: ["config"],
+  database: ["db"],
+  dependencies: ["dep", "deps"],
+  dependency: ["dep", "deps"],
+  environment: ["env"],
+  embedding: ["embed"],
+  embeddings: ["embed"],
+  javascript: ["js"],
+  jwt: ["auth", "jwks"],
+  package: ["pkg"],
+  packages: ["pkg"],
+  planner: ["plan"],
+  planning: ["plan"],
+  repository: ["repo"],
+  typescript: ["ts"],
+};
 
 const contextCache = new Map<
   string,
@@ -44,6 +68,292 @@ const contextCache = new Map<
     receipt: SearchReceipt;
   }
 >();
+
+const codeprintIndexCache = new Map<
+  string,
+  { expires: number; index: Map<string, EnrichedEntry> }
+>();
+
+const codeprintRefCache = new Map<
+  string,
+  {
+    expires: number;
+    refs: Map<string, { path: string; line: number; kind: string }[]>;
+  }
+>();
+
+async function loadCodeprintIndexFromDisk(
+  workspace: string
+): Promise<Map<string, EnrichedEntry> | null> {
+  try {
+    const data = await Bun.file(`${workspace}/.codeprint.json`).json();
+
+    if (data && typeof data === "object" && "entries" in data) {
+      const persisted = data as PersistedIndex;
+      if (persisted?.meta?.version === 2) {
+        return new Map(persisted.entries as [string, EnrichedEntry][]);
+      }
+    }
+
+    if (Array.isArray(data)) {
+      return new Map(data as [string, EnrichedEntry][]);
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function getOrLoadCodeprintIndex(
+  workspace: string
+): Promise<Map<string, EnrichedEntry> | null> {
+  const cached = codeprintIndexCache.get(workspace);
+  if (cached && cached.expires > Date.now()) {
+    return cached.index;
+  }
+
+  const index = await loadCodeprintIndexFromDisk(workspace);
+  if (!index) {
+    return null;
+  }
+
+  codeprintIndexCache.set(workspace, {
+    expires: Date.now() + CODEPRINT_INDEX_TTL_MS,
+    index,
+  });
+  return index;
+}
+
+function getOrBuildRefIndex(
+  workspace: string,
+  index: Map<string, EnrichedEntry>
+): Map<string, { path: string; line: number; kind: string }[]> {
+  const cached = codeprintRefCache.get(workspace);
+  if (cached && cached.expires > Date.now()) {
+    return cached.refs;
+  }
+
+  const refs = new Map<
+    string,
+    { path: string; line: number; kind: string }[]
+  >();
+  for (const [p, entry] of index) {
+    for (const ref of entry.references) {
+      const key = ref.name.toLowerCase();
+      let list = refs.get(key);
+      if (!list) {
+        list = [];
+        refs.set(key, list);
+      }
+      list.push({ path: p, line: ref.line, kind: ref.kind });
+    }
+  }
+
+  for (const list of refs.values()) {
+    list.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line);
+  }
+
+  codeprintRefCache.set(workspace, {
+    expires: Date.now() + CODEPRINT_INDEX_TTL_MS,
+    refs,
+  });
+  return refs;
+}
+
+function extractQueryTerms(requirement: string): Set<string> {
+  const tokens = requirement
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .filter((t) => t.length >= 3 && t.length <= 40);
+
+  const expanded = new Set(tokens);
+  for (const t of tokens) {
+    const alts = QUERY_ALIASES[t];
+    if (alts) {
+      for (const alt of alts) {
+        expanded.add(alt);
+      }
+    }
+
+    if (t.length >= 8) {
+      expanded.add(t.slice(0, 4));
+    }
+  }
+
+  return expanded;
+}
+
+function tokenizeIdentifier(value: string): string[] {
+  const out: string[] = [];
+  const lower = value.toLowerCase();
+  if (lower.length > 0) {
+    out.push(lower);
+  }
+  const split = value
+    .replaceAll(/([a-z0-9])([A-Z])/gu, "$1 $2")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .filter((t) => t.length >= 3 && t.length <= 40);
+  for (const t of split) {
+    out.push(t);
+  }
+  return out;
+}
+
+interface Anchor {
+  line: number;
+  weight: number;
+}
+
+function collectAnchorNames(
+  entry: EnrichedEntry,
+  terms: Set<string>
+): string[] {
+  const names: string[] = [];
+
+  for (const sym of entry.symbols) {
+    const tokens = tokenizeIdentifier(sym.name);
+    const hit = tokens.some((t) => terms.has(t));
+    if (hit) {
+      names.push(sym.name.toLowerCase());
+    }
+  }
+
+  for (const ref of entry.references) {
+    const tokens = tokenizeIdentifier(ref.name);
+    const hit = tokens.some((t) => terms.has(t));
+    if (hit) {
+      names.push(ref.name.toLowerCase());
+    }
+  }
+
+  return [...new Set(names)];
+}
+
+function collectAnchors(entry: EnrichedEntry, terms: Set<string>): Anchor[] {
+  const anchors: Anchor[] = [];
+
+  for (const sym of entry.symbols) {
+    const tokens = tokenizeIdentifier(sym.name);
+    const hit = tokens.some((t) => terms.has(t));
+    if (!hit) {
+      continue;
+    }
+    const base = sym.exported ? 4 : 3;
+    anchors.push({ line: sym.line, weight: base });
+  }
+
+  for (const ref of entry.references) {
+    const tokens = tokenizeIdentifier(ref.name);
+    const hit = tokens.some((t) => terms.has(t));
+    if (!hit) {
+      continue;
+    }
+    anchors.push({ line: ref.line, weight: 2 });
+  }
+
+  return anchors;
+}
+
+interface Window {
+  startLine: number;
+  endLine: number;
+  weight: number;
+}
+
+function mergeWindows(windows: Window[]): Window[] {
+  if (windows.length <= 1) {
+    return windows;
+  }
+
+  const sorted = [...windows].sort(
+    (a, b) => a.startLine - b.startLine || a.endLine - b.endLine
+  );
+  const merged: Window[] = [];
+  for (const w of sorted) {
+    const last = merged.at(-1);
+    if (!last || w.startLine > last.endLine + 3) {
+      merged.push({ ...w });
+      continue;
+    }
+    last.endLine = Math.max(last.endLine, w.endLine);
+    last.weight += w.weight;
+  }
+  merged.sort((a, b) => b.weight - a.weight || a.startLine - b.startLine);
+  return merged;
+}
+
+function buildWindows(
+  anchors: Anchor[],
+  totalLines: number,
+  radius: number
+): Window[] {
+  const windows: Window[] = [];
+  for (const a of anchors) {
+    const line = Math.max(1, Math.min(totalLines, a.line));
+    const startLine = Math.max(1, line - radius);
+    const endLine = Math.min(totalLines, line + radius);
+    windows.push({ startLine, endLine, weight: a.weight });
+  }
+  windows.sort((a, b) => a.startLine - b.startLine || b.weight - a.weight);
+
+  const merged: Window[] = [];
+  for (const win of windows) {
+    const last = merged.at(-1);
+    if (!last || win.startLine > last.endLine + 3) {
+      merged.push({ ...win });
+      continue;
+    }
+    last.endLine = Math.max(last.endLine, win.endLine);
+    last.weight += win.weight;
+  }
+
+  merged.sort((a, b) => b.weight - a.weight || a.startLine - b.startLine);
+  return merged;
+}
+
+function shrinkWindowToBudget(args: {
+  lines: string[];
+  startLine: number;
+  endLine: number;
+  budgetTokens: number;
+  estimator: ReturnType<typeof createTokenEstimator>;
+}): {
+  startLine: number;
+  endLine: number;
+  content: string;
+  tokens: number;
+} | null {
+  const { lines, estimator } = args;
+  const totalLines = lines.length;
+  let startLine = Math.max(1, Math.min(totalLines, args.startLine));
+  let endLine = Math.max(startLine, Math.min(totalLines, args.endLine));
+
+  let sliceLines = lines.slice(startLine - 1, endLine);
+  let content = sliceLines.join("\n");
+  let tokens = estimator.estimate(content);
+
+  while (tokens > args.budgetTokens && sliceLines.length > 20) {
+    const len = sliceLines.length;
+    const nextLen = Math.max(20, Math.floor(len * 0.75));
+    const mid = Math.floor((startLine + endLine) / 2);
+
+    startLine = Math.max(1, mid - Math.floor(nextLen / 2));
+    endLine = Math.min(totalLines, startLine + nextLen - 1);
+    startLine = Math.max(1, endLine - nextLen + 1);
+
+    sliceLines = lines.slice(startLine - 1, endLine);
+    content = sliceLines.join("\n");
+    tokens = estimator.estimate(content);
+  }
+
+  if (tokens > args.budgetTokens) {
+    return null;
+  }
+
+  return { startLine, endLine, content, tokens };
+}
 
 function buildCacheKey(
   requirement: string,
@@ -306,6 +616,11 @@ export async function gatherCodeContext({
   const extSet = normalizeExts(exts);
   const ignoreSet = normalizeIgnore(ignore);
   const limit = topK ?? DEFAULT_TOPK;
+  const disableLlm = process.env.ORCH_CONTEXT_NO_LLM === "1";
+  const codeprintEnabled =
+    process.env.ORCH_CONTEXT_CODEPRINT === "0"
+      ? false
+      : process.env.CODEPRINT_ENABLED !== "0";
   const cacheKey = buildCacheKey(
     requirement,
     resolvedCw,
@@ -333,7 +648,63 @@ export async function gatherCodeContext({
 
   let items: SearchReceiptItem[] = [];
 
-  if (preferredExecutor === "codex") {
+  if (codeprintEnabled) {
+    try {
+      const { findRelevantFiles } = await import("@alfred/codeprint");
+      const results = await findRelevantFiles(resolvedCw, requirement, limit);
+      items = results
+        .filter((result) => {
+          const ext = path.extname(result.path).toLowerCase();
+          if (extSet.size > 0 && ext.length > 0 && !extSet.has(ext)) {
+            return false;
+          }
+          const segments = result.path.split(/[\\/]+/u);
+          return !segments.some((seg) => ignoreSet.has(seg));
+        })
+        .map((result) => ({
+          id: `code:${result.path}`,
+          kind: "code",
+          path: result.path,
+          score: Math.max(0, Math.min(1, result.score)),
+          reason: `codeprint:${result.method}`,
+        }));
+
+      const minScoreRaw = Number(
+        process.env.ORCH_CONTEXT_CODEPRINT_MIN_SCORE ?? "0.18"
+      );
+      const minGapRaw = Number(
+        process.env.ORCH_CONTEXT_CODEPRINT_MIN_GAP ?? "0.03"
+      );
+      const minScore =
+        Number.isFinite(minScoreRaw) && minScoreRaw > 0 ? minScoreRaw : 0.18;
+      const minGap =
+        Number.isFinite(minGapRaw) && minGapRaw > 0 ? minGapRaw : 0.03;
+
+      if (items.length > 0) {
+        const topScore = items[0]?.score ?? 0;
+        const k = Math.min(items.length - 1, Math.min(limit - 1, 4));
+        const kScore = items[k]?.score ?? topScore;
+        const gap = topScore - kScore;
+
+        const lowConfidence =
+          topScore < minScore || (items.length >= 2 && k >= 1 && gap < minGap);
+
+        if (lowConfidence) {
+          await writer?.write?.({
+            type: "notice",
+            message: "codeprint_low_confidence_fallback",
+            topScore,
+            gap,
+          });
+          items = [];
+        }
+      }
+    } catch {
+      items = [];
+    }
+  }
+
+  if (!disableLlm && preferredExecutor === "codex") {
     try {
       const result = await toolCodex.execute({
         input: {
@@ -380,7 +751,7 @@ export async function gatherCodeContext({
     }
   }
 
-  if (items.length === 0 && preferredExecutor !== "codex") {
+  if (!disableLlm && items.length === 0 && preferredExecutor !== "codex") {
     try {
       const result = await toolDroid.execute({
         input: {
@@ -576,6 +947,7 @@ function buildBundleLinks(receipt: SearchReceipt) {
 export async function buildContextBundle({
   cw,
   receipts,
+  requirement,
   maxTokens,
   sliceMaxLines,
   exts,
@@ -583,6 +955,7 @@ export async function buildContextBundle({
 }: {
   cw: string;
   receipts: SearchReceipt;
+  requirement?: string;
   maxTokens: number;
   sliceMaxLines?: number;
   exts?: string[];
@@ -597,10 +970,39 @@ export async function buildContextBundle({
   const extSet = normalizeExts(exts);
   const estimator = createTokenEstimator();
 
+  const terms = requirement ? extractQueryTerms(requirement) : null;
+  const edgeFollow = process.env.ORCH_CONTEXT_EDGE_FOLLOW === "1";
+  const includeHeader = process.env.ORCH_CONTEXT_INCLUDE_HEADER !== "0";
+  const codeprintIndex = terms
+    ? await getOrLoadCodeprintIndex(resolvedCw)
+    : null;
+  const refIndex =
+    edgeFollow && codeprintIndex
+      ? getOrBuildRefIndex(resolvedCw, codeprintIndex)
+      : null;
+
   let budget = limit;
   const files: ContextFileSlice[] = [];
 
+  const seen = new Set<string>();
+  const pushSlice = (slice: ContextFileSlice) => {
+    const key = `${slice.path}:${slice.startLine}-${slice.endLine}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    files.push(slice);
+  };
+
   const sorted = [...(receipts.code ?? [])].sort((a, b) => b.score - a.score);
+
+  const rankByPath = new Map<string, number>();
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i]?.path;
+    if (p) {
+      rankByPath.set(p, i);
+    }
+  }
 
   for (const item of sorted) {
     if (budget <= 0) {
@@ -623,39 +1025,197 @@ export async function buildContextBundle({
       continue;
     }
 
-    let tokens = estimator.estimate(content);
-    const startLine = 1;
-    let endLine: number;
-    let sliceContent = content;
+    const lines = content.split(/\r?\n/u);
+    const totalLines = lines.length;
+    const entry = codeprintIndex?.get(relativePath);
+    const anchors = entry && terms ? collectAnchors(entry, terms) : [];
 
-    if (tokens > budget || content.split(/\r?\n/u).length > maxLines) {
-      const lines = content.split(/\r?\n/u);
-      let sliceLines = lines.slice(0, Math.min(maxLines, lines.length));
-      sliceContent = sliceLines.join("\n");
-      tokens = estimator.estimate(sliceContent);
-      while (tokens > budget && sliceLines.length > 20) {
-        sliceLines = sliceLines.slice(0, Math.floor(sliceLines.length * 0.75));
-        sliceContent = sliceLines.join("\n");
-        tokens = estimator.estimate(sliceContent);
+    const anchorNames =
+      entry && terms && edgeFollow ? collectAnchorNames(entry, terms) : [];
+
+    let windows: Window[] =
+      anchors.length > 0
+        ? buildWindows(anchors, totalLines, 40)
+        : [
+            {
+              startLine: 1,
+              endLine: Math.min(totalLines, maxLines),
+              weight: 0,
+            },
+          ];
+
+    if (includeHeader && anchors.length > 0) {
+      const first = windows[0];
+      if (first && first.startLine > 80) {
+        windows = mergeWindows([
+          ...windows,
+          { startLine: 1, endLine: Math.min(30, totalLines), weight: 2 },
+        ]);
       }
-      endLine = sliceLines.length;
-    } else {
-      endLine = content.split(/\r?\n/u).length;
     }
 
-    if (tokens > budget) {
+    windows = mergeWindows(windows);
+
+    let remainingLines = maxLines;
+    for (const win of windows) {
+      if (budget <= 0 || remainingLines <= 0) {
+        break;
+      }
+
+      const cappedStart = win.startLine;
+      const cappedEnd = Math.min(
+        win.endLine,
+        win.startLine + remainingLines - 1
+      );
+      const slice = shrinkWindowToBudget({
+        lines,
+        startLine: cappedStart,
+        endLine: cappedEnd,
+        budgetTokens: budget,
+        estimator,
+      });
+
+      if (!slice) {
+        continue;
+      }
+
+      pushSlice({
+        path: relativePath,
+        startLine: slice.startLine,
+        endLine: slice.endLine,
+        tokens: slice.tokens,
+        content: slice.content,
+      });
+      budget -= slice.tokens;
+      remainingLines -= slice.endLine - slice.startLine + 1;
+    }
+
+    if (budget > 0 && refIndex && anchorNames.length > 0) {
+      const callerCandidates: { path: string; line: number; rank: number }[] =
+        [];
+      for (const name of anchorNames) {
+        const refs = refIndex.get(name);
+        if (!refs) {
+          continue;
+        }
+        for (const r of refs) {
+          if (r.path === relativePath) {
+            continue;
+          }
+          const rank = rankByPath.get(r.path) ?? Number.POSITIVE_INFINITY;
+          callerCandidates.push({ path: r.path, line: r.line, rank });
+        }
+      }
+
+      callerCandidates.sort(
+        (a, b) =>
+          a.rank - b.rank || a.path.localeCompare(b.path) || a.line - b.line
+      );
+
+      let added = 0;
+      for (const caller of callerCandidates) {
+        if (added >= 2) {
+          break;
+        }
+
+        const callerFull = path.resolve(resolvedCw, caller.path);
+        if (!within(resolvedCw, callerFull)) {
+          continue;
+        }
+        const callerExt = path.extname(callerFull).toLowerCase();
+        if (extSet.size > 0 && !extSet.has(callerExt)) {
+          continue;
+        }
+
+        const callerContent = await readFileSlice(callerFull);
+        if (!callerContent) {
+          continue;
+        }
+        const callerLines = callerContent.split(/\r?\n/u);
+        const callerTotal = callerLines.length;
+
+        const win: Window = {
+          startLine: Math.max(1, caller.line - 30),
+          endLine: Math.min(callerTotal, caller.line + 30),
+          weight: 0,
+        };
+
+        const slice = shrinkWindowToBudget({
+          lines: callerLines,
+          startLine: win.startLine,
+          endLine: win.endLine,
+          budgetTokens: budget,
+          estimator,
+        });
+        if (!slice) {
+          continue;
+        }
+
+        pushSlice({
+          path: caller.path,
+          startLine: slice.startLine,
+          endLine: slice.endLine,
+          tokens: slice.tokens,
+          content: slice.content,
+        });
+        budget -= slice.tokens;
+        added++;
+      }
+    }
+  }
+
+  // Merge overlapping slices per file (no adjacency merge) to reduce redundancy.
+  const mergedFiles: ContextFileSlice[] = [];
+  const byPath = new Map<string, ContextFileSlice[]>();
+  const pathOrder: string[] = [];
+  for (const f of files) {
+    let list = byPath.get(f.path);
+    if (!list) {
+      list = [];
+      byPath.set(f.path, list);
+      pathOrder.push(f.path);
+    }
+    list.push(f);
+  }
+
+  for (const p of pathOrder) {
+    const list = byPath.get(p);
+    if (!list) {
       continue;
     }
+    list.sort((a, b) => a.startLine - b.startLine || a.endLine - b.endLine);
+    const out: { startLine: number; endLine: number }[] = [];
+    for (const s of list) {
+      const last = out.at(-1);
+      if (!last || s.startLine > last.endLine) {
+        out.push({ startLine: s.startLine, endLine: s.endLine });
+      } else {
+        last.endLine = Math.max(last.endLine, s.endLine);
+      }
+    }
 
-    files.push({
-      path: relativePath,
-      startLine,
-      endLine,
-      tokens,
-      content: sliceContent,
-    });
-    budget -= tokens;
+    const fullPath = path.resolve(resolvedCw, p);
+    const content = await readFileSlice(fullPath);
+    const lines = content ? content.split(/\r?\n/u) : null;
+
+    for (const r of out) {
+      const sliceContent =
+        lines && lines.length > 0
+          ? lines.slice(r.startLine - 1, r.endLine).join("\n")
+          : (list[0]?.content ?? "");
+      const tokens = estimator.estimate(sliceContent);
+      mergedFiles.push({
+        path: p,
+        startLine: r.startLine,
+        endLine: r.endLine,
+        tokens,
+        content: sliceContent,
+      });
+    }
   }
+
+  files.length = 0;
+  files.push(...mergedFiles);
 
   const estimatedTokens = files.reduce((sum, file) => sum + file.tokens, 0);
   const bundle: ContextBundle = {

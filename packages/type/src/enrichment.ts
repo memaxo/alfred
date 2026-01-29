@@ -7,6 +7,12 @@
 
 import { z } from "zod";
 
+import {
+  delightSignalSchema,
+  frictionSignalSchema,
+  signalInterventionSchema,
+} from "./signals";
+
 const enrichBaseSchema = z.object({
   schemaVersion: z.number().int().default(1),
   createdAt: z
@@ -73,6 +79,10 @@ export const failureContextSchema = enrichBaseSchema.extend({
   durationMs: z.number(),
   escalations: z.array(escalationRecordSchema),
   loopDetections: z.array(loopDetectionSchema),
+  /** LLM-judged friction/delight signals (abstract, no raw content). */
+  signals: z.array(frictionSignalSchema).default([]),
+  delight: z.array(delightSignalSchema).default([]),
+  interventions: z.array(signalInterventionSchema).default([]),
   reviewFailures: z.array(reviewFailureSchema),
   runId: z.string(),
   status: z.enum(["failure", "stuck", "escalated", "timeout"]),
@@ -116,6 +126,10 @@ export const structuredHandoffSchema = enrichBaseSchema.extend({
   openQuestions: z.array(z.string()),
 
   summary: z.string(),
+  /** LLM-judged signals observed in prior wave(s). */
+  signals: z.array(frictionSignalSchema).default([]),
+  delight: z.array(delightSignalSchema).default([]),
+  interventions: z.array(signalInterventionSchema).default([]),
   toolsAvoided: z.array(toolAvoidanceSchema),
 
   ts: z.number(),

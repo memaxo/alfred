@@ -1,5 +1,7 @@
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
 import type { ReactNode } from "react";
+
+type AssistantUIMessage = UIMessage;
 
 import {
   Message as BaseMessage,

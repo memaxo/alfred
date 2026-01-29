@@ -5,6 +5,9 @@
  * Enables the agent to find relevant memories by meaning, not just keywords.
  */
 
+import type { MemorySearchEvent } from "@alfred/type";
+import type { ToolCallOptions } from "ai";
+
 import { db } from "@alfred/db";
 import { recordAccessBatch } from "@alfred/db/repo/graph/read";
 import {
@@ -23,6 +26,7 @@ import {
   recordMemoryToolCall,
 } from "../../../../src/metrics";
 import { embedQuery, normalizeEmbedding } from "./embed";
+import { getHooksRuntime } from "./hook";
 
 const searchInputSchema = z.object({
   query: z.string().min(1).describe("Natural language search query"),
@@ -82,26 +86,69 @@ export const toolMemorySearch = {
     count: z.number(),
     query: z.string(),
   }),
-  execute: async ({ input }: { input: SearchInput }) => {
+  execute: async (
+    { input }: { input: SearchInput },
+    options?: ToolCallOptions
+  ) => {
     recordAssistantToolCall("memory_search");
     const startTime = Date.now();
 
     try {
-      const topK = input.topK ?? 10;
-      const minScore = input.minScore ?? DEFAULT_MIN_SCORE;
+      const hooks = getHooksRuntime(options);
+
+      let { query } = input;
+      let topK = input.topK ?? 10;
+      let minScore = input.minScore ?? DEFAULT_MIN_SCORE;
+      let { resource } = input;
+      let { kind } = input;
+
+      if (hooks) {
+        const hookEvent: MemorySearchEvent = {
+          type: "memory:search",
+          query,
+          limit: topK,
+          filters: {
+            ...(resource ? { resource } : {}),
+            ...(kind ? { kind } : {}),
+            minScore,
+          },
+        };
+        const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+        if (out.decision === "deny" || out.decision === "ask") {
+          throw new Error(out.reason ?? "hook_denied");
+        }
+
+        const next = (out.transformed ?? hookEvent) as MemorySearchEvent;
+        ({ query } = next);
+        topK = next.limit;
+
+        const { filters } = next;
+        if (filters && typeof filters === "object") {
+          const f = filters as Record<string, unknown>;
+          if (typeof f.resource === "string") {
+            ({ resource } = f);
+          }
+          if (typeof f.kind === "string") {
+            ({ kind } = f);
+          }
+          if (typeof f.minScore === "number") {
+            ({ minScore } = f);
+          }
+        }
+      }
 
       // Embed the query
-      const queryEmbedding = await embedQuery(input.query);
+      const queryEmbedding = await embedQuery(query);
 
       // Build query conditions
       const conditions = [sql`${memoryNodes.embedding} IS NOT NULL`];
 
-      if (input.resource) {
-        conditions.push(eq(memoryNodes.resource, input.resource));
+      if (resource) {
+        conditions.push(eq(memoryNodes.resource, resource));
       }
 
-      if (input.kind) {
-        conditions.push(eq(memoryNodes.kind, input.kind));
+      if (kind) {
+        conditions.push(eq(memoryNodes.kind, kind));
       }
 
       // Exclude archived nodes
@@ -178,7 +225,7 @@ export const toolMemorySearch = {
       return {
         results,
         count: results.length,
-        query: input.query,
+        query,
       };
     } catch (error) {
       recordMemoryToolCall("memory_search", "error");

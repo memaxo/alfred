@@ -500,12 +500,20 @@ async function runConversationalAssistant(
         }
       : {};
 
+  const hooks = await ensureHooksRuntime(ctx, {
+    sessionId: String(ctx.get?.("requestId") ?? input.userId),
+    signal: new AbortController().signal,
+    workspace: process.cwd(),
+    workflowId: threadId,
+  });
+
   const assistantStart = performance.now();
   const result = await generateText({
     model,
     tools: defaults.tools,
     system: systemInstructions,
     messages: modelMessages,
+    experimental_context: { hooks },
     ...telemetry,
   });
   const durationSeconds = (performance.now() - assistantStart) / 1000;
@@ -564,13 +572,6 @@ async function runConversationalAssistant(
 
   // Cognitive Integration: Feed input into the loop
   try {
-    await ensureHooksRuntime(ctx, {
-      sessionId: String(ctx.get("requestId") ?? input.userId),
-      signal: new AbortController().signal,
-      workspace: process.cwd(),
-      workflowId: threadId,
-    });
-
     const { runCognitiveLoop } = await import("@alfred/runtime");
     const result = await runCognitiveLoop(ctx, threadId, {
       _: "input",

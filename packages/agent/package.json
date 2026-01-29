@@ -62,6 +62,11 @@
       "types": "./assistant/src/*.ts",
       "bun": "./assistant/src/*.ts",
       "default": "./assistant/src/*.ts"
+    },
+    "./signals/*": {
+      "types": "./src/signals/*.ts",
+      "bun": "./src/signals/*.ts",
+      "default": "./src/signals/*.ts"
     }
   },
   "scripts": {
@@ -82,6 +87,7 @@
     "@alfred/cognitive": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/embed": "workspace:*",
+    "@alfred/home": "workspace:*",
     "@alfred/hooks": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",

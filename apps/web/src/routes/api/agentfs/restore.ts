@@ -1,5 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  rename,
+  rm,
+  stat,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 function safeRunId(runId: string): string {
@@ -218,6 +226,17 @@ export const Route = createFileRoute("/api/agentfs/restore")({
                 },
               });
             }
+
+            // Update lastAccessedAt for LRU tracking
+            try {
+              const schedulerPkg = "@alfred/api/scheduler";
+              const { touchAgentfsCasLastAccessed } = await import(
+                /* @vite-ignore */ schedulerPkg
+              );
+              await touchAgentfsCasLastAccessed({ sha: casSha });
+            } catch {
+              // ignore - don't fail the restore if tracking fails
+            }
           } else {
             await writeBodyToFile({ body: request.body, filePath: tmpArchive });
           }
@@ -313,6 +332,14 @@ export const Route = createFileRoute("/api/agentfs/restore")({
                 "Cache-Control": "no-store",
               },
             });
+          }
+
+          // Treat restored runs as "new" for TTL purposes: cleanup uses the DB mtime.
+          try {
+            const now = new Date();
+            await utimes(path.join(destRunDirAbs, db), now, now);
+          } catch {
+            // ignore
           }
 
           const dbPath = path.posix.join(destRunDirRel, db);

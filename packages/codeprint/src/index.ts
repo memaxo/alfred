@@ -11,6 +11,7 @@ import type {
 
 import { BM25Index } from "./bm25.js";
 import { discoverFiles, type DiscoveryMethod } from "./discover.js";
+import { cosineSimilarity, embedText } from "./liteembed.js";
 import {
   indexBuildDuration,
   queryDuration,
@@ -23,6 +24,7 @@ import {
   bm25VocabularyGauge,
 } from "./metrics.js";
 import { getPool, isPoolAvailable, shutdownPool } from "./pool.js";
+import { getRankerWeights, scoreRanker } from "./ranker.js";
 import { buildSearchTokens } from "./searchtext.js";
 
 // ─────────────────────────────────────────────────────────
@@ -70,6 +72,23 @@ const DIR_STOPWORDS = new Set([
   "tests",
 ]);
 
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let t: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        t = setTimeout(() => reject(new Error("codeprint_timeout")), ms);
+        (t as unknown as { unref?: () => void }).unref?.();
+      }),
+    ]);
+  } finally {
+    if (t) {
+      clearTimeout(t);
+    }
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────
@@ -115,7 +134,7 @@ export async function findRelevantFiles(
 
   const maxBm25Score = bm25Results[0]?.score ?? 0;
 
-  const candidates = bm25Results.map((r) => {
+  let candidates = bm25Results.map((r) => {
     const entry = index.get(r.path);
     const base = normalizeBm25(r.score, maxBm25Score);
     const boost = entry ? computeSymbolBoost(entry, expandedTerms) : 0;
@@ -132,8 +151,142 @@ export async function findRelevantFiles(
   candidates.sort((a, b) => b.score - a.score);
   keywordCandidatesHistogram.observe(candidates.length);
 
+  if (process.env.CODEPRINT_RANKER === "1") {
+    const w = getRankerWeights();
+    const bm25ByPath = new Map<string, number>();
+    for (const r of bm25Results) {
+      bm25ByPath.set(r.path, normalizeBm25(r.score, maxBm25Score));
+    }
+
+    const scored = candidates.map((c) => {
+      const bm25 = bm25ByPath.get(c.path) ?? 0;
+      const entry = index.get(c.path);
+      const symbolBoost = entry ? computeSymbolBoost(entry, expandedTerms) : 0;
+      const base = clamp01(bm25 + symbolBoost * SYMBOL_BOOST_WEIGHT);
+      const boostDelta = Math.max(0, c.score - base);
+
+      const pri = siblingPriority(c.path);
+      const entrypoint = 1 - Math.min(1, pri / 10);
+      const depth = c.path.split("/").length;
+      const shallow = 1 - Math.min(1, (depth - 1) / 8);
+      const name = basename(c.path);
+
+      const rankerScore = scoreRanker(
+        {
+          finalScore: c.score,
+          bm25,
+          symbolBoost,
+          boostDelta,
+          entrypoint,
+          shallow,
+          isTypes: name === "types" ? 1 : 0,
+          isIndex: name === "index" ? 1 : 0,
+        },
+        w
+      );
+
+      return { ...c, rankerScore };
+    });
+
+    scored.sort(
+      (a, b) =>
+        b.rankerScore - a.rankerScore ||
+        b.score - a.score ||
+        a.path.localeCompare(b.path)
+    );
+
+    candidates = scored.map((c) => ({ path: c.path, score: c.score }));
+  }
+
+  const liteFusionRaw = (process.env.CODEPRINT_LITE_FUSION ?? "").trim();
+  const liteFusionEnabled = liteFusionRaw.length > 0 && liteFusionRaw !== "0";
+  const liteFusionMode =
+    liteFusionRaw === "1"
+      ? (isRerankAvailable()
+        ? "rerank"
+        : "hash")
+      : liteFusionRaw;
+
+  if (liteFusionEnabled && candidates.length > 0) {
+    const fuseN = Math.min(50, candidates.length);
+    const top = candidates.slice(0, fuseN);
+
+    if (liteFusionMode === "rerank" && isRerankAvailable()) {
+      const docs = top.map((c) => {
+        const entry = index.get(c.path);
+        return {
+          id: c.path,
+          text: entry ? buildRerankText(c.path, entry) : c.path,
+        };
+      });
+
+      let reranked: { id: string; score: number }[] = [];
+      try {
+        reranked = await withTimeout(
+          rerank({
+            documents: docs,
+            instruction:
+              "Rank code files by relevance to the programming task.",
+            query,
+            topN: fuseN,
+          }),
+          250
+        );
+      } catch {
+        reranked = [];
+      }
+
+      if (reranked.length > 0) {
+        const max = reranked[0]?.score ?? 0;
+        const byId = new Map(reranked.map((r) => [r.id, r.score] as const));
+        const fused = top.map((c) => {
+          const s = byId.get(c.path) ?? 0;
+          const norm = max > 0 ? s / max : 0;
+          const fusedScore = clamp01(c.score + norm * 0.08);
+          return { ...c, fusedScore };
+        });
+
+        fused.sort(
+          (a, b) =>
+            b.fusedScore - a.fusedScore ||
+            b.score - a.score ||
+            a.path.localeCompare(b.path)
+        );
+
+        candidates = [
+          ...fused.map((c) => ({ path: c.path, score: c.fusedScore })),
+          ...candidates.slice(fuseN),
+        ];
+      }
+    } else if (liteFusionMode === "hash") {
+      const qv = embedText(query, 128);
+      const fused = top.map((c) => {
+        const entry = index.get(c.path);
+        if (!entry) {
+          return { ...c, fusedScore: c.score };
+        }
+        const dv = embedText(buildRerankText(c.path, entry), 128);
+        const sim = cosineSimilarity(qv, dv);
+        const fusedScore = clamp01(c.score + sim * 0.05);
+        return { ...c, fusedScore };
+      });
+
+      fused.sort(
+        (a, b) =>
+          b.fusedScore - a.fusedScore ||
+          b.score - a.score ||
+          a.path.localeCompare(b.path)
+      );
+
+      candidates = [
+        ...fused.map((c) => ({ path: c.path, score: c.fusedScore })),
+        ...candidates.slice(fuseN),
+      ];
+    }
+  }
+
   const toRerank = candidates.slice(0, 50);
-  if (!isRerankAvailable() || toRerank.length <= topK) {
+  if (!isRerankAvailable() || toRerank.length <= topK || liteFusionEnabled) {
     const results = toRerank
       .slice(0, topK)
       .map((c) => ({ ...c, method: "keyword" as const }));

@@ -260,7 +260,8 @@ describeFn("reviewRepo", () => {
       const shouldAutoApprove = await reviewRepo.shouldAutoApprove(
         TEST_USER_ID,
         "tool_execution",
-        `tool:${toolName}`
+        { toolName },
+        1
       );
 
       expect(shouldAutoApprove).toBe(true);
@@ -328,7 +329,7 @@ describeFn("reviewRepo", () => {
       expect(analytics.total.reviewed).toBe(2);
       expect(analytics.total.approved).toBe(1);
       expect(analytics.total.rejected).toBe(1);
-      expect(analytics.total.approvalRate).toBe(0.5);
+      expect(analytics.total.approvalRate).toBe(50);
     });
   });
 
@@ -422,8 +423,8 @@ describeFn("reviewRepo", () => {
       const graph = await reviewRepo.getReviewDependencyGraph(review.id);
 
       expect(graph.review).toBeDefined();
-      expect(graph.dependencies.length).toBe(1);
-      expect(graph.dependencies[0].blockedLabel).toBe("Release workflow");
+      expect(graph.blocks.length).toBe(1);
+      expect(graph.blocks[0].blockedLabel).toBe("Release workflow");
     });
   });
 

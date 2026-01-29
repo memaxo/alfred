@@ -31,6 +31,10 @@
       "types": "./dist/registry.d.ts",
       "default": "./src/registry.ts"
     },
+    "./metrics-registry": {
+      "types": "./dist/metrics-registry.d.ts",
+      "default": "./src/metrics-registry.ts"
+    },
     "./default": {
       "types": "./dist/default.d.ts",
       "default": "./src/default.ts"

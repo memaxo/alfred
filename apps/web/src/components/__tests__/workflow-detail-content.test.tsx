@@ -23,6 +23,25 @@ mock.module("@/components/ui/dialog", () => {
   };
 });
 
+mock.module("@/utils/trpc", () => {
+  return {
+    trpc: {
+      workflow: {
+        compilation: {
+          get: {
+            useQuery: () => ({
+              data: null,
+              isLoading: false,
+              isError: false,
+              error: null,
+            }),
+          },
+        },
+      },
+    },
+  };
+});
+
 import type { inferRouterOutputs } from "@trpc/server";
 
 import type { TRPCAppRouter } from "@/utils/trpc";

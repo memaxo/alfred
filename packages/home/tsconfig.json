@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": false,
+    "strictNullChecks": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "**/*.test.ts", "**/*.spec.ts"],
+  "references": [{ "path": "../logger" }, { "path": "../type" }]
+}

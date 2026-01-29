@@ -112,6 +112,15 @@ export const getSchedReembed = createServerOnlyFn(
 );
 
 /**
+ * Get SCHED_REVIEW_SLA environment variable (server-only).
+ * Used to enable/disable review SLA monitoring scheduler.
+ * Throws if called from client code.
+ */
+export const getSchedReviewSla = createServerOnlyFn(
+  () => process.env.SCHED_REVIEW_SLA
+);
+
+/**
  * Get EMBED_DEFAULT_MODEL environment variable (server-only).
  * Used to set the default embedding model (kalm or qwen).
  * Defaults to qwen for multimodal support.

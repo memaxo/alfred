@@ -82,7 +82,7 @@ export class VoiceSession {
     const audioBuf = Buffer.from(audioBase64, "base64");
     this.audioBuffer.push(audioBuf);
 
-    const {hooks} = this.config;
+    const { hooks } = this.config;
     if (hooks) {
       const sampleRate = mimeType.includes("pcm") ? 16_000 : 0;
       const audioLengthMs =
@@ -240,7 +240,7 @@ export class VoiceSession {
     this.lastActivity = Date.now();
     const audioChunks: Buffer[] = [];
 
-    const {hooks} = this.config;
+    const { hooks } = this.config;
     let finalText = text;
     let finalVoice = voice;
     if (hooks) {
@@ -345,7 +345,7 @@ export class VoiceSession {
   ): Promise<void> {
     this.lastActivity = Date.now();
 
-    const {hooks} = this.config;
+    const { hooks } = this.config;
     let finalText = text;
     let finalVoice = voice;
     if (hooks) {
@@ -471,7 +471,7 @@ export class VoiceSession {
     // Clear STT cache on activation for fresh start
     this.sttCacheCleared = false;
 
-    const {hooks} = this.config;
+    const { hooks } = this.config;
     if (hooks) {
       void hooks.registry
         .emit(
@@ -499,7 +499,7 @@ export class VoiceSession {
       sessionId: this.config.sessionId,
     });
 
-    const {hooks} = this.config;
+    const { hooks } = this.config;
     if (hooks) {
       void hooks.registry
         .emit(

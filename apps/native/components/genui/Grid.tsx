@@ -1,13 +1,6 @@
-import type { ListRenderItemInfo } from "react-native";
-
-import React from "react";
-import {
-  StyleSheet,
-  View,
-  FlatList,
-  Pressable,
-  type DimensionValue,
-} from "react-native";
+import { FlashList, type ListRenderItemInfo } from "@shopify/flash-list";
+import React, { memo, useCallback } from "react";
+import { StyleSheet, View, Pressable, type DimensionValue } from "react-native";
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -82,29 +75,34 @@ export function Grid({
     );
   };
 
-  const renderRow = ({ item, index }: ListRenderItemInfo<GridRow>) => {
-    const isEven = index % 2 === 0;
-    const backgroundColor =
-      striped && isEven ? theme.colors.glass.surface : "transparent";
+  const renderRow = useCallback(
+    ({ item, index }: ListRenderItemInfo<GridRow>) => {
+      const isEven = index % 2 === 0;
+      const backgroundColor =
+        striped && isEven ? theme.colors.glass.surface : "transparent";
 
-    return (
-      <GridRowItem
-        row={item}
-        columns={columns}
-        onPress={onRowPress ? () => onRowPress(item) : undefined}
-        backgroundColor={backgroundColor}
-        theme={theme}
-      />
-    );
-  };
+      return (
+        <MemoizedGridRowItem
+          row={item}
+          columns={columns}
+          onPress={onRowPress ? () => onRowPress(item) : undefined}
+          backgroundColor={backgroundColor}
+          theme={theme}
+        />
+      );
+    },
+    [columns, striped, theme, onRowPress]
+  );
 
   return (
     <View style={styles.container}>
       {renderHeader()}
-      <FlatList
+      <FlashList
         data={data}
         renderItem={renderRow}
         keyExtractor={(item) => item.id}
+        // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+        estimatedItemSize={50}
         showsVerticalScrollIndicator={false}
         scrollEnabled={false}
       />
@@ -120,78 +118,90 @@ interface GridRowItemProps {
   theme: ReturnType<typeof useVoidTheme>;
 }
 
-function GridRowItem({
-  row,
-  columns,
-  onPress,
-  backgroundColor,
-  theme,
-}: GridRowItemProps) {
-  const reduceMotion = useReducedMotion();
-  const bgOpacity = useSharedValue(0);
+const MemoizedGridRowItem = memo(
+  function GridRowItem({
+    row,
+    columns,
+    onPress,
+    backgroundColor,
+    theme,
+  }: GridRowItemProps) {
+    const reduceMotion = useReducedMotion();
+    const bgOpacity = useSharedValue(0);
 
-  const handlePressIn = () => {
-    if (!reduceMotion) {
-      bgOpacity.value = withTiming(1, { duration: 100 });
-    }
-  };
+    const handlePressIn = () => {
+      if (!reduceMotion) {
+        bgOpacity.value = withTiming(1, { duration: 100 });
+      }
+    };
 
-  const handlePressOut = () => {
-    bgOpacity.value = withTiming(0, { duration: 200 });
-  };
+    const handlePressOut = () => {
+      bgOpacity.value = withTiming(0, { duration: 200 });
+    };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor:
-      bgOpacity.value > 0
-        ? `rgba(255, 255, 255, ${0.05 * bgOpacity.value})`
-        : backgroundColor,
-  }));
+    const animatedStyle = useAnimatedStyle(() => ({
+      backgroundColor:
+        bgOpacity.value > 0
+          ? `rgba(255, 255, 255, ${0.05 * bgOpacity.value})`
+          : backgroundColor,
+    }));
 
-  const content = (
-    <Animated.View style={[styles.row, animatedStyle]}>
-      {columns.map((col) => {
-        const value = row[col.key];
-        const displayValue = formatCellValue(value);
+    const content = (
+      <Animated.View style={[styles.row, animatedStyle]}>
+        {columns.map((col) => {
+          const value = row[col.key];
+          const displayValue = formatCellValue(value);
 
-        return (
-          <View
-            key={col.key}
-            style={[
-              styles.cell,
-              col.width ? { width: col.width } : { flex: 1 },
-            ]}
-          >
-            <BiolumText
-              variant="body"
-              size="small"
-              color="standard"
-              style={{
-                textAlign: (col.align ?? "left") as "left" | "center" | "right",
-              }}
-              numberOfLines={2}
+          return (
+            <View
+              key={col.key}
+              style={[
+                styles.cell,
+                col.width ? { width: col.width } : { flex: 1 },
+              ]}
             >
-              {displayValue}
-            </BiolumText>
-          </View>
-        );
-      })}
-    </Animated.View>
-  );
-
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
-        {content}
-      </Pressable>
+              <BiolumText
+                variant="body"
+                size="small"
+                color="standard"
+                style={{
+                  textAlign: (col.align ?? "left") as
+                    | "left"
+                    | "center"
+                    | "right",
+                }}
+                numberOfLines={2}
+              >
+                {displayValue}
+              </BiolumText>
+            </View>
+          );
+        })}
+      </Animated.View>
     );
-  }
 
-  return content;
-}
+    if (onPress) {
+      return (
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
+          {content}
+        </Pressable>
+      );
+    }
+
+    return content;
+  },
+  (prev, next) =>
+    prev.row.id === next.row.id &&
+    prev.row === next.row &&
+    prev.columns === next.columns &&
+    prev.onPress === next.onPress &&
+    prev.backgroundColor === next.backgroundColor &&
+    prev.theme === next.theme
+);
 
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined) {

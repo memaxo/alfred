@@ -177,7 +177,7 @@ export class CoronaSystem implements RenderSystem {
 
     // Copy relevant uniforms
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
-      this.uniformBuffer.setFloat(i, uniforms[i]);
+      this.uniformBuffer.setFloat(i, uniforms[i] ?? 0);
     }
     this.uniformBuffer.upload();
   }

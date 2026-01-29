@@ -1,12 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, TextInput, View } from "react-native";
 
 export interface ChatInputProps {
   onSend: (text: string) => void;
@@ -50,21 +45,22 @@ export function ChatInput({
       <View className="flex-row items-center gap-2">
         {/* Call Alfred button - opens voice call screen */}
         {showCallButton && (
-          <TouchableOpacity
+          <Pressable
             accessibilityHint="Starts a real-time voice conversation with the AI assistant"
             accessibilityLabel="Call Alfred"
             accessibilityRole="button"
             className="h-11 w-11 items-center justify-center rounded-full bg-primary"
             disabled={disabled}
             onPress={handleCall}
+            style={({ pressed }) => [pressed && !disabled && { opacity: 0.7 }]}
           >
             <Ionicons color="white" name="call" size={20} />
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Voice input button (for inline recording) */}
         {onVoice && (
-          <TouchableOpacity
+          <Pressable
             accessibilityHint="Speak to input text into the chat"
             accessibilityLabel={
               isRecording ? "Stop voice input" : "Record voice message"
@@ -75,6 +71,7 @@ export function ChatInput({
             }`}
             disabled={disabled}
             onPress={onVoice}
+            style={({ pressed }) => [pressed && !disabled && { opacity: 0.7 }]}
           >
             {isRecording ? (
               <ActivityIndicator color="white" size="small" />
@@ -85,7 +82,7 @@ export function ChatInput({
                 size={20}
               />
             )}
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         <View className="flex-1 flex-row items-center rounded-2xl bg-muted px-4 py-2">
@@ -102,7 +99,7 @@ export function ChatInput({
           />
         </View>
 
-        <TouchableOpacity
+        <Pressable
           accessibilityLabel="Send message"
           accessibilityRole="button"
           accessibilityState={{
@@ -113,13 +110,16 @@ export function ChatInput({
           }`}
           disabled={disabled || text.trim().length === 0}
           onPress={handleSend}
+          style={({ pressed }) => [
+            pressed && !disabled && text.trim().length > 0 && { opacity: 0.7 },
+          ]}
         >
           <Ionicons
             color={text.trim().length > 0 ? "white" : "gray"}
             name="send"
             size={18}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

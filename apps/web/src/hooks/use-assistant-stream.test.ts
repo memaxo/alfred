@@ -1,4 +1,4 @@
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 
 import { describe, expect, it } from "bun:test";
 

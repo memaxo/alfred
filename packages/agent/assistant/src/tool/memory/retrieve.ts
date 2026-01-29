@@ -5,6 +5,9 @@
  * Optionally includes connected nodes (neighbors) for context.
  */
 
+import type { MemoryRetrieveEvent } from "@alfred/type";
+import type { ToolCallOptions } from "ai";
+
 import {
   getNeighbors,
   getNode,
@@ -16,6 +19,7 @@ import {
   recordAssistantToolCall,
   recordMemoryToolCall,
 } from "../../../../src/metrics";
+import { getHooksRuntime } from "./hook";
 
 const retrieveInputSchema = z.object({
   id: z.string().uuid().describe("Memory node ID to retrieve"),
@@ -88,11 +92,36 @@ export const toolMemoryRetrieve = {
       )
       .optional(),
   }),
-  execute: async ({ input }: { input: RetrieveInput }) => {
+  execute: async (
+    { input }: { input: RetrieveInput },
+    options?: ToolCallOptions
+  ) => {
     recordAssistantToolCall("memory_retrieve");
 
+    const hooks = getHooksRuntime(options);
+    let { id } = input;
+    let includeNeighbors = input.includeNeighbors ?? false;
+
+    if (hooks) {
+      const hookEvent: MemoryRetrieveEvent = {
+        type: "memory:retrieve",
+        memoryId: id,
+        expandNeighbors: includeNeighbors,
+        ...(includeNeighbors && typeof input.depth === "number"
+          ? { depth: input.depth }
+          : {}),
+      };
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+      const next = (out.transformed ?? hookEvent) as MemoryRetrieveEvent;
+      id = next.memoryId;
+      includeNeighbors = next.expandNeighbors;
+    }
+
     // Get the node
-    const node = await getNode(input.id);
+    const node = await getNode(id);
 
     if (!node) {
       return {
@@ -102,7 +131,7 @@ export const toolMemoryRetrieve = {
     }
 
     // Record access for adaptive decay
-    await recordAccess(input.id).catch(() => {
+    await recordAccess(id).catch(() => {
       // Non-fatal: don't fail retrieval if access tracking fails
     });
 
@@ -127,9 +156,9 @@ export const toolMemoryRetrieve = {
     // Get neighbors if requested
     let neighbors: NeighborInfo[] | undefined;
 
-    if (input.includeNeighbors) {
+    if (includeNeighbors) {
       const depth = input.depth ?? 1;
-      const neighborResults = await getNeighbors(input.id, {
+      const neighborResults = await getNeighbors(id, {
         direction: "both",
         limit: 50,
       });

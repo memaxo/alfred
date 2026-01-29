@@ -1,4 +1,18 @@
 import { JSDOM } from "jsdom";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const srcDir = fileURLToPath(new URL("../", import.meta.url));
+
+// Bun doesn't honor TS "paths" mappings at runtime; install an alias for tests.
+Bun.plugin({
+  name: "apps-web-alias",
+  setup(builder) {
+    builder.onResolve({ filter: /^@\// }, (args) => ({
+      path: resolve(srcDir, args.path.slice(2)),
+    }));
+  },
+});
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost",

@@ -152,6 +152,17 @@ export const Route = createFileRoute("/api/agentfs/export")({
             });
           }
 
+          // Update lastAccessedAt for LRU tracking
+          try {
+            const schedulerPkg = "@alfred/api/scheduler";
+            const { touchAgentfsCasLastAccessed } = await import(
+              /* @vite-ignore */ schedulerPkg
+            );
+            await touchAgentfsCasLastAccessed({ sha });
+          } catch {
+            // ignore - don't fail the download if tracking fails
+          }
+
           const name = `agentfs-cas-${sha.slice(0, 12)}.tar.gz`;
           return new Response(Bun.file(absCas).stream(), {
             status: 200,

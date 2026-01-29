@@ -125,6 +125,7 @@ export const telemetryMetrics = {
   tuningApplied: new Counter({
     name: "telemetry_tuning_applied_total",
     help: "Total number of tuning recommendations applied",
+    labelNames: ["parameter", "success"] as const,
     registers: [register],
   }),
 

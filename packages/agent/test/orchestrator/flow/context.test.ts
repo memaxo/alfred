@@ -14,6 +14,7 @@ import path from "node:path";
 
 const droidExecuteMock = vi.fn();
 const codexExecuteMock = vi.fn();
+const codeprintFindMock = vi.fn();
 
 const createDroidModule = () => ({
   toolDroid: {
@@ -32,6 +33,10 @@ mock.module("../../../src/orchestrator/tool/droid.js", createDroidModule);
 mock.module("../../../src/orchestrator/tool/codex.ts", createCodexModule);
 mock.module("../../../src/orchestrator/tool/codex.js", createCodexModule);
 
+mock.module("@alfred/codeprint", () => ({
+  findRelevantFiles: codeprintFindMock,
+}));
+
 import {
   __internals,
   gatherCodeContext,
@@ -42,15 +47,61 @@ const { contextCache, buildCacheKey, normalizeExts, normalizeIgnore } =
 
 describe("gatherCodeContext cache handoff", () => {
   const cw = process.cwd();
+  const envSnapshot = { ...process.env };
 
   beforeEach(() => {
     contextCache.clear();
     droidExecuteMock.mockReset();
     codexExecuteMock.mockReset();
+    codeprintFindMock.mockReset();
+    process.env = { ...envSnapshot };
   });
 
   afterEach(() => {
     contextCache.clear();
+    process.env = { ...envSnapshot };
+  });
+
+  it("uses codeprint first when enabled", async () => {
+    codeprintFindMock.mockResolvedValueOnce([
+      { path: "src/context.ts", score: 0.95, method: "keyword" },
+    ]);
+
+    const result = await gatherCodeContext({
+      requirement: "Collect latest context",
+      cw,
+      topK: 1,
+      authz: undefined,
+    });
+
+    expect(result.code).toHaveLength(1);
+    expect(result.code[0]?.path).toBe("src/context.ts");
+    expect(result.code[0]?.reason).toBe("codeprint:keyword");
+    expect(droidExecuteMock).toHaveBeenCalledTimes(0);
+    expect(codexExecuteMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("falls back when codeprint confidence is low", async () => {
+    codeprintFindMock.mockResolvedValueOnce([
+      { path: "src/low.ts", score: 0.05, method: "keyword" },
+    ]);
+    droidExecuteMock.mockResolvedValueOnce({
+      result: JSON.stringify({
+        files: [{ path: "src/context.ts", score: 0.95, reason: "updated" }],
+      }),
+    });
+
+    const result = await gatherCodeContext({
+      requirement: "Collect latest context",
+      cw,
+      topK: 1,
+      authz: undefined,
+    });
+
+    expect(result.code).toHaveLength(1);
+    expect(result.code[0]?.path).toBe("src/context.ts");
+    expect(codeprintFindMock).toHaveBeenCalledTimes(1);
+    expect(droidExecuteMock).toHaveBeenCalledTimes(1);
   });
 
   it("emits data-cache-handoff before context when returning cached receipts", async () => {
@@ -108,6 +159,7 @@ describe("gatherCodeContext cache handoff", () => {
   });
 
   it("emits handoff events before context events for fresh scans", async () => {
+    process.env.CODEPRINT_ENABLED = "0";
     droidExecuteMock.mockResolvedValueOnce({
       result: JSON.stringify({
         files: [{ path: "src/context.ts", score: 0.95, reason: "updated" }],

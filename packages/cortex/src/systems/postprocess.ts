@@ -161,6 +161,7 @@ export class PostProcessSystem implements RenderSystem {
       },
       primitive: { topology: "triangle-list" },
     });
+    void _aberrationPipeline;
 
     this.combinedPipeline = device.createRenderPipeline({
       label: "combined_postprocess",
@@ -197,6 +198,7 @@ export class PostProcessSystem implements RenderSystem {
     }
 
     const _resolution = { x: width, y: height };
+    void _resolution;
 
     // Destroy old textures
     this.bloomTexture0?.destroy();
@@ -237,7 +239,7 @@ export class PostProcessSystem implements RenderSystem {
     }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
-      this.uniformBuffer.setFloat(i, uniforms[i]);
+      this.uniformBuffer.setFloat(i, uniforms[i] ?? 0);
     }
     this.uniformBuffer.upload();
   }

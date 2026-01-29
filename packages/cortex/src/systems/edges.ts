@@ -61,8 +61,7 @@ export class EdgeSystem implements RenderSystem {
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
-      if (message.type === "error") {
-      }
+      if (message.type === "error") {}
     }
 
     // Create uniform buffer
@@ -212,6 +211,7 @@ export class EdgeSystem implements RenderSystem {
         { binding: 2, resource: { buffer: this.particleBuffer.gpuBuffer } },
       ],
     });
+    void _renderBindGroup;
 
     // Line bind group uses same layout for now
     if (this.linePipeline) {
@@ -224,6 +224,7 @@ export class EdgeSystem implements RenderSystem {
           { binding: 1, resource: { buffer: this.edgeBuffer.gpuBuffer } },
         ],
       });
+      void _lineBindGroup;
     }
   }
 
@@ -250,6 +251,9 @@ export class EdgeSystem implements RenderSystem {
 
     for (let i = 0; i < Math.min(this.edges.length, this.maxEdges); i++) {
       const edge = this.edges[i];
+      if (!edge) {
+        continue;
+      }
       const offset = i * 16;
 
       // Compute bezier control points
@@ -288,7 +292,7 @@ export class EdgeSystem implements RenderSystem {
     }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
-      this.uniformBuffer.setFloat(i, uniforms[i]);
+      this.uniformBuffer.setFloat(i, uniforms[i] ?? 0);
     }
     this.uniformBuffer.upload();
   }

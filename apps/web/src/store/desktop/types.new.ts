@@ -46,6 +46,7 @@ export type WindowType =
   // Tier 4: Productivity & Settings
   | "settings"
   | "components"
+  | "capability"
   | "workingset"
   | "focus"
   | "notes"
@@ -570,6 +571,10 @@ export const WINDOW_DEFAULTS: Record<
     defaultBounds: { x: 200, y: 100, width: 500, height: 500 },
   },
   components: {
+    minSize: { width: 500, height: 400 },
+    defaultBounds: { x: 140, y: 90, width: 900, height: 650 },
+  },
+  capability: {
     minSize: { width: 500, height: 400 },
     defaultBounds: { x: 140, y: 90, width: 900, height: 650 },
   },

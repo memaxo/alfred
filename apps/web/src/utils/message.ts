@@ -1,4 +1,4 @@
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 
 export const getMessageText = (message: AssistantUIMessage): string =>
   message.parts

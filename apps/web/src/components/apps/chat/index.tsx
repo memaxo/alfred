@@ -61,14 +61,16 @@ export function ChatApp({
   const {
     messages,
     handleSend,
+    currentAgent,
     handleRegenerate,
     handleEdit,
+    handleAgentChange: setBackendAgent,
     isRecording,
     toggleVoice,
     status,
     error,
   } = useChatLogic({
-    initialAgent: selectedAgent === "assistant" ? "assistant" : "orchestrator",
+    initialAgent: "assistant",
   });
 
   const handleSubmit = useCallback(
@@ -78,10 +80,16 @@ export function ChatApp({
     [handleSend]
   );
 
-  const handleAgentChange = useCallback((agent: AgentType) => {
-    setSelectedAgent(agent);
-    // Agent switch logic - may need to clear messages or start new thread
-  }, []);
+  const handleAgentChange = useCallback(
+    (agent: AgentType) => {
+      setSelectedAgent(agent);
+      const backend = agent === "assistant" ? "assistant" : "orchestrator";
+      if (backend !== currentAgent) {
+        setBackendAgent(backend);
+      }
+    },
+    [currentAgent, setBackendAgent]
+  );
 
   return (
     <div

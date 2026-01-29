@@ -336,6 +336,49 @@ export function initMetricsHooks(): void {
         reason: error instanceof Error ? error.message : String(error),
       });
     }
+
+    // Register cognitive metrics with main registry
+    try {
+      const { cognitiveMetricsRegistry } = await import("@alfred/cognitive");
+      const cognitiveMetrics =
+        await cognitiveMetricsRegistry.getMetricsAsJSON();
+      for (const metric of cognitiveMetrics) {
+        const existing = metricsRegistry.getSingleMetric(metric.name);
+        if (!existing) {
+          const cognitiveMetric = cognitiveMetricsRegistry.getSingleMetric(
+            metric.name
+          );
+          if (cognitiveMetric) {
+            metricsRegistry.registerMetric(cognitiveMetric);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn("metrics_cognitive_hooks_disabled", {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Register generic system metrics with main registry
+    try {
+      const { getMetricsRegistry } =
+        await import("@alfred/metrics/metrics-registry");
+      const systemRegistry = getMetricsRegistry();
+      const systemMetrics = await systemRegistry.getMetricsAsJSON();
+      for (const metric of systemMetrics) {
+        const existing = metricsRegistry.getSingleMetric(metric.name);
+        if (!existing) {
+          const systemMetric = systemRegistry.getSingleMetric(metric.name);
+          if (systemMetric) {
+            metricsRegistry.registerMetric(systemMetric);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn("metrics_system_hooks_disabled", {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
   })();
 }
 

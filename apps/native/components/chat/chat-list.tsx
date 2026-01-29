@@ -1,7 +1,8 @@
 import type { UIMessage } from "@alfred/type/stream";
 
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { FlatList, View, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 
 import { EmptyState } from "../utility/EmptyState";
 import { MessageBubbleVoid } from "./MessageBubbleVoid";
@@ -26,7 +27,7 @@ export function ChatList({
   isLoading,
   streamingMessageId,
 }: ChatListProps) {
-  const listRef = useRef<FlatList<UIMessage>>(null);
+  const listRef = useRef<FlashListRef<UIMessage>>(null);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -69,7 +70,7 @@ export function ChatList({
   }
 
   return (
-    <FlatList
+    <FlashList
       ref={listRef}
       style={styles.list}
       contentContainerStyle={styles.listContent}
@@ -77,12 +78,8 @@ export function ChatList({
       keyExtractor={keyExtractor}
       renderItem={renderItem}
       onContentSizeChange={handleContentSizeChange}
-      removeClippedSubviews={true}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      initialNumToRender={15}
-      updateCellsBatchingPeriod={50}
-      getItemLayout={undefined}
+      // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+      estimatedItemSize={80}
     />
   );
 }

@@ -6,6 +6,10 @@ pre-push:
       skip_fail: true
       # Warn about leaked dev processes but don't block push
 
+    src-js-artifacts:
+      run: bun scripts/check-src-js.ts
+      fail_text: "Generated src/**/*.js artifacts found - push blocked"
+
     typecheck:
       run: |
         UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")

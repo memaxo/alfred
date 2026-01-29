@@ -3,19 +3,13 @@ import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
 
-import { buildAssistantContext } from "../ai/assistant-context";
-import * as generateModule from "../ai/generate";
-import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { cloneRuntimeContext } from "../context";
 import { requirePolicy } from "../gate";
-import {
-  assistantGenerateDurationSeconds,
-  assistantGenerateRequestsTotal,
-} from "../metrics";
 import { getHonorificPreference } from "../persona/honorific";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { sanitizeResult } from "../utils/generate";
+import { ensureHooksRuntime } from "../workflow/hooks";
 
 const ASSISTANT_MAX_STEPS = 12;
 
@@ -151,6 +145,10 @@ export const assistantRouter = router({
     .use(requirePolicy("assistant.generate", (raw) => mapResource(raw)))
     .input(generateInput)
     .mutation(async ({ input, ctx }) => {
+      const {
+        assistantGenerateDurationSeconds,
+        assistantGenerateRequestsTotal,
+      } = await import("../metrics");
       const stopTimer = assistantGenerateDurationSeconds.startTimer();
       assistantGenerateRequestsTotal.inc({ status: "started" });
       try {
@@ -160,6 +158,16 @@ export const assistantRouter = router({
             message: "session_required",
           });
         }
+
+        const [
+          { buildAssistantContext },
+          { prepareModelMessagesForGenerate },
+          generateModule,
+        ] = await Promise.all([
+          import("../ai/assistant-context"),
+          import("../ai/messages"),
+          import("../ai/generate"),
+        ]);
 
         const userId = ctx.session.user.id;
         const { getAssistantAgentDefaults } =
@@ -208,6 +216,13 @@ export const assistantRouter = router({
                 },
               }
             : {};
+
+        const hooks = await ensureHooksRuntime(ctx.runtimeContext, {
+          sessionId: ctx.session.session.id,
+          signal: new AbortController().signal,
+          workspace: process.cwd(),
+          workflowId: input.thread ?? input.resource,
+        });
         // Use injected dependency or fall back to direct import
         const generateTextFn =
           ctx.deps?.assistant?.generateText ?? generateModule.generateText;
@@ -218,6 +233,7 @@ export const assistantRouter = router({
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,
+          experimental_context: { hooks },
           ...telemetry,
         });
         assistantGenerateRequestsTotal.inc({ status: "success" });

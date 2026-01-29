@@ -7,13 +7,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { Link, Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -172,7 +173,189 @@ export default function RemindersListScreen() {
     return [...filteredReminders].sort(sortOption.sortFn);
   }, [filteredReminders, sortBy]);
 
+  const renderReminderItem = useCallback(
+    ({ item }: { item: ReminderItem }) => (
+      <MemoizedReminderItem
+        item={item}
+        onDelete={handleDelete}
+        onFire={handleFire}
+        router={router}
+      />
+    ),
+    [handleDelete, handleFire, router]
+  );
+
+  return (
+    <Container>
+      <Stack.Screen
+        options={{
+          title: "Reminders",
+          headerRight: () => (
+            <Pressable
+              className="mr-4"
+              onPress={() => router.push("library/reminders/new")}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons color="#00FF88" name="add" size={24} />
+            </Pressable>
+          ),
+        }}
+      />
+
+      <View className="flex-1">
+        {/* Search, filter, and sort bar */}
+        <View className="border-border border-b bg-background px-4 py-3">
+          <View className="mb-2 flex-row items-center rounded-lg border border-border bg-surface px-3 py-2">
+            <Ionicons color="#5A6B7D" name="search-outline" size={20} />
+            <TextInput
+              accessibilityLabel="Search reminders"
+              accessibilityRole="search"
+              className="ml-2 flex-1 text-foreground"
+              onChangeText={setSearchQuery}
+              placeholder="Search reminders..."
+              placeholderTextColor="#5A6B7D"
+              value={searchQuery}
+            />
+            {searchQuery ? (
+              <Pressable
+                accessibilityLabel="Clear search"
+                accessibilityRole="button"
+                onPress={() => setSearchQuery("")}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons color="#5A6B7D" name="close-circle" size={20} />
+              </Pressable>
+            ) : null}
+          </View>
+          <View className="flex-row items-center gap-2">
+            <Ionicons color="#5A6B7D" name="filter-outline" size={16} />
+            <Text className="text-muted-foreground text-sm">Filter:</Text>
+            {reminderFilterOptions.map((option) => (
+              <Pressable
+                accessibilityLabel={`Filter ${option.label}`}
+                accessibilityRole="button"
+                className={`rounded-full px-3 py-1 ${
+                  filterBy === option.key
+                    ? "bg-primary"
+                    : "border border-border bg-surface"
+                }`}
+                key={option.key}
+                onPress={() => setFilterBy(option.key)}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Text
+                  className={`text-xs ${
+                    filterBy === option.key
+                      ? "font-semibold text-primary-foreground"
+                      : "text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View className="mt-2 flex-row items-center gap-2">
+            <Ionicons color="#5A6B7D" name="funnel-outline" size={16} />
+            <Text className="text-muted-foreground text-sm">Sort:</Text>
+            {reminderSortOptions.map((option) => (
+              <Pressable
+                accessibilityLabel={`Sort by ${option.label}`}
+                accessibilityRole="button"
+                className={`rounded-full px-3 py-1 ${
+                  sortBy === option.key
+                    ? "bg-primary"
+                    : "border border-border bg-surface"
+                }`}
+                key={option.key}
+                onPress={() => setSortBy(option.key)}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Text
+                  className={`text-xs ${
+                    sortBy === option.key
+                      ? "font-semibold text-primary-foreground"
+                      : "text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Reminders list */}
+        {remindersQuery.isLoading ? (
+          <View className="flex-1 px-4 py-4">
+            <ListSkeleton count={5} />
+          </View>
+        ) : sortedReminders && sortedReminders.length > 0 ? (
+          <FlashList
+            className="flex-1"
+            contentContainerStyle={styles.listContent}
+            data={sortedReminders}
+            keyExtractor={(item) => item.id}
+            // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+            estimatedItemSize={120}
+            ListFooterComponent={
+              remindersQuery.isLoading && offset > 0 ? (
+                <View className="py-4">
+                  <ActivityIndicator color="#00FF88" size="small" />
+                </View>
+              ) : null
+            }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            refreshControl={
+              <RefreshControl
+                onRefresh={() => {
+                  setOffset(0);
+                  remindersQuery.refetch();
+                }}
+                refreshing={remindersQuery.isRefetching}
+              />
+            }
+            renderItem={renderReminderItem}
+          />
+        ) : (
+          <View className="flex-1 items-center justify-center p-8">
+            <Ionicons color="#5A6B7D" name="notifications-outline" size={48} />
+            <Text className="mt-4 text-center text-lg text-muted-foreground">
+              {searchQuery
+                ? "No reminders match your search"
+                : "No reminders yet. Create your first reminder!"}
+            </Text>
+            {!searchQuery && (
+              <Pressable
+                className="mt-4 rounded-lg bg-primary px-6 py-3"
+                onPress={() => router.push("library/reminders/new")}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Text className="font-semibold text-primary-foreground">
+                  Create Reminder
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
+    </Container>
+  );
+}
+
+interface ReminderItemProps {
+  item: ReminderItem;
+  onDelete: (id: string) => void;
+  onFire: (id: string) => void;
+  router: ReturnType<typeof useRouter>;
+}
+
+function ReminderItem({ item, onDelete, onFire, router }: ReminderItemProps) {
   const formatDueDate = (due: string | Date) => {
+    if (!due) {
+      return "No due date";
+    }
     const date = typeof due === "string" ? new Date(due) : due;
     const now = new Date();
     const diff = date.getTime() - now.getTime();
@@ -194,225 +377,85 @@ export default function RemindersListScreen() {
   };
 
   return (
-    <Container>
-      <Stack.Screen
-        options={{
-          title: "Reminders",
-          headerRight: () => (
-            <TouchableOpacity
-              className="mr-4"
-              onPress={() => router.push("library/reminders/new")}
-            >
-              <Ionicons color="#00FF88" name="add" size={24} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
-      <View className="flex-1">
-        {/* Search, filter, and sort bar */}
-        <View className="border-border border-b bg-background px-4 py-3">
-          <View className="mb-2 flex-row items-center rounded-lg border border-border bg-surface px-3 py-2">
-            <Ionicons color="#5A6B7D" name="search-outline" size={20} />
-            <TextInput
-              accessibilityLabel="Search reminders"
-              accessibilityRole="search"
-              className="ml-2 flex-1 text-foreground"
-              onChangeText={setSearchQuery}
-              placeholder="Search reminders..."
-              placeholderTextColor="#5A6B7D"
-              value={searchQuery}
-            />
-            {searchQuery ? (
-              <TouchableOpacity
-                accessibilityLabel="Clear search"
-                accessibilityRole="button"
-                onPress={() => setSearchQuery("")}
+    <Link asChild href={`library/reminders/${item.id}`}>
+      <Pressable
+        className="mb-3 rounded-lg border border-border bg-card p-4"
+        style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      >
+        <View className="mb-2 flex-row items-start justify-between">
+          <View className="flex-1">
+            <Text className="mb-1 font-semibold text-foreground text-lg">
+              {item.title}
+            </Text>
+            {item.description ? (
+              <Text
+                className="mb-2 text-muted-foreground text-sm"
+                numberOfLines={2}
               >
-                <Ionicons color="#5A6B7D" name="close-circle" size={20} />
-              </TouchableOpacity>
+                {item.description}
+              </Text>
             ) : null}
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Ionicons color="#5A6B7D" name="filter-outline" size={16} />
-            <Text className="text-muted-foreground text-sm">Filter:</Text>
-            {reminderFilterOptions.map((option) => (
-              <TouchableOpacity
-                accessibilityLabel={`Filter ${option.label}`}
-                accessibilityRole="button"
-                className={`rounded-full px-3 py-1 ${
-                  filterBy === option.key
-                    ? "bg-primary"
-                    : "border border-border bg-surface"
-                }`}
-                key={option.key}
-                onPress={() => setFilterBy(option.key)}
-              >
-                <Text
-                  className={`text-xs ${
-                    filterBy === option.key
-                      ? "font-semibold text-primary-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {option.label}
+            <View className="flex-row items-center gap-4">
+              <View className="flex-row items-center gap-1">
+                <Ionicons color="#00FF88" name="time-outline" size={14} />
+                <Text className="text-muted-foreground text-xs">
+                  {formatDueDate(item.due)}
                 </Text>
-              </TouchableOpacity>
-            ))}
+              </View>
+              {item.fired ? (
+                <View className="flex-row items-center gap-1">
+                  <Ionicons color="#00FF88" name="checkmark-circle" size={14} />
+                  <Text className="text-muted-foreground text-xs">
+                    Completed
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </View>
-          <View className="mt-2 flex-row items-center gap-2">
-            <Ionicons color="#5A6B7D" name="funnel-outline" size={16} />
-            <Text className="text-muted-foreground text-sm">Sort:</Text>
-            {reminderSortOptions.map((option) => (
-              <TouchableOpacity
-                accessibilityLabel={`Sort by ${option.label}`}
-                accessibilityRole="button"
-                className={`rounded-full px-3 py-1 ${
-                  sortBy === option.key
-                    ? "bg-primary"
-                    : "border border-border bg-surface"
-                }`}
-                key={option.key}
-                onPress={() => setSortBy(option.key)}
+          <View className="ml-2 flex-row gap-2">
+            {!item.fired && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onFire(item.id);
+                }}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
-                <Text
-                  className={`text-xs ${
-                    sortBy === option.key
-                      ? "font-semibold text-primary-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                <Ionicons
+                  color="#00FF88"
+                  name="checkmark-circle-outline"
+                  size={20}
+                />
+              </Pressable>
+            )}
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                onDelete(item.id);
+              }}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons color="#FF3366" name="trash-outline" size={18} />
+            </Pressable>
           </View>
         </View>
-
-        {/* Reminders list */}
-        {remindersQuery.isLoading ? (
-          <View className="flex-1 px-4 py-4">
-            <ListSkeleton count={5} />
-          </View>
-        ) : sortedReminders && sortedReminders.length > 0 ? (
-          <FlashList
-            className="flex-1"
-            contentContainerStyle={{ padding: 16 }}
-            data={sortedReminders}
-            keyExtractor={(item) => item.id}
-            ListFooterComponent={
-              remindersQuery.isLoading && offset > 0 ? (
-                <View className="py-4">
-                  <ActivityIndicator color="#00FF88" size="small" />
-                </View>
-              ) : null
-            }
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.5}
-            refreshControl={
-              <RefreshControl
-                onRefresh={() => {
-                  setOffset(0);
-                  remindersQuery.refetch();
-                }}
-                refreshing={remindersQuery.isRefetching}
-              />
-            }
-            renderItem={({ item }) => (
-              <Link asChild href={`library/reminders/${item.id}`}>
-                <TouchableOpacity className="mb-3 rounded-lg border border-border bg-card p-4">
-                  <View className="mb-2 flex-row items-start justify-between">
-                    <View className="flex-1">
-                      <Text className="mb-1 font-semibold text-foreground text-lg">
-                        {item.title}
-                      </Text>
-                      {item.description ? (
-                        <Text
-                          className="mb-2 text-muted-foreground text-sm"
-                          numberOfLines={2}
-                        >
-                          {item.description}
-                        </Text>
-                      ) : null}
-                      <View className="flex-row items-center gap-4">
-                        <View className="flex-row items-center gap-1">
-                          <Ionicons
-                            color="#00FF88"
-                            name="time-outline"
-                            size={14}
-                          />
-                          <Text className="text-muted-foreground text-xs">
-                            {formatDueDate(item.due)}
-                          </Text>
-                        </View>
-                        {item.fired ? (
-                          <View className="flex-row items-center gap-1">
-                            <Ionicons
-                              color="#00FF88"
-                              name="checkmark-circle"
-                              size={14}
-                            />
-                            <Text className="text-muted-foreground text-xs">
-                              Completed
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-                    </View>
-                    <View className="ml-2 flex-row gap-2">
-                      {!item.fired && (
-                        <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleFire(item.id);
-                          }}
-                        >
-                          <Ionicons
-                            color="#00FF88"
-                            name="checkmark-circle-outline"
-                            size={20}
-                          />
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleDelete(item.id);
-                        }}
-                      >
-                        <Ionicons
-                          color="#FF3366"
-                          name="trash-outline"
-                          size={18}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              </Link>
-            )}
-          />
-        ) : (
-          <View className="flex-1 items-center justify-center p-8">
-            <Ionicons color="#5A6B7D" name="notifications-outline" size={48} />
-            <Text className="mt-4 text-center text-lg text-muted-foreground">
-              {searchQuery
-                ? "No reminders match your search"
-                : "No reminders yet. Create your first reminder!"}
-            </Text>
-            {!searchQuery && (
-              <TouchableOpacity
-                className="mt-4 rounded-lg bg-primary px-6 py-3"
-                onPress={() => router.push("library/reminders/new")}
-              >
-                <Text className="font-semibold text-primary-foreground">
-                  Create Reminder
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
-    </Container>
+      </Pressable>
+    </Link>
   );
 }
+
+const MemoizedReminderItem = memo(
+  ReminderItem,
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item === next.item &&
+    prev.onDelete === next.onDelete &&
+    prev.onFire === next.onFire &&
+    prev.router === next.router
+);
+
+const styles = StyleSheet.create({
+  listContent: {
+    padding: 16,
+  },
+});

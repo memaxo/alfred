@@ -62,6 +62,7 @@ export * as deploySchema from "./schema/deploy";
 export * as evalSchema from "./schema/eval";
 export * as focusSchema from "./schema/focus";
 export * as graphSchema from "./schema/graph";
+export * as homeSchema from "./schema/home";
 export * as linearSchema from "./schema/linear";
 export * as mcpSchema from "./schema/mcp";
 export * as patternSchema from "./schema/pattern";

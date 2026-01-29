@@ -867,10 +867,10 @@ export const reviewRouter = router({
 
       // Get completed reviews (approved, rejected, skipped)
       const reviews = await reviewRepo.getReviewQueue(userId, {
-        reviewType: input?.reviewType ?? "all",
-        status: "approved", // We'll need to handle multiple statuses
         limit: input?.limit ?? 50,
         offset: input?.offset ?? 0,
+        reviewType: input?.reviewType ?? "all",
+        status: ["approved", "rejected", "skipped"],
       });
 
       return reviews;
@@ -1219,6 +1219,9 @@ async function triggerLearningActions(
       }
       case "code": {
         await handleCodeReviewLearning(review, verdict, correction);
+        break;
+      }
+      default: {
         break;
       }
     }

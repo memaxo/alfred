@@ -182,3 +182,25 @@ jest.mock("better-auth/react", () => ({
     },
   }),
 }));
+
+expect.extend({
+  toHaveBeenCalledOnce(received: jest.Mock) {
+    const calls = received.mock.calls.length;
+    const pass = calls === 1;
+    return {
+      pass,
+      message: () =>
+        pass
+          ? `expected mock not to have been called once`
+          : `expected mock to have been called once, but was called ${calls} times`,
+    };
+  },
+});
+
+declare global {
+  namespace jest {
+    interface Matchers<R, T = {}> {
+      toHaveBeenCalledOnce(): R;
+    }
+  }
+}

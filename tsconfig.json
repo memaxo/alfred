@@ -8,6 +8,7 @@
     { "path": "packages/codex" },
     { "path": "packages/codeprint" },
     { "path": "packages/type" },
+    { "path": "packages/home" },
     { "path": "packages/persona" },
     { "path": "packages/policy" },
     { "path": "packages/auth" },

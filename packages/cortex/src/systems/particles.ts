@@ -168,6 +168,7 @@ export class ParticleSystem implements RenderSystem {
         { binding: 1, resource: { buffer: this.particleBuffer.read } },
       ],
     });
+    void _renderBindGroup;
   }
 
   private initializeParticles(): void {
@@ -216,7 +217,7 @@ export class ParticleSystem implements RenderSystem {
 
     // Copy relevant uniforms
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
-      this.uniformBuffer.setFloat(i, uniforms[i]);
+      this.uniformBuffer.setFloat(i, uniforms[i] ?? 0);
     }
     this.uniformBuffer.upload();
   }

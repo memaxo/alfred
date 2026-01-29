@@ -6,16 +6,17 @@
 
 import { logger } from "@alfred/logger";
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Pressable,
   RefreshControl,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -120,6 +121,18 @@ export default function TimersListScreen() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const renderTimerItem = useCallback(
+    ({ item }: { item: TimerItem }) => (
+      <MemoizedTimerItem
+        item={item}
+        formatTimeRemaining={formatTimeRemaining}
+        onDone={handleDone}
+        onCancel={handleCancel}
+      />
+    ),
+    [handleDone, handleCancel]
+  );
+
   return (
     <Container>
       <Stack.Screen
@@ -152,7 +165,7 @@ export default function TimersListScreen() {
               placeholderTextColor="#5A6B7D"
               value={label}
             />
-            <TouchableOpacity
+            <Pressable
               accessibilityLabel="Start timer"
               accessibilityRole="button"
               accessibilityState={{
@@ -161,13 +174,18 @@ export default function TimersListScreen() {
               className="rounded-lg bg-primary px-4 py-2"
               disabled={createMutation.isPending || !duration}
               onPress={handleCreate}
+              style={({ pressed }) => [
+                pressed &&
+                  !createMutation.isPending &&
+                  duration && { opacity: 0.7 },
+              ]}
             >
               {createMutation.isPending ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Ionicons color="#FFFFFF" name="play" size={20} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -177,64 +195,20 @@ export default function TimersListScreen() {
             <ActivityIndicator color="#FFB800" size="large" />
           </View>
         ) : timersQuery.data && timersQuery.data.length > 0 ? (
-          <FlatList
+          <FlashList
             className="flex-1"
-            contentContainerStyle={{ padding: 16 }}
+            contentContainerStyle={styles.listContent}
             data={timersQuery.data}
             keyExtractor={(item) => item.id}
+            // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+            estimatedItemSize={90}
             refreshControl={
               <RefreshControl
                 onRefresh={() => timersQuery.refetch()}
                 refreshing={timersQuery.isRefetching}
               />
             }
-            renderItem={({ item }) => (
-              <View className="mb-3 rounded-lg border border-border bg-card p-4">
-                <View className="mb-2 flex-row items-start justify-between">
-                  <View className="flex-1">
-                    <Text
-                      accessibilityRole="header"
-                      className="mb-1 font-semibold text-foreground text-lg"
-                    >
-                      {item.label || "Timer"}
-                    </Text>
-                    <View
-                      accessibilityLabel={`Time remaining: ${formatTimeRemaining(item)}`}
-                      className="flex-row items-center gap-2"
-                    >
-                      <Ionicons
-                        color="#FFB800"
-                        name="timer-outline"
-                        size={16}
-                      />
-                      <Text className="font-mono text-foreground text-lg">
-                        {formatTimeRemaining(item)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="ml-2 flex-row gap-2">
-                    <TouchableOpacity
-                      accessibilityLabel="Mark timer as done"
-                      accessibilityRole="button"
-                      onPress={() => handleDone(item.id)}
-                    >
-                      <Ionicons
-                        color="#00FF88"
-                        name="checkmark-circle"
-                        size={24}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      accessibilityLabel="Cancel timer"
-                      accessibilityRole="button"
-                      onPress={() => handleCancel(item.id)}
-                    >
-                      <Ionicons color="#FF3366" name="close-circle" size={24} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            )}
+            renderItem={renderTimerItem}
           />
         ) : (
           <View className="flex-1 items-center justify-center p-8">
@@ -248,3 +222,75 @@ export default function TimersListScreen() {
     </Container>
   );
 }
+
+interface TimerItemProps {
+  item: TimerItem;
+  formatTimeRemaining: (timer: TimerItem) => string;
+  onDone: (id: string) => void;
+  onCancel: (id: string) => void;
+}
+
+function TimerItem({
+  item,
+  formatTimeRemaining,
+  onDone,
+  onCancel,
+}: TimerItemProps) {
+  return (
+    <View className="mb-3 rounded-lg border border-border bg-card p-4">
+      <View className="mb-2 flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text
+            accessibilityRole="header"
+            className="mb-1 font-semibold text-foreground text-lg"
+          >
+            {item.label || "Timer"}
+          </Text>
+          <View
+            accessibilityLabel={`Time remaining: ${formatTimeRemaining(item)}`}
+            className="flex-row items-center gap-2"
+          >
+            <Ionicons color="#FFB800" name="timer-outline" size={16} />
+            <Text className="font-mono text-foreground text-lg">
+              {formatTimeRemaining(item)}
+            </Text>
+          </View>
+        </View>
+        <View className="ml-2 flex-row gap-2">
+          <Pressable
+            accessibilityLabel="Mark timer as done"
+            accessibilityRole="button"
+            onPress={() => onDone(item.id)}
+            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons color="#00FF88" name="checkmark-circle" size={24} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Cancel timer"
+            accessibilityRole="button"
+            onPress={() => onCancel(item.id)}
+            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons color="#FF3366" name="close-circle" size={24} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const MemoizedTimerItem = memo(
+  TimerItem,
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item === next.item &&
+    prev.formatTimeRemaining === next.formatTimeRemaining &&
+    prev.onDone === next.onDone &&
+    prev.onCancel === next.onCancel
+);
+
+const styles = StyleSheet.create({
+  listContent: {
+    padding: 16,
+  },
+});

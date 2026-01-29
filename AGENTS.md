@@ -366,6 +366,14 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 
 12. **Runtime reliability.** Implement caching, rate limiting, back-pressure, abort handling, and error hooks with the prescribed middleware (`wrapLanguageModel`, `simulateReadableStream`, Upstash KV/Ratelimit patterns, `onAbort`, `onError`) before adding custom infra.
 
+13. **Transport parity.** When switching between assistant and orchestrator modes, the chat transport must swap to the matching HTTP endpoint (e.g., `/api/assistant` ↔ `/api/orchestrator`). Both endpoints must produce AI SDK v6-compatible UIMessage streams.
+
+14. **Endpoint validation.** Add tests verifying that both assistant and orchestrator endpoints:
+    - Accept the same UIMessage format
+    - Return `no-store` cache headers
+    - Produce compatible streaming responses
+    - Handle tool-call/tool-result parts identically
+
 ## ALFRED's Custom UIMessage Format
 
 ALFRED uses explicit `type: "tool-call"` and `type: "tool-result"` discriminants for persistence and validation benefits. These use `input`/`output` properties (matching v6 naming) but separate the call from the result.
@@ -882,6 +890,7 @@ Heuristic lists are a maintenance trap for complex decision logic. When agents f
 - **Intent classification:** `packages/plan/src/intent/classify.ts` — Uses `classify()` with schema and heuristic fallback
 - **Phase grouping:** `packages/plan/src/generate/group.ts` — Uses `classifyBatch()` for batch assignment
 - **Path classification:** `packages/plan/src/classify/path.ts` — Canonical path bucketing with batch LLM support
+- **Tool routing:** `packages/agent/src/routing/intent.ts` — Intent-based tool catalog selection
 
 <!-- Source: .ruler/56-python-subprocess-packages.md -->
 
@@ -1009,6 +1018,61 @@ When TypeScript needs ML capabilities (embeddings, perplexity, speech), use a Py
 5. When restoring from a project-scoped source, write `.agentfs/<runId>/.project` to persist the project hint for future access checks.
 6. Cleanup schedulers must delete CAS artifacts older than `ALFRED_AGENTFS_CAS_RETENTION_DAYS` (default 30), delete the paired `.json`, and preserve any `<sha>.keep` pinned artifacts.
 7. Add route tests that cover `store=1` export, download-by-sha authorization, and restore-by-sha including `.project` tagging.
+
+<!-- Source: .ruler/63-signals.md -->
+
+# Signals (LLM Judge)
+
+## Rules
+
+1. Signals detection must be LLM-judged via `generateObject` + Zod schema; no keyword/regex detectors or heuristic branch forests.
+2. Signals inputs must be fact-only traces; never send raw user quotes, code, or file paths to the judge.
+3. Persist only abstract citations and structured summaries (`FrictionSignal`, `DelightSignal`, `SignalIntervention`).
+4. Gate judge execution behind `ALFRED_SIGNALS=1`.
+5. Use `getClassificationModel()` (classify role) for all signals judging.
+6. Chat steering must be step-cadenced via AI SDK `prepareStep` and inject only system guidance derived from the judge output.
+7. Workflow durability must flow through pipeline events (`agent:signal`) mapped to workflow events (`eventType: "report"`, `kind: "agent_signal"`).
+8. AgentFS persistence must use KV keys `signals:<taskId>` and validate payloads with Zod before writing.
+9. Learning worker consumption must summarize signals as types/actions only; do not replay raw content.
+10. Add metrics for judge latency and counts across surfaces (chat/pipeline/agentfs).
+
+<!-- Source: .ruler/64-tool-routing.md -->
+
+# Tool Routing and Capability Parity
+
+## Core Principle
+
+Capability parity requires that every backend capability is reachable by both human UI and agent tools. Tool catalogs must stay small for AI SDK hygiene (≤5 tools), requiring intent-based routing rather than monolithic tool collections.
+
+## Rules
+
+1. **Tool catalog size limit.** Never expose more than 5 tools to a single agent. Exceeding this degrades model performance and increases latency. Use intent-based routing to select appropriate small catalogs.
+
+2. **Intent-based routing.** Route user requests to tool catalogs using LLM classification with schema-based output. Keep heuristics as offline fallbacks only.
+
+3. **Capability parity enforcement.** Every capability must have either:
+   - Tool coverage (via routing catalogs), or
+   - Explicit `uiOnly: true` marker with rationale
+     Tests must verify this parity on every build.
+
+4. **Catalog definitions.** Tool catalogs are defined in `packages/agent/src/routing/` with:
+   - `id`: Intent category identifier
+   - `name`: Human-readable name
+   - `description`: Purpose documentation
+   - `capabilities`: Capability IDs this catalog covers
+   - `tools`: The actual AI SDK Tool instances (≤5)
+
+5. **Classification schema.** Intent routing uses Zod schema with `category`, `confidence`, and optional `reasoning` fields. Confidence thresholds determine when to prompt for clarification.
+
+6. **Offline fallback.** When `ALFRED_CLASSIFY_OFFLINE=1`, use deterministic heuristics. Log degraded behavior and surface in UI.
+
+7. **Catalog per intent.** Each intent category maps to exactly one catalog. Multiple intent categories may share the same underlying tools (e.g., `code_edit` and `code_review`).
+
+## Reference Implementations
+
+- **Routing module:** `packages/agent/src/routing/intent.ts` — Intent classification and catalog selection
+- **Capability registry:** `packages/agent/src/capability.ts` — Capability definitions with uiOnly markers
+- **Parity tests:** `packages/agent/test/capability-parity.test.ts` — Enforcement of tool coverage
 
 <!-- Source: .ruler/bts.md -->
 

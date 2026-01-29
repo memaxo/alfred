@@ -54,7 +54,7 @@ export class ShellErrorBoundary extends Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
 
     logger.error("desktop_shell_crashed", {
@@ -73,7 +73,7 @@ export class ShellErrorBoundary extends Component<
     this.setState({ hasError: false, error: null });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -132,7 +132,7 @@ export class LayerErrorBoundary extends Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
 
     const layerName = this.props.layerName ?? "unknown";
@@ -149,7 +149,7 @@ export class LayerErrorBoundary extends Component<
     this.setState({ hasError: false, error: null });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;

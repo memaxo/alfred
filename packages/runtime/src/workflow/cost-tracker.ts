@@ -5,6 +5,8 @@
  * Provides user-facing cost transparency and budget enforcement.
  */
 
+import { costTrackerMetrics } from "@alfred/metrics/metrics-registry";
+
 export type CostPeriod = "day" | "week" | "month" | "year";
 
 export interface CostEntry {
@@ -53,6 +55,12 @@ export class CostTracker {
         ? existing.tokensUsed + entry.tokensUsed
         : entry.tokensUsed,
     });
+
+    costTrackerMetrics.costUsd.inc({ provider: "unknown" }, entry.costUsd);
+    costTrackerMetrics.tokens.inc(
+      { provider: "unknown", token_type: "total" },
+      entry.tokensUsed
+    );
   }
 
   getCostSummary(userId: string, period: CostPeriod = "month"): CostSummary {
@@ -100,6 +108,12 @@ export class CostTracker {
     const summary = this.getCostSummary(userId, budget.period);
     const periodCost = summary.byPeriod.get(budget.period) || 0;
     const percentageUsed = periodCost / budget.limitUsd;
+
+    if (percentageUsed >= 1) {
+      costTrackerMetrics.budgetAlerts.inc({ alert_type: "limit_exceeded" });
+    } else if (percentageUsed >= budget.alertThreshold) {
+      costTrackerMetrics.budgetAlerts.inc({ alert_type: "threshold_reached" });
+    }
 
     return {
       withinBudget: percentageUsed < 1,

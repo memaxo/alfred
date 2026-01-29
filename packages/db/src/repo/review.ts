@@ -3,7 +3,7 @@
  * Database operations for review queue, analytics, and auto-approve patterns
  */
 
-import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 
 import {
   cacheAnalytics,
@@ -16,6 +16,12 @@ import {
   invalidateUserReviewCache,
 } from "../cache/review";
 import { db } from "../client";
+import {
+  measureQuery,
+  reviewCreationDurationSeconds,
+  reviewSubmissionDurationSeconds,
+  reviewSubmissionsTotal,
+} from "../metrics";
 import {
   type AuditAction,
   type BlockedType,
@@ -49,38 +55,43 @@ export async function getReviewQueue(
   userId: string,
   options: {
     reviewType?: ReviewType | "all";
-    status?: ReviewStatus;
+    status?: ReviewStatus | ReviewStatus[];
     limit?: number;
     offset?: number;
   } = {}
 ): Promise<ReviewQueueRow[]> {
   const { reviewType, status = "pending", limit = 10, offset = 0 } = options;
 
-  const conditions = [
-    eq(reviewQueue.userId, userId),
-    eq(reviewQueue.status, status),
-  ];
+  const conditions = [eq(reviewQueue.userId, userId)];
+
+  if (Array.isArray(status)) {
+    conditions.push(inArray(reviewQueue.status, status));
+  } else {
+    conditions.push(eq(reviewQueue.status, status));
+  }
 
   if (reviewType && reviewType !== "all") {
     conditions.push(eq(reviewQueue.reviewType, reviewType));
   }
 
-  return await db
-    .select()
-    .from(reviewQueue)
-    .where(and(...conditions))
-    .orderBy(
-      sql`CASE 
-        WHEN ${reviewQueue.priority} = 'critical' THEN 1
-        WHEN ${reviewQueue.priority} = 'high' THEN 2
-        WHEN ${reviewQueue.priority} = 'medium' THEN 3
-        WHEN ${reviewQueue.priority} = 'low' THEN 4
-        ELSE 5
-      END`,
-      desc(reviewQueue.createdAt)
-    )
-    .limit(limit)
-    .offset(offset);
+  return await measureQuery("review", "getReviewQueue", async () => {
+    return await db
+      .select()
+      .from(reviewQueue)
+      .where(and(...conditions))
+      .orderBy(
+        sql`CASE 
+          WHEN ${reviewQueue.priority} = 'critical' THEN 1
+          WHEN ${reviewQueue.priority} = 'high' THEN 2
+          WHEN ${reviewQueue.priority} = 'medium' THEN 3
+          WHEN ${reviewQueue.priority} = 'low' THEN 4
+          ELSE 5
+        END`,
+        desc(reviewQueue.createdAt)
+      )
+      .limit(limit)
+      .offset(offset);
+  });
 }
 
 /**
@@ -107,10 +118,16 @@ export async function getPendingReviewCount(
     conditions.push(eq(reviewQueue.reviewType, reviewType));
   }
 
-  const result = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(reviewQueue)
-    .where(and(...conditions));
+  const result = await measureQuery(
+    "review",
+    "getPendingReviewCount",
+    async () => {
+      return await db
+        .select({ count: sql<number>`count(*)` })
+        .from(reviewQueue)
+        .where(and(...conditions));
+    }
+  );
 
   const count = Number(result[0]?.count ?? 0);
 
@@ -143,6 +160,7 @@ export async function getReviewById(
 export async function createReview(
   data: Omit<ReviewQueueInsert, "id" | "createdAt" | "updatedAt">
 ): Promise<ReviewQueueRow> {
+  const start = performance.now();
   // Check if auto-approve is enabled for this pattern
   const patternKey = getPatternKey(data.reviewType, data.subjectData);
   const pattern = await getAutoApprovePattern(
@@ -169,6 +187,11 @@ export async function createReview(
 
   // Invalidate cache
   void invalidateUserReviewCache(data.userId);
+
+  reviewCreationDurationSeconds.observe(
+    { type: data.reviewType },
+    (performance.now() - start) / 1000
+  );
 
   return row;
 }
@@ -207,6 +230,7 @@ export async function submitReview(
   verdict: "approve" | "reject" | "skip",
   verdictData?: VerdictData
 ): Promise<ReviewQueueRow | null> {
+  const start = performance.now();
   const review = await getReviewById(reviewId);
   if (!review || review.userId !== userId) {
     return null;
@@ -242,6 +266,12 @@ export async function submitReview(
 
   // Invalidate cache
   void invalidateUserReviewCache(userId);
+
+  reviewSubmissionsTotal.inc({ type: review.reviewType, verdict });
+  reviewSubmissionDurationSeconds.observe(
+    { type: review.reviewType, verdict },
+    (performance.now() - start) / 1000
+  );
 
   return updatedReview;
 }
@@ -650,13 +680,29 @@ export async function getBlockedReviews(
     )
     .limit(limit);
 
+  if (reviews.length === 0) {
+    return [];
+  }
+
+  // Get blocking counts for all reviews
+  const reviewIds = reviews.map((r) => r.id);
+  const dependencyCounts = await db
+    .select({
+      reviewId: reviewDependencies.reviewId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(reviewDependencies)
+    .where(inArray(reviewDependencies.reviewId, reviewIds))
+    .groupBy(reviewDependencies.reviewId);
+
+  const countMap = new Map(dependencyCounts.map((d) => [d.reviewId, d.count]));
   const now = Date.now();
 
   return reviews.map((review) => ({
     ...review,
     timeBlockedMs: now - new Date(review.createdAt!).getTime(),
     risk: calculateRisk(review),
-    blockingCount: 0, // TODO: Calculate from dependency graph if available
+    blockingCount: countMap.get(review.id) ?? 0,
   }));
 }
 

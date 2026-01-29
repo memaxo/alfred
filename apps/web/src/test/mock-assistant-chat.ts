@@ -1,4 +1,4 @@
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage as AssistantUIMessage } from "@alfred/type/stream";
 import type { Dispatch, SetStateAction } from "react";
 
 import { uiMessageSchema } from "@alfred/type/stream.zod";
@@ -24,9 +24,13 @@ export const assistantChatMock = {
   sendSpy: vi.fn<(text: string) => void>(),
   approveSpy:
     vi.fn<(args: { id: string; approved: boolean; reason?: string }) => void>(),
+  transportSpy: vi.fn<(options: Record<string, unknown>) => void>(),
+  lastTransportOptions: null as Record<string, unknown> | null,
   reset() {
     this.sendSpy.mockReset();
     this.approveSpy.mockReset();
+    this.transportSpy.mockReset();
+    this.lastTransportOptions = null;
   },
   emitAssistantMessage(message: AssistantUIMessage) {
     const sanitized = ensureAssistantMessage(message);
@@ -42,7 +46,10 @@ export const assistantChatMock = {
 
 mock.module("ai", () => ({
   DefaultChatTransport: class MockTransport {
-    constructor(public options: Record<string, unknown> = {}) {}
+    constructor(public options: Record<string, unknown> = {}) {
+      assistantChatMock.lastTransportOptions = options;
+      assistantChatMock.transportSpy(options);
+    }
   },
 }));
 

@@ -42,7 +42,9 @@ export const authTokenMocks = {
     claims: DEFAULT_TOKEN_CLAIMS,
   }),
   issueAccessToken: vi.fn().mockResolvedValue("mock-access-token"),
+  issueMcpSessionToken: vi.fn().mockResolvedValue("mock-mcp-session-token"),
   verifyAccessToken: vi.fn().mockResolvedValue(DEFAULT_TOKEN_CLAIMS),
+  verifyMcpSessionToken: vi.fn().mockResolvedValue(DEFAULT_TOKEN_CLAIMS),
   cacheJTI: vi.fn().mockImplementation(async () => {}),
 };
 
@@ -54,7 +56,9 @@ export function installAuthTokenMock() {
   mock.module("@alfred/auth/token", () => ({
     requireToolScopesAndPolicy: authTokenMocks.requireToolScopesAndPolicy,
     issueAccessToken: authTokenMocks.issueAccessToken,
+    issueMcpSessionToken: authTokenMocks.issueMcpSessionToken,
     verifyAccessToken: authTokenMocks.verifyAccessToken,
+    verifyMcpSessionToken: authTokenMocks.verifyMcpSessionToken,
     cacheJTI: authTokenMocks.cacheJTI,
   }));
 }
@@ -71,10 +75,16 @@ export function resetAuthTokenMocks() {
   });
   authTokenMocks.issueAccessToken.mockClear();
   authTokenMocks.issueAccessToken.mockResolvedValue("mock-access-token");
+  authTokenMocks.issueMcpSessionToken.mockClear();
+  authTokenMocks.issueMcpSessionToken.mockResolvedValue(
+    "mock-mcp-session-token"
+  );
   authTokenMocks.cacheJTI.mockClear();
   authTokenMocks.cacheJTI.mockImplementation(async () => {});
   authTokenMocks.verifyAccessToken.mockClear();
   authTokenMocks.verifyAccessToken.mockResolvedValue(DEFAULT_TOKEN_CLAIMS);
+  authTokenMocks.verifyMcpSessionToken.mockClear();
+  authTokenMocks.verifyMcpSessionToken.mockResolvedValue(DEFAULT_TOKEN_CLAIMS);
 }
 
 /**

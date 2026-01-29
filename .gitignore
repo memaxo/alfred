@@ -34,7 +34,14 @@ build
 .idea
 *.swp
 *.swo
-.DS_Store
+
+# AI coding assistants
+.qwen/
+.windsurf/
+.claude/
+.copilot/
+.codeium/
+.cody/
 
 # Logs
 logs
@@ -73,6 +80,15 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
+.python-version
 
 # Test results
 test-results/
@@ -87,8 +103,6 @@ tmp-*.test.ts
 *.safetensors
 *.gguf
 *.bin
-packages/voice/models/
-packages/embed/models/
 
 # Workflow DevKit docs (kept locally but not tracked)
 docs/use-workflow/
@@ -98,6 +112,7 @@ packages/embed/models/
 packages/embed/.venv/
 
 # Voice models (large files)
+packages/voice/models/
 packages/voice/.venv/
 
 # Agent plans and database data
@@ -112,6 +127,7 @@ tmp-policy-test/
 **/.agent/plans/
 .agent/profiles/**/*.pstats
 .agentfs/
+.agentfs/**
 
 # Codeprint index
 .codeprint.json
@@ -119,6 +135,21 @@ tmp-policy-test/
 # Build profiling artifacts (heap snapshots, diagnostic reports)
 .profiles/
 **/*.heapsnapshot
+**/*.heapprofile
+**/*.cpuprofile
 
+# Bun-specific
+.bun/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Design assets (large video files)
 design-reference/intro-videos/
 .agent/xcodebuild/

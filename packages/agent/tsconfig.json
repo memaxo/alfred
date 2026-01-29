@@ -16,6 +16,7 @@
     { "path": "../protocol" },
     { "path": "../type" },
     { "path": "../hooks" },
+    { "path": "../home" },
     { "path": "../persona" },
     { "path": "../cognitive" },
     { "path": "../knowledge" },

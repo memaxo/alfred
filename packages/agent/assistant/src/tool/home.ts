@@ -5,7 +5,7 @@
  *
  * Supported Actions:
  * - status: Get status of home entities (scope: home.read)
- * - control: Control home entities (scope: home.write)
+ * - control: Control home entities (scope: home.write; uses home.act for lock/unlock/delete)
  * - list: List available entities (scope: home.read)
  *
  * Required Environment:
@@ -29,7 +29,6 @@ import {
   type HomeEntity,
 } from "../../../src/lib/homeassistant";
 import { recordAssistantToolCall } from "../../../src/metrics";
-
 const entitySchema = z.object({
   id: z.string().describe("Entity ID (e.g., light.living_room)"),
   name: z.string().describe("Friendly name of the entity"),
@@ -103,12 +102,39 @@ interface HomeError {
   detail?: string;
 }
 
-function scopesForAction(action: HomeInput["action"]): string[] {
-  return action === "control" ? ["home.write"] : ["home.read"];
+function entityDomain(entityId: string | undefined): string | null {
+  if (!entityId) {
+    return null;
+  }
+  const i = entityId.indexOf(".");
+  if (i <= 0) {
+    return null;
+  }
+  return entityId.slice(0, i) || null;
 }
 
-function policyAction(action: HomeInput["action"]): string {
-  return action === "control" ? "home.control" : "home.read";
+function isHighRiskControl(input: HomeInput): boolean {
+  if (input.action !== "control") {
+    return false;
+  }
+  if (!input.service) {
+    return false;
+  }
+  return ["lock", "unlock", "delete"].includes(input.service);
+}
+
+function scopesForInput(input: HomeInput): string[] {
+  if (input.action === "control") {
+    return isHighRiskControl(input) ? ["home.act"] : ["home.write"];
+  }
+  return ["home.read"];
+}
+
+function policyAction(input: HomeInput): string {
+  if (input.action === "control") {
+    return isHighRiskControl(input) ? "home.act" : "home.control";
+  }
+  return "home.read";
 }
 
 function autonomyLevel(action: HomeInput["action"]): number {
@@ -139,7 +165,10 @@ function errorToResponse(err: unknown): HomeError {
   return {
     ok: false,
     code: "home_error",
-    message: err instanceof Error ? err.message : String(err),
+    message:
+      typeof err === "object" && err !== null && err instanceof Error
+        ? err.message
+        : String(err),
   };
 }
 
@@ -194,21 +223,19 @@ export const toolHome = {
 
     try {
       // Policy enforcement
-      await requireToolScopesAndPolicy(
-        input.authz,
-        scopesForAction(input.action),
-        {
-          action: policyAction(input.action),
-          resource: {
-            kind: "home",
-            id: input.entity ?? "all",
-          },
-          context: {
-            runtimeContextId: runtimeContext?.get?.("requestId"),
-            autonomyLevel: autonomyLevel(input.action),
-          },
-        }
-      );
+      await requireToolScopesAndPolicy(input.authz, scopesForInput(input), {
+        action: policyAction(input),
+        resource: {
+          kind: "home",
+          id: input.entity ?? "all",
+        },
+        context: {
+          runtimeContextId: runtimeContext?.get?.("requestId"),
+          entity: entityDomain(input.entity),
+          service: input.service ?? null,
+          autonomyLevel: autonomyLevel(input.action),
+        },
+      });
 
       // Check if provider is configured
       if (!isProviderConfigured()) {
@@ -285,7 +312,7 @@ export const toolHome = {
           const entities = await client.listEntities(input.domain);
           return {
             action: "list",
-            entities: entities.map((e) => ({
+            entities: entities.map((e: HomeEntity) => ({
               id: e.id,
               name: e.name,
               domain: e.domain,

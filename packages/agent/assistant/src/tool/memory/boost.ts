@@ -5,6 +5,9 @@
  * Used to mark memories as important or validated.
  */
 
+import type { MemoryUpdateEvent } from "@alfred/type";
+import type { ToolCallOptions } from "ai";
+
 import { getNode, recordAccess } from "@alfred/db/repo/graph/read";
 import { updateNodeConfidence } from "@alfred/db/repo/graph/write";
 import { z } from "zod";
@@ -14,6 +17,7 @@ import {
   recordMemoryBoost,
   recordMemoryToolCall,
 } from "../../../../src/metrics";
+import { getHooksRuntime } from "./hook";
 
 const boostInputSchema = z.object({
   id: z.string().uuid().describe("Memory node ID to boost"),
@@ -40,8 +44,13 @@ export const toolMemoryBoost = {
     newConfidence: z.number().nullable(),
     message: z.string(),
   }),
-  execute: async ({ input }: { input: BoostInput }) => {
+  execute: async (
+    { input }: { input: BoostInput },
+    options?: ToolCallOptions
+  ) => {
     recordAssistantToolCall("memory_boost");
+
+    const hooks = getHooksRuntime(options);
 
     // Verify node exists
     const existing = await getNode(input.id);
@@ -62,7 +71,25 @@ export const toolMemoryBoost = {
 
     // Calculate new confidence
     const boostAmount = input.amount ?? 0.1;
-    const newConfidence = Math.min(1, currentConfidence + boostAmount);
+    let newConfidence = Math.min(1, currentConfidence + boostAmount);
+
+    if (hooks) {
+      const hookEvent: MemoryUpdateEvent = {
+        type: "memory:update",
+        memoryId: input.id,
+        changes: { confidence: newConfidence },
+      };
+      const out = await hooks.registry.emit(hookEvent, hooks.ctx);
+      if (out.decision === "deny" || out.decision === "ask") {
+        throw new Error(out.reason ?? "hook_denied");
+      }
+
+      const next = (out.transformed ?? hookEvent) as MemoryUpdateEvent;
+      if (typeof next.changes.confidence === "number") {
+        // Clamp for safety
+        newConfidence = Math.min(1, Math.max(0, next.changes.confidence));
+      }
+    }
 
     // Update confidence
     const result = await updateNodeConfidence(input.id, newConfidence);

@@ -4,7 +4,14 @@ import { getVoiceStreamUrl } from "./voice-stream";
 
 describe("getVoiceStreamUrl", () => {
   it("returns null when no origin and no directUrl", () => {
-    expect(getVoiceStreamUrl({ origin: null as unknown as string })).toBeNull();
+    const g = globalThis as unknown as { window?: unknown };
+    const prev = g.window;
+    try {
+      g.window = undefined;
+      expect(getVoiceStreamUrl()).toBeNull();
+    } finally {
+      g.window = prev;
+    }
   });
 
   it("uses directUrl when provided", () => {

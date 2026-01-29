@@ -7,6 +7,7 @@ import type {
   PromptHookConfig,
 } from "@alfred/type";
 
+import { generateObject } from "ai";
 import { z } from "zod";
 
 const hookOutputSchema = z
@@ -38,11 +39,45 @@ export async function executeHookConfig(
   ctx: HookContext
 ): Promise<HookOutput<HookEvent>> {
   if ((config as PromptHookConfig).type === "prompt") {
-    ctx.log.warn("prompt_hooks_not_supported", { hookEvent });
-    return {};
+    return executePromptHook(hookEvent, config as PromptHookConfig, event, ctx);
   }
 
   return executeCommandHook(hookEvent, config as CommandHookConfig, event, ctx);
+}
+
+async function executePromptHook(
+  hookEvent: string,
+  config: PromptHookConfig,
+  event: HookEvent,
+  ctx: HookContext
+): Promise<HookOutput<HookEvent>> {
+  const llm = ctx.llm?.model;
+  if (!llm) {
+    throw new Error("prompt_hook_model_missing");
+  }
+
+  const input = {
+    hookEvent,
+    sessionId: ctx.sessionId,
+    workflowId: ctx.workflowId,
+    timestamp: new Date().toISOString(),
+    alfredVersion: ctx.alfredVersion,
+    cognitive: ctx.cognitive,
+    payload: event,
+  };
+
+  const abortSignal = mergeAbortSignals(ctx.signal, config.timeout);
+
+  const prompt = `${config.prompt}\n\n<event_json>\n${JSON.stringify(input)}\n</event_json>\n`;
+
+  const res = await generateObject({
+    model: llm as Parameters<typeof generateObject>[0]["model"],
+    schema: hookOutputSchema,
+    prompt,
+    abortSignal,
+  });
+
+  return coerceHookOutput(res.object, hookEvent);
 }
 
 async function executeCommandHook(
@@ -187,4 +222,37 @@ function coerceHookOutput(
   }
 
   return {};
+}
+
+function mergeAbortSignals(
+  base: AbortSignal,
+  timeoutSeconds: number | undefined
+): AbortSignal {
+  if (!timeoutSeconds || timeoutSeconds <= 0) {
+    return base;
+  }
+
+  // If base is already aborted, propagate immediately.
+  if (base.aborted) {
+    return base;
+  }
+
+  const controller = new AbortController();
+  const onAbort = () => controller.abort(base.reason);
+  base.addEventListener("abort", onAbort, { once: true });
+
+  const ms = timeoutSeconds * 1000;
+  const timer = setTimeout(() => controller.abort("timeout"), ms);
+  timer.unref?.();
+
+  controller.signal.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timer);
+      base.removeEventListener("abort", onAbort);
+    },
+    { once: true }
+  );
+
+  return controller.signal;
 }

@@ -15,6 +15,10 @@
 
 import { db } from "@alfred/db/client";
 import {
+  reviewSlaBreachesTotal,
+  reviewSlaCheckDurationSeconds,
+} from "@alfred/db/metrics";
+import {
   reviewQueue,
   type ReviewPriority,
   type ReviewType,
@@ -48,6 +52,7 @@ async function checkSlaBreaches(
   logger: Pick<Console, "info" | "error" | "warn">,
   now: () => Date
 ): Promise<{ checked: number; warnings: number }> {
+  const start = performance.now();
   const currentTime = now();
   let warnings = 0;
 
@@ -98,6 +103,14 @@ async function checkSlaBreaches(
       });
 
       warnings++;
+
+      if (atBreachThreshold) {
+        reviewSlaBreachesTotal.inc({
+          priority,
+          type: review.reviewType as ReviewType,
+        });
+      }
+
       logger.info?.(`[review-sla] SLA warning sent for review ${review.id}`, {
         breached: atBreachThreshold,
         priority,
@@ -106,6 +119,8 @@ async function checkSlaBreaches(
       });
     }
   }
+
+  reviewSlaCheckDurationSeconds.observe((performance.now() - start) / 1000);
 
   return { checked: pendingReviews.length, warnings };
 }

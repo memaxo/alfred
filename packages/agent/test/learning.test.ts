@@ -1,3 +1,6 @@
+import type { HookContext } from "@alfred/type";
+
+import { createHookRegistry } from "@alfred/hooks";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
@@ -40,6 +43,35 @@ mock.module("@alfred/embed", () => ({
 
 const { toolLearnMistake, toolLearnPattern, toolLearnRecord } =
   await import("../src/orchestrator/tool/learning");
+
+function makeHooks() {
+  const registry = createHookRegistry();
+  const ctx: HookContext = {
+    sessionId: "test",
+    workflowId: "wf",
+    autonomy: 0.5,
+    cognitive: {
+      state: "idle",
+      autonomy: 0.5,
+      physiology: { energy: 1, boredom: 0, frustration: 0 },
+    },
+    alfredVersion: "test",
+    projectDir: "/tmp",
+    emit: async () => {},
+    signal: new AbortController().signal,
+    log: {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    },
+  };
+  return { registry, ctx };
+}
+
+function makeToolOptions(hooks: { registry: any; ctx: any }) {
+  return { experimental_context: { hooks } } as any;
+}
 
 describe("Learning Tools", () => {
   beforeEach(() => {
@@ -225,6 +257,99 @@ describe("Learning Tools", () => {
       expect(mockUpsertNodes).toHaveBeenCalledTimes(2);
       const insightCall = mockUpsertNodes.mock.calls[1];
       expect(insightCall[0]).toHaveLength(1);
+    });
+  });
+
+  describe("hooks integration", () => {
+    it("applies learn:pattern:detected transforms before persisting", async () => {
+      mockUpsertNodes.mockResolvedValueOnce(
+        new Map([["user:any", { id: "pattern-1" }]])
+      );
+
+      const hooks = makeHooks();
+      hooks.registry.on("learn:pattern:detected", (event) => ({
+        transformed: {
+          ...event,
+          pattern: {
+            ...event.pattern,
+            description: "Hooked",
+            confidence: 0.9,
+          },
+        },
+      }));
+
+      const input: LearnPatternInput = {
+        authz: "Bearer token",
+        confidence: 0.1,
+        description: "Original",
+        toolSequence: ["tool_a", "tool_b"],
+      };
+
+      const result = await toolLearnPattern.execute(
+        { input },
+        makeToolOptions(hooks)
+      );
+
+      expect(result.description).toBe("Hooked");
+      expect(result.confidence).toBe(0.9);
+      expect(mockUpsertNodes).toHaveBeenCalledWith([
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            confidence: 0.9,
+            description: "Hooked",
+          }),
+        }),
+      ]);
+    });
+
+    it("applies learn:feedback transforms before persisting", async () => {
+      mockUpsertNodes.mockResolvedValueOnce(
+        new Map([["runtime:any", { id: "outcome-1" }]])
+      );
+
+      const hooks = makeHooks();
+      hooks.registry.on("learn:feedback:positive", (event) => ({
+        transformed: {
+          ...event,
+          action: "Redacted",
+        },
+      }));
+
+      const input: LearnRecordInput = {
+        actual: "secret",
+        authz: "Bearer token",
+        outcome: "success",
+        workflowId: "run-123",
+      };
+
+      await toolLearnRecord.execute({ input }, makeToolOptions(hooks));
+
+      const call = mockUpsertNodes.mock.calls[0]?.[0]?.[0] as
+        | { properties?: unknown }
+        | undefined;
+      expect(call).toBeTruthy();
+      expect((call?.properties as any)?.actual).toBe("Redacted");
+    });
+
+    it("blocks learn:heuristic:proposed when hook denies", async () => {
+      const hooks = makeHooks();
+      hooks.registry.on("learn:heuristic:proposed", () => ({
+        decision: "deny",
+        reason: "no",
+      }));
+
+      const input: LearnMistakeInput = {
+        authz: "Bearer token",
+        correction: "Do X",
+        mistake: "Did Y",
+        severity: "low",
+      };
+
+      await expect(
+        toolLearnMistake.execute({ input }, makeToolOptions(hooks))
+      ).rejects.toThrow("no");
+
+      expect(mockUpsertNodes).not.toHaveBeenCalled();
     });
   });
 

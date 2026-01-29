@@ -4,7 +4,9 @@
  * Context Panel - RAG context and knowledge facts display
  */
 
-import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
+
+type AssistantUIMessage = UIMessage;
 
 import { computeBudgetUsage } from "@alfred/history/budget";
 import { Brain, Database, FileText, Link, Loader2, X } from "lucide-react";

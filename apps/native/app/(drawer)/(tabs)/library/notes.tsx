@@ -7,13 +7,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { Link, Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -102,6 +103,13 @@ export default function NotesListScreen() {
     [deleteMutation]
   );
 
+  const renderNoteItem = useCallback(
+    ({ item }: { item: NoteItem }) => (
+      <MemoizedNoteItem item={item} onDelete={handleDelete} router={router} />
+    ),
+    [handleDelete, router]
+  );
+
   // Apply fuzzy search
   const searchedNotes = searchQuery.trim()
     ? fuzzySearch(notesQuery.data ?? [], searchQuery, (note) => [
@@ -126,12 +134,13 @@ export default function NotesListScreen() {
         options={{
           title: "Notes",
           headerRight: () => (
-            <TouchableOpacity
+            <Pressable
               className="mr-4"
               onPress={() => router.push("/library/notes/new")}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
             >
               <Ionicons color="#00D9FF" name="add" size={24} />
-            </TouchableOpacity>
+            </Pressable>
           ),
         }}
       />
@@ -151,20 +160,21 @@ export default function NotesListScreen() {
               value={searchQuery}
             />
             {searchQuery ? (
-              <TouchableOpacity
+              <Pressable
                 accessibilityLabel="Clear search"
                 accessibilityRole="button"
                 onPress={() => setSearchQuery("")}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
                 <Ionicons color="#5A6B7D" name="close-circle" size={20} />
-              </TouchableOpacity>
+              </Pressable>
             ) : null}
           </View>
           <View className="flex-row items-center gap-2">
             <Ionicons color="#5A6B7D" name="funnel-outline" size={16} />
             <Text className="text-muted-foreground text-sm">Sort:</Text>
             {sortOptions.map((option) => (
-              <TouchableOpacity
+              <Pressable
                 accessibilityLabel={`Sort by ${option.label}`}
                 accessibilityRole="button"
                 className={`rounded-full px-3 py-1 ${
@@ -174,6 +184,7 @@ export default function NotesListScreen() {
                 }`}
                 key={option.key}
                 onPress={() => setSortBy(option.key)}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
                 <Text
                   className={`text-xs ${
@@ -184,7 +195,7 @@ export default function NotesListScreen() {
                 >
                   {option.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -197,9 +208,11 @@ export default function NotesListScreen() {
         ) : sortedNotes && sortedNotes.length > 0 ? (
           <FlashList
             className="flex-1"
-            contentContainerStyle={{ padding: 16 }}
+            contentContainerStyle={styles.listContent}
             data={sortedNotes}
             keyExtractor={(item) => item.id}
+            // @ts-expect-error - estimatedItemSize exists at runtime but not in types for v2.2.0
+            estimatedItemSize={100}
             ListFooterComponent={
               notesQuery.isLoading && offset > 0 ? (
                 <View className="py-4">
@@ -218,66 +231,7 @@ export default function NotesListScreen() {
                 refreshing={notesQuery.isRefetching}
               />
             }
-            renderItem={({ item }) => (
-              <Link asChild href={`library/notes/${item.id}`}>
-                <TouchableOpacity
-                  accessibilityHint="Double tap to view or edit this note"
-                  accessibilityLabel={`Note: ${item.title || "Untitled Note"}`}
-                  accessibilityRole="button"
-                  className="mb-3 rounded-lg border border-border bg-card p-4"
-                >
-                  <View className="mb-2 flex-row items-start justify-between">
-                    <Text
-                      accessibilityRole="header"
-                      className="flex-1 font-semibold text-foreground text-lg"
-                    >
-                      {item.title || "Untitled Note"}
-                    </Text>
-                    <TouchableOpacity
-                      accessibilityHint="Double tap to delete this note"
-                      accessibilityLabel="Delete note"
-                      accessibilityRole="button"
-                      className="ml-2"
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      <Ionicons
-                        color="#FF3366"
-                        name="trash-outline"
-                        size={18}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {item.content ? (
-                    <Text
-                      className="mb-2 text-muted-foreground text-sm"
-                      numberOfLines={2}
-                    >
-                      {item.content}
-                    </Text>
-                  ) : null}
-                  {item.tags && item.tags.length > 0 ? (
-                    <View className="flex-row flex-wrap gap-2">
-                      {item.tags.map((tag: string, idx: number) => (
-                        <View
-                          className="rounded-full bg-primary/20 px-2 py-1"
-                          key={idx}
-                        >
-                          <Text className="text-primary text-xs">{tag}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-                  {item.updated ? (
-                    <Text className="mt-2 text-muted-foreground/60 text-xs">
-                      {new Date(item.updated).toLocaleDateString()}
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-              </Link>
-            )}
+            renderItem={renderNoteItem}
           />
         ) : (
           <View className="flex-1 items-center justify-center p-8">
@@ -288,14 +242,15 @@ export default function NotesListScreen() {
                 : "No notes yet. Create your first note!"}
             </Text>
             {!searchQuery && (
-              <TouchableOpacity
+              <Pressable
                 className="mt-4 rounded-lg bg-primary px-6 py-3"
                 onPress={() => router.push("library/notes/new")}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
               >
                 <Text className="font-semibold text-primary-foreground">
                   Create Note
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         )}
@@ -303,3 +258,82 @@ export default function NotesListScreen() {
     </Container>
   );
 }
+
+interface NoteItemProps {
+  item: NoteItem;
+  onDelete: (id: string) => void;
+  router: ReturnType<typeof useRouter>;
+}
+
+function NoteItem({ item, onDelete, router }: NoteItemProps) {
+  return (
+    <Link asChild href={`library/notes/${item.id}`}>
+      <Pressable
+        accessibilityHint="Double tap to view or edit this note"
+        accessibilityLabel={`Note: ${item.title || "Untitled Note"}`}
+        accessibilityRole="button"
+        className="mb-3 rounded-lg border border-border bg-card p-4"
+        style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      >
+        <View className="mb-2 flex-row items-start justify-between">
+          <Text
+            accessibilityRole="header"
+            className="flex-1 font-semibold text-foreground text-lg"
+          >
+            {item.title || "Untitled Note"}
+          </Text>
+          <Pressable
+            accessibilityHint="Double tap to delete this note"
+            accessibilityLabel="Delete note"
+            accessibilityRole="button"
+            className="ml-2"
+            onPress={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons color="#FF3366" name="trash-outline" size={18} />
+          </Pressable>
+        </View>
+        {item.content ? (
+          <Text
+            className="mb-2 text-muted-foreground text-sm"
+            numberOfLines={2}
+          >
+            {item.content}
+          </Text>
+        ) : null}
+        {item.tags && item.tags.length > 0 ? (
+          <View className="flex-row flex-wrap gap-2">
+            {item.tags.map((tag: string, idx: number) => (
+              <View className="rounded-full bg-primary/20 px-2 py-1" key={idx}>
+                <Text className="text-primary text-xs">{tag}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {item.updated ? (
+          <Text className="mt-2 text-muted-foreground/60 text-xs">
+            {new Date(item.updated).toLocaleDateString()}
+          </Text>
+        ) : null}
+      </Pressable>
+    </Link>
+  );
+}
+
+const MemoizedNoteItem = memo(
+  NoteItem,
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item === next.item &&
+    prev.onDelete === next.onDelete &&
+    prev.router === next.router
+);
+
+const styles = StyleSheet.create({
+  listContent: {
+    padding: 16,
+  },
+});

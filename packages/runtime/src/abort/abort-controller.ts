@@ -1,3 +1,5 @@
+import { abortMetrics } from "@alfred/metrics/metrics-registry";
+
 /**
  * Abort Controller Utilities
  *
@@ -14,7 +16,10 @@ export interface AbortOptions {
 export function createAbortController(timeoutMs: number): AbortController {
   const controller = new AbortController();
   setTimeout(() => {
-    controller.abort(new Error(`Operation timed out after ${timeoutMs}ms`));
+    if (!controller.signal.aborted) {
+      abortMetrics.timeouts.inc({ operation: "unknown" });
+      controller.abort(new Error(`Operation timed out after ${timeoutMs}ms`));
+    }
   }, timeoutMs);
 
   return controller;
@@ -29,6 +34,7 @@ export function withTimeout<T>(
     promise,
     new Promise<T>((_, reject) => {
       setTimeout(() => {
+        abortMetrics.timeouts.inc({ operation });
         reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
     }),

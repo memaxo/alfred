@@ -286,6 +286,33 @@ describe("Home Tool", () => {
         })
       );
     });
+
+    it("enforces home.act policy for lock/unlock", async () => {
+      mockControlEntity.mockResolvedValue({
+        success: true,
+        entityId: "lock.front_door",
+        state: "unlocked",
+      });
+
+      await toolHome.execute({
+        input: {
+          userId: "user-123",
+          action: "control",
+          entity: "lock.front_door",
+          service: "unlock",
+          authz: "Bearer token",
+        },
+      });
+
+      expect(mockRequireToolScopesAndPolicy).toHaveBeenCalledWith(
+        "Bearer token",
+        ["home.act"],
+        expect.objectContaining({
+          action: "home.act",
+          resource: { kind: "home", id: "lock.front_door" },
+        })
+      );
+    });
   });
 
   describe("list action", () => {

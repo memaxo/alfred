@@ -27,6 +27,15 @@ const LOD_CONFIG = {
   fiberSegments: [10, 20, 35, 50, 75] as const,
 } as const;
 
+function at<T>(arr: readonly T[], idx: number): T {
+  const n = arr.length;
+  if (n === 0) {
+    throw new Error("Empty LOD config");
+  }
+  const i = idx < 0 ? 0 : (idx >= n ? n - 1 : idx);
+  return arr[i]!;
+}
+
 /**
  * Compute LOD level from zoom
  */
@@ -34,15 +43,16 @@ export function computeLOD(zoom: number): LODLevel {
   let level = 0;
 
   for (let i = 0; i < LOD_CONFIG.thresholds.length; i++) {
-    if (zoom >= LOD_CONFIG.thresholds[i]) {
+    const th = LOD_CONFIG.thresholds[i];
+    if (th !== undefined && zoom >= th) {
       level = i + 1;
     }
   }
 
   return {
-    particles: LOD_CONFIG.particles[level],
-    fibers: LOD_CONFIG.fibers[level],
-    edgeParticles: LOD_CONFIG.edgeParticles[level],
+    particles: at(LOD_CONFIG.particles, level),
+    fibers: at(LOD_CONFIG.fibers, level),
+    edgeParticles: at(LOD_CONFIG.edgeParticles, level),
   };
 }
 
@@ -53,12 +63,13 @@ export function getFiberSegments(zoom: number): number {
   let level = 0;
 
   for (let i = 0; i < LOD_CONFIG.thresholds.length; i++) {
-    if (zoom >= LOD_CONFIG.thresholds[i]) {
+    const th = LOD_CONFIG.thresholds[i];
+    if (th !== undefined && zoom >= th) {
       level = i + 1;
     }
   }
 
-  return LOD_CONFIG.fiberSegments[level];
+  return at(LOD_CONFIG.fiberSegments, level);
 }
 
 /**

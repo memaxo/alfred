@@ -177,17 +177,27 @@ describe("useVoiceSessionWeb", () => {
   });
 
   it("passes sttChunkSize from preferences into streaming start", async () => {
+    const originalTestMode = import.meta.env.VITE_TEST_MODE;
+    const originalMindscape = import.meta.env.MINDSCAPE_TEST;
+    (import.meta.env as any).VITE_TEST_MODE = "false";
+    (import.meta.env as any).MINDSCAPE_TEST = "0";
+
     prefsData = [{ key: "voice.stt.chunk_size", value: "fast" }];
 
-    const { result } = renderHook(() => useVoiceSessionWeb());
-    await result.current.stream.start();
+    try {
+      const { result } = renderHook(() => useVoiceSessionWeb());
+      await result.current.stream.start();
 
-    expect(connectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        codec: "pcm",
-        sttChunkSize: "fast",
-        inputMimeType: "audio/raw;codec=pcm_s16le;rate=16000",
-      })
-    );
+      expect(connectMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          codec: "pcm",
+          sttChunkSize: "fast",
+          inputMimeType: "audio/raw;codec=pcm_s16le;rate=16000",
+        })
+      );
+    } finally {
+      (import.meta.env as any).VITE_TEST_MODE = originalTestMode;
+      (import.meta.env as any).MINDSCAPE_TEST = originalMindscape;
+    }
   });
 });
