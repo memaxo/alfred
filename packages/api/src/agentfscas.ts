@@ -47,7 +47,7 @@ async function listTarInputs(relDir: string): Promise<string[]> {
 
   const walk = async (absDir: string, relDirPosix: string): Promise<void> => {
     const ents = await readdir(absDir, { withFileTypes: true });
-    ents.sort((a, b) => (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
+    ents.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
     for (const ent of ents) {
       const childRel = path.posix.join(relDirPosix, ent.name);

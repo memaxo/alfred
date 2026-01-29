@@ -329,9 +329,9 @@ async function runWorkflow(args: RunArgs) {
         error:
           runError instanceof Error
             ? runError.message
-            : (runError
+            : runError
               ? String(runError)
-              : null),
+              : null,
       },
       null,
       2

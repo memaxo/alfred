@@ -162,9 +162,9 @@ function isServerStartFailure(
   const code =
     executor === "codex"
       ? "codex_server_start_failed"
-      : (executor === "opencode"
+      : executor === "opencode"
         ? "opencode_server_start_failed"
-        : undefined);
+        : undefined;
   if (!code) {
     return false;
   }
@@ -1234,9 +1234,9 @@ function buildAgentPrompt(
   const runtimeEscalateTool =
     executor === "codex" || executor === "droid"
       ? "mcp__alfred_runtime__escalate"
-      : (executor === "opencode"
+      : executor === "opencode"
         ? "alfred_runtime_escalate"
-        : "escalate");
+        : "escalate";
 
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
@@ -1375,9 +1375,9 @@ function createAgentWriter(
                 status:
                   inner.status === "failed"
                     ? "failed"
-                    : (inner.status === "completed"
+                    : inner.status === "completed"
                       ? "completed"
-                      : "running"),
+                      : "running",
                 ts,
                 type: "agent/command",
               }

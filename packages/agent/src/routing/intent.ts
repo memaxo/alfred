@@ -393,7 +393,7 @@ export async function routeToolsByIntent(
       }
     );
 
-    const {category} = result.result;
+    const { category } = result.result;
 
     return {
       catalog: getCatalogForIntent(category),

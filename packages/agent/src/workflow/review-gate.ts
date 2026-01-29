@@ -20,9 +20,9 @@ export class ReviewGate {
       const id =
         typeof item.id === "string" && item.id.length > 0
           ? item.id
-          : (typeof item.type === "string" && item.type.length > 0
+          : typeof item.type === "string" && item.type.length > 0
             ? item.type
-            : undefined);
+            : undefined;
       if (!id) {
         continue;
       }
@@ -52,9 +52,9 @@ export class ReviewGate {
     const id =
       typeof result.id === "string" && result.id.length > 0
         ? result.id
-        : (typeof result.type === "string" && result.type.length > 0
+        : typeof result.type === "string" && result.type.length > 0
           ? result.type
-          : undefined);
+          : undefined;
     if (!id) {
       return;
     }

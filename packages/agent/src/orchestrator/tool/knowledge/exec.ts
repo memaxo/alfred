@@ -488,9 +488,9 @@ export async function executeCorrect(
 
   const node: NodeRow | null = input.nodeId
     ? await graphRepo.getNode(input.nodeId)
-    : (input.factId
+    : input.factId
       ? await graphRepo.findNodeByHash(resource, input.factId)
-      : null);
+      : null;
 
   if (!node) {
     throw new Error("knowledge_node_not_found");

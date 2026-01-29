@@ -40,7 +40,9 @@ export async function executeRunCleanup(
       autopinned++;
     } else if (item.action === "delete") {
       const success = await deleteRun(item.entry, item.reason, context);
-      if (success) {deleted++;}
+      if (success) {
+        deleted++;
+      }
     }
   }
 
@@ -200,7 +202,9 @@ export async function cleanupOrphans(
   const allFiles = await readdir(casDir, { withFileTypes: true });
 
   for (const ent of allFiles) {
-    if (!ent.isFile()) {continue;}
+    if (!ent.isFile()) {
+      continue;
+    }
 
     if (ent.name.endsWith(".json")) {
       await cleanupOrphanedMeta(ent.name, casDir, logger, dryRun);
@@ -217,10 +221,14 @@ async function cleanupOrphanedMeta(
   dryRun: boolean
 ): Promise<void> {
   const sha = filename.slice(0, -".json".length);
-  if (!/^[a-f0-9]{64}$/i.test(sha)) {return;}
+  if (!/^[a-f0-9]{64}$/i.test(sha)) {
+    return;
+  }
 
   const tarAbs = path.join(casDir, `${sha.toLowerCase()}.tar.gz`);
-  if (existsSync(tarAbs)) {return;}
+  if (existsSync(tarAbs)) {
+    return;
+  }
 
   const metaAbs = path.join(casDir, filename);
 
@@ -254,10 +262,14 @@ async function cleanupOrphanedKeep(
   dryRun: boolean
 ): Promise<void> {
   const sha = filename.slice(0, -".keep".length);
-  if (!/^[a-f0-9]{64}$/i.test(sha)) {return;}
+  if (!/^[a-f0-9]{64}$/i.test(sha)) {
+    return;
+  }
 
   const tarAbs = path.join(casDir, `${sha.toLowerCase()}.tar.gz`);
-  if (existsSync(tarAbs)) {return;}
+  if (existsSync(tarAbs)) {
+    return;
+  }
 
   const keepAbs = path.join(casDir, filename);
 

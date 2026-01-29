@@ -52,9 +52,9 @@ export function FormField({
 
   const borderColor = error
     ? theme.colors.semantic.error
-    : (focused
+    : focused
       ? theme.colors.biolum.standard
-      : theme.colors.glass.border);
+      : theme.colors.glass.border;
 
   return (
     <View style={[styles.container, style]}>
@@ -70,7 +70,7 @@ export function FormField({
         <Animated.View style={[styles.label, labelStyle]} pointerEvents="none">
           <CaptionText
             size="medium"
-            color={error ? "faint" : (focused ? "standard" : "dim")}
+            color={error ? "faint" : focused ? "standard" : "dim"}
           >
             {label}
             {required && " *"}
@@ -88,11 +88,11 @@ export function FormField({
             >
               {error}
             </CaptionText>
-          ) : (hint ? (
+          ) : hint ? (
             <CaptionText size="small" color="faint">
               {hint}
             </CaptionText>
-          ) : null)}
+          ) : null}
         </View>
       )}
     </View>

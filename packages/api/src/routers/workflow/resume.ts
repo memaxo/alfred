@@ -305,9 +305,9 @@ export const workflowResumePipelineProcedure = authedProcedure
                   status:
                     finalStatus === "completed"
                       ? "completed"
-                      : (finalStatus === "suspended"
+                      : finalStatus === "suspended"
                         ? "suspended"
-                        : "failed"),
+                        : "failed",
                   suspendedAt: finalStatus === "suspended" ? new Date() : null,
                 });
               } catch {

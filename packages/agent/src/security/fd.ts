@@ -21,9 +21,9 @@ function getLibc(): LibcSymbols | null {
     const libcPath =
       process.platform === "darwin"
         ? "libSystem.B.dylib"
-        : (process.platform === "linux"
+        : process.platform === "linux"
           ? "libc.so.6"
-          : null);
+          : null;
 
     if (!libcPath) {
       return null;

@@ -248,9 +248,9 @@ export async function runExecutorEvals(
 
   const status: ExecutorEvalsResult["status"] = config.preflightOnly
     ? "preflight_only"
-    : (config.confirmCost
+    : config.confirmCost
       ? "completed"
-      : "skipped_cost");
+      : "skipped_cost";
 
   let ok = false;
   let results: StepResult[] = [];

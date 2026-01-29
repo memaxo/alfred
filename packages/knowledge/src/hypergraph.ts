@@ -105,7 +105,7 @@ class HAMT<V> {
 
   set(key: string, value: V): void {
     const hash = this.hash(key);
-    const bucket = hash & 0xFF;
+    const bucket = hash & 0xff;
     if (!this.root.has(bucket)) {
       this.root.set(bucket, new Map());
     }
@@ -114,7 +114,7 @@ class HAMT<V> {
 
   get(key: string): V | undefined {
     const hash = this.hash(key);
-    const bucket = hash & 0xFF;
+    const bucket = hash & 0xff;
     return this.root.get(bucket)?.get(key);
   }
 

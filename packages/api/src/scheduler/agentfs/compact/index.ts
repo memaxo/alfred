@@ -64,17 +64,25 @@ async function tick(options: CompactTickOptions): Promise<CompactResult> {
     }[] = [];
 
     for (const ent of entries) {
-      if (!ent.isDirectory()) {continue;}
-      if (ent.name === "quarantine" || ent.name === "cas") {continue;}
+      if (!ent.isDirectory()) {
+        continue;
+      }
+      if (ent.name === "quarantine" || ent.name === "cas") {
+        continue;
+      }
 
       const runDir = path.join(root, ent.name);
       const dbPath = await findDbPath(runDir);
-      if (!dbPath) {continue;}
+      if (!dbPath) {
+        continue;
+      }
 
       try {
         const st = await stat(dbPath);
         const ageMs = nowMs - st.mtimeMs;
-        if (ageMs < minAgeMs) {continue;}
+        if (ageMs < minAgeMs) {
+          continue;
+        }
         candidates.push({ dbPath, mtimeMs: st.mtimeMs, runId: ent.name });
       } catch {
         // ignore
@@ -85,7 +93,9 @@ async function tick(options: CompactTickOptions): Promise<CompactResult> {
 
     let compacted = 0;
     for (const c of candidates) {
-      if (compacted >= options.maxRuns) {break;}
+      if (compacted >= options.maxRuns) {
+        break;
+      }
 
       try {
         const db = new Database(c.dbPath);

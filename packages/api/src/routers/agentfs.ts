@@ -723,7 +723,7 @@ export const agentfsRouter = router({
 
         return {
           checkpoints: [...merged.values()].sort((a, b) =>
-            a.createdAt < b.createdAt ? 1 : (a.createdAt > b.createdAt ? -1 : 0)
+            a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
           ),
         };
       } finally {

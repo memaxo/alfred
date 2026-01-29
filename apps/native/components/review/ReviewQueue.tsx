@@ -271,9 +271,9 @@ function ReviewItem({ item, onPress, theme }: ReviewItemProps) {
   const priorityBadgeStyle =
     item.priority === "critical"
       ? { backgroundColor: `${theme.colors.semantic.error}40` }
-      : (item.priority === "high"
+      : item.priority === "high"
         ? { backgroundColor: `${theme.colors.semantic.warning}40` }
-        : undefined);
+        : undefined;
 
   return (
     <Pressable

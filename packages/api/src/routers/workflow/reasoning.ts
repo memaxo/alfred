@@ -45,10 +45,10 @@ export const workflowReasoningProcedure = authedProcedure
     const resource =
       typeof inputData.cw === "string" && inputData.cw.length > 0
         ? inputData.cw
-        : (typeof inputData.workspace === "string" &&
+        : typeof inputData.workspace === "string" &&
             inputData.workspace.length > 0
           ? inputData.workspace
-          : process.cwd());
+          : process.cwd();
 
     const executionId =
       typeof inputData.executionId === "string" &&
@@ -59,9 +59,9 @@ export const workflowReasoningProcedure = authedProcedure
     const since =
       typeof inputData.reasoningSince === "number"
         ? inputData.reasoningSince
-        : (run.created instanceof Date
+        : run.created instanceof Date
           ? run.created.getTime()
-          : undefined);
+          : undefined;
 
     const graphRepoPkg = "@alfred/db/repo/graph";
     const { getReasoningChain } = await import(graphRepoPkg);

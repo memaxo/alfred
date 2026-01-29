@@ -296,9 +296,9 @@ function createClient(
         const mapped =
           status === "completed"
             ? "completed"
-            : (status === "failed"
+            : status === "failed"
               ? "failed"
-              : "running");
+              : "running";
         emitCommand(writer, titleStr, mapped);
 
         // Capture diff payloads (ACP tool_call_update may include `content` array).

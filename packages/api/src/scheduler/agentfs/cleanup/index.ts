@@ -45,8 +45,12 @@ async function listRunEntries(args: {
   const candidates: RunEntry[] = [];
 
   for (const ent of entries) {
-    if (!ent.isDirectory()) {continue;}
-    if (ent.name === "quarantine" || ent.name === "cas") {continue;}
+    if (!ent.isDirectory()) {
+      continue;
+    }
+    if (ent.name === "quarantine" || ent.name === "cas") {
+      continue;
+    }
 
     const dir = path.join(args.root, ent.name);
 
@@ -57,7 +61,9 @@ async function listRunEntries(args: {
     }
 
     const keep = path.join(dir, ".keep");
-    if (existsSync(keep)) {continue;}
+    if (existsSync(keep)) {
+      continue;
+    }
 
     const db = path.join(dir, "agentfs.db");
     try {
@@ -88,11 +94,17 @@ async function listCasEntries(args: {
   const candidates: CasEntry[] = [];
 
   for (const ent of entries) {
-    if (!ent.isFile()) {continue;}
-    if (!ent.name.endsWith(".tar.gz")) {continue;}
+    if (!ent.isFile()) {
+      continue;
+    }
+    if (!ent.name.endsWith(".tar.gz")) {
+      continue;
+    }
 
     const sha = ent.name.slice(0, -".tar.gz".length);
-    if (!/^[a-f0-9]{64}$/i.test(sha)) {continue;}
+    if (!/^[a-f0-9]{64}$/i.test(sha)) {
+      continue;
+    }
 
     const shaLower = sha.toLowerCase();
     const abs = path.join(casDir, ent.name);
@@ -150,7 +162,9 @@ async function sumDirectoryBytes(dir: string): Promise<number> {
     const ents = await readdir(dir, { withFileTypes: true, recursive: true });
     let total = 0;
     for (const ent of ents) {
-      if (!ent.isFile()) {continue;}
+      if (!ent.isFile()) {
+        continue;
+      }
       try {
         const { stat } = await import("node:fs/promises");
         const st = await stat(path.join(ent.parentPath ?? dir, ent.name));

@@ -275,9 +275,9 @@ export function MetricsPanel({
   const content =
     viewMode === "latency"
       ? renderLatencyView()
-      : (viewMode === "throughput"
+      : viewMode === "throughput"
         ? renderThroughputView()
-        : renderOverview());
+        : renderOverview();
 
   return (
     <box

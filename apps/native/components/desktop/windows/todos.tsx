@@ -152,7 +152,7 @@ export function TodosWindow({ window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (filtered.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             Nothing here yet.
           </Text>
@@ -199,7 +199,7 @@ export function TodosWindow({ window }: WindowComponentProps) {
               );
             })}
           </View>
-        ))}
+        )}
       </View>
     </ScrollView>
   );

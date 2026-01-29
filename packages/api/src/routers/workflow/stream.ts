@@ -158,9 +158,9 @@ export const workflowStreamPipelineProcedure = authedProcedure
             typeof rawInput.workspace === "string" &&
             rawInput.workspace.length > 0
               ? rawInput.workspace
-              : (typeof rawInput.cw === "string" && rawInput.cw.length > 0
+              : typeof rawInput.cw === "string" && rawInput.cw.length > 0
                 ? rawInput.cw
-                : process.cwd());
+                : process.cwd();
 
           const runner = new PipelineRunner({
             enableLearning: true,

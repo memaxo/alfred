@@ -290,9 +290,9 @@ export async function buildHistoryContext(
     const modelMessagesRaw =
       uiMessages.length === 0
         ? []
-        : (options.tools
+        : options.tools
           ? convertToModelMessages(uiMessages, { tools: options.tools })
-          : convertToModelMessages(uiMessages));
+          : convertToModelMessages(uiMessages);
 
     const modelMessages =
       modelMessagesRaw.length === 0

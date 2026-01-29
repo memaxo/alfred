@@ -197,7 +197,7 @@ function formatEnrichmentBlock(enrichment: TaskEnrichment): string {
     sections.push("## Learned Heuristics");
     for (const h of enrichment.relevantHeuristics) {
       const severityIcon =
-        h.severity === "high" ? "⚠" : (h.severity === "medium" ? "!" : "i");
+        h.severity === "high" ? "⚠" : h.severity === "medium" ? "!" : "i";
       sections.push(`- [${severityIcon}/${h.domain}] ${h.rule}`);
     }
   }

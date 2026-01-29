@@ -77,9 +77,9 @@ export function FocusPanel({ width, height, focused, x, y }: FocusPanelProps) {
           const lane =
             c.lane === "spotlight"
               ? fg(colors.primary)("S")
-              : (c.lane === "maintenance"
+              : c.lane === "maintenance"
                 ? fg(colors.muted)("M")
-                : dim("B"));
+                : dim("B");
           rows.push({
             id: c.id,
             title: `  ${lane} ${truncate(toTitle(c.title), width - 6)}`,

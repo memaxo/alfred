@@ -386,9 +386,9 @@ async function main(): Promise<void> {
     const net0 =
       spec.name === "alfred"
         ? alfredNet0
-        : (spec.name === "alfred-db"
+        : spec.name === "alfred-db"
           ? dbNet0
-          : redisNet0);
+          : redisNet0;
     console.log(
       `- ${spec.name}: vmid=${spec.vmid} hostname=${spec.hostname} net0=${net0 ?? "none"}`
     );

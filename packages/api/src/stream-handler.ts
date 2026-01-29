@@ -546,9 +546,9 @@ export async function handleStreamRequest(
         const stepNumber =
           typeof args?.stepNumber === "number"
             ? args.stepNumber
-            : (typeof args?.step === "number"
+            : typeof args?.step === "number"
               ? args.step
-              : 0);
+              : 0;
 
         try {
           if (!signalsMetrics) {

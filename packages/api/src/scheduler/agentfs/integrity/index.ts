@@ -149,7 +149,9 @@ async function sha256File(absPath: string): Promise<string> {
   const reader = file.stream().getReader();
   while (true) {
     const { done, value } = await reader.read();
-    if (done) {break;}
+    if (done) {
+      break;
+    }
     hash.update(value);
   }
   return hash.digest("hex");
@@ -168,11 +170,17 @@ async function listCasEntries(args: {
   const candidates: CasEntry[] = [];
 
   for (const ent of entries) {
-    if (!ent.isFile()) {continue;}
-    if (!ent.name.endsWith(".tar.gz")) {continue;}
+    if (!ent.isFile()) {
+      continue;
+    }
+    if (!ent.name.endsWith(".tar.gz")) {
+      continue;
+    }
 
     const sha = ent.name.slice(0, -".tar.gz".length);
-    if (!/^[a-f0-9]{64}$/i.test(sha)) {continue;}
+    if (!/^[a-f0-9]{64}$/i.test(sha)) {
+      continue;
+    }
 
     const shaLower = sha.toLowerCase();
     const abs = path.join(casDir, ent.name);
@@ -325,17 +333,25 @@ async function tick(options: IntegrityTickOptions): Promise<IntegrityResult> {
     }[] = [];
 
     for (const ent of entries) {
-      if (!ent.isDirectory()) {continue;}
-      if (ent.name === "quarantine" || ent.name === "cas") {continue;}
+      if (!ent.isDirectory()) {
+        continue;
+      }
+      if (ent.name === "quarantine" || ent.name === "cas") {
+        continue;
+      }
 
       const runDir = path.join(root, ent.name);
       const dbPath = await findDbPath(runDir);
-      if (!dbPath) {continue;}
+      if (!dbPath) {
+        continue;
+      }
 
       try {
         const st = await stat(dbPath);
         const ageMs = nowMs - st.mtimeMs;
-        if (ageMs < options.minAgeMs) {continue;}
+        if (ageMs < options.minAgeMs) {
+          continue;
+        }
         candidates.push({
           dbPath,
           mtimeMs: st.mtimeMs,
@@ -353,7 +369,9 @@ async function tick(options: IntegrityTickOptions): Promise<IntegrityResult> {
     let quarantined = 0;
 
     for (const c of candidates) {
-      if (checked >= options.maxChecks) {break;}
+      if (checked >= options.maxChecks) {
+        break;
+      }
       checked += 1;
 
       const startedMs = Date.now();

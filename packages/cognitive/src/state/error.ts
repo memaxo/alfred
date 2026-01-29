@@ -48,6 +48,7 @@ export const calculateError = (expected: string, actual: string): number => {
     const durationMs = performance.now() - start;
     cognitiveErrorCalculationDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.1) {}
+    if (shouldWarn && durationMs > 0.1) {
+    }
   }
 };

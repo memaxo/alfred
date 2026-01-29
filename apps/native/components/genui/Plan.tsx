@@ -167,9 +167,9 @@ function PhaseItem({ phase, index, isLast, onPress, theme }: PhaseItemProps) {
           color={
             phase.status === "active"
               ? "full"
-              : (phase.status === "completed"
+              : phase.status === "completed"
                 ? "standard"
-                : "dim")
+                : "dim"
           }
         >
           {phase.title}

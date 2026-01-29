@@ -154,7 +154,8 @@ export async function ingestWithOptions(
       if (
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
-      ) {}
+      ) {
+      }
       // Fill with empty embeddings for failed batch to maintain array length
       allEmbeddings.push(...batch.map(() => []));
     }
@@ -188,7 +189,8 @@ export async function ingestWithOptions(
       if (
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
-      ) {}
+      ) {
+      }
     }
   }
 
@@ -255,9 +257,9 @@ export async function retrieveWithOptions(
       const metadata =
         rawMetadata && typeof rawMetadata === "object"
           ? (rawMetadata as Record<string, unknown>)
-          : (rawMetadata !== undefined
+          : rawMetadata !== undefined
             ? { value: rawMetadata }
-            : undefined);
+            : undefined;
 
       return {
         content: row.content,
@@ -436,7 +438,8 @@ async function enrichGraphFromChunks(args: {
     if (
       typeof process !== "undefined" &&
       process.env.NODE_ENV !== "production"
-    ) {}
+    ) {
+    }
   }
 
   for (const chunk of args.chunks) {

@@ -188,7 +188,7 @@ export function serializeQuantized(quantized: QuantizedEmbedding): Uint8Array {
   for (let i = 0; i < quantized.dimensions; i++) {
     // Convert signed int8 to unsigned for storage
     const val = quantized.data[i] ?? 0;
-    uint8View[i] = (val + 128) & 0xFF;
+    uint8View[i] = (val + 128) & 0xff;
   }
 
   return new Uint8Array(buffer);

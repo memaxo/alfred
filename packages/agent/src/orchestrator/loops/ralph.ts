@@ -655,7 +655,7 @@ export const toolRalph = {
             containerName: toolInputRest.containerName,
             containerCw: toolInputRest.containerCw,
           }
-        : (executor === "droid"
+        : executor === "droid"
           ? {
               out: "text" as const,
               auto: toolInputRest.auto,
@@ -676,7 +676,7 @@ export const toolRalph = {
               args: toolInputRest.args,
               containerName: toolInputRest.containerName,
               containerCw: toolInputRest.containerCw,
-            });
+            };
 
     return await runRalphLoop({
       executor,
