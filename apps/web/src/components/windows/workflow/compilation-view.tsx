@@ -217,7 +217,7 @@ export function CompilationView({ runId }: CompilationViewProps) {
                           }
                         />
                         <span className="capitalize">
-                          {stage.name.replaceAll(/-/g, " ")}
+                          {stage.name.replaceAll('-', " ")}
                         </span>
                       </div>
                       <span className="text-xs text-muted-foreground">

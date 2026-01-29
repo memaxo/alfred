@@ -63,10 +63,18 @@ function getEventIcon(type: string) {
 }
 
 function categorizeEvent(type: string): EventFilter {
-  if (type.startsWith("stage:")) {return "stage";}
-  if (type.startsWith("agent:")) {return "agent";}
-  if (type.startsWith("tool")) {return "tool";}
-  if (type.startsWith("pipeline:")) {return "system";}
+  if (type.startsWith("stage:")) {
+    return "stage";
+  }
+  if (type.startsWith("agent:")) {
+    return "agent";
+  }
+  if (type.startsWith("tool")) {
+    return "tool";
+  }
+  if (type.startsWith("pipeline:")) {
+    return "system";
+  }
   return "system";
 }
 
