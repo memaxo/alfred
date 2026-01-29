@@ -45,7 +45,7 @@ describe("search utilities", () => {
     });
   });
 
-  describe(sortFunctions, () => {
+  describe("sortFunctions object", () => {
     it("should sort by date newest first", () => {
       const itemsWithCreatedAt = items.map((item) => ({
         ...item,
@@ -63,7 +63,7 @@ describe("search utilities", () => {
     });
   });
 
-  describe(filterFunctions, () => {
+  describe("filterFunctions object", () => {
     it("should filter by pending status", () => {
       const filtered = items.filter(filterFunctions.isPending);
       expect(filtered).toHaveLength(2);
