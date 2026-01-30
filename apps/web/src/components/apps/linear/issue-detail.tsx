@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Issue Detail - Full issue information panel
  */

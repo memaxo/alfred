@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps } from "react";
 
 import { Controls as ControlsPrimitive } from "@xyflow/react";

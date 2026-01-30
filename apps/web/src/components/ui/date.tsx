@@ -1,5 +1,3 @@
-"use client";
-
 import { DateTimePicker, type DateTimePickerProps } from "./date-time-picker";
 
 export type DateFieldProps = Omit<DateTimePickerProps, "showTime"> & {

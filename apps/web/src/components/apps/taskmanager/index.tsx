@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Task Manager Application - Phase 3 System Application
  *

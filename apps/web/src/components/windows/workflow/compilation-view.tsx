@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Workflow Compilation View
  *
@@ -217,7 +215,7 @@ export function CompilationView({ runId }: CompilationViewProps) {
                           }
                         />
                         <span className="capitalize">
-                          {stage.name.replaceAll('-', " ")}
+                          {stage.name.replaceAll("-", " ")}
                         </span>
                       </div>
                       <span className="text-xs text-muted-foreground">

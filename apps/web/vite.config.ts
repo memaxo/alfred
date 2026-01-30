@@ -249,14 +249,7 @@ const useEffectEventShimPlugin = {
     );
 
     // Add the useEffectEvent import from radix-ui at the top
-    if (transformed.includes("'use client'")) {
-      transformed = transformed.replace(
-        "'use client';",
-        "'use client';\nimport { useEffectEvent } from '@radix-ui/react-use-effect-event';"
-      );
-    } else {
-      transformed = `import { useEffectEvent } from '@radix-ui/react-use-effect-event';\n${transformed}`;
-    }
+    transformed = `import { useEffectEvent } from '@radix-ui/react-use-effect-event';\n${transformed}`;
 
     return { code: transformed, map: null };
   },

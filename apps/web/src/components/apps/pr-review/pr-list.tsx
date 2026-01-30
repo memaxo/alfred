@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * PR List - Virtualized list of pull requests
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Network Tab - Network connections and bandwidth
  */

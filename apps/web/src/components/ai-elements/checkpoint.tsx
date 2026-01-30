@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps, HTMLAttributes } from "react";
 
 import { BookmarkIcon, type LucideProps } from "lucide-react";

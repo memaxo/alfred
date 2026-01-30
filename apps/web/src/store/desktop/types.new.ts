@@ -22,7 +22,9 @@ export type WindowType =
   // Tier 1: System & Operations
   | "taskmanager"
   | "docker"
+  | "deploy"
   | "pr-review"
+  | "reviews"
   | "agentfs"
   | "files"
   | "admin"
@@ -490,9 +492,17 @@ export const WINDOW_DEFAULTS: Record<
     minSize: { width: 500, height: 400 },
     defaultBounds: { x: 150, y: 100, width: 700, height: 500 },
   },
+  deploy: {
+    minSize: { width: 600, height: 450 },
+    defaultBounds: { x: 100, y: 50, width: 800, height: 600 },
+  },
   "pr-review": {
     minSize: { width: 600, height: 400 },
     defaultBounds: { x: 100, y: 100, width: 800, height: 600 },
+  },
+  reviews: {
+    minSize: { width: 700, height: 500 },
+    defaultBounds: { x: 50, y: 50, width: 900, height: 650 },
   },
   agentfs: {
     minSize: { width: 400, height: 300 },

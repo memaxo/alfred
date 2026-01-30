@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Tune Manager - Fine-tuning jobs and model management
  *

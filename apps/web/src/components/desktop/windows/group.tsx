@@ -1,5 +1,3 @@
-"use client";
-
 import { X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";

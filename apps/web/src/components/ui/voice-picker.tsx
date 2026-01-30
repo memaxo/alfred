@@ -1,5 +1,3 @@
-"use client";
-
 import type { ElevenLabs } from "@elevenlabs/elevenlabs-js";
 
 import { Check, ChevronsUpDown, Pause, Play } from "lucide-react";

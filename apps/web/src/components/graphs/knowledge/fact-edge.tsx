@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Fact Edge - Custom edge for knowledge facts
  */

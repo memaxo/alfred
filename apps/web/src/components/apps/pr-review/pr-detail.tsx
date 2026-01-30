@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * PR Detail - Pull request metadata panel
  */

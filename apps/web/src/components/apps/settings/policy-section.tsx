@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Policy Section - Configure autonomy and permission preferences
  *

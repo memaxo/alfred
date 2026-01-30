@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Code Editor Application - Phase 2 Core Application
  *

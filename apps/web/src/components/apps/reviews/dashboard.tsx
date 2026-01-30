@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ReviewsDashboard - Main composition component for PM Reviews dashboard
  *

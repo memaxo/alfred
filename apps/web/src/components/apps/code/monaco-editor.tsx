@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Monaco Editor - Code editor integration
  *

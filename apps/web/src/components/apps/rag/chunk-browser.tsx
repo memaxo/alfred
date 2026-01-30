@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Chunk Browser - Browse document chunks with semantic search
  */

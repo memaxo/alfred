@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Entity Node - Custom node type for Mindscape entities
  */

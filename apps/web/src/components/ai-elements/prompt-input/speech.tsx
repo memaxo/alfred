@@ -1,5 +1,3 @@
-"use client";
-
 import { MicIcon } from "lucide-react";
 import {
   type ComponentProps,

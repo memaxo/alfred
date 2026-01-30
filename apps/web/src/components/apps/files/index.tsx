@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * File Browser Application - Phase 4 Knowledge & Integration
  *

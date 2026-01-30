@@ -1,5 +1,3 @@
-"use client";
-
 import { Container, Server, Terminal, X } from "lucide-react";
 import { useCallback, useState } from "react";
 

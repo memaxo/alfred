@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Knowledge Entity Node - Custom node for knowledge entities
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Orb Layer - Floating voice orb with visual feedback
  *

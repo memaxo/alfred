@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Expanded Orb - Full-screen voice overlay
  */

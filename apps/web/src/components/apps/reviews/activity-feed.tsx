@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * AgentActivityFeed - Real-time horizontal ticker of review events
  */

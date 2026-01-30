@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * VirtualList - Reusable virtualized list component
  */

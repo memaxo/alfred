@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Knowledge Graph Canvas - ReactFlow for Knowledge app
  *

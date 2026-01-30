@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Training Progress - Training progress charts
  */

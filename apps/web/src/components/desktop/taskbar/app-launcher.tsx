@@ -1,5 +1,3 @@
-"use client";
-
 import { MessageSquare, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";

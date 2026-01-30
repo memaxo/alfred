@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Autonomy Controls - Adjust autonomy levels per scope
  */

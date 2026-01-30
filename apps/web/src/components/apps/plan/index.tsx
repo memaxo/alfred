@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Plan Editor - Visual plan editor for ExecPlans
  *

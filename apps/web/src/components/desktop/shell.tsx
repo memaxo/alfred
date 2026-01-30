@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Alfred Desktop Shell - Phase 1 Foundation
  *

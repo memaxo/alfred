@@ -89,12 +89,12 @@ function componentToZodField(schema: UIComponent): z.ZodTypeAny {
           const value =
             typeof option === "string"
               ? option
-              : typeof option === "object" &&
+              : (typeof option === "object" &&
                   option !== null &&
                   "value" in option &&
                   typeof option.value === "string"
                 ? option.value
-                : String(option);
+                : String(option));
           validValues.push(value);
         }
         if (validValues.length > 0) {

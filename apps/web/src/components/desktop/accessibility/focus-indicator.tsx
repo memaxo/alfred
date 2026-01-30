@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Focus Indicator - Visual focus ring for accessibility
  *

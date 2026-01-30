@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Query Editor - PromQL query editor
  */

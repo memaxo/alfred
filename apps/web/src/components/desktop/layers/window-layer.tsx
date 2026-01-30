@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Window Layer - Traditional DOM-based window rendering
  *

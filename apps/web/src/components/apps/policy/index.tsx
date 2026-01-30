@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Policy Viewer - Autonomy constraints and permission management
  *

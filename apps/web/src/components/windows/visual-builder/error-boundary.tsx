@@ -5,8 +5,6 @@
  * Provides user-friendly error messages and recovery options.
  */
 
-"use client";
-
 import type { ReactNode } from "react";
 
 import { AlertTriangle, RefreshCw } from "lucide-react";

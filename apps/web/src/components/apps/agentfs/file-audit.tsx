@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * File Audit - File change history
  */

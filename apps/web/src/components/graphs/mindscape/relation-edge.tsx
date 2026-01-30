@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Relation Edge - Custom edge type for Mindscape relations
  */

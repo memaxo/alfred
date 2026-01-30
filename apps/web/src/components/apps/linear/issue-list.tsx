@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Issue List - Virtualized Linear issue list
  */

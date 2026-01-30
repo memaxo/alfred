@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Linear Integration Application - Phase 4 Knowledge & Integration
  *

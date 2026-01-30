@@ -5,8 +5,6 @@
  * Integrates with ALFRED's plan generation system and desktop window management.
  */
 
-"use client";
-
 import {
   addEdge,
   Background,

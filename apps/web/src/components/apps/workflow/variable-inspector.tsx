@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Variable Inspector - Workflow variable values
  */

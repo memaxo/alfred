@@ -1,5 +1,3 @@
-"use client";
-
 import { Container, Loader2, RefreshCw, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Mindscape Layer - ReactFlow infinite canvas wrapper
  *

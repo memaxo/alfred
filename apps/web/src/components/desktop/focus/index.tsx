@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Focus Mode - Hide distractions and enhance focus environment
  *

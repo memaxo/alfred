@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Constraint List - Active autonomy constraints
  */

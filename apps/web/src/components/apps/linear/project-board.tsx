@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Project Board - Kanban view of issues
  */

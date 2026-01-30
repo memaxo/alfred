@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Pattern Library - Browse plan templates
  */

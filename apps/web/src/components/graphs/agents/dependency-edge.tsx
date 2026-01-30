@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Dependency Edge - Edge type for agent dependencies
  */

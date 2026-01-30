@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps, HTMLAttributes } from "react";
 
 import { type LucideIcon, XIcon } from "lucide-react";

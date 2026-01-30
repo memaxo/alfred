@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * KV Viewer - Key-value store browser
  */

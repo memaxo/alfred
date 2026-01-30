@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ReviewTable - Full data table with sorting, filtering, and batch actions
  * Keyboard shortcuts: j/k navigate, a approve, r reject, space select

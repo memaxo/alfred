@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Flow Edge - Workflow connection edge
  */

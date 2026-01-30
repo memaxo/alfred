@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Chat Application - Phase 2 Core Application
  *

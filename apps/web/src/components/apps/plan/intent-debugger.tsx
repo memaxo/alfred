@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Intent Debugger - Debug plan generation intents
  */

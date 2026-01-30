@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Terminal Tabs - Tab management for terminal
  */

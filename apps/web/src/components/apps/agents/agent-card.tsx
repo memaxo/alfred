@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Agent Card - Individual agent status display
  */

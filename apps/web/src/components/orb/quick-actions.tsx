@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Quick Actions - Context menu accessible from orb
  */

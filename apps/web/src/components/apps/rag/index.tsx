@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * RAG Explorer - Debug and explore RAG retrieval
  *

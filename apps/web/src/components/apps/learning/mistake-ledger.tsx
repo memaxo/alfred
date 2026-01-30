@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Mistake Ledger - Chronological list of errors and corrections
  */

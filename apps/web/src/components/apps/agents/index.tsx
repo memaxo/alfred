@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Agent Waves Application - Phase 2 Core Application
  *

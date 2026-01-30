@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Background,
   BackgroundVariant,

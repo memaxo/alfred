@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Voice Indicator - Voice activity visualization
  */

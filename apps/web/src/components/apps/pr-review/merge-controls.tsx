@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Merge Controls - Merge button with biometric verification
  */

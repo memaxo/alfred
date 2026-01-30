@@ -1,5 +1,3 @@
-"use client";
-
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactElement, useState } from "react";

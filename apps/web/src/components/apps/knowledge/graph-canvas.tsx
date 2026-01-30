@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Graph Canvas - Force-directed graph visualization
  *

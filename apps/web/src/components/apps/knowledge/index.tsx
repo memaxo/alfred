@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Knowledge Graph Application - Phase 4 Knowledge & Integration
  *

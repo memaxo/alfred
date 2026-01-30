@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Execution Panel - Workflow run status and logs
  */

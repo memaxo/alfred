@@ -1,5 +1,3 @@
-"use client";
-
 import { FileCode, Loader2, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 

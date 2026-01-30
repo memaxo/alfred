@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Container List - Virtualized Docker container list with status
  */

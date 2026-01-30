@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Input Area - Text and voice input for chat
  */

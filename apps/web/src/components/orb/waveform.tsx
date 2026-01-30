@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Waveform - Voice activity visualization
  */

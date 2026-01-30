@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ReviewCycleTimeChart - Collapsible chart showing cycle time trends
  */

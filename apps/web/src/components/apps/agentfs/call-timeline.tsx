@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Call Timeline - Chronological operation history
  */

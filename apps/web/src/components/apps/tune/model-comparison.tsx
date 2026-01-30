@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Model Comparison - Compare model performance metrics
  */

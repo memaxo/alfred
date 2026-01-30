@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Preset Browser - Browse and apply visualization presets
  */

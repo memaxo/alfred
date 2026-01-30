@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Agent Spawn Tree - ReactFlow tree for agent hierarchy
  *

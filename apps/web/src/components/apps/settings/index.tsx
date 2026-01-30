@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Settings App - Unified system configuration and preferences
  *

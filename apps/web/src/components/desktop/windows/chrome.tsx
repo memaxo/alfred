@@ -1,5 +1,3 @@
-"use client";
-
 import { Maximize2, Minus, Sparkles, Square, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useCallback, useRef, useState } from "react";

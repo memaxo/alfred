@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Workflow DAG Canvas - ReactFlow for Workflow Builder
  *

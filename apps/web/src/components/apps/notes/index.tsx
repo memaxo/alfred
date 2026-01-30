@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Modern Notes Application - Phase 3 Productivity
  *

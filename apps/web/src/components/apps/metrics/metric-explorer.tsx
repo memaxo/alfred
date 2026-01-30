@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Metric Explorer - Browse available metrics
  */

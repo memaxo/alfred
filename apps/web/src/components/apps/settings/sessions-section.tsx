@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Sessions Section - Manage active authentication sessions
  *

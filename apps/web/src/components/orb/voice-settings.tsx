@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Voice Settings - Configuration panel for voice features
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Checkpoint Browser - Browse and restore checkpoints
  */

@@ -31,6 +31,8 @@ import {
   ListTodo,
   MessageSquare,
   Network,
+  Rocket,
+  ScanLine,
   Search,
   Settings,
   Shield,
@@ -52,6 +54,7 @@ import { CapabilityAppWindow } from "@/components/apps/capability";
 import { ChatAppWindow } from "@/components/apps/chat";
 import { ComponentsAppWindow } from "@/components/apps/components";
 import { CortexAppWindow } from "@/components/apps/cortex";
+import { DeployAppWindow } from "@/components/apps/deploy";
 import { DockerAppWindow } from "@/components/apps/docker";
 import { FilesAppWindow } from "@/components/apps/files";
 import { FocusAppWindow } from "@/components/apps/focus";
@@ -65,6 +68,7 @@ import { PlanAppWindow } from "@/components/apps/plan";
 import { PolicyAppWindow } from "@/components/apps/policy";
 import { PRReviewAppWindow } from "@/components/apps/pr-review";
 import { RagAppWindow } from "@/components/apps/rag";
+import { ReviewsAppWindow } from "@/components/apps/reviews";
 import { SettingsAppWindow } from "@/components/apps/settings";
 import { TaskManagerAppWindow } from "@/components/apps/taskmanager";
 import { TerminalAppWindow } from "@/components/apps/terminal";
@@ -482,6 +486,20 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
     },
     isLegacy: false,
   },
+  deploy: {
+    type: "deploy",
+    component: DeployAppWindow,
+    metadata: {
+      label: "Deploy",
+      icon: Rocket,
+      defaultSize: { width: 800, height: 600 },
+      minSize: { width: 600, height: 450 },
+      resizable: true,
+      singleton: true,
+      tier: "secondary",
+    },
+    isLegacy: false,
+  },
   "pr-review": {
     type: "pr-review",
     component: PRReviewAppWindow,
@@ -493,6 +511,20 @@ export const windowRegistry: Record<string, WindowRegistryEntry> = {
       resizable: true,
       singleton: false,
       tier: "tertiary",
+    },
+    isLegacy: false,
+  },
+  reviews: {
+    type: "reviews",
+    component: ReviewsAppWindow,
+    metadata: {
+      label: "Reviews",
+      icon: ScanLine,
+      defaultSize: { width: 900, height: 650 },
+      minSize: { width: 700, height: 500 },
+      resizable: true,
+      singleton: true,
+      tier: "secondary",
     },
     isLegacy: false,
   },

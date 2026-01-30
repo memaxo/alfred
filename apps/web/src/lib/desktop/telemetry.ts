@@ -1,5 +1,3 @@
-"use client";
-
 type RagCacheMetricEvent = "hit" | "miss" | "eviction";
 
 type PendingSnapshot = Record<RagCacheMetricEvent, number>;

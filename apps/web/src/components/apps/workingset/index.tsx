@@ -1,5 +1,3 @@
-"use client";
-
 import { Pin, Save, Target, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";

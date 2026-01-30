@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Skip Links - Accessibility navigation shortcuts
  *

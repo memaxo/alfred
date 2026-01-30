@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Workspace List - AgentFS workspace list
  */

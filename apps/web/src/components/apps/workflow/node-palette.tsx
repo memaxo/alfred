@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Node Palette - Draggable node types
  */

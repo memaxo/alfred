@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Orb Component - AI Presence Indicator
  *

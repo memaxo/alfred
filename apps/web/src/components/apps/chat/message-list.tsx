@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Message List - Virtualized message rendering
  *

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Execution Log - Real-time log stream
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Docked Orb - Menu bar/taskbar integration
  */

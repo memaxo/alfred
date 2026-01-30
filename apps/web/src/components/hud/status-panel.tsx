@@ -7,8 +7,6 @@
  * @module hud/status-panel
  */
 
-"use client";
-
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Activity, AlertTriangle, CheckCircle2, Cpu, Zap } from "lucide-react";
 import * as React from "react";

@@ -1,5 +1,3 @@
-"use client";
-
 import { Activity, Battery, Flame, type LucideIcon, Zap } from "lucide-react";
 import { useId, useMemo } from "react";
 

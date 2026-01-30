@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Workflow Event Inspector
  *

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";

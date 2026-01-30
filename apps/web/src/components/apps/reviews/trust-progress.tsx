@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * TrustProgressBar - Shows progress toward auto-approve thresholds
  */

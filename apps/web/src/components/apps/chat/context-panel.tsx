@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Context Panel - RAG context and knowledge facts display
  */

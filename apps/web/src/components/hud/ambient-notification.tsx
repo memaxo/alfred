@@ -7,8 +7,6 @@
  * @module hud/ambient-notification
  */
 
-"use client";
-
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,

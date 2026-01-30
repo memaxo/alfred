@@ -1,5 +1,3 @@
-"use client";
-
 import { Network } from "lucide-react";
 
 import { VirtualList } from "@/components/ui/virtual-list";

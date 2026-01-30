@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Accessibility React Hooks
  *

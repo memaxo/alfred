@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * BlockedWorkQueue - PM's primary view showing pending reviews that block work
  */

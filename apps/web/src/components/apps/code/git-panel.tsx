@@ -1,5 +1,3 @@
-"use client";
-
 import { ChevronRight, GitBranch, GitCommit, RefreshCw } from "lucide-react";
 import { useState } from "react";
 

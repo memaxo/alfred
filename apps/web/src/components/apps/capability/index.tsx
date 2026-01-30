@@ -1,5 +1,3 @@
-"use client";
-
 import { Layers, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 

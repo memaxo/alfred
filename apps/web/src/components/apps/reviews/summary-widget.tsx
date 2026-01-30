@@ -1,5 +1,3 @@
-"use client";
-
 import { AlertTriangle, CheckCircle, Clock, Shield } from "lucide-react";
 
 import { trpc } from "@/utils/trpc";

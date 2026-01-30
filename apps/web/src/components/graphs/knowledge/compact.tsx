@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Compact Knowledge Graph Visualization for Context Panel
  *

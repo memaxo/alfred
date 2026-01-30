@@ -8,8 +8,6 @@
  * @see docs/execplans/desktop-type-migration.md Section 6.1
  */
 
-"use client";
-
 import { type ComponentType, useCallback } from "react";
 
 import type { WindowData, WindowInstance } from "@/store/desktop/types.new";

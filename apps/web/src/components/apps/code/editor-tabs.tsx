@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Editor Tabs - Tab management with drag-and-drop reordering
  */

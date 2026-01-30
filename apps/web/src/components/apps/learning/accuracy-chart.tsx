@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Accuracy Chart - Accuracy trends over time by category
  */

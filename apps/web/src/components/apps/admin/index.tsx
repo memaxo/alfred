@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Admin/Ops Application - Central hub for system operations
  *

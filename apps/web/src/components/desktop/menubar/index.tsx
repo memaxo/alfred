@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Menu Bar - macOS-inspired top menu bar
  *

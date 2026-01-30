@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Wave Timeline - Execution phase visualization
  */

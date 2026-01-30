@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Orb Core - The visual orb element with state-based animations
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Profile Selector - Terminal profile selection modal
  */

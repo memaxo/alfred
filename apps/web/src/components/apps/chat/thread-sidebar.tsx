@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Thread Sidebar - Conversation history navigation
  */

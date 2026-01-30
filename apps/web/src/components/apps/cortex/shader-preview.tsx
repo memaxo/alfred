@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Shader Preview - Live WebGPU shader rendering canvas
  */

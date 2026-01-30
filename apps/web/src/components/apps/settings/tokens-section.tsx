@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Tokens Section - Manage API tokens and tool credentials
  *

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Workflow Builder Application - Phase 4 Knowledge & Integration
  *

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Time Slider - Temporal navigation for knowledge graph
  */

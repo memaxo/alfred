@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Docker Manager Application - Phase 3 System Application
  *

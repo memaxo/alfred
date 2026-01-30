@@ -1,5 +1,3 @@
-"use client";
-
 import { DiffEditor } from "@monaco-editor/react";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";

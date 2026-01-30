@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Agents Window - Full Agent Waves Management Desktop App
  *

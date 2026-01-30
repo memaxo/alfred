@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * History Budget Panel - Visualize conversation history token usage
  *

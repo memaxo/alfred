@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Decision Log - Audit trail of policy decisions
  */

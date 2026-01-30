@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect } from "react";
 
 import type { WindowType } from "@/store/desktop/types.new";

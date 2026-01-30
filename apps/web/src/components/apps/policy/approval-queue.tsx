@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Approval Queue - Pending approval requests
  */

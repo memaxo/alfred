@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Dataset Browser - Browse training datasets
  */

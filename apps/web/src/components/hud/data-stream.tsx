@@ -7,8 +7,6 @@
  * @module hud/data-stream
  */
 
-"use client";
-
 import { motion, useAnimationFrame, useReducedMotion } from "framer-motion";
 import * as React from "react";
 

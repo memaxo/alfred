@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * GPU Monitor - GPU utilization and memory metrics
  */

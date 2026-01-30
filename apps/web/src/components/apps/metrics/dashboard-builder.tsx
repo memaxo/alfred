@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Dashboard Builder - Create custom metric dashboards
  */

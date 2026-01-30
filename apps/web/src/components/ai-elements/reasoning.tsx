@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps } from "react";
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";

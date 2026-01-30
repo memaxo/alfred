@@ -1,5 +1,3 @@
-"use client";
-
 import { Inbox as InboxIcon, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";

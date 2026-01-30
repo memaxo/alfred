@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Node Canvas - ReactFlow DAG canvas for workflow editing
  *

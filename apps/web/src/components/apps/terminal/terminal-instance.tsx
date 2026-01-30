@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Terminal Instance - XTerm.js wrapper
  *

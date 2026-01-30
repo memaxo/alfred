@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Process List - Virtualized running processes and agents
  */

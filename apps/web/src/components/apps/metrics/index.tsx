@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Metrics Dashboard - Prometheus metrics visualization
  *

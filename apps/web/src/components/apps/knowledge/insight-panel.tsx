@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Insight Panel - AI-generated insights from knowledge graph
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Taskbar - Windows 11-inspired bottom taskbar
  *

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Action Node - Workflow action node
  */

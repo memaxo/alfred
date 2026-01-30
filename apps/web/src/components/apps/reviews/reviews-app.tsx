@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Reviews Application - Phase 2 Web Desktop Expansion
  *
@@ -14,14 +12,7 @@
  * @see docs/execplans/alfred-web-unification.md Milestone 5
  */
 
-import {
-  CheckCircle,
-  Clock,
-  Code,
-  GitPullRequest,
-  Inbox,
-  Shield,
-} from "lucide-react";
+import { Clock, Code, GitPullRequest, Inbox, Shield } from "lucide-react";
 import { useState } from "react";
 
 import type { WindowComponentProps } from "@/components/desktop/windows/types";
@@ -40,7 +31,6 @@ import { ReviewQueueSection } from "./sections/review-queue";
 type ReviewsSection = "queue" | "prs" | "code";
 
 interface SectionConfig {
-  badge?: number;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   id: ReviewsSection;

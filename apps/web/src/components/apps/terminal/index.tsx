@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Terminal Application - Phase 2 Core Application
  *

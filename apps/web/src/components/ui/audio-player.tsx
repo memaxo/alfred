@@ -1,5 +1,3 @@
-"use client";
-
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { Check, PauseIcon, PlayIcon, Settings } from "lucide-react";
 import {

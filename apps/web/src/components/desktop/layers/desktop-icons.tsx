@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Desktop Icons - Grid of pinnable shortcuts on desktop background
  *

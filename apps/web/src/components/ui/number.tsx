@@ -1,5 +1,3 @@
-"use client";
-
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { memo, useMemo } from "react";
 

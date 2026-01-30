@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Parameter Tuner - Real-time shader parameter sliders
  */

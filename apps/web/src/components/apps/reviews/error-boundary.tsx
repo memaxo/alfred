@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Review-specific error boundary with retry functionality
  */

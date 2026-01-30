@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Quick Look - File preview modal
  */

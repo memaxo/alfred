@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * File Tree - File navigation sidebar
  */

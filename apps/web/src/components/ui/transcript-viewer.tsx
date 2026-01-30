@@ -1,5 +1,3 @@
-"use client";
-
 import type { CharacterAlignmentResponseModel } from "@elevenlabs/elevenlabs-js/api/types/CharacterAlignmentResponseModel";
 
 import { Pause, Play } from "lucide-react";

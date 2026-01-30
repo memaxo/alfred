@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * RiskAssessmentPanel - Shows aggregated risk counts for pending reviews
  */

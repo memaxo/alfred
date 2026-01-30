@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Improvement Insights - AI-generated insights on learning patterns
  */

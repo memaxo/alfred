@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * TUI Mode Toggle - Switch between standard terminal and TUI widget mode
  *

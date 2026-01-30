@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Search Bar - Semantic and keyword search for entities
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Plan Preview - Inline plan display
  */

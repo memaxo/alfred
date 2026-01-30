@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Tree Sidebar - Directory tree navigation
  */

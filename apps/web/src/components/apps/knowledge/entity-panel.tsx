@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Entity Panel - Selected entity details with facts and relations
  */

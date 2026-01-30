@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * RAG Context Display - Show retrieved context used for responses
  *

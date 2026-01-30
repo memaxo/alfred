@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Floating Orb - Draggable floating orb with position persistence
  */

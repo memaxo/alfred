@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Context Lens - Hover tooltip showing context information
  *

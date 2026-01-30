@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Mindscape Canvas - ReactFlow infinite canvas for knowledge exploration
  *

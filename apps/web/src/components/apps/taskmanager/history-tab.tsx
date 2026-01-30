@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * History Tab - Past agent runs and workflow executions
  */

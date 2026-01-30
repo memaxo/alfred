@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * PR Review Application - Phase 3 System Application
  *

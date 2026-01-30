@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Resize Handles - Window resize interaction
  *

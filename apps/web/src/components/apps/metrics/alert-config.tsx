@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Alert Config - Configure metric alerts
  */
@@ -143,9 +141,9 @@ export function AlertConfig() {
                       "h-4 w-4",
                       alert.severity === "critical"
                         ? "text-red-400"
-                        : alert.severity === "warning"
+                        : (alert.severity === "warning"
                           ? "text-yellow-400"
-                          : "text-biolum"
+                          : "text-biolum")
                     )}
                   />
                   <span className="font-medium text-sm">{alert.name}</span>
@@ -156,9 +154,9 @@ export function AlertConfig() {
                       "rounded px-2 py-0.5 text-[10px] uppercase tracking-wider",
                       alert.severity === "critical"
                         ? "bg-red-500/20 text-red-400"
-                        : alert.severity === "warning"
+                        : (alert.severity === "warning"
                           ? "bg-yellow-500/20 text-yellow-400"
-                          : "bg-biolum/20 text-biolum"
+                          : "bg-biolum/20 text-biolum")
                     )}
                   >
                     {alert.severity}

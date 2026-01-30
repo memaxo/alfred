@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ReviewContextDrawer - Slide-out panel showing full review context
  */

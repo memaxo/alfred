@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Similarity Explorer - Explore embedding similarities with live graph data
  */

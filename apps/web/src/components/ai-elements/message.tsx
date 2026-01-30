@@ -1,5 +1,3 @@
-"use client";
-
 import type { FileUIPart, UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 

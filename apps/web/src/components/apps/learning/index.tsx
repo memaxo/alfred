@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Learning Dashboard - ALFRED's learning progress and self-improvement
  *

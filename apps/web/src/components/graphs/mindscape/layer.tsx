@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Mindscape Layer - Desktop integration layer
  *

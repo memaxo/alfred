@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * AI Suggestions - Codex completions overlay
  */

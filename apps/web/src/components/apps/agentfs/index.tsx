@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * AgentFS Viewer Application - Phase 3 System Application
  *

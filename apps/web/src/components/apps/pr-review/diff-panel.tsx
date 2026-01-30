@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Diff Panel - File diff viewer with inline comments
  */

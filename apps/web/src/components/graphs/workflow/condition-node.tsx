@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Condition Node - Workflow condition/decision node
  */

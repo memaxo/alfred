@@ -1,5 +1,3 @@
-"use client";
-
 import type { ChatStatus } from "ai";
 
 import {

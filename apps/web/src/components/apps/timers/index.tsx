@@ -1,5 +1,3 @@
-"use client";
-
 import { Clock, Play, StopCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -90,7 +88,7 @@ export function TimersApp({ window: _window }: WindowComponentProps) {
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               Loading timers...
             </div>
-          ) : timers?.length === 0 ? (
+          ) : (timers?.length === 0 ? (
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               No active timers
             </div>
@@ -102,7 +100,7 @@ export function TimersApp({ window: _window }: WindowComponentProps) {
                 timer={timer}
               />
             ))
-          )}
+          ))}
         </div>
       </ScrollArea>
     </div>

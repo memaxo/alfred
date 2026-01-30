@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Agent Node - Node type for agent spawn tree
  */

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Semantic Search - AI-powered code search using embeddings
  *

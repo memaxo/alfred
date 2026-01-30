@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * File Grid - Grid/list view of files
  */

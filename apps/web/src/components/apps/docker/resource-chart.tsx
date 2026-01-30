@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Resource Chart - CPU/Memory/Network graphs
  */

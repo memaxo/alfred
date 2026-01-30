@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Clock Widget - Menu bar clock with date
  */

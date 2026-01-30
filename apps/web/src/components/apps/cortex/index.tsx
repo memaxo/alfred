@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Cortex Visualizer - WebGPU shader visualization and configuration
  *

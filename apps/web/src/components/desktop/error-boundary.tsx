@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Desktop Error Boundaries - Layered error handling for desktop components
  *

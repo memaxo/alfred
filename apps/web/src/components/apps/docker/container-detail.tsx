@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Container Detail - Full container information
  */

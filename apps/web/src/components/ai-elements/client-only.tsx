@@ -1,5 +1,3 @@
-"use client";
-
 import { type ReactNode, useEffect, useState } from "react";
 
 export function ClientOnly({ children }: { children: ReactNode }) {

@@ -1,5 +1,3 @@
-"use client";
-
 import { ExternalLink, Plus, Target } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";

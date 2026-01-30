@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Agent Selector - Choose between different AI agents
  */

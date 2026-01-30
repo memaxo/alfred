@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ReviewDependencyGraph - Modal showing review impact and dependencies
  * Visualizes which tasks are blocked by a pending review

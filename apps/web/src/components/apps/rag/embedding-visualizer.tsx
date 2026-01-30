@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Embedding Visualizer - t-SNE/UMAP projections with live data
  */

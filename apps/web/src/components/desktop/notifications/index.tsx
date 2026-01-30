@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Notification Center - System notifications with grouping and actions
  *

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Job List - Fine-tuning job list with status filters
  */

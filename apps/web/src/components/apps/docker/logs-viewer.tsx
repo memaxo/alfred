@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Logs Viewer - Real-time log streaming
  */

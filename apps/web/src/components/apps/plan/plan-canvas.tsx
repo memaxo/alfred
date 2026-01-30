@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Plan Canvas - Visual plan step dependencies
  */
