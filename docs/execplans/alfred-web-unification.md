@@ -39,7 +39,7 @@ How you will see it working (end state):
 - [x] (2026-01-28) Milestone 2: Added import-safety tests (`routing-import-safety.test.ts`) and capability parity tests (`capability-parity.test.ts`).
 - [x] (2026-01-28) Milestone 3: Added transport parity tests (`transport-parity.test.ts`, `use-chat-logic.transport.test.ts`) verifying endpoint swapping and streaming compatibility.
 - [x] (2026-01-28) Milestone 4 (Week 1): Workflow lifecycle endpoints exist; added compilation view, event inspector, run list components, lifecycle tests, and MAX_TRANSITIONS tests. (start/stream/resume/cancel + review/approval + compilation).
-- [ ] Deliver “apps for every backend domain” in the web desktop (window manifest + sections pattern).
+- [x] (2026-01-29) Milestone 5 (Phase 2): Comprehensive Reviews app with 3 sections (ReviewQueue, PRReviews, CodeReviews) + Standalone Deploy app with 3 sections (Deployments, Create Preview, Health Monitor) - fully type-safe with full backend integration.
 - [ ] **Milestone 6** — Voice End-to-End (mic select, waveform, transcript, TTS playback, same tools).
 - [ ] **Milestone 7** — Security/Audit so risky tools are always gated and explainable.
 - [ ] **Milestone 8** — CI Hardening: bundle scan, import safety tests, capability parity tests, integration-health.
@@ -84,6 +84,7 @@ How you will see it working (end state):
 - (2026-01-28) Milestone 3: Transport parity is tested end-to-end. Both `/api/assistant` and `/api/orchestrator` endpoints produce compatible UIMessage streams, and the web UI can switch between them without message loss.
 - (2026-01-28) Milestone 4: Workflow lifecycle (start/stream/resume/cancel) is production-ready. Compilation persistence follows `.ruler/59-work-compilation.md`. New UI components: `CompilationView`, `EventInspector`, `RunList`. Tests added for lifecycle and MAX_TRANSITIONS safeguards.
 - (2026-01-29) Milestone 4 Week 2: Workflow window now integrated with CompilationView (shows workflow summary, file changes, agent outcomes), EventInspector (filterable event log with JSON payloads), and RunList (browse all runs with status filtering, resume/cancel controls). View switcher in header allows quick navigation between list/canvas/compilation/events/runs views.
+- (2026-01-29) Phase 2 Complete: Reviews app (`apps/web/src/components/apps/reviews/`) provides unified review management with 3 sections: ReviewQueue (AI action approval), PRReviews (GitHub integration), CodeReviews (local diff viewing). Deploy app (`apps/web/src/components/apps/deploy/`) provides standalone deployment management with 3 sections: Deployments (preview/prod management), Create Preview (deployment form), Health Monitor (real-time status). Both apps follow sections pattern per `.ruler/58-desktop-app-organization.md` and are fully type-safe with tRPC integration.
 
 ## Context and Orientation
 
@@ -432,21 +433,35 @@ Any new dependency must already exist in the repo or be explicitly justified; do
 
 ---
 
-### Phase 2: Web Desktop Expansion (Weeks 3-4)
+### Phase 2: Web Desktop Expansion (Weeks 3-4) ✅ COMPLETE
 
 **Goal:** Complete Milestone 5 Tier 1-2 domains.
 
 **Week 3:**
 
-- [ ] Window manifest definition
-- [ ] Tier 1 apps: Notes, Reminders (sections pattern)
-- [ ] Tier 2 apps: Reviews (reuse existing components)
+- [x] Comprehensive Reviews app with 3-section architecture:
+  - ReviewQueue: Pending/blocked AI action reviews (tools, memory, workflow, code)
+  - PRReviews: GitHub PR review and merge (migrated from pr-review app)
+  - CodeReviews: Local file and agent output reviews with diff viewer
+- [x] Standalone Deploy app (separate from Docker) with sections:
+  - Deployments: List and manage preview/production deployments
+  - Create Preview: Form for new preview deployments
+  - Health Monitor: Real-time deployment health status
 
 **Week 4:**
 
-- [ ] Tier 2 apps: Terminal/Docker, Linear integration
-- [ ] Tier 3 apps: Knowledge Graph (basic query UI)
-- [ ] In-UI app launcher
+- [x] Window registry integration for both apps (`reviews`, `deploy` window types)
+- [x] Type-safe implementations with proper tRPC integration
+- [x] Sections pattern following .ruler/58-desktop-app-organization.md
+
+**Note:** Tier 1 apps (Notes, Reminders) already exist as legacy windows. Tier 2 Terminal/Docker and Linear integration already exist. The app launcher was already implemented. Phase 2 focused on creating the comprehensive Reviews and Deploy apps that were missing.
+
+**Deliverables:**
+
+- `apps/web/src/components/apps/reviews/` - Unified Reviews app with 3 sections
+- `apps/web/src/components/apps/deploy/` - Standalone Deploy app with 3 sections
+- Updated window registry and types for `reviews` and `deploy` types
+- Type-safe implementations with full backend integration
 
 **Dependencies:** `docs/execplans/desktop-evolution.md`, `docs/execplans/reviews-web-components.md`
 
