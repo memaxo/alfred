@@ -197,9 +197,9 @@ export function ToolCallsPanel({
             content={`${bold("Status:")} ${
               call.error
                 ? fg(colors.error)("Failed")
-                : !call.completed_at
+                : (!call.completed_at
                   ? fg(colors.warning)("Running")
-                  : fg(colors.success)("Success")
+                  : fg(colors.success)("Success"))
             }`}
           />
           <text

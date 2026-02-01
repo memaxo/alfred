@@ -44,9 +44,9 @@ export const defaultRubric: EvaluationRubric = {
         // Higher score for parallel strategy
         return plan.resources.strategy === "parallel"
           ? 1
-          : plan.resources.strategy === "mixed"
+          : (plan.resources.strategy === "mixed"
             ? 0.7
-            : 0.4;
+            : 0.4);
       },
     },
     {

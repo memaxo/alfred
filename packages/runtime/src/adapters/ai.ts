@@ -279,10 +279,10 @@ export class AISDKAdapter {
     const raw =
       typeof model === "string"
         ? model
-        : typeof model === "object" && model !== null
+        : (typeof model === "object" && model !== null
           ? ((model as { id?: unknown }).id ??
             (model as { modelId?: unknown }).modelId)
-          : undefined;
+          : undefined);
 
     if (typeof raw !== "string" || raw.trim().length === 0) {
       return "unknown";

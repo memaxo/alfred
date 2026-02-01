@@ -25,8 +25,7 @@ export async function loadCassette(
     const cassette = JSON.parse(content) as VCRCassette;
 
     // Validate version
-    if (cassette.version !== 2) {
-    }
+    if (cassette.version !== 2) {}
 
     return cassette;
   } catch (error) {

@@ -32,7 +32,7 @@ function at<T>(arr: readonly T[], idx: number): T {
   if (n === 0) {
     throw new Error("Empty LOD config");
   }
-  const i = idx < 0 ? 0 : idx >= n ? n - 1 : idx;
+  const i = idx < 0 ? 0 : (idx >= n ? n - 1 : idx);
   return arr[i]!;
 }
 

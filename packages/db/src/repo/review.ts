@@ -239,9 +239,9 @@ export async function submitReview(
   const status: ReviewStatus =
     verdict === "approve"
       ? "approved"
-      : verdict === "reject"
+      : (verdict === "reject"
         ? "rejected"
-        : "skipped";
+        : "skipped");
 
   const updatedReview = await updateReviewStatus(reviewId, {
     status,
@@ -823,9 +823,9 @@ export async function getCycleTimeStats(
   const periodMs =
     period === "day"
       ? 24 * 60 * 60 * 1000
-      : period === "week"
+      : (period === "week"
         ? 7 * 24 * 60 * 60 * 1000
-        : 30 * 24 * 60 * 60 * 1000;
+        : 30 * 24 * 60 * 60 * 1000);
 
   const since = new Date(Date.now() - periodMs);
 

@@ -109,8 +109,7 @@ class TextToSpeech {
 
     // Check for failures but don't throw (cleanup should be best-effort)
     const failures = results.filter((r) => r.status === "rejected");
-    if (failures.length > 0) {
-    }
+    if (failures.length > 0) {}
   }
 
   private async _infer(

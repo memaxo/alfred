@@ -12,8 +12,7 @@ export async function withBudget<T>(
   const start = nowNs();
   const result = await fn();
   const elapsedMs = Number(nowNs() - start) / 1_000_000;
-  if (elapsedMs > budgetMs) {
-  }
+  if (elapsedMs > budgetMs) {}
   return result;
 }
 

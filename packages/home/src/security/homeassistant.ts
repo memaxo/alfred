@@ -187,9 +187,9 @@ export class HomeAssistant {
         throw this.makeError(
           status === 401 || status === 403
             ? "auth"
-            : status === 404
+            : (status === 404
               ? "notfound"
-              : "server",
+              : "server"),
           status,
           resp.statusText || `HTTP ${status}`,
           path

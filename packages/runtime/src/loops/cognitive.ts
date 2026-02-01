@@ -181,9 +181,9 @@ export async function runCognitiveLoop(
         ? (state.options.find(
             (opt) => opt.id === inputContent || opt.id.includes(inputContent)
           ) ?? state.options[0])
-        : eventToApply._ === "timeout"
+        : (eventToApply._ === "timeout"
           ? state.options[0]
-          : undefined;
+          : undefined);
 
       if (selected) {
         const riskMax = selected.risks

@@ -381,9 +381,9 @@ export async function getToolCalls(
     const args =
       typeof data.args === "object" && data.args !== null
         ? coerceRecord(data.args)
-        : typeof data.input === "object" && data.input !== null
+        : (typeof data.input === "object" && data.input !== null
           ? coerceRecord(data.input)
-          : undefined;
+          : undefined);
     return {
       eventId: row.eventId,
       toolName,

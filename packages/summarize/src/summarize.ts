@@ -227,7 +227,7 @@ function heuristicSummarize(
 
   // Score lines by position (first and last are important) and length
   const scored = lines.map((line, i) => {
-    const positionScore = i === 0 ? 10 : i === lines.length - 1 ? 5 : 1;
+    const positionScore = i === 0 ? 10 : (i === lines.length - 1 ? 5 : 1);
     const lengthScore = Math.min(line.length / 100, 3);
     return { line, score: positionScore + lengthScore, index: i };
   });

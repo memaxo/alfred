@@ -125,8 +125,7 @@ export class VCRRecorder {
       const loaded = await loadCassette(this.cassettePath);
       if (loaded) {
         this.cassette = loaded;
-      } else if (this.strictReplay) {
-      }
+      } else if (this.strictReplay) {}
     }
 
     // Patch global fetch
@@ -175,9 +174,9 @@ export class VCRRecorder {
       const url =
         typeof input === "string"
           ? input
-          : input instanceof URL
+          : (input instanceof URL
             ? input.href
-            : input.url;
+            : input.url);
       const provider = getProvider(url);
 
       // Pass through non-AI requests
