@@ -65,7 +65,6 @@ export const updatePhysiology = (
     const durationMs = performance.now() - start;
     cognitivePhysiologyUpdateDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.01) {
-    }
+    if (shouldWarn && durationMs > 0.01) {}
   }
 };

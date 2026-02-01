@@ -115,7 +115,6 @@ export function updateAutonomy(
     const durationMs = perf.now() - start;
     cognitiveAutonomyUpdateDuration.observe(durationMs / 1000);
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.05) {
-    }
+    if (shouldWarn && durationMs > 0.05) {}
   }
 }

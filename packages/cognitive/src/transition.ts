@@ -61,11 +61,11 @@ export const applyTransition = (
     const eventTimestamp =
       event._ === "timeout"
         ? event.deadline
-        : "ts" in event
+        : ("ts" in event
           ? event.ts
           : (() => {
               throw new Error("event_missing_timestamp");
-            })();
+            })());
     const nextPhysiology = applyPhysiologyEvent(state.physiology, event);
 
     switch (state._) {
@@ -216,9 +216,9 @@ export const applyTransition = (
               state.plan.steps.map((s) => s.action).join(", "),
               event.outcome._ === "success"
                 ? String(event.outcome.result ?? "completed")
-                : event.outcome._ === "failure"
+                : (event.outcome._ === "failure"
                   ? event.outcome.error
-                  : "unknown",
+                  : "unknown"),
               nextPhysiology
             ),
             autonomy,
@@ -271,7 +271,6 @@ export const applyTransition = (
 
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
-    if (shouldWarn && durationMs > 0.1) {
-    }
+    if (shouldWarn && durationMs > 0.1) {}
   }
 };
