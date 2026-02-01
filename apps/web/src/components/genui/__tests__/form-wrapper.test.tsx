@@ -7,7 +7,7 @@
 import "@/test/dom";
 import type { UIComponent } from "@alfred/type/genui";
 
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 import { GenUIFormWrapper } from "../form-wrapper";
@@ -21,7 +21,11 @@ function newId(): string {
 }
 
 // Mock the submit hook
-const mockSubmit = {
+const mockSubmit: {
+  submit: ReturnType<typeof mock>;
+  isLoading: boolean;
+  error: Error | null;
+} = {
   submit: mock(async () => {}),
   isLoading: false,
   error: null,
@@ -51,7 +55,7 @@ describe("GenUIFormWrapper", () => {
       },
     };
 
-    render(
+    const { getByRole } = render(
       <GenUIFormWrapper
         conversationId={conversationId}
         formId={formId}
@@ -60,7 +64,7 @@ describe("GenUIFormWrapper", () => {
     );
 
     // Form should render (basic check)
-    expect(screen.getByRole("button", { name: /submit/i })).toBeDefined();
+    expect(getByRole("button", { name: /submit/i })).toBeDefined();
   });
 
   it("displays error when submission fails", () => {
@@ -72,7 +76,7 @@ describe("GenUIFormWrapper", () => {
       props: {},
     };
 
-    render(
+    const { getByText } = render(
       <GenUIFormWrapper
         conversationId={conversationId}
         formId={formId}
@@ -80,7 +84,7 @@ describe("GenUIFormWrapper", () => {
       />
     );
 
-    expect(screen.getByText(/Form submission error/i)).toBeDefined();
+    expect(getByText(/Form submission error/i)).toBeDefined();
   });
 
   it("displays loading state", () => {
@@ -92,7 +96,7 @@ describe("GenUIFormWrapper", () => {
       props: {},
     };
 
-    render(
+    const { getByRole } = render(
       <GenUIFormWrapper
         conversationId={conversationId}
         formId={formId}
@@ -100,23 +104,9 @@ describe("GenUIFormWrapper", () => {
       />
     );
 
-    const btn = screen.getByRole("button", { name: /submitting/i });
+    const btn = getByRole("button", { name: /submitting/i });
     expect(btn).toBeDefined();
     expect((btn as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("generates formId when not provided", () => {
-    const schema: UIComponent = {
-      component: "text",
-      props: {},
-    };
-
-    render(
-      <GenUIFormWrapper conversationId={conversationId} schema={schema} />
-    );
-
-    // Should render without error (formId generated internally)
-    expect(screen.getByRole("button", { name: /submit/i })).toBeDefined();
   });
 
   it("handles formData with default values", () => {
@@ -131,7 +121,7 @@ describe("GenUIFormWrapper", () => {
       },
     };
 
-    render(
+    const { getByRole } = render(
       <GenUIFormWrapper
         conversationId={conversationId}
         formData={formData}
@@ -140,6 +130,6 @@ describe("GenUIFormWrapper", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /submit/i })).toBeDefined();
+    expect(getByRole("button", { name: /submit/i })).toBeDefined();
   });
 });

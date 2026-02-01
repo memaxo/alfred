@@ -2,16 +2,19 @@
  * Test suite for CompactKnowledgeGraph component
  */
 
-import { render, screen } from "@testing-library/react";
+import "@/test/dom";
+import { render } from "@testing-library/react";
 import { describe, expect, it } from "bun:test";
 
 import { CompactKnowledgeGraph } from "./compact";
 
 describe("CompactKnowledgeGraph", () => {
   it("renders empty state when no nodes provided", () => {
-    render(<CompactKnowledgeGraph data={{ nodes: [], edges: [] }} />);
+    const { queryByText } = render(
+      <CompactKnowledgeGraph data={{ nodes: [], edges: [] }} />
+    );
 
-    const text = screen.queryByText("No knowledge graph data");
+    const text = queryByText("No knowledge graph data");
     expect(text).toBeTruthy();
   });
 
@@ -42,9 +45,9 @@ describe("CompactKnowledgeGraph", () => {
       ],
     };
 
-    render(<CompactKnowledgeGraph data={data} />);
+    const { container } = render(<CompactKnowledgeGraph data={data} />);
 
-    const svg = document.querySelector("svg");
+    const svg = container.querySelector("svg");
     expect(svg).toBeTruthy();
   });
 
@@ -76,9 +79,9 @@ describe("CompactKnowledgeGraph", () => {
       ],
     };
 
-    render(<CompactKnowledgeGraph data={data} />);
+    const { container } = render(<CompactKnowledgeGraph data={data} />);
 
-    const lines = document.querySelectorAll("line");
+    const lines = container.querySelectorAll("line");
     expect(lines.length).toBe(0);
   });
 });

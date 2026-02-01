@@ -1,5 +1,5 @@
 import "@/test/dom";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "bun:test";
 
 vi.mock("@/utils/trpc", () => ({
@@ -58,21 +58,21 @@ import { MindscapeCanvas } from "./canvas";
 
 describe("MindscapeCanvas", () => {
   it("should render canvas with ReactFlowProvider", () => {
-    render(<MindscapeCanvas />);
+    const { getByText } = render(<MindscapeCanvas />);
 
-    expect(screen.getByText(/knowledge graph/i)).toBeTruthy();
+    expect(getByText(/knowledge graph/i)).toBeTruthy();
   });
 
   it("should render search input", () => {
-    render(<MindscapeCanvas />);
+    const { getByPlaceholderText } = render(<MindscapeCanvas />);
 
-    expect(screen.getByPlaceholderText(/search entities/i)).toBeTruthy();
+    expect(getByPlaceholderText(/search entities/i)).toBeTruthy();
   });
 
   it("should render stats panel", () => {
-    render(<MindscapeCanvas />);
+    const { getByText } = render(<MindscapeCanvas />);
 
-    expect(screen.getByText(/entities/i)).toBeTruthy();
-    expect(screen.getByText(/relations/i)).toBeTruthy();
+    expect(getByText(/entities/i)).toBeTruthy();
+    expect(getByText(/relations/i)).toBeTruthy();
   });
 });
