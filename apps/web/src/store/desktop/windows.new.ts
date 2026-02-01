@@ -109,12 +109,28 @@ export const createWindowSliceNew: StateCreator<
   // ─────────────────────────────────────────────────────────────────────────
 
   openWindow: (type, data, bounds) => {
-    const { windows, zIndexCounter } = get();
+    const { windows, zIndexCounter, activeWorkspaceId } = get();
     const windowDefaults = getWindowDefaults(type);
     const position = getCascadedPosition(windows);
 
     const id = generateWindowId(type);
     const now = Date.now();
+
+    // Assign window to active workspace if not explicitly specified
+    const rawWorkspaceId = (
+      data as unknown as { workspaceId?: unknown } | undefined
+    )?.workspaceId;
+    const requestedWorkspaceId =
+      typeof rawWorkspaceId === "number" ? rawWorkspaceId : undefined;
+    const workspaceId =
+      (requestedWorkspaceId ?? activeWorkspaceId) >= 1 &&
+      (requestedWorkspaceId ?? activeWorkspaceId) <= 6
+        ? (requestedWorkspaceId ?? activeWorkspaceId)
+        : 1;
+
+    const dataWithWorkspaceStripped = (data ?? {}) as Record<string, unknown>;
+    const { workspaceId: _ignoredWorkspaceId, ...dataWithoutWorkspace } =
+      dataWithWorkspaceStripped;
 
     const newWindow: WindowInstance = {
       id,
@@ -122,8 +138,9 @@ export const createWindowSliceNew: StateCreator<
       data: {
         type,
         viewMode: "full",
-        ...data,
+        ...dataWithoutWorkspace,
       } as WindowData,
+      workspaceId,
       bounds: {
         x: bounds?.x ?? position.x,
         y: bounds?.y ?? position.y,
@@ -147,6 +164,12 @@ export const createWindowSliceNew: StateCreator<
       ],
       zIndexCounter: state.zIndexCounter + 1,
       focusedWindowId: id,
+      // Ensure the newly opened window's workspace is active
+      activeWorkspaceId: workspaceId,
+      // Update workspace windowIds
+      workspaces: state.workspaces.map((ws) =>
+        ws.id === workspaceId ? { ...ws, windowIds: [...ws.windowIds, id] } : ws
+      ),
     }));
 
     return id;
@@ -155,25 +178,38 @@ export const createWindowSliceNew: StateCreator<
   closeWindow: (windowId) => {
     set((state) => {
       const filtered = state.windows.filter((w) => w.id !== windowId);
-      const wasFocused = state.windows.find(
-        (w) => w.id === windowId
-      )?.isFocused;
+      const closedWindow = state.windows.find((w) => w.id === windowId);
+      const wasFocused = closedWindow?.isFocused;
+      const workspaceId = closedWindow?.workspaceId;
 
       // If the closed window was focused, focus the topmost remaining window
-      let newFocusedId: string | null = null;
-      if (wasFocused && filtered.length > 0) {
-        const topmost = filtered.reduce((a, b) =>
-          a.zIndex > b.zIndex ? a : b
+      let newFocusedId = state.focusedWindowId ?? null;
+      if (wasFocused) {
+        const focusWorkspaceId = workspaceId ?? state.activeWorkspaceId;
+        const visible = filtered.filter(
+          (w) => w.workspaceId === focusWorkspaceId && w.state !== "minimized"
         );
-        newFocusedId = topmost.id;
+        if (visible.length > 0) {
+          const topmost = visible.reduce((a, b) =>
+            a.zIndex > b.zIndex ? a : b
+          );
+          newFocusedId = topmost.id;
+        } else {
+          newFocusedId = null;
+        }
       }
 
       return {
         windows: filtered.map((w) => ({
           ...w,
-          isFocused: w.id === newFocusedId,
+          isFocused: wasFocused ? w.id === newFocusedId : w.isFocused,
         })),
         focusedWindowId: newFocusedId,
+        // Remove window from all workspaces (defensive)
+        workspaces: state.workspaces.map((ws) => ({
+          ...ws,
+          windowIds: ws.windowIds.filter((id) => id !== windowId),
+        })),
       };
     });
   },
@@ -247,14 +283,21 @@ export const createWindowSliceNew: StateCreator<
     }));
 
     // Focus next window
-    const { windows } = get();
+    const { activeWorkspaceId, focusedWindowId, windows } = get();
+    if (focusedWindowId !== windowId) {
+      return;
+    }
+
     const visible = windows.filter(
-      (w) => w.state === "normal" || w.state === "maximized"
+      (w) => w.workspaceId === activeWorkspaceId && w.state !== "minimized"
     );
     if (visible.length > 0) {
       const topmost = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
       get().focusWindow(topmost.id);
+      return;
     }
+
+    set({ focusedWindowId: null });
   },
 
   maximizeWindow: (windowId) => {
@@ -362,7 +405,12 @@ export const createWindowSliceNew: StateCreator<
   // ─────────────────────────────────────────────────────────────────────────
 
   closeAllWindows: () => {
-    set({ windows: [], focusedWindowId: null });
+    set((state) => ({
+      windows: [],
+      focusedWindowId: null,
+      workspaces: state.workspaces.map((ws) => ({ ...ws, windowIds: [] })),
+      lastFocusedWindowIds: new Map(),
+    }));
   },
 
   minimizeAllWindows: () => {
@@ -409,6 +457,11 @@ export const createWindowSliceNew: StateCreator<
       return {
         windows: [...state.windows, window],
         zIndexCounter: Math.max(state.zIndexCounter, window.zIndex) + 1,
+        workspaces: state.workspaces.map((ws) =>
+          ws.id === window.workspaceId
+            ? { ...ws, windowIds: [...ws.windowIds, window.id] }
+            : ws
+        ),
       };
     });
   },

@@ -55,10 +55,21 @@ export function nodePropsToWindow(
   defaults?: Partial<WindowInstance>
 ): WindowInstance {
   const now = Date.now();
+  const clampWorkspaceId = (value: number) =>
+    value >= 1 && value <= 6 ? Math.trunc(value) : 1;
+  const rawWorkspaceId = (
+    props.data as unknown as { workspaceId?: unknown } | undefined
+  )?.workspaceId;
+  const workspaceId =
+    typeof rawWorkspaceId === "number"
+      ? clampWorkspaceId(rawWorkspaceId)
+      : clampWorkspaceId(defaults?.workspaceId ?? 1);
+
   return {
     id: props.id,
     type: (props.data?.type ?? props.type ?? "chat") as WindowInstance["type"],
     data: props.data ?? { type: "chat" as const, viewMode: "full" as const },
+    workspaceId,
     bounds: {
       x: props.xPos ?? props.positionAbsoluteX ?? 100,
       y: props.yPos ?? props.positionAbsoluteY ?? 100,

@@ -13,3 +13,5 @@ export { createTilingSlice } from "./tiling";
 export * from "./types.new";
 export { createViewportSliceNew } from "./viewport.new";
 export { createWindowSliceNew } from "./windows.new";
+export { createWorkspaceSlice } from "./workspaces";
+export type { Workspace, WorkspaceSlice } from "./workspaces";

@@ -62,6 +62,7 @@ export function SettingsWindow({ id, data, selected }: NodeProps) {
       label: windowData.label,
       viewMode: windowData.viewMode,
     },
+    workspaceId: 1,
     bounds: {
       x: 0,
       y: 0,

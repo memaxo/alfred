@@ -43,8 +43,8 @@ export const DEFAULT_MENUS: AppMenus = {
     { id: "minimize", label: "Minimize", shortcut: "⌘M" },
     { id: "maximize", label: "Maximize" },
     { id: "sep-1", label: "", separator: true },
-    { id: "tile-left", label: "Tile Left", shortcut: "⌃⌘←" },
-    { id: "tile-right", label: "Tile Right", shortcut: "⌃⌘→" },
+    { id: "tile-left", label: "Tile Left", shortcut: "⌘←" },
+    { id: "tile-right", label: "Tile Right", shortcut: "⌘→" },
   ],
   Help: [
     { id: "docs", label: "Documentation" },

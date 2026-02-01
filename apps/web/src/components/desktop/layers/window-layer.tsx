@@ -66,19 +66,31 @@ function WindowRenderer({
 }
 
 export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
-  const { windows, desktopArea } = useDesktopStore(
+  const { windows, desktopArea, activeWorkspaceId } = useDesktopStore(
     useShallow((s) => ({
       windows: s.windows,
       desktopArea: s.desktopArea,
+      activeWorkspaceId: s.activeWorkspaceId,
     }))
   );
 
   const reduced = useReducedMotion();
 
+  // Filter windows by active workspace (default to workspace 1 if not assigned)
+  const workspaceWindows = windows.filter(
+    (w) => (w.workspaceId ?? 1) === activeWorkspaceId
+  );
+
+  // Only show non-minimized windows
+  const visibleWindows = workspaceWindows.filter(
+    (w) => w.state !== "minimized"
+  );
+
   return (
     <div
       className="pointer-events-none absolute inset-0"
       data-layer="windows"
+      data-workspace={activeWorkspaceId}
       style={style}
     >
       {/* Desktop area (excludes menu bar and taskbar) */}
@@ -92,22 +104,20 @@ export function WindowLayer({ style, focusedWindowId }: WindowLayerProps) {
         {/* Tile Zone Preview (shown during drag) */}
         <TileZonePreview />
 
-        {/* Window instances (skip minimized) */}
+        {/* Window instances (skip minimized, filter by workspace) */}
         <AnimatePresence>
-          {windows
-            .filter((w) => w.state !== "minimized")
-            .map((window) => (
-              <WindowRenderer
-                isFocused={window.id === focusedWindowId}
-                key={window.id}
-                windowId={window.id}
-              />
-            ))}
+          {visibleWindows.map((window) => (
+            <WindowRenderer
+              isFocused={window.id === focusedWindowId}
+              key={window.id}
+              windowId={window.id}
+            />
+          ))}
         </AnimatePresence>
 
-        {/* Empty state */}
+        {/* Empty state - show per-workspace */}
         <AnimatePresence>
-          {windows.length === 0 && (
+          {workspaceWindows.length === 0 && (
             <motion.div
               animate={{ opacity: 1, y: 0 }}
               className="flex h-full items-center justify-center"

@@ -38,6 +38,7 @@ import { useDesktopStore } from "@/store/desktop";
 
 import type { AppMenuAction, AppMenuCategory, AppMenus } from "./types";
 
+import { WorkspaceSwitcher } from "../workspace-switcher";
 import { Clock } from "./clock";
 
 interface MenuBarProps {
@@ -54,6 +55,10 @@ export function MenuBar({ style }: MenuBarProps) {
     minimizeWindow,
     maximizeWindow,
     tileWindow,
+    nextWorkspace,
+    previousWorkspace,
+    moveWindowToWorkspace,
+    activeWorkspaceId,
     setSpaceMode,
     isSpaceMode,
   } = useDesktopStore(
@@ -66,6 +71,10 @@ export function MenuBar({ style }: MenuBarProps) {
       minimizeWindow: s.minimizeWindow,
       maximizeWindow: s.maximizeWindow,
       tileWindow: s.tileWindow,
+      nextWorkspace: s.nextWorkspace,
+      previousWorkspace: s.previousWorkspace,
+      moveWindowToWorkspace: s.moveWindowToWorkspace,
+      activeWorkspaceId: s.activeWorkspaceId,
       setSpaceMode: s.setSpaceMode,
       isSpaceMode: s.isSpaceMode,
     }))
@@ -110,6 +119,30 @@ export function MenuBar({ style }: MenuBarProps) {
       tileWindow(focusedWindowId, "right");
     }
   }, [focusedWindowId, tileWindow]);
+
+  const handlePreviousWorkspace = useCallback(() => {
+    previousWorkspace();
+  }, [previousWorkspace]);
+
+  const handleNextWorkspace = useCallback(() => {
+    nextWorkspace();
+  }, [nextWorkspace]);
+
+  const handleMoveWindowToPreviousWorkspace = useCallback(() => {
+    if (!focusedWindowId) {
+      return;
+    }
+    const prevId = activeWorkspaceId <= 1 ? 6 : activeWorkspaceId - 1;
+    moveWindowToWorkspace(focusedWindowId, prevId);
+  }, [activeWorkspaceId, focusedWindowId, moveWindowToWorkspace]);
+
+  const handleMoveWindowToNextWorkspace = useCallback(() => {
+    if (!focusedWindowId) {
+      return;
+    }
+    const nextId = activeWorkspaceId >= 6 ? 1 : activeWorkspaceId + 1;
+    moveWindowToWorkspace(focusedWindowId, nextId);
+  }, [activeWorkspaceId, focusedWindowId, moveWindowToWorkspace]);
 
   // Build default menus with bound handlers
   const defaultMenus: AppMenus = useMemo(
@@ -157,15 +190,43 @@ export function MenuBar({ style }: MenuBarProps) {
         {
           id: "tile-left",
           label: "Tile Left",
-          shortcut: "⌃⌘←",
+          shortcut: "⌘←",
           onClick: handleTileLeft,
           disabled: !focusedWindowId,
         },
         {
           id: "tile-right",
           label: "Tile Right",
-          shortcut: "⌃⌘→",
+          shortcut: "⌘→",
           onClick: handleTileRight,
+          disabled: !focusedWindowId,
+        },
+        { id: "sep-2", label: "", separator: true },
+        {
+          id: "workspace-prev",
+          label: "Previous Workspace",
+          shortcut: "⌃⌘←",
+          onClick: handlePreviousWorkspace,
+        },
+        {
+          id: "workspace-next",
+          label: "Next Workspace",
+          shortcut: "⌃⌘→",
+          onClick: handleNextWorkspace,
+        },
+        { id: "sep-3", label: "", separator: true },
+        {
+          id: "workspace-move-prev",
+          label: "Move Window to Previous Workspace",
+          shortcut: "⌃⌘⇧←",
+          onClick: handleMoveWindowToPreviousWorkspace,
+          disabled: !focusedWindowId,
+        },
+        {
+          id: "workspace-move-next",
+          label: "Move Window to Next Workspace",
+          shortcut: "⌃⌘⇧→",
+          onClick: handleMoveWindowToNextWorkspace,
           disabled: !focusedWindowId,
         },
       ],
@@ -183,6 +244,10 @@ export function MenuBar({ style }: MenuBarProps) {
       handleToggleMindscape,
       handleTileLeft,
       handleTileRight,
+      handlePreviousWorkspace,
+      handleNextWorkspace,
+      handleMoveWindowToPreviousWorkspace,
+      handleMoveWindowToNextWorkspace,
     ]
   );
 
@@ -203,6 +268,11 @@ export function MenuBar({ style }: MenuBarProps) {
 
         {/* App-specific menus */}
         <AppMenuBar appName={focusedAppName} menus={activeMenus} />
+      </div>
+
+      {/* Center: Workspace Switcher */}
+      <div className="absolute left-1/2 -translate-x-1/2">
+        <WorkspaceSwitcher />
       </div>
 
       {/* Right: Status Area */}

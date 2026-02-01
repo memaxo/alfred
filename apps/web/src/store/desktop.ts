@@ -15,6 +15,7 @@ import { createTilingSlice } from "./desktop/tiling";
 import { createViewportSliceNew } from "./desktop/viewport.new";
 import { createWidgetSlice } from "./desktop/widgets";
 import { createWindowSliceNew } from "./desktop/windows.new";
+import { createWorkspaceSlice } from "./desktop/workspaces";
 
 type FullDesktopState = DesktopState & DesktopIconSlice & MenuSlice;
 
@@ -32,6 +33,7 @@ export const useDesktopStore = create<FullDesktopState>()(
       ...createKnowledgeSlice(set as never, get as never, store as never),
       ...createDesktopIconSlice(set as never, get as never),
       ...createMenuSlice(set as never, get as never),
+      ...createWorkspaceSlice(set as never, get as never, store as never),
     }),
     persistOptions as unknown as PersistOptions<FullDesktopState>
   )

@@ -137,6 +137,9 @@ export interface WindowInstance {
   type: WindowType;
   data: WindowData;
 
+  // Workspace assignment (virtual desktop workspaces)
+  workspaceId: number; // Workspace ID (1-6)
+
   // Geometry (replaces ReactFlow position)
   bounds: Bounds;
   state: WindowState;
@@ -232,7 +235,7 @@ export interface WindowSlice {
   // Window CRUD
   openWindow: (
     type: WindowType,
-    data?: Partial<WindowData>,
+    data?: Partial<WindowData> & { workspaceId?: number },
     bounds?: Partial<Bounds>
   ) => string;
   closeWindow: (windowId: string) => void;
@@ -433,6 +436,7 @@ export type { KnowledgeSlice } from "./knowledge";
 import type { CacheSlice } from "./cache";
 import type { ContextSlice } from "./context";
 import type { KnowledgeSlice } from "./knowledge";
+import type { WorkspaceSlice } from "./workspaces";
 
 export type DesktopState = WindowSlice &
   GroupSlice &
@@ -442,7 +446,8 @@ export type DesktopState = WindowSlice &
   WidgetSlice &
   CacheSlice &
   ContextSlice &
-  KnowledgeSlice;
+  KnowledgeSlice &
+  WorkspaceSlice;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT VALUES — Window constraints and defaults

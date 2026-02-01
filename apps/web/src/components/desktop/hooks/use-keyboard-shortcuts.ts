@@ -18,6 +18,11 @@ export function useKeyboardShortcuts() {
     minimizeWindow,
     restoreWindow,
     untileWindow,
+    switchWorkspace,
+    nextWorkspace,
+    previousWorkspace,
+    moveWindowToWorkspace,
+    activeWorkspaceId,
   } = useDesktopStore(
     useShallow((s) => ({
       focusedWindowId: s.focusedWindowId,
@@ -31,6 +36,11 @@ export function useKeyboardShortcuts() {
       minimizeWindow: s.minimizeWindow,
       restoreWindow: s.restoreWindow,
       untileWindow: s.untileWindow,
+      switchWorkspace: s.switchWorkspace,
+      nextWorkspace: s.nextWorkspace,
+      previousWorkspace: s.previousWorkspace,
+      moveWindowToWorkspace: s.moveWindowToWorkspace,
+      activeWorkspaceId: s.activeWorkspaceId,
     }))
   );
 
@@ -77,18 +87,72 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Cmd+1-6: Switch to workspace (macOS-only)
+      if (e.metaKey && !e.ctrlKey && e.key >= "1" && e.key <= "6") {
+        e.preventDefault();
+        const workspaceId = Number.parseInt(e.key, 10);
+        switchWorkspace(workspaceId);
+        return;
+      }
+
+      // Cmd+Ctrl+ArrowRight: Next workspace (macOS-only)
+      if (e.metaKey && e.ctrlKey && e.key === "ArrowRight" && !e.shiftKey) {
+        e.preventDefault();
+        nextWorkspace();
+        return;
+      }
+
+      // Cmd+Ctrl+ArrowLeft: Previous workspace (macOS-only)
+      if (e.metaKey && e.ctrlKey && e.key === "ArrowLeft" && !e.shiftKey) {
+        e.preventDefault();
+        previousWorkspace();
+        return;
+      }
+
+      // Cmd+Ctrl+Shift+ArrowRight: Move window to next workspace (macOS-only)
+      if (e.metaKey && e.ctrlKey && e.shiftKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        if (focusedWindowId) {
+          const nextId = activeWorkspaceId >= 6 ? 1 : activeWorkspaceId + 1;
+          moveWindowToWorkspace(focusedWindowId, nextId);
+        }
+        return;
+      }
+
+      // Cmd+Ctrl+Shift+ArrowLeft: Move window to previous workspace (macOS-only)
+      if (e.metaKey && e.ctrlKey && e.shiftKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (focusedWindowId) {
+          const prevId = activeWorkspaceId <= 1 ? 6 : activeWorkspaceId - 1;
+          moveWindowToWorkspace(focusedWindowId, prevId);
+        }
+        return;
+      }
+
       if (isMeta && e.key === "Tab") {
         e.preventDefault();
-        if (windows.length === 0) {
+        const workspaceWindows = windows.filter(
+          (w) => w.workspaceId === activeWorkspaceId && w.state !== "minimized"
+        );
+        if (workspaceWindows.length === 0) {
           return;
         }
 
-        const currentIndex = windows.findIndex((w) => w.id === focusedWindowId);
-        const nextIndex = e.shiftKey
-          ? (currentIndex - 1 + windows.length) % windows.length
-          : (currentIndex + 1) % windows.length;
+        const currentIndex = workspaceWindows.findIndex(
+          (w) => w.id === focusedWindowId
+        );
+        let nextIndex = 0;
+        if (currentIndex === -1) {
+          nextIndex = e.shiftKey ? workspaceWindows.length - 1 : 0;
+        } else if (e.shiftKey) {
+          nextIndex =
+            (currentIndex - 1 + workspaceWindows.length) %
+            workspaceWindows.length;
+        } else {
+          nextIndex = (currentIndex + 1) % workspaceWindows.length;
+        }
 
-        const nextWindow = windows[nextIndex];
+        const nextWindow = workspaceWindows[nextIndex];
         if (nextWindow) {
           focusWindow(nextWindow.id);
         }
@@ -98,7 +162,10 @@ export function useKeyboardShortcuts() {
       if (isMeta && e.key >= "1" && e.key <= "9") {
         e.preventDefault();
         const index = Number.parseInt(e.key, 10) - 1;
-        const window = windows[index];
+        const workspaceWindows = windows.filter(
+          (w) => w.workspaceId === activeWorkspaceId && w.state !== "minimized"
+        );
+        const window = workspaceWindows[index];
         if (window) {
           focusWindow(window.id);
         }
@@ -244,6 +311,11 @@ export function useKeyboardShortcuts() {
       minimizeWindow,
       restoreWindow,
       untileWindow,
+      switchWorkspace,
+      nextWorkspace,
+      previousWorkspace,
+      moveWindowToWorkspace,
+      activeWorkspaceId,
     ]
   );
 
