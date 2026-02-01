@@ -104,7 +104,7 @@ export async function listContainers(
             id: raw.ID,
             name: raw.Names,
             image: raw.Image,
-            status: isPaused ? "paused" : isRunning ? "running" : "exited",
+            status: isPaused ? "paused" : (isRunning ? "running" : "exited"),
             ports: raw.Ports ? raw.Ports.split(", ").filter(Boolean) : [],
             created: raw.CreatedAt,
             isAgentWorkspace: isAgent,

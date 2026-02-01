@@ -47,7 +47,7 @@ async function listTarInputs(relDir: string): Promise<string[]> {
 
   const walk = async (absDir: string, relDirPosix: string): Promise<void> => {
     const ents = await readdir(absDir, { withFileTypes: true });
-    ents.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    ents.sort((a, b) => (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
 
     for (const ent of ents) {
       const childRel = path.posix.join(relDirPosix, ent.name);
@@ -119,7 +119,7 @@ export async function exportAgentfsRunToCas(args: {
     const runTar = async (cmd: string[]) => {
       const tar = Bun.spawn({
         cmd,
-        cwd: process.cwd(),
+        cwd: rootAbs,
         stderr: "pipe",
         stdin: "ignore",
         stdout: "ignore",
@@ -164,7 +164,7 @@ export async function exportAgentfsRunToCas(args: {
     try {
       const gzip = Bun.spawn({
         cmd: ["gzip", "-n", tmpTarAbs],
-        cwd: process.cwd(),
+        cwd: rootAbs,
         stderr: "pipe",
         stdin: "ignore",
         stdout: "ignore",
@@ -187,7 +187,7 @@ export async function exportAgentfsRunToCas(args: {
 
       const tarGz = Bun.spawn({
         cmd: ["tar", "-czf", tmpAbs, args.relDir],
-        cwd: process.cwd(),
+        cwd: rootAbs,
         stderr: "pipe",
         stdin: "ignore",
         stdout: "ignore",

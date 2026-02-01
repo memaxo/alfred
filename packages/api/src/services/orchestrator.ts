@@ -16,15 +16,15 @@ function coerceUsage(value: unknown): {
   const inputTokens =
     typeof u.inputTokens === "number"
       ? u.inputTokens
-      : typeof u.promptTokens === "number"
+      : (typeof u.promptTokens === "number"
         ? u.promptTokens
-        : 0;
+        : 0);
   const outputTokens =
     typeof u.outputTokens === "number"
       ? u.outputTokens
-      : typeof u.completionTokens === "number"
+      : (typeof u.completionTokens === "number"
         ? u.completionTokens
-        : 0;
+        : 0);
   return { inputTokens, outputTokens };
 }
 

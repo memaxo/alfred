@@ -723,7 +723,7 @@ export const agentfsRouter = router({
 
         return {
           checkpoints: [...merged.values()].sort((a, b) =>
-            a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+            a.createdAt < b.createdAt ? 1 : (a.createdAt > b.createdAt ? -1 : 0)
           ),
         };
       } finally {
@@ -2280,6 +2280,672 @@ export const agentfsRouter = router({
           message: `Failed to list workspaces: ${(error as Error).message}`,
         });
       }
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Quarantine Management Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  quarantineList: authedProcedure
+    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "quarantine:/",
+      }))
+    )
+    .input(z.object({ limit: z.number().int().min(1).max(1000).default(100) }))
+    .query(async ({ input }) => {
+      const { listQuarantine } = await import("../services/agentfs-quarantine");
+      const result = await listQuarantine({ limit: input.limit });
+      return { items: result.entries, nextCursor: result.nextCursor };
+    }),
+
+  quarantineInspect: authedProcedure
+    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const id = typeof rec.id === "string" ? rec.id : "unknown";
+        return { kind: "agentfs_file", id: `quarantine:${id}` };
+      })
+    )
+    .input(z.object({ id: z.string().min(1).max(200) }))
+    .query(async ({ input }) => {
+      const { inspectQuarantineItem } =
+        await import("../services/agentfs-quarantine");
+      const item = await inspectQuarantineItem(input.id);
+      if (!item) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Quarantine item not found",
+        });
+      }
+      return item;
+    }),
+
+  quarantineRestore: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const id = typeof rec.id === "string" ? rec.id : "unknown";
+        return { kind: "agentfs_file", id: `quarantine:${id}` };
+      })
+    )
+    .input(z.object({ id: z.string().min(1).max(200) }))
+    .mutation(async ({ input }) => {
+      const { restoreQuarantineItem } =
+        await import("../services/agentfs-quarantine");
+      const result = await restoreQuarantineItem(input.id);
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error || "Failed to restore quarantine item",
+        });
+      }
+      return result;
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Storage Metrics Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  metricsStorage: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "metrics:/",
+      }))
+    )
+    .input(z.object({ projectId: z.string().uuid().optional() }))
+    .query(async () => {
+      const { calculateStorageMetrics } =
+        await import("../services/agentfs-metrics");
+      return calculateStorageMetrics();
+    }),
+
+  metricsCas: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "metrics:cas",
+      }))
+    )
+    .query(async () => {
+      const { getCasMetrics } = await import("../services/agentfs-metrics");
+      return getCasMetrics();
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Batch Operations Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  batchDelete: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "batch:/",
+      }))
+    )
+    .input(
+      z.object({
+        runIds: z.array(z.string().min(1)).min(1).max(1000),
+        dryRun: z.boolean().default(false),
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = getUserIdForAgentfsAccess(ctx);
+
+      // Validate access to each run
+      const accessibleRunIds: string[] = [];
+      const failed: { id: string; success: boolean; error: string }[] = [];
+
+      for (const runId of input.runIds) {
+        const access = await checkAgentfsAccess({
+          userId,
+          runId,
+          requestedProjectId: input.projectId ?? null,
+        });
+
+        if (!access.allow) {
+          failed.push({
+            id: runId,
+            success: false,
+            error:
+              access.reason === "run_not_owned"
+                ? "agentfs_run_forbidden"
+                : "agentfs_project_mismatch",
+          });
+        } else {
+          accessibleRunIds.push(runId);
+        }
+      }
+
+      const { batchDelete } = await import("../services/agentfs-batch");
+      const result = await batchDelete(accessibleRunIds, {
+        dryRun: input.dryRun,
+      });
+
+      // Merge access failures with operation failures
+      return {
+        ...result,
+        failed: [...failed, ...result.failed],
+      };
+    }),
+
+  batchPin: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "batch:/",
+      }))
+    )
+    .input(
+      z.object({
+        runIds: z.array(z.string().min(1)).min(1).max(1000),
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = getUserIdForAgentfsAccess(ctx);
+
+      // Validate access to each run
+      const accessibleRunIds: string[] = [];
+      const failed: { id: string; success: boolean; error: string }[] = [];
+
+      for (const runId of input.runIds) {
+        const access = await checkAgentfsAccess({
+          userId,
+          runId,
+          requestedProjectId: input.projectId ?? null,
+        });
+
+        if (!access.allow) {
+          failed.push({
+            id: runId,
+            success: false,
+            error:
+              access.reason === "run_not_owned"
+                ? "agentfs_run_forbidden"
+                : "agentfs_project_mismatch",
+          });
+        } else {
+          accessibleRunIds.push(runId);
+        }
+      }
+
+      const { batchPin } = await import("../services/agentfs-batch");
+      const result = await batchPin(accessibleRunIds);
+
+      return {
+        ...result,
+        failed: [...failed, ...result.failed],
+      };
+    }),
+
+  batchUnpin: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "batch:/",
+      }))
+    )
+    .input(
+      z.object({
+        runIds: z.array(z.string().min(1)).min(1).max(1000),
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = getUserIdForAgentfsAccess(ctx);
+
+      // Validate access to each run
+      const accessibleRunIds: string[] = [];
+      const failed: { id: string; success: boolean; error: string }[] = [];
+
+      for (const runId of input.runIds) {
+        const access = await checkAgentfsAccess({
+          userId,
+          runId,
+          requestedProjectId: input.projectId ?? null,
+        });
+
+        if (!access.allow) {
+          failed.push({
+            id: runId,
+            success: false,
+            error:
+              access.reason === "run_not_owned"
+                ? "agentfs_run_forbidden"
+                : "agentfs_project_mismatch",
+          });
+        } else {
+          accessibleRunIds.push(runId);
+        }
+      }
+
+      const { batchUnpin } = await import("../services/agentfs-batch");
+      const result = await batchUnpin(accessibleRunIds);
+
+      return {
+        ...result,
+        failed: [...failed, ...result.failed],
+      };
+    }),
+
+  batchExport: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "batch:/",
+      }))
+    )
+    .input(
+      z.object({
+        runIds: z.array(z.string().min(1)).min(1).max(100),
+        store: z.boolean().default(true),
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = getUserIdForAgentfsAccess(ctx);
+
+      // Validate access to each run and collect projectIds
+      const accessibleRunIds: string[] = [];
+      const projectIdMap = new Map<string, string | null>();
+      const failed: { id: string; success: boolean; error?: string }[] = [];
+
+      for (const runId of input.runIds) {
+        const access = await checkAgentfsAccess({
+          userId,
+          runId,
+          requestedProjectId: input.projectId ?? null,
+        });
+
+        if (!access.allow) {
+          failed.push({
+            id: runId,
+            success: false,
+            error:
+              access.reason === "run_not_owned"
+                ? "agentfs_run_forbidden"
+                : "agentfs_project_mismatch",
+          });
+        } else {
+          accessibleRunIds.push(runId);
+          projectIdMap.set(runId, access.projectId);
+        }
+      }
+
+      // Export runs one by one to preserve project scoping
+      const { batchExport } = await import("../services/agentfs-batch");
+      const archives: { runId: string; sha: string }[] = [];
+      const exportFailed: { id: string; success: boolean; error?: string }[] =
+        [];
+
+      for (const runId of accessibleRunIds) {
+        try {
+          const result = await batchExport([runId], {
+            store: input.store,
+            projectId: projectIdMap.get(runId),
+          });
+          archives.push(...result.archives);
+          exportFailed.push(...result.failed);
+        } catch {
+          exportFailed.push({
+            id: runId,
+            success: false,
+            error: "agentfs_batch_export_failed",
+          });
+        }
+      }
+
+      return {
+        archives,
+        failed: [...failed, ...exportFailed],
+      };
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Advanced Search Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  searchFiles: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "search:/",
+      }))
+    )
+    .input(
+      z.object({
+        pattern: z.string().min(1).max(500),
+        projectId: z.string().uuid().optional(),
+        agentType: z.string().optional(),
+        dateFrom: z.string().datetime().optional(),
+        dateTo: z.string().datetime().optional(),
+        sensitivity: z.enum(["normal", "sensitive", "all"]).default("normal"),
+        limit: z.number().int().min(1).max(1000).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      const { searchFiles } = await import("../services/agentfs-search");
+      return searchFiles(input.pattern, {
+        projectId: input.projectId,
+        agentType: input.agentType,
+        dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
+        dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
+        sensitivity: input.sensitivity,
+        limit: input.limit,
+      });
+    }),
+
+  searchKv: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "search:/",
+      }))
+    )
+    .input(
+      z.object({
+        keyPattern: z.string().min(1).max(500),
+        projectId: z.string().uuid().optional(),
+        agentType: z.string().optional(),
+        dateFrom: z.string().datetime().optional(),
+        dateTo: z.string().datetime().optional(),
+        limit: z.number().int().min(1).max(1000).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      const { searchKv } = await import("../services/agentfs-search");
+      return searchKv(input.keyPattern, {
+        projectId: input.projectId,
+        agentType: input.agentType,
+        dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
+        dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
+        limit: input.limit,
+      });
+    }),
+
+  searchToolCalls: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "search:/",
+      }))
+    )
+    .input(
+      z.object({
+        namePattern: z.string().min(1).max(500),
+        projectId: z.string().uuid().optional(),
+        agentType: z.string().optional(),
+        dateFrom: z.string().datetime().optional(),
+        dateTo: z.string().datetime().optional(),
+        limit: z.number().int().min(1).max(1000).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      const { searchToolCalls } = await import("../services/agentfs-search");
+      return searchToolCalls(input.namePattern, {
+        projectId: input.projectId,
+        agentType: input.agentType,
+        dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
+        dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
+        limit: input.limit,
+      });
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Retention Policy Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  retentionPreview: authedProcedure
+    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "retention:/",
+      }))
+    )
+    .input(
+      z.object({
+        retentionDays: z.number().int().min(1).max(3650).optional(),
+        maxBytes: z.number().int().min(0).optional(),
+        casMaxBytes: z.number().int().min(0).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { generateRetentionPreview } =
+        await import("../services/agentfs-retention");
+      return generateRetentionPreview({
+        retentionDays: input.retentionDays,
+        maxBytes: input.maxBytes,
+        casMaxBytes: input.casMaxBytes,
+      });
+    }),
+
+  retentionSimulate: authedProcedure
+    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "retention:/",
+      }))
+    )
+    .input(
+      z.object({
+        retentionDays: z.number().int().min(1).max(3650).optional(),
+        maxBytes: z.number().int().min(0).optional(),
+        casMaxBytes: z.number().int().min(0).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { simulateCleanup } = await import("../services/agentfs-retention");
+      return simulateCleanup({
+        retentionDays: input.retentionDays,
+        maxBytes: input.maxBytes,
+        casMaxBytes: input.casMaxBytes,
+      });
+    }),
+
+  retentionViolations: authedProcedure
+    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "retention:/",
+      }))
+    )
+    .query(async () => {
+      const { getPolicyViolations } =
+        await import("../services/agentfs-retention");
+      return getPolicyViolations();
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CAS Management Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  casList: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "cas:/",
+      }))
+    )
+    .input(
+      z.object({
+        projectId: z.string().uuid().optional(),
+        runId: z.string().min(1).max(200).optional(),
+        from: z.string().datetime().optional(),
+        to: z.string().datetime().optional(),
+        limit: z.number().int().min(1).max(1000).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      const { listCasArchives } = await import("../services/agentfs-cas");
+      return listCasArchives({
+        projectId: input.projectId,
+        runId: input.runId,
+        from: input.from ? new Date(input.from) : undefined,
+        to: input.to ? new Date(input.to) : undefined,
+        limit: input.limit,
+      });
+    }),
+
+  casMetadata: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const sha = typeof rec.sha === "string" ? rec.sha : "unknown";
+        return { kind: "agentfs_file", id: `cas:${sha}` };
+      })
+    )
+    .input(z.object({ sha: z.string().min(1).max(200) }))
+    .query(async ({ input }) => {
+      const { getCasMetadata } = await import("../services/agentfs-cas");
+      const archive = await getCasMetadata(input.sha);
+      if (!archive) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "CAS archive not found",
+        });
+      }
+      return archive;
+    }),
+
+  casDelete: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const sha = typeof rec.sha === "string" ? rec.sha : "unknown";
+        return { kind: "agentfs_file", id: `cas:${sha}` };
+      })
+    )
+    .input(z.object({ sha: z.string().min(1).max(200) }))
+    .mutation(async ({ input }) => {
+      const { deleteCasArchive } = await import("../services/agentfs-cas");
+      const result = await deleteCasArchive(input.sha);
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error || "Failed to delete CAS archive",
+        });
+      }
+      return result;
+    }),
+
+  casStats: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "cas:/",
+      }))
+    )
+    .query(async () => {
+      const { getCasStorageStats } = await import("../services/agentfs-cas");
+      return getCasStorageStats();
+    }),
+
+  casCleanup: authedProcedure
+    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "cas:/",
+      }))
+    )
+    .mutation(async () => {
+      const { cleanupOrphanedCas } = await import("../services/agentfs-cas");
+      return cleanupOrphanedCas();
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Access Audit Procedures
+  // ─────────────────────────────────────────────────────────────────────────
+
+  auditLog: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "audit:/",
+      }))
+    )
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200).optional(),
+        userId: z.string().min(1).max(200).optional(),
+        action: z.string().min(1).max(100).optional(),
+        resource: z.string().min(1).max(500).optional(),
+        from: z.string().datetime().optional(),
+        to: z.string().datetime().optional(),
+        successOnly: z.boolean().optional(),
+        limit: z.number().int().min(1).max(1000).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      const { queryAuditLog } = await import("../services/agentfs-audit");
+      return queryAuditLog({
+        runId: input.runId,
+        userId: input.userId,
+        action: input.action,
+        resource: input.resource,
+        from: input.from ? new Date(input.from) : undefined,
+        to: input.to ? new Date(input.to) : undefined,
+        successOnly: input.successOnly,
+        limit: input.limit,
+      });
+    }),
+
+  auditRecent: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "audit:/",
+      }))
+    )
+    .input(z.object({ limit: z.number().int().min(1).max(1000).default(50) }))
+    .query(async ({ input }) => {
+      const { getRecentActivity } = await import("../services/agentfs-audit");
+      const entries = await getRecentActivity(input.limit);
+      return { entries };
+    }),
+
+  auditStats: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", () => ({
+        kind: "agentfs_file",
+        id: "audit:/",
+      }))
+    )
+    .input(
+      z.object({
+        from: z.string().datetime(),
+        to: z.string().datetime(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { getAccessStats } = await import("../services/agentfs-audit");
+      return getAccessStats(new Date(input.from), new Date(input.to));
     }),
 });
 
