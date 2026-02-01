@@ -94,7 +94,7 @@ export default function FocusScreen() {
               <View className="py-8">
                 <ActivityIndicator color="#3b82f6" size="large" />
               </View>
-            ) : (attention.data ?? []).length === 0 ? (
+            ) : ((attention.data ?? []).length === 0 ? (
               <Text className="py-6 text-center text-muted-foreground">
                 No open attention items.
               </Text>
@@ -157,7 +157,7 @@ export default function FocusScreen() {
                   </View>
                 ))}
               </View>
-            )}
+            ))}
           </View>
 
           <View className="rounded-lg border border-border bg-card p-4">
@@ -168,7 +168,7 @@ export default function FocusScreen() {
               <View className="py-6">
                 <ActivityIndicator color="#3b82f6" size="small" />
               </View>
-            ) : (delta.data ?? []).length === 0 ? (
+            ) : ((delta.data ?? []).length === 0 ? (
               <Text className="py-6 text-center text-muted-foreground">
                 No delta yet.
               </Text>
@@ -188,7 +188,7 @@ export default function FocusScreen() {
                   </View>
                 ))}
               </View>
-            )}
+            ))}
           </View>
         </View>
       </ScrollView>

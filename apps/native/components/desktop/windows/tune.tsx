@@ -100,7 +100,7 @@ export function TuneWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : evalQuery.error ? (
+        ) : (evalQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {evalQuery.error.message}
           </Text>
@@ -131,7 +131,7 @@ export function TuneWindow(_props: WindowComponentProps) {
               );
             })}
           </View>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

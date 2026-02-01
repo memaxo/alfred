@@ -379,7 +379,7 @@ export default function ProfileTab() {
 
           {isLoadingPasskeys ? (
             <ActivityIndicator color={theme.colors.biolum.standard} />
-          ) : passkeys.length > 0 ? (
+          ) : (passkeys.length > 0 ? (
             <View style={styles.passkeyList}>
               {passkeys.map((pk) => (
                 <View
@@ -412,7 +412,7 @@ export default function ProfileTab() {
             <CaptionText size="medium" color="dim" style={styles.noPasskeys}>
               No passkeys registered yet.
             </CaptionText>
-          )}
+          ))}
 
           <FluidButton
             label={

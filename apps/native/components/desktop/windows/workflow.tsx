@@ -103,7 +103,7 @@ export function WorkflowWindow({ window }: WindowComponentProps) {
           <View className="py-4">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : statusQuery.error ? (
+        ) : (statusQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {statusQuery.error.message}
           </Text>
@@ -119,7 +119,7 @@ export function WorkflowWindow({ window }: WindowComponentProps) {
               status: {String(status?.status ?? "unknown")}
             </Text>
           </View>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

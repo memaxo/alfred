@@ -214,9 +214,9 @@ export default function CaptureScreen() {
               label={
                 createMutation.isPending
                   ? "Processing..."
-                  : recording
+                  : (recording
                     ? "Stop + Send"
-                    : "Start Recording"
+                    : "Start Recording")
               }
               variant={recording ? "secondary" : "primary"}
               size="large"

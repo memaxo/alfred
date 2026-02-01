@@ -290,7 +290,7 @@ export default function RemindersListScreen() {
           <View className="flex-1 px-4 py-4">
             <ListSkeleton count={5} />
           </View>
-        ) : sortedReminders && sortedReminders.length > 0 ? (
+        ) : (sortedReminders && sortedReminders.length > 0 ? (
           <FlashList
             className="flex-1"
             contentContainerStyle={styles.listContent}
@@ -338,7 +338,7 @@ export default function RemindersListScreen() {
               </Pressable>
             )}
           </View>
-        )}
+        ))}
       </View>
     </Container>
   );

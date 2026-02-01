@@ -205,7 +205,7 @@ export default function NotesListScreen() {
           <View className="flex-1 px-4 py-4">
             <ListSkeleton count={5} />
           </View>
-        ) : sortedNotes && sortedNotes.length > 0 ? (
+        ) : (sortedNotes && sortedNotes.length > 0 ? (
           <FlashList
             className="flex-1"
             contentContainerStyle={styles.listContent}
@@ -253,7 +253,7 @@ export default function NotesListScreen() {
               </Pressable>
             )}
           </View>
-        )}
+        ))}
       </View>
     </Container>
   );

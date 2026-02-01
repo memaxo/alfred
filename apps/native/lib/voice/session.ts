@@ -1167,9 +1167,9 @@ export function useVoiceSessionNative(
         const errorText =
           error instanceof Error
             ? [error.message, error.stack].filter(Boolean).join("\n")
-            : typeof error === "string"
+            : (typeof error === "string"
               ? error
-              : "voice_webrtc_failed";
+              : "voice_webrtc_failed");
         setStreamState((prev) => ({
           ...prev,
           error: errorText,

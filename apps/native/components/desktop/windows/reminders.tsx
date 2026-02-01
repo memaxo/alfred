@@ -142,7 +142,7 @@ export function RemindersWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : reminders.length === 0 ? (
+        ) : (reminders.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No reminders yet.
           </Text>
@@ -197,7 +197,7 @@ export function RemindersWindow(_props: WindowComponentProps) {
               );
             })}
           </View>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

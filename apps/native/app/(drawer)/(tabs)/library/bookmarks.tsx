@@ -197,7 +197,7 @@ export default function BookmarksListScreen() {
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#00D9FF" size="large" />
           </View>
-        ) : filteredBookmarks && filteredBookmarks.length > 0 ? (
+        ) : (filteredBookmarks && filteredBookmarks.length > 0 ? (
           <FlashList
             className="flex-1"
             contentContainerStyle={styles.listContent}
@@ -234,7 +234,7 @@ export default function BookmarksListScreen() {
                 : "No bookmarks yet. Add your first bookmark above!"}
             </Text>
           </View>
-        )}
+        ))}
       </View>
     </Container>
   );

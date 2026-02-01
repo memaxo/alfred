@@ -194,7 +194,7 @@ export default function TimersListScreen() {
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#FFB800" size="large" />
           </View>
-        ) : timersQuery.data && timersQuery.data.length > 0 ? (
+        ) : (timersQuery.data && timersQuery.data.length > 0 ? (
           <FlashList
             className="flex-1"
             contentContainerStyle={styles.listContent}
@@ -217,7 +217,7 @@ export default function TimersListScreen() {
               No active timers. Create one above!
             </Text>
           </View>
-        )}
+        ))}
       </View>
     </Container>
   );

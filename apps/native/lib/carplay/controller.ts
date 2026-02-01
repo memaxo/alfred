@@ -750,9 +750,7 @@ class CarPlayController {
   };
 
   private readonly handleAudioInterruption = (began: boolean): void => {
-    if (began) {
-    } else {
-    }
+    if (began) {} else {}
   };
 
   // ============================================================================
