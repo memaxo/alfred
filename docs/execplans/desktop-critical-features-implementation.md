@@ -149,7 +149,60 @@ Key user-visible outcomes:
 
 ## Outcomes & Retrospective
 
-_(To be completed at final milestone)_
+### Milestone 1: Virtual Workspaces Foundation ✅ COMPLETE (2026-01-29)
+
+**Implementation Evidence:**
+
+**Files Created:**
+
+- `apps/web/src/store/desktop/workspaces.ts` - Workspace slice with 6 fixed workspaces, switchWorkspace/nextWorkspace/previousWorkspace actions
+- `apps/web/src/components/desktop/workspace-switcher.tsx` - Visual workspace indicator with 1-6 buttons
+- `apps/web/src/store/desktop/__tests__/workspaces.test.ts` - Unit tests for workspace operations
+
+**Files Modified:**
+
+- `apps/web/src/store/desktop/types.new.ts` - Added `workspaceId` field to WindowInstance type
+- `apps/web/src/store/desktop/windows.new.ts` - Auto-assign new windows to active workspace (lines 112-128, 286-292)
+- `apps/web/src/store/desktop/index.ts` - Exported workspace slice and integrated into DesktopState
+- `apps/web/src/components/desktop/layers/window-layer.tsx` - Filter windows by active workspace
+- `apps/web/src/components/desktop/menubar/index.tsx` - Integrated WorkspaceSwitcher component (line 41)
+- `apps/web/src/components/desktop/hooks/use-keyboard-shortcuts.ts` - Added ⌘1-6 and ⌘⌃arrow shortcuts (lines 21-43, 94-166)
+- `apps/web/src/store/desktop/persist.ts` - Added workspace state persistence with migration v4 (lines 240-358)
+
+**Test Results:**
+
+```bash
+$ bun test apps/web/src/store/desktop/__tests__/workspaces.test.ts
+✓ switchWorkspace: switches to valid workspace
+✓ switchWorkspace: ignores invalid workspace IDs
+✓ nextWorkspace: cycles from 6 to 1
+✓ previousWorkspace: cycles from 1 to 6
+✓ switchWorkspace: clears focus when switching to empty workspace
+✓ switchWorkspace: restores last focused window when available
+✓ moveWindowToWorkspace: moves window to target workspace
+✓ Persistence: saves activeWorkspaceId to localStorage
+✓ Migration v4: preserves workspace assignments across reloads
+
+9 pass, 0 fail
+```
+
+**Verification:**
+
+1. Start dev server: `bun run dev`
+2. Open 3 windows in workspace 1
+3. Press ⌘2 → windows disappear, menubar shows workspace 2 active
+4. Press ⌘1 → original 3 windows reappear
+5. Refresh page → workspaces persisted via migration v4
+
+**Key Decisions Validated:**
+
+- Centered workspace switcher positioning provides visual balance regardless of menubar content width
+- 6 fixed workspaces (like macOS) simplifies mental model vs dynamic workspaces
+- Integration tests with actual Zustand store more reliable than slice unit tests
+
+### Milestones 2-8: Pending Implementation
+
+_(To be documented as each milestone completes)_
 
 ---
 

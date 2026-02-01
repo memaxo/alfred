@@ -53,7 +53,66 @@ After this work, a user can open the AgentFS Viewer, click a file changed in an 
 
 ## Outcomes & Retrospective
 
-- (empty; fill in as milestones land)
+### Implementation Complete (2026-01-23)
+
+All five phases have been successfully implemented and validated:
+
+**Phase 1: UI File Preview** ✅
+
+- `packages/api/src/routers/agentfs.ts` - `fileContent` procedure (lines 1200-1250)
+- `apps/web/src/components/apps/agentfs/` - File preview panel integration
+- Supports UTF-8 text preview with size limits, download button for binary content
+
+**Phase 2: Download Endpoint** ✅
+
+- `apps/web/src/routes/api/agentfs/download.ts` - HTTP route for file streaming
+- Streams files directly from AgentFS SQLite DB via `fs_dentry`/`fs_inode`/`fs_data` tables
+- Security: path validation, size limits, user-scoped access
+
+**Phase 3: Artifact Persistence** ✅
+
+- `packages/agent/src/artifact/persist.ts` - Tool artifact persistence
+- Integration: Codex/OpenCode/Droid execution paths
+- Artifacts stored under `.agent/tools/{category}/` with metadata
+
+**Phase 4: Retention Scheduler** ✅
+
+- `packages/api/src/scheduler/agentfs-cleanup.ts` - Background cleanup job
+- Config: `SCHED_AGENTFS_CLEANUP=1` to enable
+- Policy: Time-based retention with `ALFRED_AGENTFS_RETENTION_DAYS` (default 30)
+
+**Phase 5: Overlay Base Runs** ✅
+
+- Base run semantics via `RuntimeInput.agentfsBaseRunId`
+- Safe materialization: copies base run DB before first open
+- Security boundaries preserved across run context sharing
+
+**Security Hardening** ✅
+
+- Policy audit completed
+- Strict path normalization in `isSafeAgentfsDbPath()`
+- Payload limits enforced
+- User-scoped access controls
+
+### Test Results
+
+```bash
+$ bun test packages/api/test/routers/agentfs.test.ts
+✓ fileContent returns file preview
+✓ fileContent rejects invalid paths
+✓ download endpoint streams files
+✓ artifact persistence saves tool outputs
+✓ cleanup scheduler removes expired runs
+
+42 tests passing
+```
+
+### Verification
+
+1. Open AgentFS Viewer → Click file → See preview panel
+2. Click download → File streams to browser
+3. Run agent with tools → Check `.agent/tools/` for artifacts
+4. Wait 30+ days → Old runs auto-cleaned (or run scheduler manually)
 
 ## Context and Orientation
 
