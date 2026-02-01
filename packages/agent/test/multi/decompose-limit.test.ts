@@ -35,7 +35,7 @@ describe("decomposeTask limit enforcement", () => {
   it("truncates bucket-based decomposition when exceeding MAX_SUBTASKS", () => {
     const manyFiles = Array.from({ length: 50 }, (_, i) => {
       const bucket =
-        i % 3 === 0 ? "backend" : i % 3 === 1 ? "frontend" : "test";
+        i % 3 === 0 ? "backend" : (i % 3 === 1 ? "frontend" : "test");
       return `packages/${bucket}/file${i}.ts`;
     });
     const bundle = makeBundle(manyFiles);

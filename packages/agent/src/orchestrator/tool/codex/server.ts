@@ -499,9 +499,9 @@ async function startServer(args: {
         const mapped =
           status === "failed" || status === "declined"
             ? "failed"
-            : status === "completed"
+            : (status === "completed"
               ? "completed"
-              : "running";
+              : "running");
         emitCommand(turn.writer, command, mapped);
         return;
       }
@@ -547,9 +547,9 @@ async function startServer(args: {
       state.status =
         status === "interrupted"
           ? "interrupted"
-          : status === "failed"
+          : (status === "failed"
             ? "failed"
-            : "completed";
+            : "completed");
 
       if (state.status === "failed") {
         const errRecord = isRecord(turn.error) ? turn.error : null;
@@ -569,9 +569,9 @@ async function startServer(args: {
           new Error(
             errMsg
               ? `codex_server_turn_failed: ${errMsg}`
-              : payload
+              : (payload
                 ? `codex_server_turn_failed: ${payload}`
-                : "codex_server_turn_failed"
+                : "codex_server_turn_failed")
           )
         );
       } else if (state.status === "interrupted") {
