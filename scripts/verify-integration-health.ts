@@ -125,9 +125,9 @@ function formatTable(results: CheckResult[]): string {
       const status =
         r.matches > 0
           ? "wired"
-          : r.allowedDisconnected
+          : (r.allowedDisconnected
             ? "standalone"
-            : "disconnected";
+            : "disconnected");
       return `${status.padEnd(12)}  ${String(r.matches).padStart(6)}  ${r.pkg.name}`;
     });
 
