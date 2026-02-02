@@ -6,6 +6,11 @@
 
 import { AlertTriangle, Bell, Check, Info, Trash2, X } from "lucide-react";
 
+import type {
+  Notification,
+  NotificationType,
+} from "@/store/desktop/notifications";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -14,18 +19,10 @@ import { cn } from "@/lib/utils";
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type NotificationType = "info" | "success" | "warning" | "error";
-
-export interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  group?: string;
-  actions?: { label: string; onClick: () => void }[];
-}
+export type {
+  Notification,
+  NotificationType,
+} from "@/store/desktop/notifications";
 
 interface NotificationCenterProps {
   notifications: Notification[];

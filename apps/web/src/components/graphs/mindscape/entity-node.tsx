@@ -8,6 +8,7 @@ import {
   Brain,
   FileText,
   Lightbulb,
+  LayoutGrid,
   MessageSquare,
   Monitor,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const typeIcons: Record<MindscapeNodeType, typeof Brain> = {
   note: FileText,
   conversation: MessageSquare,
   window: Monitor,
+  app: LayoutGrid,
   agent: Bot,
 };
 
@@ -31,6 +33,7 @@ const typeColors: Record<MindscapeNodeType, string> = {
   note: "border-yellow-500/50 bg-yellow-500/10",
   conversation: "border-blue-500/50 bg-blue-500/10",
   window: "border-orange-500/50 bg-orange-500/10",
+  app: "border-cyan-500/50 bg-cyan-500/10",
   agent: "border-green-500/50 bg-green-500/10",
 };
 
@@ -40,6 +43,7 @@ const iconColors: Record<MindscapeNodeType, string> = {
   note: "text-yellow-400",
   conversation: "text-blue-400",
   window: "text-orange-400",
+  app: "text-cyan-400",
   agent: "text-green-400",
 };
 

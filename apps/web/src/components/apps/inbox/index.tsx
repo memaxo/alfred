@@ -89,9 +89,9 @@ export function InboxApp({
       toast.success(
         result.kind === "note"
           ? "Converted to note"
-          : (result.kind === "reminder"
+          : result.kind === "reminder"
             ? "Converted to reminder"
-            : "Converted")
+            : "Converted"
       );
       await utils.inbox.list.invalidate();
     },

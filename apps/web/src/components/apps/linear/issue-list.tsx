@@ -86,9 +86,9 @@ export function IssueList({ selectedId, onSelect, className }: IssueListProps) {
   const issues = data?.issues ?? [];
 
   const errorMsg = error
-    ? (error.message === "linear_not_connected"
+    ? error.message === "linear_not_connected"
       ? "Linear not connected. Connect via Settings."
-      : error.message)
+      : error.message
     : null;
 
   return (

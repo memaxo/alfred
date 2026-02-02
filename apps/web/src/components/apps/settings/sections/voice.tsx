@@ -59,9 +59,9 @@ export function VoiceSection() {
         <p className="text-biolum-dim text-xs">
           {mode === "push-to-talk"
             ? "Hold space bar to record"
-            : (mode === "voice-activity"
+            : mode === "voice-activity"
               ? "Automatically detect when you start speaking"
-              : "Always listening for voice input")}
+              : "Always listening for voice input"}
         </p>
       </section>
 

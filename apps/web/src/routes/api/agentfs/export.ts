@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
-import { isUuid, openAgentfsDb } from "../../../server/agentfs";
+import { isUuid, openAgentfsDb } from "@/server/agentfs";
 
 function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
   const normalized = args.dbPath.replaceAll("\\", "/");
@@ -294,7 +294,8 @@ export const Route = createFileRoute("/api/agentfs/export")({
           );
           const cas = await exportAgentfsRunToCas({
             runId,
-            relDir,
+            relDir: runId,
+            rootAbs: path.resolve(process.cwd(), ".agentfs"),
             projectId: access.projectId,
           });
           const name = `agentfs-${safeRunId(runId)}-${cas.sha.slice(0, 12)}.tar.gz`;

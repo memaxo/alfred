@@ -163,17 +163,17 @@ function DiffLineRow({ line }: { line: DiffLine }) {
   const bgColor =
     line.type === "addition"
       ? "bg-green-500/10"
-      : (line.type === "deletion"
+      : line.type === "deletion"
         ? "bg-red-500/10"
-        : "");
+        : "";
   const textColor =
     line.type === "addition"
       ? "text-green-400"
-      : (line.type === "deletion"
+      : line.type === "deletion"
         ? "text-red-400"
-        : "text-biolum-dim");
+        : "text-biolum-dim";
   const prefix =
-    line.type === "addition" ? "+" : (line.type === "deletion" ? "-" : " ");
+    line.type === "addition" ? "+" : line.type === "deletion" ? "-" : " ";
 
   return (
     <div

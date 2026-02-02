@@ -97,9 +97,9 @@ function ProcessRow({ process }: { process: Process }) {
   const Icon =
     process.type === "agent"
       ? Bot
-      : (process.type === "service"
+      : process.type === "service"
         ? Server
-        : Terminal);
+        : Terminal;
   const statusColors = {
     running: "text-green-400",
     idle: "text-yellow-400",

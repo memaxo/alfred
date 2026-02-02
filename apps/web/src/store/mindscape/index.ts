@@ -20,6 +20,8 @@ import { addEdge, applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
+import type { WindowType } from "@/store/desktop/types.new";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,6 +32,7 @@ export type MindscapeNodeType =
   | "note"
   | "conversation"
   | "window"
+  | "app"
   | "agent";
 
 export interface MindscapeNodeData extends Record<string, unknown> {
@@ -39,6 +42,8 @@ export interface MindscapeNodeData extends Record<string, unknown> {
   color?: string;
   icon?: string;
   sourceWindowId?: string;
+  sourceIconId?: string;
+  windowType?: WindowType;
   metadata?: Record<string, unknown>;
   // Entity specific
   entityId?: string;
@@ -98,6 +103,12 @@ export interface MindscapeStore {
   // Desktop integration
   spawnFromWindow: (
     windowId: string,
+    label: string,
+    position?: { x: number; y: number }
+  ) => void;
+  spawnFromIcon: (
+    iconId: string,
+    windowType: WindowType,
     label: string,
     position?: { x: number; y: number }
   ) => void;
@@ -238,6 +249,25 @@ export const useMindscapeStore = create<MindscapeStore>()(
               label,
               type: "window",
               sourceWindowId: windowId,
+            },
+          };
+          get().addNode(node);
+        },
+
+        spawnFromIcon: (iconId, windowType, label, position) => {
+          const pos = position ?? {
+            x: Math.random() * 400 - 200,
+            y: Math.random() * 400 - 200,
+          };
+          const node: MindscapeNode = {
+            id: `app-${iconId}`,
+            type: "entity",
+            position: pos,
+            data: {
+              label,
+              type: "app",
+              sourceIconId: iconId,
+              windowType,
             },
           };
           get().addNode(node);

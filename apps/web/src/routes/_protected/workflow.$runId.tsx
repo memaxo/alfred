@@ -82,9 +82,9 @@ function WorkflowRunRoute() {
       setActiveTab(
         runQuery.data.status === "completed"
           ? "work"
-          : (runQuery.data.status === "failed"
+          : runQuery.data.status === "failed"
             ? "error"
-            : "overview")
+            : "overview"
       );
     }
   }, [runQuery.data?.status, runQuery.data]);

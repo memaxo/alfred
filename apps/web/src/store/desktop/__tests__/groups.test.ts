@@ -10,18 +10,24 @@ import { createKnowledgeSlice } from "../knowledge";
 import { createTaskbarSlice } from "../taskbar";
 import { createTilingSlice } from "../tiling";
 import { createViewportSliceNew } from "../viewport.new";
+import { createWidgetSlice } from "../widgets";
 import { createWindowSliceNew } from "../windows.new";
+import { createWorkspaceSlice } from "../workspaces";
 
 function createTestStore() {
-  return create<DesktopState>()((...a) => ({
-    ...createWindowSliceNew(...a),
-    ...createGroupSlice(...a),
-    ...createViewportSliceNew(...a),
-    ...createTilingSlice(...a),
-    ...createTaskbarSlice(...a),
-    ...createCacheSlice(...a),
-    ...createContextSlice(...a),
-    ...createKnowledgeSlice(...a),
+  return create<DesktopState>()((set, get, store) => ({
+    ...createWindowSliceNew(set, get, store),
+    ...createGroupSlice(set, get, store),
+    ...createViewportSliceNew(set, get, store),
+    ...createTilingSlice(set, get, store),
+    ...createTaskbarSlice(set, get, store),
+    ...createCacheSlice(set, get, store),
+    ...createContextSlice(set, get, store),
+    ...createKnowledgeSlice(set, get, store),
+    ...createWorkspaceSlice(set, get, store),
+    ...createWidgetSlice(
+      set as unknown as Parameters<typeof createWidgetSlice>[0]
+    ),
   }));
 }
 

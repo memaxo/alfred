@@ -105,7 +105,7 @@ export function BookmarksApp({ window: _window }: WindowComponentProps) {
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               Loading bookmarks...
             </div>
-          ) : (filtered.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               No bookmarks found
             </div>
@@ -145,7 +145,7 @@ export function BookmarksApp({ window: _window }: WindowComponentProps) {
                 </div>
               </div>
             ))
-          ))}
+          )}
         </div>
       </ScrollArea>
     </div>

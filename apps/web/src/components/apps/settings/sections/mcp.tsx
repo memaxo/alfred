@@ -195,7 +195,7 @@ export function McpSection() {
           <div className="flex h-24 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
           </div>
-        ) : (servers.length > 0 ? (
+        ) : servers.length > 0 ? (
           <div className="space-y-3">
             {servers.map((server) => (
               <div
@@ -239,7 +239,7 @@ export function McpSection() {
           <div className="flex h-24 items-center justify-center rounded-xl border border-white/10 border-dashed">
             <p className="text-biolum-faint text-sm">No MCP servers yet.</p>
           </div>
-        ))}
+        )}
       </section>
     </div>
   );

@@ -27,6 +27,7 @@ import { OnboardingOverlay } from "../onboarding/overlay";
 import { FocusIndicator, SkipLinks } from "./accessibility";
 import { DesktopCommandPalette } from "./command-palette";
 import { LayerErrorBoundary, ShellErrorBoundary } from "./error-boundary";
+import { FocusModeOverlay } from "./focus-mode";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { DesktopIcons } from "./layers/desktop-icons";
 import { MindscapeLayer } from "./layers/mindscape-layer";
@@ -34,7 +35,9 @@ import { OrbLayer } from "./layers/orb-layer";
 import { WidgetLayer } from "./layers/widget-layer";
 import { WindowLayer } from "./layers/window-layer";
 import { MenuBar } from "./menubar";
+import { NotificationOverlay } from "./notifications/overlay";
 import { Taskbar } from "./taskbar";
+import { WorkflowTrails } from "./workflow-trails";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Z-INDEX CONSTANTS
@@ -76,13 +79,15 @@ export function AlfredDesktopShell({
     import.meta.env.VITE_TEST_MODE === "true" ||
     import.meta.env.MINDSCAPE_TEST === "1";
 
-  const { mode, focusedWindowId, setDesktopArea } = useDesktopStore(
-    useShallow((s) => ({
-      mode: s.isSpaceMode ? "mindscape" : "desktop",
-      focusedWindowId: s.focusedWindowId,
-      setDesktopArea: s.setDesktopArea,
-    }))
-  );
+  const { addNotification, mode, focusedWindowId, setDesktopArea } =
+    useDesktopStore(
+      useShallow((s) => ({
+        addNotification: s.addNotification,
+        mode: s.isSpaceMode ? "mindscape" : "desktop",
+        focusedWindowId: s.focusedWindowId,
+        setDesktopArea: s.setDesktopArea,
+      }))
+    );
 
   useKeyboardShortcuts();
 
@@ -92,11 +97,23 @@ export function AlfredDesktopShell({
     const handleOnline = () => {
       setIsOffline(false);
       toast.success("Back online", { duration: 2000 });
+      addNotification({
+        type: "success",
+        title: "Back online",
+        message: "Connectivity restored.",
+        group: "System",
+      });
     };
     const handleOffline = () => {
       setIsOffline(true);
       toast.error("Lost connection. Running in offline mode.", {
         duration: Number.POSITIVE_INFINITY,
+      });
+      addNotification({
+        type: "warning",
+        title: "Offline",
+        message: "Lost connection. Running in offline mode.",
+        group: "System",
       });
     };
 
@@ -106,7 +123,7 @@ export function AlfredDesktopShell({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [addNotification]);
 
   useEffect(() => {
     const updateDesktopArea = () => {
@@ -147,7 +164,7 @@ export function AlfredDesktopShell({
           {/* Desktop background - gradient or image */}
           <div
             className={cn(
-              "h-full w-full bg-gradient-to-br transition-colors duration-1000",
+              "h-full w-full bg-linear-to-br transition-colors duration-1000",
               isOffline
                 ? "from-red-950/20 via-void to-red-950/20"
                 : "from-void via-void-surface to-void"
@@ -181,6 +198,9 @@ export function AlfredDesktopShell({
           </main>
         )}
 
+        {/* Workflow Trails Overlay */}
+        {mode === "desktop" && <WorkflowTrails />}
+
         {/* Menu Bar Layer */}
         <LayerErrorBoundary fallback={null} layerName="Menu Bar">
           <MenuBar style={{ zIndex: Z_INDEX.MENU_BAR }} />
@@ -191,8 +211,14 @@ export function AlfredDesktopShell({
           <Taskbar style={{ zIndex: Z_INDEX.TASKBAR }} />
         </LayerErrorBoundary>
 
+        {/* Notification Center Overlay */}
+        {mode === "desktop" && <NotificationOverlay />}
+
         {/* Orb Layer */}
         {isTestMode ? null : <OrbLayer style={{ zIndex: Z_INDEX.ORB }} />}
+
+        {/* Focus Mode Overlay */}
+        <FocusModeOverlay />
 
         {/* Overlay Layer (Command Palette, Modals) */}
         <div

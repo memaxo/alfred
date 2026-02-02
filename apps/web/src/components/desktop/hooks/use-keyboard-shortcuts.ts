@@ -80,6 +80,23 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Cmd+F - Focus mode (distraction-free)
+      if (isMeta && e.key === "f" && !e.shiftKey) {
+        e.preventDefault();
+        const {
+          isFocusMode,
+          enterFocusMode,
+          exitFocusMode,
+          focusedWindowId: currentWindowId,
+        } = useDesktopStore.getState();
+        if (isFocusMode) {
+          exitFocusMode();
+        } else if (currentWindowId) {
+          enterFocusMode(currentWindowId);
+        }
+        return;
+      }
+
       // Mindscape toggle: Cmd+M or Cmd+` (per PRD)
       if (isMeta && (e.key === "m" || e.key === "`")) {
         e.preventDefault();

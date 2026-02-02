@@ -157,6 +157,15 @@ function MindscapeCanvasInner() {
         return;
       }
 
+      // App nodes open a desktop window (icon-to-node projection)
+      if (node.data.type === "app" && node.data.windowType) {
+        const id = spawnWindow(node.data.windowType);
+        focusWindow(id);
+        deactivate();
+        setMode("desktop");
+        return;
+      }
+
       // For knowledge entities, spawn a knowledge window
       const entityId = node.id;
       spawnWindow("knowledge", { type: "knowledge", id: entityId });

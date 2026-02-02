@@ -99,7 +99,7 @@ function hash32(input: string): number {
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
   return () => {
-    t += 0x6D_2B_79_F5;
+    t += 0x6d_2b_79_f5;
     let x = t;
     x = Math.imul(x ^ (x >>> 15), x | 1);
     x ^= x + Math.imul(x ^ (x >>> 7), x | 61);

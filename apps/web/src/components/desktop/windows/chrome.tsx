@@ -5,12 +5,6 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { WindowInstance } from "@/store/desktop/types.new";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useFocusGravity } from "@/hooks/use-focus-gravity";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
@@ -18,6 +12,7 @@ import { useMindscapeStore } from "@/store/mindscape";
 
 import type { ResizeDirection } from "./types";
 
+import { ContextLens } from "../accessibility";
 import { detectZoneFromPosition } from "../tiling/utils";
 import { ResizeHandles } from "./resize-handles";
 
@@ -92,6 +87,7 @@ export function WindowChrome({
     useMindscapeStore.getState().spawnFromWindow(windowId, title);
     useDesktopStore.getState().minimizeWindow(windowId);
     useMindscapeStore.getState().activate();
+    useDesktopStore.getState().setMode("mindscape");
   }, [window, windowId]);
 
   const handleFocus = useCallback(() => {
@@ -404,7 +400,7 @@ export function WindowChrome({
     >
       <div
         className={cn(
-          "flex h-10 flex-shrink-0 cursor-grab items-center justify-between border-white/5 border-b px-3",
+          "flex h-10 shrink-0 cursor-grab items-center justify-between border-white/5 border-b px-3",
           isDragging && "cursor-grabbing"
         )}
         onMouseDown={handleDragStart}
@@ -444,23 +440,26 @@ export function WindowChrome({
           {title}
         </span>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                aria-label="Visualize in Mindscape"
-                className="flex h-5 w-5 items-center justify-center rounded text-biolum-dim transition-colors hover:bg-white/10 hover:text-biolum"
-                onClick={handleVisualize}
-                type="button"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Visualize in Mindscape</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <ContextLens
+          delay={250}
+          info={{
+            title: "Visualize in Mindscape",
+            description:
+              "Project this window into Mindscape for spatial navigation.",
+            metadata: { Window: title },
+            shortcuts: [{ key: "⌘M", action: "Toggle Mindscape" }],
+          }}
+          position="bottom"
+        >
+          <button
+            aria-label="Visualize in Mindscape"
+            className="flex h-5 w-5 items-center justify-center rounded text-biolum-dim transition-colors hover:bg-white/10 hover:text-biolum"
+            onClick={handleVisualize}
+            type="button"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </button>
+        </ContextLens>
       </div>
 
       <div className="flex-1 overflow-auto">

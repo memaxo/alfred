@@ -10,12 +10,14 @@
  * @see docs/execplans/desktop-evolution-prd.md Section 2.3
  */
 
+import { Bell } from "lucide-react";
 import { type CSSProperties, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import type { WindowInstance, WindowType } from "@/store/desktop/types.new";
 
 import { Dock } from "@/components/dock";
+import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useDesktopStore } from "@/store/desktop";
 
@@ -34,6 +36,8 @@ export function Taskbar({ style }: TaskbarProps) {
     spawnWindow,
     focusWindow,
     restoreWindow,
+    notifications,
+    toggleNotificationCenter,
   } = useDesktopStore(
     useShallow((s) => ({
       dockPins: s.dockPins,
@@ -42,6 +46,8 @@ export function Taskbar({ style }: TaskbarProps) {
       spawnWindow: s.spawnWindow,
       focusWindow: s.focusWindow,
       restoreWindow: s.restoreWindow,
+      notifications: s.notifications,
+      toggleNotificationCenter: s.toggleNotificationCenter,
     }))
   );
 
@@ -67,6 +73,11 @@ export function Taskbar({ style }: TaskbarProps) {
     const all = new Set([...dockPins, ...runningTypes]);
     return [...all];
   }, [dockPins, windowsByType]);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
 
   const handleAppClick = useCallback(
     (type: WindowType) => {
@@ -136,6 +147,24 @@ export function Taskbar({ style }: TaskbarProps) {
             );
           })}
         </Dock>
+
+        {/* System Tray */}
+        <div className="absolute right-3 flex items-center gap-2">
+          <Button
+            aria-label="Notifications"
+            className="relative h-9 w-9"
+            onClick={toggleNotificationCenter}
+            size="icon"
+            variant="ghost"
+          >
+            <Bell className="h-4 w-4 text-biolum-dim" />
+            {unreadCount > 0 && (
+              <span className="-top-0.5 -right-0.5 absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-biolum px-1 text-[10px] text-void">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
     </TooltipProvider>
   );

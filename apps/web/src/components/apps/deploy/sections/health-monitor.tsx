@@ -147,9 +147,9 @@ function HealthCard({ check }: HealthCardProps) {
   const StatusIcon =
     check.status === "healthy"
       ? CheckCircle
-      : (check.status === "unhealthy"
+      : check.status === "unhealthy"
         ? XCircle
-        : Clock);
+        : Clock;
 
   const statusColors: Record<HealthStatus, string> = {
     healthy: "text-green-400 border-green-500/30 bg-green-500/10",

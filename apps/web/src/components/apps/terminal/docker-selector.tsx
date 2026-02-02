@@ -87,7 +87,7 @@ export function DockerSelector({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-biolum-dim" />
             </div>
-          ) : (runningContainers.length === 0 ? (
+          ) : runningContainers.length === 0 ? (
             <div className="py-8 text-center text-biolum-dim text-sm">
               <Container className="mx-auto mb-2 h-8 w-8 opacity-30" />
               <p>No running containers found</p>
@@ -122,7 +122,7 @@ export function DockerSelector({
                 </button>
               ))}
             </div>
-          ))}
+          )}
         </div>
 
         <div className="border-white/5 border-t p-2">

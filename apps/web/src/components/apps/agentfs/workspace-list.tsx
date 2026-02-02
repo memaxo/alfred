@@ -98,9 +98,9 @@ function WorkspaceItem({
   const StatusIcon =
     workspace.status === "active"
       ? Clock
-      : (workspace.status === "completed"
+      : workspace.status === "completed"
         ? CheckCircle
-        : XCircle);
+        : XCircle;
   const statusColors: Record<string, string> = {
     active: "text-blue-400",
     completed: "text-green-400",

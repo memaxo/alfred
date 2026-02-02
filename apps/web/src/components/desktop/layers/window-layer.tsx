@@ -7,7 +7,6 @@
  * @see docs/execplans/desktop-type-migration.md
  */
 
-import { ReactFlowProvider } from "@xyflow/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type CSSProperties, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -56,11 +55,9 @@ function WindowRenderer({
 
   return (
     <WindowChrome isFocused={isFocused} windowId={windowId}>
-      <ReactFlowProvider>
-        <WindowErrorBoundary windowId={windowId}>
-          <Component {...props} />
-        </WindowErrorBoundary>
-      </ReactFlowProvider>
+      <WindowErrorBoundary windowId={windowId}>
+        <Component {...props} />
+      </WindowErrorBoundary>
     </WindowChrome>
   );
 }

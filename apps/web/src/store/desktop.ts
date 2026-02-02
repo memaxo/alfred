@@ -5,10 +5,18 @@ import type { DesktopState } from "./desktop/types.new";
 
 import { createCacheSlice } from "./desktop/cache";
 import { createContextSlice } from "./desktop/context";
+import {
+  createFocusModeSlice,
+  type FocusModeSlice,
+} from "./desktop/focus-mode";
 import { createGroupSlice } from "./desktop/groups";
 import { createDesktopIconSlice, type DesktopIconSlice } from "./desktop/icons";
 import { createKnowledgeSlice } from "./desktop/knowledge";
 import { createMenuSlice, type MenuSlice } from "./desktop/menus";
+import {
+  createNotificationsSlice,
+  type NotificationsSlice,
+} from "./desktop/notifications";
 import { persistOptions } from "./desktop/persist";
 import { createTaskbarSlice } from "./desktop/taskbar";
 import { createTilingSlice } from "./desktop/tiling";
@@ -17,7 +25,11 @@ import { createWidgetSlice } from "./desktop/widgets";
 import { createWindowSliceNew } from "./desktop/windows.new";
 import { createWorkspaceSlice } from "./desktop/workspaces";
 
-type FullDesktopState = DesktopState & DesktopIconSlice & MenuSlice;
+type FullDesktopState = DesktopState &
+  DesktopIconSlice &
+  MenuSlice &
+  FocusModeSlice &
+  NotificationsSlice;
 
 export const useDesktopStore = create<FullDesktopState>()(
   persist(
@@ -33,7 +45,9 @@ export const useDesktopStore = create<FullDesktopState>()(
       ...createKnowledgeSlice(set as never, get as never, store as never),
       ...createDesktopIconSlice(set as never, get as never),
       ...createMenuSlice(set as never, get as never),
+      ...createNotificationsSlice(set as never, get as never, store as never),
       ...createWorkspaceSlice(set as never, get as never, store as never),
+      ...createFocusModeSlice(set as never, get as never, store as never),
     }),
     persistOptions as unknown as PersistOptions<FullDesktopState>
   )

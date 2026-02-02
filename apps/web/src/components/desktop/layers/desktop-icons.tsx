@@ -22,6 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 
+import { IconContextMenu, useIconContextMenu } from "../icon-context-menu";
+
 const ICON_SIZE = 80;
 const GRID_GAP = 8;
 const GRID_PADDING = 16;
@@ -36,6 +38,9 @@ export function DesktopIcons({ style }: DesktopIconsProps) {
     row: number;
     col: number;
   } | null>(null);
+
+  const { contextMenu, openContextMenu, closeContextMenu } =
+    useIconContextMenu();
 
   const {
     desktopIcons,
@@ -78,6 +83,19 @@ export function DesktopIcons({ style }: DesktopIconsProps) {
     clearIconSelection();
   }, [clearIconSelection]);
 
+  const handleContextMenu = useCallback(
+    (icon: DesktopIcon, label: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectIcon(icon.id, false);
+      openContextMenu(icon.id, icon.type, label, {
+        x: e.clientX,
+        y: e.clientY,
+      });
+    },
+    [openContextMenu, selectIcon]
+  );
+
   const handleDragStart = useCallback(
     (iconId: string, e: React.MouseEvent) => {
       e.preventDefault();
@@ -117,54 +135,71 @@ export function DesktopIcons({ style }: DesktopIconsProps) {
   );
 
   return (
-    <div
-      className="pointer-events-none absolute inset-0"
-      data-layer="desktop-icons"
-      onClick={handleBackgroundClick}
-      style={{
-        ...style,
-        top: 32 + GRID_PADDING,
-        left: GRID_PADDING,
-        right: GRID_PADDING,
-        bottom: 48 + GRID_PADDING,
-      }}
-    >
+    <>
       <div
-        className="relative h-full w-full"
-        ref={containerRef}
+        className="absolute inset-0"
+        data-layer="desktop-icons"
+        onClick={handleBackgroundClick}
         style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(auto-fill, ${ICON_SIZE}px)`,
-          gridTemplateRows: `repeat(auto-fill, ${ICON_SIZE + 20}px)`,
-          gap: GRID_GAP,
-          alignContent: "start",
+          ...style,
+          top: 32 + GRID_PADDING,
+          left: GRID_PADDING,
+          right: GRID_PADDING,
+          bottom: 48 + GRID_PADDING,
         }}
       >
-        {desktopIcons.map((icon) => (
-          <DesktopIconButton
-            icon={icon}
-            isDragging={draggingIconId === icon.id}
-            isSelected={selectedIconIds.includes(icon.id)}
-            key={icon.id}
-            onClick={handleClick}
-            onDoubleClick={handleDoubleClick}
-            onDragStart={handleDragStart}
-          />
-        ))}
+        <div
+          className="relative h-full w-full"
+          ref={containerRef}
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(auto-fill, ${ICON_SIZE}px)`,
+            gridTemplateRows: `repeat(auto-fill, ${ICON_SIZE + 20}px)`,
+            gap: GRID_GAP,
+            alignContent: "start",
+          }}
+        >
+          {desktopIcons.map((icon) => (
+            <DesktopIconButton
+              icon={icon}
+              isDragging={draggingIconId === icon.id}
+              isSelected={selectedIconIds.includes(icon.id)}
+              key={icon.id}
+              onClick={handleClick}
+              onContextMenu={handleContextMenu}
+              onDoubleClick={handleDoubleClick}
+              onDragStart={handleDragStart}
+            />
+          ))}
 
-        {dragPreview && (
-          <div
-            className="pointer-events-none absolute rounded-lg border-2 border-biolum/50 border-dashed bg-biolum/10"
-            style={{
-              width: ICON_SIZE,
-              height: ICON_SIZE + 20,
-              gridRow: dragPreview.row + 1,
-              gridColumn: dragPreview.col + 1,
-            }}
-          />
-        )}
+          {dragPreview && (
+            <div
+              className="pointer-events-none absolute rounded-lg border-2 border-biolum/50 border-dashed bg-biolum/10"
+              style={{
+                width: ICON_SIZE,
+                height: ICON_SIZE + 20,
+                gridRow: dragPreview.row + 1,
+                gridColumn: dragPreview.col + 1,
+              }}
+            />
+          )}
+        </div>
       </div>
-    </div>
+
+      {contextMenu ? (
+        <IconContextMenu
+          iconId={contextMenu.iconId}
+          iconType={contextMenu.iconType}
+          isOpen
+          label={contextMenu.label}
+          onClose={closeContextMenu}
+          onOpen={() => {
+            spawnWindow(contextMenu.iconType);
+          }}
+          position={contextMenu.position}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -173,6 +208,11 @@ interface DesktopIconButtonProps {
   isSelected: boolean;
   isDragging: boolean;
   onClick: (iconId: string, e: React.MouseEvent) => void;
+  onContextMenu: (
+    icon: DesktopIcon,
+    label: string,
+    e: React.MouseEvent
+  ) => void;
   onDoubleClick: (type: WindowType) => void;
   onDragStart: (iconId: string, e: React.MouseEvent) => void;
 }
@@ -182,6 +222,7 @@ function DesktopIconButton({
   isSelected,
   isDragging,
   onClick,
+  onContextMenu,
   onDoubleClick,
   onDragStart,
 }: DesktopIconButtonProps) {
@@ -208,11 +249,18 @@ function DesktopIconButton({
     [icon.id, onDragStart]
   );
 
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      onContextMenu(icon, label, e);
+    },
+    [icon, label, onContextMenu]
+  );
+
   return (
     <button
       aria-label={`Open ${label}`}
       className={cn(
-        "pointer-events-auto flex flex-col items-center justify-center gap-1 rounded-lg p-2",
+        "flex flex-col items-center justify-center gap-1 rounded-lg p-2",
         "text-biolum-dim transition-all",
         "hover:bg-white/5 hover:text-biolum",
         "focus:outline-none focus:ring-2 focus:ring-biolum/50 focus:ring-offset-2 focus:ring-offset-void",
@@ -222,6 +270,7 @@ function DesktopIconButton({
         isDragging && "opacity-50"
       )}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
       onMouseDown={handleMouseDown}
       style={{

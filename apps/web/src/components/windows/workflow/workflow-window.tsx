@@ -15,7 +15,7 @@ import {
   Workflow,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -119,6 +119,8 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   );
 
   const updateWindowData = useDesktopStore((s) => s.updateWindowData);
+  const addNotification = useDesktopStore((s) => s.addNotification);
+  const lastNotifiedStatusRef = useRef<string | null>(null);
 
   const { ref, onSubmitInvalid } = useSubmitInvalidFocus();
   const startForm = useAppForm({
@@ -163,9 +165,78 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     kind: "resume",
     onWindowUpdate: (update) => {
       updateWindowData(id, update);
+
+      const status = typeof update.status === "string" ? update.status : null;
+      if (!status || lastNotifiedStatusRef.current === status) {
+        return;
+      }
+      lastNotifiedStatusRef.current = status;
+
+      if (status === "completed") {
+        const summary =
+          typeof update.summaryText === "string" ? update.summaryText : null;
+        addNotification({
+          type: "success",
+          title: "Workflow completed",
+          message: summary ?? planRequirement,
+          group: "Workflows",
+          actions: [
+            {
+              label: "Open",
+              onClick: () => {
+                const s = useDesktopStore.getState();
+                s.setMode("desktop");
+                s.restoreWindow(id);
+                s.focusWindow(id);
+              },
+            },
+          ],
+        });
+      }
+
+      if (status === "suspended" && update.escalation) {
+        const escalation = update.escalation as WorkflowEscalation;
+        addNotification({
+          type: escalation.severity === "blocking" ? "error" : "warning",
+          title:
+            escalation.severity === "blocking"
+              ? "Workflow needs input"
+              : "Workflow escalation",
+          message: escalation.details,
+          group: "Workflows",
+          actions: [
+            {
+              label: "Open",
+              onClick: () => {
+                const s = useDesktopStore.getState();
+                s.setMode("desktop");
+                s.restoreWindow(id);
+                s.focusWindow(id);
+              },
+            },
+          ],
+        });
+      }
     },
     onError: (err) => {
       toast.error(`Workflow failed: ${err.message}`);
+      addNotification({
+        type: "error",
+        title: "Workflow failed",
+        message: err.message,
+        group: "Workflows",
+        actions: [
+          {
+            label: "Open",
+            onClick: () => {
+              const s = useDesktopStore.getState();
+              s.setMode("desktop");
+              s.restoreWindow(id);
+              s.focusWindow(id);
+            },
+          },
+        ],
+      });
     },
   });
 

@@ -107,7 +107,7 @@ function ContextLensTooltip({ info, coords, position }: TooltipProps) {
   return (
     <div
       className={cn(
-        "fixed z-50 w-64 rounded-lg border border-white/10 bg-void-surface/95 p-3 shadow-xl backdrop-blur-sm",
+        "fixed z-2100 w-64 rounded-lg border border-white/10 bg-void-surface/95 p-3 shadow-xl backdrop-blur-sm",
         "fade-in-0 zoom-in-95 animate-in",
         position === "bottom" ? "origin-top" : "origin-bottom"
       )}
