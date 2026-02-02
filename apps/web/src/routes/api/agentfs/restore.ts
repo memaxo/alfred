@@ -1,3 +1,4 @@
+import { hasAllScopes, READ_SCOPES, WRITE_SCOPES } from "@alfred/type";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   mkdir,
@@ -181,7 +182,10 @@ export const Route = createFileRoute("/api/agentfs/restore")({
           ? user.scopes.filter((s): s is string => typeof s === "string")
           : [];
 
-        if (scopes.length > 0 && !scopes.includes("agentfs.write")) {
+        if (
+          scopes.length > 0 &&
+          !hasAllScopes(scopes, [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS])
+        ) {
           return new Response(JSON.stringify({ error: "missing_scope" }), {
             status: 403,
             headers: {

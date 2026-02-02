@@ -1,8 +1,9 @@
+import { hasScope, READ_SCOPES } from "@alfred/type";
 import { createFileRoute } from "@tanstack/react-router";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
-import { isUuid, openAgentfsDb } from "../../../server/agentfs";
+import { isUuid, openAgentfsDb } from "@/server/agentfs";
 
 function isSafeAgentfsDbPath(args: { runId: string; dbPath: string }): boolean {
   const normalized = args.dbPath.replaceAll("\\", "/");
@@ -57,7 +58,7 @@ export const Route = createFileRoute("/api/agentfs/handoff")({
           ? user.scopes.filter((s): s is string => typeof s === "string")
           : [];
 
-        if (scopes.length > 0 && !scopes.includes("read:agentfs")) {
+        if (scopes.length > 0 && !hasScope(scopes, READ_SCOPES.AGENTFS)) {
           return new Response(JSON.stringify({ error: "missing_scope" }), {
             status: 403,
             headers: {

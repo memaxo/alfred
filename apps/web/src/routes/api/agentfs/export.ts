@@ -1,3 +1,4 @@
+import { hasScope, READ_SCOPES } from "@alfred/type";
 import { createFileRoute } from "@tanstack/react-router";
 import { stat } from "node:fs/promises";
 import path from "node:path";
@@ -61,7 +62,7 @@ export const Route = createFileRoute("/api/agentfs/export")({
           ? user.scopes.filter((s): s is string => typeof s === "string")
           : [];
 
-        if (scopes.length > 0 && !scopes.includes("read:agentfs")) {
+        if (scopes.length > 0 && !hasScope(scopes, READ_SCOPES.AGENTFS)) {
           return new Response(JSON.stringify({ error: "missing_scope" }), {
             status: 403,
             headers: {
