@@ -9,8 +9,13 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface ChatPreferences {
+  selectedModelId: string;
+}
+
 const HISTORY_DIR = join(homedir(), ".alfred", "tui");
 const HISTORY_FILE = join(HISTORY_DIR, "chat_history.json");
+const PREFS_FILE = join(HISTORY_DIR, "chat_prefs.json");
 
 export async function saveChatHistory(messages: ChatMessage[]): Promise<void> {
   try {
@@ -28,5 +33,26 @@ export async function loadChatHistory(): Promise<ChatMessage[]> {
   } catch {
     // File might not exist yet
     return [];
+  }
+}
+
+export async function saveChatPreferences(
+  prefs: ChatPreferences
+): Promise<void> {
+  try {
+    await mkdir(HISTORY_DIR, { recursive: true });
+    await writeFile(PREFS_FILE, JSON.stringify(prefs, null, 2));
+  } catch (error) {
+    console.error("Failed to save chat preferences:", error);
+  }
+}
+
+export async function loadChatPreferences(): Promise<ChatPreferences | null> {
+  try {
+    const content = await readFile(PREFS_FILE, "utf8");
+    return JSON.parse(content) as ChatPreferences;
+  } catch {
+    // File might not exist yet
+    return null;
   }
 }

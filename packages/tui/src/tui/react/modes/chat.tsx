@@ -14,7 +14,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   loadChatHistory,
+  loadChatPreferences,
   saveChatHistory,
+  saveChatPreferences,
   type ChatMessage,
 } from "../../api/history";
 import { streamMLXChat } from "../../api/mlx";
@@ -47,8 +49,9 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
   const { healthy: mlxHealthy } = useMlxHealth();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load history on mount
+  // Load history and preferences on mount
   useEffect(() => {
+    // Load chat history
     loadChatHistory().then((history) => {
       if (history.length > 0) {
         setMessages(
@@ -59,6 +62,16 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
             status: "complete",
           }))
         );
+      }
+    });
+
+    // Load model preferences
+    loadChatPreferences().then((prefs) => {
+      if (prefs?.selectedModelId) {
+        const model = MODELS.find((m) => m.id === prefs.selectedModelId);
+        if (model) {
+          setSelectedModel(model);
+        }
       }
     });
   }, []);
@@ -346,7 +359,10 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
         height={height}
         isOpen={modelPickerOpen}
         onClose={() => setModelPickerOpen(false)}
-        onSelect={(m) => setSelectedModel(m)}
+        onSelect={(m) => {
+          setSelectedModel(m);
+          void saveChatPreferences({ selectedModelId: m.id });
+        }}
         selectedId={selectedModel.id}
         width={width}
       />
