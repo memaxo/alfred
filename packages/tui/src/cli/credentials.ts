@@ -26,6 +26,17 @@ export interface StoredCredentials {
   user: User;
   session: Session;
   isLocal?: boolean;
+  toolAuthz?: StoredToolAuthz;
+}
+
+export interface StoredToolAuthz {
+  /** Raw tool JWT returned by token.issue/elevate */
+  token: string;
+  tokenId?: string;
+  scopes: string[];
+  issuedAt: number;
+  expiresAt: number | null;
+  elevated: boolean;
 }
 
 /**
@@ -164,8 +175,24 @@ export async function refreshIfNeeded(
     sessionId: creds.sessionId,
     user: creds.user,
     session: creds.session, // These would ideally be updated too if the refresh provides them
+    isLocal: creds.isLocal,
+    toolAuthz: creds.toolAuthz,
   };
 
   await storeCredentials(updated);
   return updated;
+}
+
+export async function storeToolAuthz(
+  toolAuthz: StoredToolAuthz | null
+): Promise<void> {
+  const creds = await loadCredentials();
+  if (!creds) {
+    throw new Error("credentials_missing");
+  }
+  const next: StoredCredentials = {
+    ...creds,
+    toolAuthz: toolAuthz ?? undefined,
+  };
+  await storeCredentials(next);
 }

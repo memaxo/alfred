@@ -27,6 +27,11 @@ export async function runCli(args: string[]): Promise<void> {
       return await authCommands(args.slice(1));
     }
 
+    if (args[0] === "token") {
+      const { handleTokenCommand } = await import("./token");
+      return await handleTokenCommand(args.slice(1));
+    }
+
     // JARVIS convenience commands (kept outside registry init for fast UX).
     if (args[0] === "jarvis") {
       const { jarvisCommands } = await import("../commands/jarvis");
@@ -62,6 +67,22 @@ export async function runCli(args: string[]): Promise<void> {
     if (args[0] === "work" || args[0] === "compilation") {
       const { handleCompilationCommand } = await import("./phase");
       return await handleCompilationCommand(args.slice(1));
+    }
+    if (args[0] === "step") {
+      const { handleStepCommand } = await import("./phase");
+      return await handleStepCommand(args.slice(1));
+    }
+    if (args[0] === "prepare") {
+      const { handlePrepareCommand } = await import("./phase");
+      return await handlePrepareCommand(args.slice(1));
+    }
+    if (args[0] === "executor") {
+      const { handleExecutorCommand } = await import("./phase");
+      return await handleExecutorCommand(args.slice(1));
+    }
+    if (args[0] === "cognitive") {
+      const { handleCognitiveCommand } = await import("./phase");
+      return await handleCognitiveCommand(args.slice(1));
     }
 
     // Handle TUI commands (also before registry init).

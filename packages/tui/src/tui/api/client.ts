@@ -450,6 +450,27 @@ export class ApiClient {
 
   // ─── AgentFS ──────────────────────────────────────────────────────────────
 
+  async agentfsSnapshot(input: {
+    runId: string;
+    dbPath: string;
+    dir: string;
+    projectId?: string;
+  }): Promise<
+    ApiResult<{
+      runId: string;
+      dbPath: string;
+      entries: unknown[];
+      toolCalls: unknown[];
+      kvStore: unknown[];
+      cursor: unknown;
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/agentfs.snapshot?input=${encodeURIComponent(
+      JSON.stringify(input)
+    )}`;
+    return await fetchJson(url);
+  }
+
   async agentfsExecutorConfigGet(input: {
     runId: string;
     dbPath: string;
@@ -499,6 +520,36 @@ export class ApiClient {
       JSON.stringify(input)
     )}`;
     return await fetchJson(url);
+  }
+
+  // ─── Tool tokens ───────────────────────────────────────────────────────────
+
+  async tokenIssue(input: {
+    scopes: string[];
+    ttlSec?: number;
+    aud?: string;
+    name?: string;
+    projectId?: string;
+  }): Promise<ApiResult<{ token: string; tokenId: string }>> {
+    const url = `${this.baseUrl}/api/trpc/token.issue`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  }
+
+  async tokenElevate(input: {
+    scopes: string[];
+    ttlSec?: number;
+    aud?: string;
+    name?: string;
+    projectId?: string;
+  }): Promise<ApiResult<{ token: string; tokenId: string }>> {
+    const url = `${this.baseUrl}/api/trpc/token.elevate`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
   }
 
   // ─── Focus (Concierge) ─────────────────────────────────────────────────────
