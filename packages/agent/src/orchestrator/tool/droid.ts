@@ -41,6 +41,16 @@ export const droidInputSchema = z.object({
   cw: z.string().optional(),
   model: z.string().optional(),
   authz: z.string().optional(),
+  command: z
+    .string()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe("Optional droid binary/command override."),
+  args: z
+    .array(z.string().min(1))
+    .optional()
+    .describe("Optional args for droid execution."),
   timeoutSec: z
     .number()
     .int()
@@ -97,6 +107,12 @@ function buildFlags(input: DroidToolInput) {
 
   if (input.auto !== "read") {
     flags.push("--auto", input.auto);
+  }
+
+  if (input.args) {
+    for (const arg of input.args) {
+      flags.push(arg);
+    }
   }
 
   flags.push(input.prompt);
@@ -264,7 +280,8 @@ export const toolDroid = {
     // Acquire secure directory handle to prevent TOCTOU symlink attacks
     const cwdHandle = acquireWorkingDirectoryHandle(input.cw);
     const flags = buildFlags(input);
-    const command = process.env.DROID_BIN?.trim() || "droid";
+    const command =
+      input.command?.trim() || process.env.DROID_BIN?.trim() || "droid";
     const executable = resolveExecutable(command, "droid");
 
     const proc = spawnWithSecureCwd({
