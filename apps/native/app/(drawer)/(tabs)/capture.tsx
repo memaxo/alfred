@@ -198,7 +198,7 @@ export default function CaptureScreen() {
       id: item.capture.id,
       content: item.bundle?.text ?? "",
       type: (item.capture.kind ?? "text") as "voice" | "text" | "photo",
-      createdAt: new Date(item.capture.created),
+      createdAt: new Date(item.capture.createdAt),
       status: (item.capture.status ?? "new") as Capture["status"],
     }));
   }, [inboxQuery.data]);
@@ -265,7 +265,7 @@ export default function CaptureScreen() {
   const ListEmpty = useCallback(
     () =>
       !inboxQuery.isLoading ? (
-        <HUDSurface elevation={0} style={styles.emptyState}>
+        <HUDSurface style={styles.emptyState}>
           <CaptionText size="medium" color="dim" style={styles.emptyText}>
             No captures yet
           </CaptionText>
@@ -291,7 +291,6 @@ export default function CaptureScreen() {
         data={captures}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        estimatedItemSize={120}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
         contentContainerStyle={styles.listContent}

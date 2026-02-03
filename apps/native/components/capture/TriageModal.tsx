@@ -167,7 +167,7 @@ export function TriageModal({
             </View>
 
             {/* Content Preview */}
-            <HUDSurface elevation={0} style={styles.previewCard}>
+            <HUDSurface style={styles.previewCard}>
               <CaptionText
                 size="small"
                 color="faint"

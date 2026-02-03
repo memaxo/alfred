@@ -93,6 +93,19 @@ interface TodoItemProps {
 function TodoItem({ task, onToggle, onDelete }: TodoItemProps) {
   const theme = useVoidTheme();
   const isCompleted = task.status === "completed";
+  const priority =
+    typeof task.priority === "number" && Number.isFinite(task.priority)
+      ? task.priority
+      : 0;
+  const priorityBand = (() => {
+    if (priority >= 8) {
+      return "high";
+    }
+    if (priority >= 4) {
+      return "medium";
+    }
+    return "low";
+  })();
 
   return (
     <HUDSurface elevation={1} style={styles.todoItem}>
@@ -108,16 +121,16 @@ function TodoItem({ task, onToggle, onDelete }: TodoItemProps) {
           >
             {task.title}
           </BodyText>
-          {task.priority && (
+          {priority > 0 && (
             <View style={styles.priorityContainer}>
               <View
                 style={[
                   styles.priorityDot,
                   {
                     backgroundColor:
-                      task.priority === "high"
+                      priorityBand === "high"
                         ? theme.colors.semantic.error
-                        : task.priority === "medium"
+                        : priorityBand === "medium"
                           ? theme.colors.semantic.warning
                           : theme.colors.biolum.faint,
                   },
@@ -126,14 +139,12 @@ function TodoItem({ task, onToggle, onDelete }: TodoItemProps) {
               <CaptionText
                 size="small"
                 color={
-                  task.priority === "high"
+                  priorityBand === "high" || priorityBand === "medium"
                     ? "standard"
-                    : task.priority === "medium"
-                      ? "standard"
-                      : "faint"
+                    : "faint"
                 }
               >
-                {task.priority}
+                {`P${priority}`}
               </CaptionText>
             </View>
           )}

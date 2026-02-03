@@ -92,12 +92,10 @@ export function CaptureInput({
 
       {/* Text Input Alternative */}
       <HUDSurface elevation={1} style={styles.textSection}>
-        <CaptionText size="small" color="faint" style={styles.textLabel}>
-          Or type a note
-        </CaptionText>
         <VoidTextInput
+          label="Quick capture"
           value={textInput}
-          onChangeText={setTextInput}
+          onChange={setTextInput}
           placeholder="Quick capture..."
           multiline
           numberOfLines={3}

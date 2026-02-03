@@ -149,7 +149,7 @@ function CaptureCardComponent({
             onPress={handleNotePress}
             style={({ pressed }) => [
               styles.actionButton,
-              { backgroundColor: theme.colors.glass.subtle },
+              { backgroundColor: theme.colors.glass.surface },
               pressed && styles.actionPressed,
             ]}
             accessibilityRole="button"
@@ -173,7 +173,7 @@ function CaptureCardComponent({
             onPress={handleReminderPress}
             style={({ pressed }) => [
               styles.actionButton,
-              { backgroundColor: theme.colors.glass.subtle },
+              { backgroundColor: theme.colors.glass.surface },
               pressed && styles.actionPressed,
             ]}
             accessibilityRole="button"
@@ -197,7 +197,7 @@ function CaptureCardComponent({
             onPress={handleArchivePress}
             style={({ pressed }) => [
               styles.actionButton,
-              { backgroundColor: theme.colors.glass.subtle },
+              { backgroundColor: theme.colors.glass.surface },
               pressed && styles.actionPressed,
             ]}
             accessibilityRole="button"

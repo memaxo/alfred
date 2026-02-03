@@ -1,7 +1,7 @@
-import type { TextStyle } from "react-native";
+import type { StyleProp, TextProps, TextStyle } from "react-native";
 
 import React from "react";
-import { Text, StyleSheet } from "react-native";
+import { Text } from "react-native";
 
 import type {
   TypographyCategory,
@@ -12,15 +12,13 @@ import { useVoidTheme } from "../../hooks/use-void-theme";
 
 type BiolumColor = "full" | "bright" | "standard" | "dim" | "faint" | "whisper";
 
-interface BiolumTextProps {
+interface BiolumTextProps extends Omit<TextProps, "children" | "style"> {
   variant?: TypographyCategory;
   size?: TypographySize;
   color?: BiolumColor;
   mono?: boolean;
   children: React.ReactNode;
-  style?: TextStyle;
-  numberOfLines?: number;
-  selectable?: boolean;
+  style?: StyleProp<TextStyle>;
 }
 
 export function BiolumText({
@@ -30,8 +28,7 @@ export function BiolumText({
   mono = false,
   children,
   style,
-  numberOfLines,
-  selectable = false,
+  ...props
 }: BiolumTextProps) {
   const theme = useVoidTheme();
 
@@ -41,11 +38,7 @@ export function BiolumText({
   const textColor = theme.colors.biolum[color];
 
   return (
-    <Text
-      style={[typographyStyle, { color: textColor }, style]}
-      numberOfLines={numberOfLines}
-      selectable={selectable}
-    >
+    <Text {...props} style={[typographyStyle, { color: textColor }, style]}>
       {children}
     </Text>
   );
