@@ -214,14 +214,30 @@ export function Dashboard({
 
   useKeyboard(handleKeyboard);
 
-  // Calculate layout for 8 panels
+  // Responsive layout based on terminal width
+  // < 80 cols: Single panel focus mode
+  // 80-120 cols: Two column split mode
+  // > 120 cols: Multi-panel dashboard mode (default)
+  const layoutMode = width < 80 ? "focus" : width < 120 ? "split" : "dashboard";
+
+  // Calculate layout dimensions
   const headerHeight = 3;
   const footerHeight = 2;
   const contentHeight = height - headerHeight - footerHeight;
-  const leftWidth = Math.floor(width * 0.5);
-  const rightWidth = width - leftWidth;
-  // Both columns: 4 panels each
+
+  // Layout calculations based on mode
+  const isFocusMode = layoutMode === "focus";
+
+  const leftWidth = isFocusMode ? width : Math.floor(width * 0.5);
+  const rightWidth = isFocusMode ? 0 : width - leftWidth;
+
+  // In focus mode, show only the focused panel at full size
+  // In split/dashboard mode, distribute panels across columns
   const quarterHeight = Math.floor(contentHeight / 4);
+
+  // Determine which panels to show based on layout mode
+  const showLeftColumn = !isFocusMode || focusedPanel === "focus" || focusedPanel === "cognitive" || focusedPanel === "workflow" || focusedPanel === "agentfs";
+  const showRightColumn = !isFocusMode && rightWidth > 0;
 
   return (
     <StoresContext.Provider value={stores}>
@@ -236,71 +252,87 @@ export function Dashboard({
           width={width}
         >
           <text
-            content={`Dashboard | ${width}x${height} | Focus: ${focusedPanel}`}
+            content={`Dashboard | ${width}x${height} | Mode: ${layoutMode} | Focus: ${focusedPanel}`}
           />
         </box>
 
         {/* Main content area */}
         <box height={contentHeight} top={headerHeight} width={width}>
-          {/* Left column: 4 panels */}
-          <FocusPanel
-            focused={focusedPanel === "focus"}
-            height={quarterHeight}
-            width={leftWidth}
-            x={0}
-            y={0}
-          />
-          <CognitivePanel
-            focused={focusedPanel === "cognitive"}
-            height={quarterHeight}
-            width={leftWidth}
-            x={0}
-            y={quarterHeight}
-          />
-          <WorkflowPanel
-            focused={focusedPanel === "workflow"}
-            height={quarterHeight}
-            width={leftWidth}
-            x={0}
-            y={quarterHeight * 2}
-          />
-          <AgentFSPanel
-            focused={focusedPanel === "agentfs"}
-            height={contentHeight - quarterHeight * 3}
-            width={leftWidth}
-            x={0}
-            y={quarterHeight * 3}
-          />
+          {/* Left column: 4 panels (or single panel in focus mode) */}
+          {showLeftColumn && (
+            <>
+              {(isFocusMode ? focusedPanel === "focus" : true) && (
+                <FocusPanel
+                  focused={focusedPanel === "focus"}
+                  height={isFocusMode ? contentHeight : quarterHeight}
+                  width={leftWidth}
+                  x={0}
+                  y={0}
+                />
+              )}
+              {(isFocusMode ? focusedPanel === "cognitive" : true) && (
+                <CognitivePanel
+                  focused={focusedPanel === "cognitive"}
+                  height={isFocusMode ? contentHeight : quarterHeight}
+                  width={leftWidth}
+                  x={0}
+                  y={isFocusMode ? 0 : quarterHeight}
+                />
+              )}
+              {(isFocusMode ? focusedPanel === "workflow" : true) && (
+                <WorkflowPanel
+                  focused={focusedPanel === "workflow"}
+                  height={isFocusMode ? contentHeight : quarterHeight}
+                  width={leftWidth}
+                  x={0}
+                  y={isFocusMode ? 0 : quarterHeight * 2}
+                />
+              )}
+              {(isFocusMode ? focusedPanel === "agentfs" : true) && (
+                <AgentFSPanel
+                  focused={focusedPanel === "agentfs"}
+                  height={isFocusMode ? contentHeight : contentHeight - quarterHeight * 3}
+                  width={leftWidth}
+                  x={0}
+                  y={isFocusMode ? 0 : quarterHeight * 3}
+                />
+              )}
+            </>
+          )}
 
-          {/* Right column: 4 panels */}
-          <MetricsPanel
-            focused={focusedPanel === "metrics"}
-            height={quarterHeight}
-            width={rightWidth}
-            x={leftWidth}
-            y={0}
-          />
-          <VoicePanel
-            focused={focusedPanel === "voice"}
-            height={quarterHeight}
-            width={rightWidth}
-            x={leftWidth}
-            y={quarterHeight}
-          />
-          <KnowledgePanel
-            focused={focusedPanel === "knowledge"}
-            height={quarterHeight}
-            width={rightWidth}
-            x={leftWidth}
-            y={quarterHeight * 2}
-          />
-          <ToolCallsPanel
-            focused={focusedPanel === "toolcalls"}
-            height={contentHeight - quarterHeight * 3}
-            width={rightWidth}
-            x={leftWidth}
-            y={quarterHeight * 3}
-          />
+          {/* Right column: 4 panels (hidden in focus mode) */}
+          {showRightColumn && (
+            <>
+              <MetricsPanel
+                focused={focusedPanel === "metrics"}
+                height={quarterHeight}
+                width={rightWidth}
+                x={leftWidth}
+                y={0}
+              />
+              <VoicePanel
+                focused={focusedPanel === "voice"}
+                height={quarterHeight}
+                width={rightWidth}
+                x={leftWidth}
+                y={quarterHeight}
+              />
+              <KnowledgePanel
+                focused={focusedPanel === "knowledge"}
+                height={quarterHeight}
+                width={rightWidth}
+                x={leftWidth}
+                y={quarterHeight * 2}
+              />
+              <ToolCallsPanel
+                focused={focusedPanel === "toolcalls"}
+                height={contentHeight - quarterHeight * 3}
+                width={rightWidth}
+                x={leftWidth}
+                y={quarterHeight * 3}
+              />
+            </>
+          )}
         </box>
 
         {/* Footer */}
