@@ -105,7 +105,10 @@ export async function* streamAssistant(
   messages: UIMessage[],
   options: SSEOptions = {}
 ): AsyncGenerator<StreamChunk> {
-  const { baseUrl = "http://localhost:3000", signal } = options;
+  const {
+    baseUrl = process.env.ALFRED_API_BASE_URL ?? "http://localhost:3000",
+    signal,
+  } = options;
   const url = `${baseUrl}/api/assistant`;
 
   // Load credentials for auth

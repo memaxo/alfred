@@ -86,7 +86,10 @@ export class ApiClient {
   private readonly baseUrl: string;
 
   constructor(options: ApiClientOptions = {}) {
-    this.baseUrl = options.baseUrl ?? "http://localhost:3000";
+    this.baseUrl =
+      options.baseUrl ??
+      process.env.ALFRED_API_BASE_URL ??
+      "http://localhost:3000";
   }
 
   // ─── Cognitive ─────────────────────────────────────────────────────────────
@@ -101,6 +104,24 @@ export class ApiClient {
   > {
     const url = `${this.baseUrl}/api/trpc/cognitive.state?input=${encodeURIComponent(
       JSON.stringify({ streamId })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async listCognitiveEvents(
+    streamId = "default",
+    limit = 50
+  ): Promise<
+    ApiResult<{
+      events: {
+        id: string;
+        kind: string;
+        ts: number | null;
+      }[];
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/cognitive.eventsList?input=${encodeURIComponent(
+      JSON.stringify({ limit, streamId })
     )}`;
     return await fetchJson(url);
   }
@@ -197,6 +218,119 @@ export class ApiClient {
     });
   }
 
+  async phasePlan(input: {
+    requirement: string;
+    runId?: string;
+    workspace?: string;
+    authz?: string;
+    authzLinear?: string;
+    linear?: {
+      sessionId: string;
+      space: string;
+      teamId?: string;
+      issueId?: string;
+      authz: string;
+    };
+  }): Promise<
+    ApiResult<{
+      runId: string;
+      waveCount: number;
+      waves: { id: string; agents: string[]; dependsOn: string[] }[];
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.plan`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  }
+
+  async phaseStatus(runId: string): Promise<
+    ApiResult<{
+      runId: string;
+      status: string;
+      canResume: boolean;
+      nextStage: string | null;
+      lastCompletedStage?: string | null;
+      lastCompletedStageIndex?: number;
+      error?: string | null;
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.status?input=${encodeURIComponent(
+      JSON.stringify({ runId })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async phaseStep(input: {
+    runId: string;
+    untilStage:
+      | "init"
+      | "context"
+      | "plan"
+      | "schedule"
+      | "execute"
+      | "review"
+      | "learn"
+      | "summarize";
+    requirement?: string;
+    workspace?: string;
+    authz?: string;
+    authzLinear?: string;
+    linear?: {
+      sessionId: string;
+      space: string;
+      teamId?: string;
+      issueId?: string;
+      authz: string;
+    };
+    waveIds?: string[];
+    skipTaskIds?: string[];
+    dryRun?: boolean;
+  }): Promise<
+    ApiResult<{
+      runId: string;
+      status: string;
+      canResume: boolean;
+      nextStage: string | null;
+      lastCompletedStage: string | null;
+      lastCompletedStageIndex: number;
+      stageResults: { name: string; durationMs: number; status: string }[];
+      outputSummary: Record<string, unknown>;
+      untilStage: string;
+      durationMs: number;
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.step`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  }
+
+  async phasePrepare(input: {
+    runId: string;
+    authz: string;
+    workspace?: string;
+    projectId?: string;
+  }): Promise<
+    ApiResult<{
+      runId: string;
+      workspace: string;
+      dbPath: string;
+      containerName: string;
+      containerId?: string | null;
+      containerCw: string;
+      durationMs: number;
+    }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.prepare`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  }
+
   async getWorkflowRun(runId: string): Promise<
     ApiResult<{
       id: string;
@@ -264,6 +398,37 @@ export class ApiClient {
     });
   }
 
+  async executeByRunId(input: {
+    runId: string;
+    dryRun?: boolean;
+    waveIds?: string[];
+    skipTaskIds?: string[];
+    authz?: string;
+    authzLinear?: string;
+    linear?: {
+      sessionId: string;
+      space: string;
+      teamId?: string;
+      issueId?: string;
+      authz: string;
+    };
+  }): Promise<
+    ApiResult<{ runId: string; status: string; completed: boolean }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.executeByRunId`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  }
+
+  async getCompilation(runId: string): Promise<ApiResult<unknown | null>> {
+    const url = `${this.baseUrl}/api/trpc/workflow.compilation.get?input=${encodeURIComponent(
+      JSON.stringify({ runId })
+    )}`;
+    return await fetchJson(url);
+  }
+
   async getWorkflowEvents(
     runId: string,
     limit = 100
@@ -279,6 +444,59 @@ export class ApiClient {
   > {
     const url = `${this.baseUrl}/api/trpc/workflow.events?input=${encodeURIComponent(
       JSON.stringify({ limit, runId })
+    )}`;
+    return await fetchJson(url);
+  }
+
+  // ─── AgentFS ──────────────────────────────────────────────────────────────
+
+  async agentfsExecutorConfigGet(input: {
+    runId: string;
+    dbPath: string;
+    kind: "opencode" | "codex" | "droid";
+    projectId?: string;
+  }): Promise<
+    ApiResult<{ exists: boolean; valid: boolean; config: unknown | null }>
+  > {
+    const url = `${this.baseUrl}/api/trpc/agentfs.executorConfigGet?input=${encodeURIComponent(
+      JSON.stringify(input)
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async agentfsExecutorConfigSet(input: {
+    runId: string;
+    dbPath: string;
+    config: unknown;
+    projectId?: string;
+  }): Promise<ApiResult<{ exists: boolean; config: unknown }>> {
+    const url = `${this.baseUrl}/api/trpc/agentfs.executorConfigSet`;
+    return await fetchJson(url, {
+      body: JSON.stringify(input),
+      method: "POST",
+    });
+  }
+
+  async agentfsExecutorStatus(input: {
+    runId: string;
+    dbPath: string;
+    kind: "opencode" | "codex" | "droid";
+    projectId?: string;
+  }): Promise<ApiResult<unknown>> {
+    const url = `${this.baseUrl}/api/trpc/agentfs.executorStatus?input=${encodeURIComponent(
+      JSON.stringify(input)
+    )}`;
+    return await fetchJson(url);
+  }
+
+  async agentfsExecutorHealth(input: {
+    runId: string;
+    dbPath: string;
+    kind: "opencode" | "codex" | "droid";
+    projectId?: string;
+  }): Promise<ApiResult<unknown>> {
+    const url = `${this.baseUrl}/api/trpc/agentfs.executorHealth?input=${encodeURIComponent(
+      JSON.stringify(input)
     )}`;
     return await fetchJson(url);
   }
