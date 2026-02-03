@@ -13,6 +13,7 @@ import {
   getTestCheckpointStorage,
   WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
+import { createCognitiveBridge } from "../../../workflow/cognitive";
 import { attachHooksObserver } from "../../../workflow/hooks";
 import { linearInputSchema } from "../../../workflow/input";
 import { mapWorkflowRunResourceLocal } from "../../../workflow/resource";
@@ -82,7 +83,7 @@ function stageOutputSummary(
 
   if (stage === "execute") {
     const fileChanges = Array.isArray(out.fileChanges) ? out.fileChanges : [];
-    const outcomes = out.outcomes;
+    const { outcomes } = out;
     const outcomeCount =
       outcomes instanceof Map
         ? outcomes.size
@@ -204,6 +205,20 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
         const ctxDecoded = createContextFromSnapshot(existingSnapshot, {
           emit: () => {},
         });
+        const workspace =
+          ctxDecoded.get<string>("workspace") ??
+          input.workspace ??
+          process.cwd();
+        const cognitive = createCognitiveBridge({
+          requirement: existingSnapshot.requirement,
+          runId: existingSnapshot.runId,
+          source: "phase",
+          startedAtMs: existingSnapshot.startedAt,
+          userId: user.id,
+          workspace,
+        });
+        await cognitive.ensureInput();
+
         const output = ctxDecoded.get(`${input.untilStage}Output`);
         const nextStage = getResumeStage(existingSnapshot);
         const canResume =
@@ -298,6 +313,21 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
 
       const workspace = await resolveWorkspace();
 
+      const requirement =
+        existingSnapshot?.requirement ??
+        input.requirement ??
+        "workflow_step_missing_requirement";
+      const runStartedAtMs = existingSnapshot?.startedAt ?? Date.now();
+      const cognitive = createCognitiveBridge({
+        requirement,
+        runId: input.runId,
+        source: "phase",
+        startedAtMs: runStartedAtMs,
+        userId: user.id,
+        workspace,
+      });
+      const autonomyLevel = await cognitive.ensureInput();
+
       await attachHooksObserver(runner, {
         runId: input.runId,
         sessionId,
@@ -316,6 +346,11 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
       const snapshotBeforeRun = await storage.load(input.runId);
       if (snapshotBeforeRun) {
         const contextMap = new Map(snapshotBeforeRun.contextEntries ?? []);
+        // Ensure cognitive stream keys are available for resumed stage stepping.
+        contextMap.set("cognitiveStreamId", cognitive.streamId);
+        if (typeof autonomyLevel === "number") {
+          contextMap.set("autonomyLevel", autonomyLevel);
+        }
         if (typeof input.authz === "string") {
           contextMap.set("authz", input.authz);
         }
@@ -339,6 +374,10 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
 
       const pipelineInput = {
         authz: input.authz,
+        cognitive: {
+          autonomyLevel: autonomyLevel ?? undefined,
+          streamId: cognitive.streamId,
+        },
         linear: input.linear
           ? {
               sessionId: input.linear.sessionId ?? "",
@@ -348,10 +387,7 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
               authz: input.authzLinear ?? "",
             }
           : undefined,
-        requirement:
-          existingSnapshot?.requirement ??
-          input.requirement ??
-          "workflow_step_missing_requirement",
+        requirement,
         runId: input.runId,
         userId: user.id,
         workspace,
@@ -364,7 +400,15 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
           pipelineInput,
           input.untilStage
         )) {
-          void _event;
+          if (
+            _event.type === "agent:complete" ||
+            _event.type === "agent:escalate-request" ||
+            _event.type === "pipeline:complete" ||
+            _event.type === "pipeline:failed" ||
+            _event.type === "pipeline:suspend"
+          ) {
+            await cognitive.handlePipelineEvent(_event);
+          }
         }
       } else {
         // New run: run from start until requested stage.
@@ -372,7 +416,15 @@ export const workflowPhaseStepProcedure = phaseStepProcedure
           pipelineInput,
           input.untilStage
         )) {
-          void _event;
+          if (
+            _event.type === "agent:complete" ||
+            _event.type === "agent:escalate-request" ||
+            _event.type === "pipeline:complete" ||
+            _event.type === "pipeline:failed" ||
+            _event.type === "pipeline:suspend"
+          ) {
+            await cognitive.handlePipelineEvent(_event);
+          }
         }
       }
 

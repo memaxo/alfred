@@ -10,6 +10,7 @@ import {
   getTestCheckpointStorage,
   WorkflowCheckpointStorage,
 } from "../../../workflow/checkpoint";
+import { createCognitiveBridge } from "../../../workflow/cognitive";
 import { mapWorkflowRunResourceLocal } from "../../../workflow/resource";
 
 const isTestMode =
@@ -77,6 +78,19 @@ export const workflowPhasePrepareProcedure = phasePrepareProcedure
         // Fallback: keep behaviour consistent with other endpoints.
         return process.cwd();
       })();
+
+      // Best-effort: ensure cognitive stream has an input event for this run.
+      if (snapshot) {
+        const cognitive = createCognitiveBridge({
+          requirement: snapshot.requirement,
+          runId: input.runId,
+          source: "phase",
+          startedAtMs: snapshot.startedAt,
+          userId: user.id,
+          workspace,
+        });
+        await cognitive.ensureInput();
+      }
 
       const { WorkspaceFactory } =
         await import("@alfred/agent/environment/factory");
