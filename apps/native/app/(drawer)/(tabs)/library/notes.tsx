@@ -2,6 +2,7 @@
  * Notes List Screen
  *
  * Displays all user notes with search and filtering.
+ * Styled with ALFRED's "Signal in the Void" design system.
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -13,18 +14,25 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
 
-import { Container } from "@/components/container";
+import {
+  BodyText,
+  CaptionText,
+  FluidButton,
+  HUDSurface,
+  TitleText,
+  VoidContainer,
+} from "@/components/foundation";
 import { ListSkeleton } from "@/components/loading-skeleton";
 import {
   type NoteRouterOutputs,
   useNoteDelete,
   useNoteList,
 } from "@/hooks/use-trpc";
+import { useVoidTheme } from "@/hooks/use-void-theme";
 import { trackEvent, trackScreen } from "@/lib/analytics";
 import { haptics } from "@/lib/haptics";
 import { fuzzySearch, type SortOption, sortFunctions } from "@/lib/search";
@@ -61,6 +69,7 @@ const sortOptions: SortOption<NoteItem>[] = [
 
 export default function NotesListScreen() {
   const router = useRouter();
+  const theme = useVoidTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("updated-newest");
   const [limit] = useState(50);
@@ -129,34 +138,50 @@ export default function NotesListScreen() {
   }, [searchedNotes, sortBy]);
 
   return (
-    <Container>
+    <VoidContainer gradient="ambient" noise noiseOpacity={0.03}>
       <Stack.Screen
         options={{
           title: "Notes",
+          headerStyle: { backgroundColor: theme.colors.void.deep },
+          headerTintColor: theme.colors.biolum.bright,
           headerRight: () => (
             <Pressable
-              className="mr-4"
+              style={styles.headerButton}
               onPress={() => router.push("/library/notes/new")}
-              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              hitSlop={8}
             >
-              <Ionicons color="#00D9FF" name="add" size={24} />
+              {({ pressed }) => (
+                <Ionicons
+                  color={theme.colors.accent.cyan}
+                  name="add"
+                  size={24}
+                  style={pressed ? styles.pressed : undefined}
+                />
+              )}
             </Pressable>
           ),
         }}
       />
 
-      <View className="flex-1">
+      <View style={styles.content}>
         {/* Search and sort bar */}
-        <View className="border-border border-b bg-background px-4 py-3">
-          <View className="mb-2 flex-row items-center rounded-lg border border-border bg-surface px-3 py-2">
-            <Ionicons color="#5A6B7D" name="search-outline" size={20} />
+        <View style={styles.searchBar}>
+          <HUDSurface elevation={1} style={styles.searchInputContainer}>
+            <Ionicons
+              color={theme.colors.biolum.dim}
+              name="search-outline"
+              size={20}
+            />
             <TextInput
               accessibilityLabel="Search notes"
               accessibilityRole="search"
-              className="ml-2 flex-1 text-foreground"
+              style={[
+                styles.searchInput,
+                { color: theme.colors.biolum.bright },
+              ]}
               onChangeText={setSearchQuery}
               placeholder="Search notes..."
-              placeholderTextColor="#5A6B7D"
+              placeholderTextColor={theme.colors.biolum.faint}
               value={searchQuery}
             />
             {searchQuery ? (
@@ -164,37 +189,54 @@ export default function NotesListScreen() {
                 accessibilityLabel="Clear search"
                 accessibilityRole="button"
                 onPress={() => setSearchQuery("")}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                hitSlop={8}
               >
-                <Ionicons color="#5A6B7D" name="close-circle" size={20} />
+                {({ pressed }) => (
+                  <Ionicons
+                    color={theme.colors.biolum.dim}
+                    name="close-circle"
+                    size={20}
+                    style={pressed ? styles.pressed : undefined}
+                  />
+                )}
               </Pressable>
             ) : null}
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Ionicons color="#5A6B7D" name="funnel-outline" size={16} />
-            <Text className="text-muted-foreground text-sm">Sort:</Text>
+          </HUDSurface>
+          <View style={styles.sortRow}>
+            <Ionicons
+              color={theme.colors.biolum.faint}
+              name="funnel-outline"
+              size={16}
+            />
+            <CaptionText>Sort:</CaptionText>
             {sortOptions.map((option) => (
               <Pressable
                 accessibilityLabel={`Sort by ${option.label}`}
                 accessibilityRole="button"
-                className={`rounded-full px-3 py-1 ${
-                  sortBy === option.key
-                    ? "bg-primary"
-                    : "border border-border bg-surface"
-                }`}
                 key={option.key}
                 onPress={() => setSortBy(option.key)}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                style={[
+                  styles.sortPill,
+                  {
+                    backgroundColor:
+                      sortBy === option.key
+                        ? theme.colors.glass.active
+                        : theme.colors.glass.surface,
+                    borderColor:
+                      sortBy === option.key
+                        ? theme.colors.accent.cyan
+                        : theme.colors.glass.border,
+                  },
+                ]}
               >
-                <Text
-                  className={`text-xs ${
-                    sortBy === option.key
-                      ? "font-semibold text-primary-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </Text>
+                {({ pressed }) => (
+                  <CaptionText
+                    color={sortBy === option.key ? "bright" : "dim"}
+                    style={pressed ? styles.pressed : undefined}
+                  >
+                    {option.label}
+                  </CaptionText>
+                )}
               </Pressable>
             ))}
           </View>
@@ -202,12 +244,11 @@ export default function NotesListScreen() {
 
         {/* Notes list */}
         {notesQuery.isLoading ? (
-          <View className="flex-1 px-4 py-4">
+          <View style={styles.loadingContainer}>
             <ListSkeleton count={5} />
           </View>
-        ) : (sortedNotes && sortedNotes.length > 0 ? (
+        ) : sortedNotes && sortedNotes.length > 0 ? (
           <FlashList
-            className="flex-1"
             contentContainerStyle={styles.listContent}
             data={sortedNotes}
             keyExtractor={(item) => item.id}
@@ -215,8 +256,11 @@ export default function NotesListScreen() {
             estimatedItemSize={100}
             ListFooterComponent={
               notesQuery.isLoading && offset > 0 ? (
-                <View className="py-4">
-                  <ActivityIndicator color="#00D9FF" size="small" />
+                <View style={styles.footer}>
+                  <ActivityIndicator
+                    color={theme.colors.accent.cyan}
+                    size="small"
+                  />
                 </View>
               ) : null
             }
@@ -229,33 +273,36 @@ export default function NotesListScreen() {
                   notesQuery.refetch();
                 }}
                 refreshing={notesQuery.isRefetching}
+                tintColor={theme.colors.accent.cyan}
               />
             }
             renderItem={renderNoteItem}
           />
         ) : (
-          <View className="flex-1 items-center justify-center p-8">
-            <Ionicons color="#5A6B7D" name="document-text-outline" size={48} />
-            <Text className="mt-4 text-center text-lg text-muted-foreground">
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              color={theme.colors.biolum.faint}
+              name="document-text-outline"
+              size={48}
+            />
+            <BodyText color="dim" style={styles.emptyText}>
               {searchQuery
                 ? "No notes match your search"
                 : "No notes yet. Create your first note!"}
-            </Text>
+            </BodyText>
             {!searchQuery && (
-              <Pressable
-                className="mt-4 rounded-lg bg-primary px-6 py-3"
+              <FluidButton
+                label="Create Note"
                 onPress={() => router.push("library/notes/new")}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-              >
-                <Text className="font-semibold text-primary-foreground">
-                  Create Note
-                </Text>
-              </Pressable>
+                variant="primary"
+                size="medium"
+                style={styles.createButton}
+              />
             )}
           </View>
-        ))}
+        )}
       </View>
-    </Container>
+    </VoidContainer>
   );
 }
 
@@ -265,59 +312,81 @@ interface NoteItemProps {
   router: ReturnType<typeof useRouter>;
 }
 
-function NoteItem({ item, onDelete, router }: NoteItemProps) {
+function NoteItem({ item, onDelete }: NoteItemProps) {
+  const theme = useVoidTheme();
+
   return (
     <Link asChild href={`library/notes/${item.id}`}>
       <Pressable
         accessibilityHint="Double tap to view or edit this note"
         accessibilityLabel={`Note: ${item.title || "Untitled Note"}`}
         accessibilityRole="button"
-        className="mb-3 rounded-lg border border-border bg-card p-4"
-        style={({ pressed }) => [pressed && { opacity: 0.7 }]}
       >
-        <View className="mb-2 flex-row items-start justify-between">
-          <Text
-            accessibilityRole="header"
-            className="flex-1 font-semibold text-foreground text-lg"
+        {({ pressed }) => (
+          <HUDSurface
+            elevation={1}
+            active={pressed}
+            style={[styles.noteCard, pressed && styles.pressed]}
           >
-            {item.title || "Untitled Note"}
-          </Text>
-          <Pressable
-            accessibilityHint="Double tap to delete this note"
-            accessibilityLabel="Delete note"
-            accessibilityRole="button"
-            className="ml-2"
-            onPress={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-          >
-            <Ionicons color="#FF3366" name="trash-outline" size={18} />
-          </Pressable>
-        </View>
-        {item.content ? (
-          <Text
-            className="mb-2 text-muted-foreground text-sm"
-            numberOfLines={2}
-          >
-            {item.content}
-          </Text>
-        ) : null}
-        {item.tags && item.tags.length > 0 ? (
-          <View className="flex-row flex-wrap gap-2">
-            {item.tags.map((tag: string, idx: number) => (
-              <View className="rounded-full bg-primary/20 px-2 py-1" key={idx}>
-                <Text className="text-primary text-xs">{tag}</Text>
+            <View style={styles.noteHeader}>
+              <BodyText
+                color="bright"
+                style={styles.noteTitle}
+                numberOfLines={1}
+              >
+                {item.title || "Untitled Note"}
+              </BodyText>
+              <Pressable
+                accessibilityHint="Double tap to delete this note"
+                accessibilityLabel="Delete note"
+                accessibilityRole="button"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+                hitSlop={8}
+              >
+                {({ pressed: deletePressed }) => (
+                  <Ionicons
+                    color={theme.colors.semantic.error}
+                    name="trash-outline"
+                    size={18}
+                    style={deletePressed ? styles.pressed : undefined}
+                  />
+                )}
+              </Pressable>
+            </View>
+            {item.content ? (
+              <BodyText
+                color="dim"
+                numberOfLines={2}
+                style={styles.notePreview}
+              >
+                {item.content}
+              </BodyText>
+            ) : null}
+            {item.tags && item.tags.length > 0 ? (
+              <View style={styles.tagsContainer}>
+                {item.tags.map((tag: string, idx: number) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.tag,
+                      { backgroundColor: theme.colors.glass.surface },
+                    ]}
+                  >
+                    <CaptionText color="standard">{tag}</CaptionText>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        ) : null}
-        {item.updated ? (
-          <Text className="mt-2 text-muted-foreground/60 text-xs">
-            {new Date(item.updated).toLocaleDateString()}
-          </Text>
-        ) : null}
+            ) : null}
+            {item.updated ? (
+              <CaptionText mono style={styles.noteDate}>
+                {new Date(item.updated).toLocaleDateString()}
+              </CaptionText>
+            ) : null}
+          </HUDSurface>
+        )}
       </Pressable>
     </Link>
   );
@@ -333,7 +402,96 @@ const MemoizedNoteItem = memo(
 );
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+  },
+  headerButton: {
+    marginRight: 16,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  searchBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  sortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  sortPill: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  loadingContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
   listContent: {
     padding: 16,
+  },
+  footer: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  emptyText: {
+    marginTop: 16,
+    textAlign: "center",
+  },
+  createButton: {
+    marginTop: 16,
+  },
+  noteCard: {
+    marginBottom: 12,
+    padding: 16,
+  },
+  noteHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  noteTitle: {
+    flex: 1,
+    fontWeight: "600",
+  },
+  notePreview: {
+    marginBottom: 8,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tag: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  noteDate: {
+    marginTop: 8,
   },
 });

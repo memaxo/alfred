@@ -1,12 +1,23 @@
 import type { inferRouterOutputs } from "@trpc/server";
 
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, View, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { TRPCAppRouter } from "@/utils/trpc";
 
-import { Container } from "@/components/container";
+import { BiolumOrb } from "@/components/foundation/BiolumOrb";
+import {
+  BiolumText,
+  DisplayText,
+  BodyText,
+  CaptionText,
+} from "@/components/foundation/BiolumText";
+import { FluidButton } from "@/components/foundation/FluidButton";
+import { HUDSurface } from "@/components/foundation/HUDSurface";
+import { VoidContainer } from "@/components/foundation/VoidContainer";
 import { SignIn } from "@/components/sign-in";
 import { useServerUrl } from "@/lib/api";
 import { useAuthClient } from "@/lib/auth-client";
@@ -68,31 +79,7 @@ export default function Home() {
     };
   }, [serverUrl]);
 
-  const apiStatusIndicator =
-    healthz.state === "ok" ? "bg-green-500" : "bg-red-500";
-  const apiStatusText = (() => {
-    if (healthz.state === "checking") {
-      return "Checking /healthz...";
-    }
-    if (healthz.state === "ok") {
-      return `Connected (${healthz.latencyMs}ms)`;
-    }
-    if (healthz.state === "fail") {
-      return `Error: ${healthz.error}`;
-    }
-    if (isHealthLoading) {
-      return "Checking...";
-    }
-    if (healthCheckError) {
-      return `Error: ${healthCheckError.message || "Connection failed"}`;
-    }
-    if (healthCheck) {
-      return "Connected to API";
-    }
-    return "API Disconnected";
-  })();
-
-  const displayUrl = serverUrl ?? "Not configured";
+  const isConnected = healthz.state === "ok" || !!healthCheck;
   const isTailnet =
     serverClass.kind === "tailnet-hostname" ||
     serverClass.kind === "tailnet-ipv4" ||
@@ -100,88 +87,227 @@ export default function Home() {
   const isLocal = isLocalServer(serverUrl);
   const canCall = !!session?.user || isLocal;
 
-  return (
-    <Container>
-      <ScrollView className="flex-1">
-        <View className="px-4">
-          <Text className="mb-4 font-bold text-4xl text-foreground">
-            ALFRED
-          </Text>
-          <Text className="mb-6 text-muted-foreground text-sm">
-            Your self-hosted AI assistant
-          </Text>
+  const getStatusColor = () => {
+    if (healthz.state === "ok") {
+      return "#00FF88";
+    }
+    if (healthz.state === "checking" || isHealthLoading) {
+      return "#FFB800";
+    }
+    return "#FF4444";
+  };
 
-          <View className="mb-6 rounded-lg border border-border p-4">
-            <Text className="mb-3 font-medium text-foreground">
-              Server Status
-            </Text>
-            <View className="flex-row items-center gap-2">
-              <View className={`h-3 w-3 rounded-full ${apiStatusIndicator}`} />
-              <Text className="text-muted-foreground">{apiStatusText}</Text>
+  const getStatusText = () => {
+    if (healthz.state === "checking") {
+      return "Connecting...";
+    }
+    if (healthz.state === "ok") {
+      return `Connected (${healthz.latencyMs}ms)`;
+    }
+    if (healthz.state === "fail") {
+      return "Connection failed";
+    }
+    if (isHealthLoading) {
+      return "Checking...";
+    }
+    if (healthCheckError) {
+      return "Error";
+    }
+    if (healthCheck) {
+      return "Connected";
+    }
+    return "Disconnected";
+  };
+
+  return (
+    <VoidContainer gradient="ambient" noise={true} noiseOpacity={0.03}>
+      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero Section with Orb */}
+          <View style={styles.heroSection}>
+            <BiolumOrb size={180} pulsing={true} active={isConnected} />
+            <View style={styles.titleContainer}>
+              <DisplayText size="large">ALFRED</DisplayText>
+              <BodyText color="dim" style={styles.subtitle}>
+                Signal in the Void
+              </BodyText>
             </View>
-            <View className="mt-3">
-              <Text className="mb-1 text-muted-foreground text-xs">
-                Server URL:
-              </Text>
-              <Text className="font-mono text-muted-foreground text-xs">
-                {displayUrl}
-              </Text>
+          </View>
+
+          {/* Server Status HUD */}
+          <HUDSurface elevation={2} glow={true} style={styles.statusCard}>
+            <View style={styles.statusHeader}>
+              <View style={styles.statusIconContainer}>
+                <Ionicons
+                  name={isConnected ? "wifi" : "wifi-outline"}
+                  size={20}
+                  color={getStatusColor()}
+                />
+              </View>
+              <View style={styles.statusTextContainer}>
+                <BodyText color={isConnected ? "bright" : "standard"}>
+                  {getStatusText()}
+                </BodyText>
+                {serverUrl && (
+                  <CaptionText mono style={styles.serverUrl}>
+                    {serverUrl}
+                  </CaptionText>
+                )}
+              </View>
             </View>
+
             {isTailnet && (
-              <View className="mt-2 rounded-md bg-blue-500/10 p-2">
-                <Text className="text-blue-600 text-xs dark:text-blue-400">
-                  ✓ Connected via Tailscale
-                </Text>
+              <View style={styles.tailnetBadge}>
+                <CaptionText color="bright">
+                  Connected via Tailscale
+                </CaptionText>
               </View>
             )}
 
             {!serverUrl && (
-              <TouchableOpacity
-                accessibilityLabel="Use local test server"
-                accessibilityRole="button"
-                className="mt-4 items-center justify-center rounded-md bg-secondary px-4 py-3"
+              <FluidButton
+                label="Use Local Server"
                 onPress={() => void setServerUrl("http://127.0.0.1:3155")}
-                testID="Use local test server"
-              >
-                <Text className="font-medium text-secondary-foreground">
-                  Use local test server
-                </Text>
-              </TouchableOpacity>
+                variant="secondary"
+                size="small"
+                style={styles.localServerButton}
+              />
             )}
+          </HUDSurface>
 
-            {canCall && (
-              <TouchableOpacity
-                accessibilityLabel="Call Alfred"
-                accessibilityRole="button"
-                className="mt-3 items-center justify-center rounded-md bg-primary px-4 py-3"
+          {/* Quick Actions */}
+          {canCall && (
+            <HUDSurface elevation={1} style={styles.actionsCard}>
+              <View style={styles.actionsHeader}>
+                <Ionicons
+                  name="server"
+                  size={18}
+                  color="rgba(255,255,255,0.6)"
+                />
+                <CaptionText>Quick Actions</CaptionText>
+              </View>
+
+              <FluidButton
+                label="Start Voice Call"
+                icon={<Ionicons name="mic" size={18} color="#0A0A0F" />}
                 onPress={() => router.push("/(drawer)/call")}
-                testID="Call Alfred"
-              >
-                <Text className="font-medium text-primary-foreground">
-                  Call Alfred
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                variant="primary"
+                size="large"
+                style={styles.callButton}
+              />
+            </HUDSurface>
+          )}
 
+          {/* Private Data Section */}
           {session?.user ? (
-            <View className="mb-6 rounded-lg border border-border p-4">
-              <Text className="mb-3 font-medium text-foreground">
-                Private Data
-              </Text>
+            <HUDSurface elevation={1} style={styles.dataCard}>
+              <View style={styles.dataHeader}>
+                <BodyText color="bright">Session Active</BodyText>
+                <CaptionText mono>{session.user.email}</CaptionText>
+              </View>
               {!isPrivateLoading && privateData && (
-                <View>
-                  <Text className="text-muted-foreground">
+                <View style={styles.dataContent}>
+                  <BodyText color="dim" size="small">
                     {privateData.message}
-                  </Text>
+                  </BodyText>
                 </View>
               )}
-            </View>
+            </HUDSurface>
           ) : (
             <SignIn />
           )}
-        </View>
-      </ScrollView>
-    </Container>
+        </ScrollView>
+      </SafeAreaView>
+    </VoidContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  heroSection: {
+    alignItems: "center",
+    paddingVertical: 40,
+    gap: 24,
+  },
+  titleContainer: {
+    alignItems: "center",
+    gap: 8,
+  },
+  subtitle: {
+    letterSpacing: 2,
+  },
+  statusCard: {
+    marginBottom: 16,
+    padding: 20,
+  },
+  statusHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  statusIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  serverUrl: {
+    opacity: 0.6,
+  },
+  tailnetBadge: {
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(0, 217, 255, 0.1)",
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  localServerButton: {
+    marginTop: 16,
+  },
+  actionsCard: {
+    marginBottom: 16,
+    padding: 20,
+  },
+  actionsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  callButton: {
+    width: "100%",
+  },
+  dataCard: {
+    marginBottom: 16,
+    padding: 20,
+  },
+  dataHeader: {
+    gap: 4,
+    marginBottom: 12,
+  },
+  dataContent: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+});

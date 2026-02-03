@@ -66,7 +66,7 @@ export function TaskmanagerWindow({ window: _window }: WindowComponentProps) {
           <View className="py-4">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (runtimeQuery.error ? (
+        ) : runtimeQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {runtimeQuery.error.message}
           </Text>
@@ -74,7 +74,7 @@ export function TaskmanagerWindow({ window: _window }: WindowComponentProps) {
           <Text className="mt-2 font-mono text-[10px] text-muted-foreground">
             {JSON.stringify(runtimeQuery.data, null, 2).slice(0, 2000)}
           </Text>
-        ))}
+        )}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

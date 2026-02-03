@@ -83,9 +83,9 @@ export default function VoiceCallScreen() {
   const prompt =
     typeof params.prompt === "string" && params.prompt.length > 0
       ? params.prompt
-      : (typeof params.runId === "string" && params.runId.length > 0
+      : typeof params.runId === "string" && params.runId.length > 0
         ? `Focus on workflow run ${params.runId}. Start by summarizing where it is stuck and what you need from me.`
-        : undefined);
+        : undefined;
 
   const { stream } = useVoiceSessionNative(trpcClient, {
     surface: "native",

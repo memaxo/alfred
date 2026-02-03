@@ -78,8 +78,17 @@ function buildPlanMessages(
   runId: string,
   input: RuntimeInput,
   context: ExecutionContext,
-  subTasks: SubTask[]
+  subTasks: SubTask[],
+  cognitive?: {
+    autonomyLevel?: number;
+    physiology?: unknown;
+  }
 ): UIMessage[] {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  const isNum = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value);
+
   const contextPreview = formatContextPreview(context);
   const subTaskPreview = subTasks
     .slice(0, 6)
@@ -90,6 +99,51 @@ function buildPlanMessages(
     `Requirement:\n${input.requirement}`,
     `Auto Level: ${input.auto}`,
   ];
+
+  if (typeof cognitive?.autonomyLevel === "number") {
+    messageParts.push(
+      `Cognitive autonomyLevel (0..1): ${cognitive.autonomyLevel.toFixed(2)}`
+    );
+  }
+
+  const physiology = cognitive?.physiology;
+  if (isRecord(physiology)) {
+    const energy = physiology.energy;
+    const boredom = physiology.boredom;
+    const frustration = physiology.frustration;
+    const entropy = physiology.entropy;
+
+    if (
+      isNum(energy) &&
+      isNum(boredom) &&
+      isNum(frustration) &&
+      isNum(entropy)
+    ) {
+      messageParts.push(
+        [
+          "Cognitive physiology (0..1):",
+          `- energy: ${energy.toFixed(2)}`,
+          `- boredom: ${boredom.toFixed(2)}`,
+          `- frustration: ${frustration.toFixed(2)}`,
+          `- entropy: ${entropy.toFixed(2)}`,
+        ].join("\n")
+      );
+    }
+  }
+
+  if (
+    typeof cognitive?.autonomyLevel === "number" &&
+    cognitive.autonomyLevel < 0.65
+  ) {
+    messageParts.push(
+      [
+        "Steering:",
+        "- Autonomy is LOW. Prefer conservative, explicit, auditable steps.",
+        "- Include review gates and verification steps before risky actions.",
+        "- Prefer sequential execution; avoid parallel waves unless required.",
+      ].join("\n")
+    );
+  }
 
   if (contextPreview) {
     messageParts.push(contextPreview);
@@ -118,6 +172,10 @@ export async function* executePlanPhase(
   deps?: {
     userId?: string;
     projectId?: string;
+    cognitive?: {
+      autonomyLevel?: number;
+      physiology?: unknown;
+    };
     createAiAdapter?: (runId: string) => AiAdapter;
     buildContext?: (args: {
       requirement: string;
@@ -317,7 +375,13 @@ export async function* executePlanPhase(
     deps?.createAiAdapter ??
     ((id: string) => new AISDKAdapter({ runId: id, userId, projectId }));
   const aiAdapter = createAiAdapter(runId);
-  const planningMessages = buildPlanMessages(runId, input, context, subTasks);
+  const planningMessages = buildPlanMessages(
+    runId,
+    input,
+    context,
+    subTasks,
+    deps?.cognitive
+  );
   let planSummary = "";
 
   try {

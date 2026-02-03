@@ -1,289 +1,259 @@
 /**
  * Workflow Detail Screen
  *
- * View workflow details and resume suspended workflows with biometric auth.
+ * View workflow details with execution progress, step status, variables,
+ * and approve/reject actions for workflows awaiting review.
  */
 
-import { workflowCompilationSchema } from "@alfred/type/compilation";
 import { Ionicons } from "@expo/vector-icons";
-import * as LocalAuthentication from "expo-local-authentication";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  SafeAreaView,
   ScrollView,
-  Text,
-  TouchableOpacity,
+  StyleSheet,
   View,
 } from "react-native";
 
-import { Container } from "@/components/container";
+import { BiolumOrb, CaptionText, TitleText } from "@/components/foundation";
+import { VoidContainer } from "@/components/foundation/VoidContainer";
 import {
-  useWorkflowCompilationGet,
-  useWorkflowGet,
-  useWorkflowResume,
-} from "@/hooks/use-trpc";
+  ExecutionTimeline,
+  VariableInspector,
+  type WorkflowStep,
+} from "@/components/workflow";
+import { useWorkflowGet } from "@/hooks/use-trpc";
+import { trpc } from "@/utils/trpc";
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: "#FFB800",
+  running: "#00D9FF",
+  completed: "#00FF88",
+  failed: "#FF4444",
+  suspended: "#FFB800",
+  cancelled: "#8B8B8B",
+};
+
+const STATUS_ICONS: Record<
+  string,
+  React.ComponentProps<typeof Ionicons>["name"]
+> = {
+  pending: "hourglass-outline",
+  running: "sync",
+  completed: "checkmark-circle",
+  failed: "close-circle",
+  suspended: "pause-circle",
+  cancelled: "ban",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  running: "Running",
+  completed: "Completed",
+  failed: "Failed",
+  suspended: "Suspended",
+  cancelled: "Cancelled",
+};
+
+// Convert workflow events to steps
+function parseWorkflowEvents(events: unknown[]): WorkflowStep[] {
+  const steps: WorkflowStep[] = [];
+  const stepMap = new Map<string, WorkflowStep>();
+
+  if (!Array.isArray(events)) return steps;
+
+  for (const event of events) {
+    if (!event || typeof event !== "object") continue;
+
+    const e = event as Record<string, unknown>;
+    const eventType = String(e.eventType ?? "");
+    const stepId = String(e.stepId ?? e.eventId ?? "");
+    const timestamp = e.timestamp ? new Date(String(e.timestamp)) : new Date();
+    const eventData = e.eventData as Record<string, unknown> | undefined;
+
+    if (!stepId) continue;
+
+    if (eventType === "stage-enter" || eventType === "step-start") {
+      const step: WorkflowStep = {
+        id: stepId,
+        name: String(eventData?.stage ?? eventData?.name ?? stepId),
+        status: "running",
+        startedAt: timestamp,
+      };
+      stepMap.set(stepId, step);
+      steps.push(step);
+    } else if (eventType === "stage-exit" || eventType === "step-complete") {
+      const step = stepMap.get(stepId);
+      if (step) {
+        step.status = "success";
+        step.completedAt = timestamp;
+      }
+    } else if (eventType === "stage-error" || eventType === "step-error") {
+      const step = stepMap.get(stepId);
+      if (step) {
+        step.status = "failed";
+        step.completedAt = timestamp;
+        step.error = String(eventData?.error ?? "Unknown error");
+      }
+    }
+  }
+
+  return steps;
+}
 
 export default function WorkflowDetailScreen() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const workflowQuery = useWorkflowGet({ runId: id ?? "" });
   const workflow = workflowQuery.data;
-  const isCompletedOrFailed =
-    workflow?.status === "completed" || workflow?.status === "failed";
-  const compilationQuery = useWorkflowCompilationGet(
+
+  // Get workflow events
+  const eventsQuery = trpc.workflow.events.useQuery(
     { runId: id ?? "" },
-    { enabled: Boolean(id) && isCompletedOrFailed }
+    { enabled: Boolean(id) }
   );
-  const compilationParsed = workflowCompilationSchema.safeParse(
-    compilationQuery.data
-  );
-  const compilation = compilationParsed.success ? compilationParsed.data : null;
 
-  const resumeMutation = useWorkflowResume({
-    onSuccess: () => {
-      router.back();
-    },
-  });
+  // Parse events into steps
+  const steps = useMemo(() => {
+    if (!eventsQuery.data) return [];
+    return parseWorkflowEvents(eventsQuery.data);
+  }, [eventsQuery.data]);
 
-  const handleResume = useCallback(async () => {
-    if (!id) {
-      return;
-    }
+  // Find current step index
+  const currentStepIndex = useMemo(() => {
+    if (steps.length === 0) return -1;
+    const runningIndex = steps.findIndex((s) => s.status === "running");
+    if (runningIndex >= 0) return runningIndex;
+    const pendingIndex = steps.findIndex((s) => s.status === "pending");
+    if (pendingIndex >= 0) return pendingIndex;
+    return steps.length - 1;
+  }, [steps]);
 
-    setIsAuthenticating(true);
-    try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      if (!hasHardware) {
-        Alert.alert(
-          "Biometric Auth Unavailable",
-          "Your device does not support biometric authentication."
-        );
-        setIsAuthenticating(false);
-        return;
-      }
-
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      if (!isEnrolled) {
-        Alert.alert(
-          "Biometric Not Set Up",
-          "Please set up biometric authentication in your device settings."
-        );
-        setIsAuthenticating(false);
-        return;
-      }
-
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Authenticate to resume workflow",
-        cancelLabel: "Cancel",
-        disableDeviceFallback: false,
-      });
-
-      if (result.success) {
-        resumeMutation.mutate({ runId: id });
-      } else {
-        Alert.alert("Authentication Failed", "Please try again.");
-      }
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Authentication failed"
-      );
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [id, resumeMutation]);
+  const isRunning = workflow?.status === "running";
+  const statusColor = STATUS_COLORS[workflow?.status ?? "pending"];
+  const statusIcon = STATUS_ICONS[workflow?.status ?? "pending"];
+  const statusText = STATUS_LABELS[workflow?.status ?? "pending"];
 
   if (workflowQuery.isLoading) {
     return (
-      <Container>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#00D9FF" size="large" />
-        </View>
-      </Container>
+      <VoidContainer gradient="ambient" noise noiseOpacity={0.03}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color="#00D9FF" size="large" />
+          </View>
+        </SafeAreaView>
+      </VoidContainer>
     );
   }
 
-  if (!workflowQuery.data && id) {
+  if (!workflow && id) {
     return (
-      <Container>
-        <View className="flex-1 items-center justify-center p-8">
-          <Text className="text-center text-lg text-muted-foreground">
-            Workflow not found
-          </Text>
-        </View>
-      </Container>
+      <VoidContainer gradient="ambient" noise noiseOpacity={0.03}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={48} color="#FF4444" />
+            <TitleText style={styles.errorText}>Workflow not found</TitleText>
+          </View>
+        </SafeAreaView>
+      </VoidContainer>
     );
   }
-
-  const isSuspended = workflow?.status === "suspended";
 
   return (
-    <Container>
-      <Stack.Screen
-        options={{
-          title: "Workflow Details",
-        }}
-      />
+    <VoidContainer gradient="ambient" noise noiseOpacity={0.03}>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: "Workflow Details" }} />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-        <View className="mb-4">
-          <Text className="mb-2 font-semibold text-foreground">Status</Text>
-          <View className="flex-row items-center gap-2">
-            <View
-              className="h-3 w-3 rounded-full"
-              style={{
-                backgroundColor:
-                  workflow?.status === "completed"
-                    ? "#00FF88"
-                    : workflow?.status === "suspended"
-                      ? "#FFB800"
-                      : workflow?.status === "running"
-                        ? "#00D9FF"
-                        : "#5A6B7D",
-              }}
-            />
-            <Text className="text-foreground">
-              {workflow?.status ?? "Unknown"}
-            </Text>
-          </View>
-        </View>
-
-        {workflow?.id && (
-          <View className="mb-4">
-            <Text className="mb-2 font-semibold text-foreground">ID</Text>
-            <Text className="font-mono text-foreground text-sm">
-              {workflow.id}
-            </Text>
-          </View>
-        )}
-
-        {workflow?.created && (
-          <View className="mb-4">
-            <Text className="mb-2 font-semibold text-foreground">Created</Text>
-            <Text className="text-foreground">
-              {new Date(workflow.created).toLocaleString()}
-            </Text>
-          </View>
-        )}
-
-        {isCompletedOrFailed && (
-          <View className="mb-4">
-            <Text className="mb-2 font-semibold text-foreground">
-              Work Compilation
-            </Text>
-            {compilationQuery.isLoading ? (
-              <View className="items-center justify-center py-3">
-                <ActivityIndicator color="#00D9FF" size="small" />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+        >
+          {/* Header with status */}
+          <View style={styles.header}>
+            <View style={styles.statusOrb}>
+              <BiolumOrb size={60} pulsing={isRunning} active={isRunning} />
+              <View style={styles.statusIconContainer}>
+                <Ionicons name={statusIcon} size={24} color={statusColor} />
               </View>
-            ) : compilationQuery.isError ? (
-              <Text className="text-red-500">
-                {compilationQuery.error.message}
-              </Text>
-            ) : compilationQuery.data ? (
-              compilation ? (
-                <View className="gap-3 rounded-xl border border-border bg-card p-4">
-                  <View>
-                    <Text className="mb-1 text-muted-foreground text-xs">
-                      Summary
-                    </Text>
-                    <Text className="text-foreground">
-                      {compilation.summaryText ?? "—"}
-                    </Text>
-                  </View>
-
-                  <View>
-                    <Text className="mb-1 text-muted-foreground text-xs">
-                      Files
-                    </Text>
-                    <Text className="text-foreground">
-                      Created: {compilation.fileChanges.created.length}
-                    </Text>
-                    <Text className="text-foreground">
-                      Modified: {compilation.fileChanges.modified.length}
-                    </Text>
-                    <Text className="text-foreground">
-                      Deleted: {compilation.fileChanges.deleted.length}
-                    </Text>
-                  </View>
-
-                  <View>
-                    <Text className="mb-1 text-muted-foreground text-xs">
-                      Agents
-                    </Text>
-                    {compilation.agents.length === 0 ? (
-                      <Text className="text-muted-foreground">
-                        No agent outcomes recorded.
-                      </Text>
-                    ) : (
-                      <View className="gap-2">
-                        {compilation.agents.slice(0, 20).map((agent) => (
-                          <View
-                            className="rounded-lg border border-border bg-background p-3"
-                            key={agent.agentId}
-                          >
-                            <Text className="font-mono text-foreground text-xs">
-                              {agent.agentId}
-                            </Text>
-                            <Text className="text-muted-foreground text-xs">
-                              {agent.status}
-                            </Text>
-                            {agent.result?.summary ? (
-                              <Text className="mt-1 text-foreground">
-                                {agent.result.summary}
-                              </Text>
-                            ) : null}
-                          </View>
-                        ))}
-                        {compilation.agents.length > 20 ? (
-                          <Text className="text-muted-foreground text-xs">
-                            Showing first 20 agents.
-                          </Text>
-                        ) : null}
-                      </View>
-                    )}
-                  </View>
-                </View>
-              ) : (
-                <Text className="text-muted-foreground">
-                  Compilation is not in a supported format yet.
-                </Text>
-              )
-            ) : (
-              <Text className="text-muted-foreground">
-                No compilation is available for this run yet.
-              </Text>
-            )}
+            </View>
+            <View style={styles.headerText}>
+              <TitleText style={styles.workflowName}>
+                {workflow?.requirement ?? "Workflow"}
+              </TitleText>
+              <CaptionText color="dim" style={styles.workflowId}>
+                {workflow?.id}
+              </CaptionText>
+              <CaptionText mono style={{ fontSize: 12, color: statusColor }}>
+                {statusText}
+              </CaptionText>
+            </View>
           </View>
-        )}
 
-        {isSuspended && (
-          <TouchableOpacity
-            className="mt-4 rounded-lg bg-primary px-6 py-4"
-            disabled={isAuthenticating || resumeMutation.isPending}
-            onPress={handleResume}
-          >
-            {isAuthenticating || resumeMutation.isPending ? (
-              <View className="flex-row items-center justify-center gap-2">
-                <ActivityIndicator color="#FFFFFF" size="small" />
-                <Text className="font-semibold text-primary-foreground">
-                  Authenticating...
-                </Text>
-              </View>
-            ) : (
-              <View className="flex-row items-center justify-center gap-2">
-                <Ionicons color="#FFFFFF" name="finger-print" size={20} />
-                <Text className="font-semibold text-primary-foreground">
-                  Resume with Biometric Auth
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
-      </ScrollView>
-    </Container>
+          {/* Execution timeline */}
+          <ExecutionTimeline steps={steps} currentStep={currentStepIndex} />
+
+          {/* Variable inspector - show state data as variables */}
+          <VariableInspector
+            variables={(workflow?.stateData as Record<string, unknown>) ?? {}}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    </VoidContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  errorText: {
+    marginTop: 16,
+    textAlign: "center",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  statusOrb: {
+    position: "relative",
+    marginRight: 16,
+  },
+  statusIconContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerText: {
+    flex: 1,
+  },
+  workflowName: {
+    marginBottom: 4,
+  },
+  workflowId: {
+    marginBottom: 4,
+  },
+});

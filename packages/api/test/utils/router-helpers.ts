@@ -18,6 +18,9 @@ export {
 
 // Shared mock references that can be controlled by any test
 export const createAuditLogMock = vi.fn().mockResolvedValue();
+export const queryAuditLogsMock = vi
+  .fn()
+  .mockResolvedValue({ rows: [], totalCount: 0 });
 export const policyEvaluateMock = vi
   .fn()
   .mockResolvedValue({ allow: true, obligations: [] as Obligation[] });
@@ -29,6 +32,7 @@ export const consumeRouteRateLimitMock = vi.fn().mockResolvedValue();
 export function mockPolicyAudit() {
   mock.module("@alfred/db/repo/policy", () => ({
     createAuditLog: createAuditLogMock,
+    queryAuditLogs: queryAuditLogsMock,
   }));
   mock.module("@alfred/policy", () => ({
     evaluate: policyEvaluateMock,

@@ -5,6 +5,7 @@
  * Runtime is a leaf package - no runtime-specific types should leak to other packages.
  */
 
+import type { Event } from "@alfred/cognitive/state";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
@@ -12,6 +13,12 @@ import type { LanguageModel } from "ai";
 import { z } from "zod";
 
 import type { AiAdapter } from "./adapters/ai";
+
+export type RunCognitiveLoop = (
+  ctx: RuntimeContext<Record<string, unknown>>,
+  streamId: string,
+  event: Event
+) => Promise<unknown>;
 
 /**
  * Resume payload for in-flight authorization
@@ -109,6 +116,12 @@ export interface RuntimeOptions {
    * When omitted, phases construct `AISDKAdapter` directly.
    */
   createAiAdapter?: (runId: string) => AiAdapter;
+
+  /**
+   * Optional cognitive loop executor (primarily for deterministic tests).
+   * When omitted, runtime calls the default `runCognitiveLoop`.
+   */
+  runCognitiveLoop?: RunCognitiveLoop;
 
   /** Expected heartbeat frequency for supervisor interrupts (default: 60s) */
   supervisorHeartbeatMs?: number;
@@ -215,6 +228,11 @@ export const runtimeOptionsSchema = z.object({
   model: z.custom<LanguageModel>((val) => val !== null && val !== undefined, {
     message: "Model must be provided",
   }),
+  runCognitiveLoop: z
+    .custom<RunCognitiveLoop>((val) => typeof val === "function", {
+      message: "runCognitiveLoop must be a function",
+    })
+    .optional(),
   runId: z.string().uuid().optional(),
   runtimeContext: z
     .custom<RuntimeContext<Record<string, unknown>>>()

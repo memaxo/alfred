@@ -1,18 +1,37 @@
+import { resolveStreamId } from "@alfred/cognitive/stream";
 import { useMemo } from "react";
 
+import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
 /**
  * Hook to fetch and poll cognitive physiology metrics.
  * Provides energy, boredom, and frustration levels.
  */
-export function useCognitivePhysiology(streamId = "default") {
+export function useCognitivePhysiology(streamId?: string) {
+  const { data: session } = authClient.useSession();
+  const userId = session?.user.id;
+
+  const resolvedStreamId = useMemo(() => {
+    if (streamId) {
+      return streamId;
+    }
+    if (userId) {
+      return resolveStreamId({
+        surface: "system",
+        userId,
+        fallback: "default",
+      });
+    }
+    return "default";
+  }, [streamId, userId]);
+
   const {
     data: physiology,
     isLoading,
     error,
   } = trpc.cognitive.physiologyGet.useQuery(
-    { streamId },
+    { streamId: resolvedStreamId },
     {
       refetchInterval: 5000, // Poll every 5s for the HUD
       staleTime: 4000,
@@ -39,6 +58,7 @@ export function useCognitivePhysiology(streamId = "default") {
 
   return {
     ...metrics,
+    streamId: resolvedStreamId,
     isLoading,
     error,
   };

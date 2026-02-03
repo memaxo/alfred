@@ -58,11 +58,11 @@ export async function createTask(
   const row = Array.isArray(res)
     ? res[0]
     : // oxlint-disable noExplicitAny: Drizzle return type normalization
-      ((res as any).rows
+      (res as any).rows
       ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
       : // oxlint-disable noExplicitAny: Drizzle return type normalization
-        (res as any)[0]);
+        (res as any)[0];
   return row;
 }
 
@@ -140,11 +140,11 @@ export async function createNote(
   const row = Array.isArray(res)
     ? res[0]
     : // oxlint-disable noExplicitAny: Drizzle return type normalization
-      ((res as any).rows
+      (res as any).rows
       ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
       : // oxlint-disable noExplicitAny: Drizzle return type normalization
-        (res as any)[0]);
+        (res as any)[0];
   return row;
 }
 
@@ -230,11 +230,11 @@ export async function createReminder(
   const row = Array.isArray(res)
     ? res[0]
     : // oxlint-disable noExplicitAny: Drizzle return type normalization
-      ((res as any).rows
+      (res as any).rows
       ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
       : // oxlint-disable noExplicitAny: Drizzle return type normalization
-        (res as any)[0]);
+        (res as any)[0];
   return row;
 }
 
@@ -365,11 +365,11 @@ export async function createBookmark(
   const row = Array.isArray(res)
     ? res[0]
     : // oxlint-disable noExplicitAny: Drizzle return type normalization
-      ((res as any).rows
+      (res as any).rows
       ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
       : // oxlint-disable noExplicitAny: Drizzle return type normalization
-        (res as any)[0]);
+        (res as any)[0];
   return row;
 }
 
@@ -425,11 +425,11 @@ export async function createTimer(
   const row = Array.isArray(res)
     ? res[0]
     : // oxlint-disable noExplicitAny: Drizzle return type normalization
-      ((res as any).rows
+      (res as any).rows
       ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
       : // oxlint-disable noExplicitAny: Drizzle return type normalization
-        (res as any)[0]);
+        (res as any)[0];
   return row;
 }
 
@@ -497,11 +497,11 @@ export async function createEvent(
   const row = Array.isArray(res)
     ? res[0]
     : // oxlint-disable noExplicitAny: Drizzle return type normalization
-      ((res as any).rows
+      (res as any).rows
       ? // oxlint-disable noExplicitAny: Drizzle return type normalization
         (res as any).rows[0]
       : // oxlint-disable noExplicitAny: Drizzle return type normalization
-        (res as any)[0]);
+        (res as any)[0];
   return row;
 }
 

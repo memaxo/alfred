@@ -4,6 +4,8 @@
  * Polls or subscribes to cognitive state updates.
  */
 
+import { resolveStreamId } from "@alfred/cognitive/stream";
+
 import type { SubscriptionManager } from "./manager";
 
 import { getApiClient } from "../api/client";
@@ -78,6 +80,24 @@ function mockCognitiveState(): CognitiveState {
     },
     timestamp: Date.now(),
   };
+}
+
+async function getDefaultStreamId(): Promise<string> {
+  try {
+    const { loadCredentials } = await import("../../cli/credentials");
+    const creds = await loadCredentials();
+    const userId = (creds?.user as { id?: unknown } | undefined)?.id;
+    if (typeof userId === "string" && userId.length > 0) {
+      return resolveStreamId({
+        surface: "system",
+        userId,
+        fallback: "default",
+      });
+    }
+  } catch {
+    // No credentials (or no user id)
+  }
+  return "default";
 }
 
 // ─── Cognitive State Store ───────────────────────────────────────────────────
@@ -168,7 +188,8 @@ export function setupCognitiveSubscription(
     fetchMock: async () => mockCognitiveState(),
     fetchLive: async () => {
       const client = getApiClient();
-      const result = await client.getCognitiveState("default");
+      const streamId = await getDefaultStreamId();
+      const result = await client.getCognitiveState(streamId);
       if (result.error || !result.data) {
         const code = result.error?.code;
         const msg = result.error?.message ?? "";

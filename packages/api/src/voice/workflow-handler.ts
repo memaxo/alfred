@@ -422,13 +422,13 @@ function toWorkflowTimeline(
   const approvalPhase = {
     id: "approval",
     name: "Approval",
-    progress: mode === "awaiting_approval" ? 50 : (mode === "rejected" ? 0 : 100),
+    progress: mode === "awaiting_approval" ? 50 : mode === "rejected" ? 0 : 100,
     status:
       mode === "awaiting_approval"
         ? ("running" as const)
-        : (mode === "rejected"
+        : mode === "rejected"
           ? ("error" as const)
-          : ("completed" as const)),
+          : ("completed" as const),
     tasks: [
       {
         id: "approve_plan",
@@ -436,9 +436,9 @@ function toWorkflowTimeline(
         status:
           mode === "awaiting_approval"
             ? ("running" as const)
-            : (mode === "rejected"
+            : mode === "rejected"
               ? ("error" as const)
-              : ("completed" as const)),
+              : ("completed" as const),
       },
     ],
   };
@@ -456,7 +456,7 @@ function toWorkflowTimeline(
     id: phase.id,
     name: phase.name,
     progress:
-      execStatus === "completed" ? 100 : (execStatus === "running" ? 10 : 0),
+      execStatus === "completed" ? 100 : execStatus === "running" ? 10 : 0,
     status:
       idx === 0 && mode === "executing" ? ("running" as const) : execStatus,
     tasks: phase.tasks.map((task) => ({

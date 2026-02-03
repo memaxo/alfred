@@ -13,6 +13,7 @@ import {
   Activity,
   Battery,
   Bell,
+  Brain,
   Cpu,
   Flame,
   HelpCircle,
@@ -35,6 +36,7 @@ import {
 import { useCognitivePhysiology } from "@/hooks/use-cognitive-physiology";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
+import { trpc } from "@/utils/trpc";
 
 import type { AppMenuAction, AppMenuCategory, AppMenus } from "./types";
 
@@ -399,7 +401,16 @@ function AppMenuBar({ appName, menus }: AppMenuBarProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StatusIcons() {
-  const { energy, frustration, entropy } = useCognitivePhysiology();
+  const { energy, frustration, entropy, streamId } = useCognitivePhysiology();
+  const { data: cognitiveState } = trpc.cognitive.state.useQuery(
+    { streamId },
+    {
+      refetchInterval: 5000,
+      staleTime: 4000,
+    }
+  );
+  const phase = cognitiveState?.phase ?? null;
+  const autonomyLevel = cognitiveState?.autonomy?.level;
 
   return (
     <div className="flex items-center gap-2 text-biolum-dim">
@@ -432,11 +443,39 @@ function StatusIcons() {
                 {Math.round(frustration * 100)}%
               </span>
             </div>
+            <div className="flex items-center gap-1">
+              <Brain className="h-3.5 w-3.5 text-biolum-dim" />
+              <span className="font-mono text-[10px]">
+                {typeof autonomyLevel === "number" &&
+                Number.isFinite(autonomyLevel)
+                  ? Math.round(autonomyLevel * 100)
+                  : "--"}
+                %
+              </span>
+            </div>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <div className="px-2 py-1.5 font-medium text-biolum text-xs uppercase tracking-widest opacity-60">
             Cognitive State
+          </div>
+          <DropdownMenuSeparator />
+          <div className="space-y-1 px-3 py-2 text-biolum-dim text-xs">
+            <div className="flex items-center justify-between">
+              <span>Phase</span>
+              <span className="font-mono text-[10px] text-biolum">
+                {phase ?? "unknown"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Autonomy</span>
+              <span className="font-mono text-[10px] text-biolum">
+                {typeof autonomyLevel === "number" &&
+                Number.isFinite(autonomyLevel)
+                  ? `${Math.round(autonomyLevel * 100)}%`
+                  : "--"}
+              </span>
+            </div>
           </div>
           <DropdownMenuSeparator />
           <div className="space-y-3 p-3">

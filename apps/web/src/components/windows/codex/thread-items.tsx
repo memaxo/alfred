@@ -84,11 +84,11 @@ function CommandExecutionItemView({ item }: { item: CommandExecutionItem }) {
   const statusIcon =
     item.status === "in_progress" ? (
       <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-    ) : (item.status === "completed" ? (
+    ) : item.status === "completed" ? (
       <CheckCircle className="h-3 w-3 text-green-500" />
     ) : (
       <AlertCircle className="h-3 w-3 text-red-500" />
-    ));
+    );
 
   return (
     <div className="rounded bg-zinc-900/50 p-2 text-xs">
@@ -157,11 +157,11 @@ function McpToolCallItemView({ item }: { item: McpToolCallItem }) {
   const statusIcon =
     item.status === "in_progress" ? (
       <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-    ) : (item.status === "completed" ? (
+    ) : item.status === "completed" ? (
       <CheckCircle className="h-3 w-3 text-green-500" />
     ) : (
       <AlertCircle className="h-3 w-3 text-red-500" />
-    ));
+    );
 
   return (
     <div className="rounded bg-zinc-900/50 p-2 text-xs">

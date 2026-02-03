@@ -74,9 +74,9 @@ function useJarvisHealth() {
           const overall =
             apiStatus === "critical" || dbStatus === "critical"
               ? "critical"
-              : (dbStatus === "degraded"
+              : dbStatus === "degraded"
                 ? "degraded"
-                : "nominal");
+                : "nominal";
 
           updateSystemStatus({
             overall,

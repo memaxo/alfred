@@ -127,9 +127,9 @@ export const runMlxFineTune = async (
   const completedAt = new Date();
   const status: FineTuneRunResult["status"] = aborted
     ? "cancelled"
-    : (exitCode === 0
+    : exitCode === 0
       ? "success"
-      : "failed");
+      : "failed";
 
   if (tokensProcessed > 0) {
     fineTuneTokensTotal.inc({ backend: "mlx" }, tokensProcessed);

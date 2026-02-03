@@ -372,17 +372,17 @@ async function runPrompt(args: {
             const title =
               part.state.status === "completed"
                 ? part.state.title
-                : (part.state.status === "running"
+                : part.state.status === "running"
                   ? part.state.title
-                  : undefined);
+                  : undefined;
             const tool = title ?? part.tool;
             const st = part.state.status;
             const mapped =
               st === "completed"
                 ? "completed"
-                : (st === "error"
+                : st === "error"
                   ? "failed"
-                  : "running");
+                  : "running";
             emitCommand(args.writer, tool, mapped);
             if (st === "error") {
               void Promise.resolve(

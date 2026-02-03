@@ -17,7 +17,9 @@ import {
   workflowPhasePlanProcedure,
   workflowPhaseStreamPlanProcedure,
 } from "./workflow/phase/plan";
+import { workflowPhasePrepareProcedure } from "./workflow/phase/prepare";
 import { workflowPhaseStatusProcedure } from "./workflow/phase/status";
+import { workflowPhaseStepProcedure } from "./workflow/phase/step";
 import {
   workflowPhaseApplyTemplateProcedure,
   workflowPhaseListTemplatesProcedure,
@@ -44,6 +46,17 @@ const workflowPhaseRouter = router({
    * Returns WavePlan[] and snapshot for later execution.
    */
   plan: workflowPhasePlanProcedure,
+
+  /**
+   * Run or resume the pipeline until a specific stage boundary.
+   * Intended for atomic stepping via CLI/TUI harness.
+   */
+  step: workflowPhaseStepProcedure,
+
+  /**
+   * Deterministically initialize the run-scoped AgentFS container/DB.
+   */
+  prepare: workflowPhasePrepareProcedure,
 
   /**
    * Execute a previously planned workflow.

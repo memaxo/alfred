@@ -20,6 +20,8 @@ import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 
+import { useJarvis } from "@/components/hud";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/store/desktop";
 
@@ -92,6 +94,8 @@ export function AlfredDesktopShell({
   useKeyboardShortcuts();
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const { state: jarvisState } = useJarvis();
+  const isCriticalHealth = jarvisState?.systems?.overall === "critical";
 
   useEffect(() => {
     const handleOnline = () => {
@@ -200,6 +204,29 @@ export function AlfredDesktopShell({
 
         {/* Workflow Trails Overlay */}
         {mode === "desktop" && <WorkflowTrails />}
+
+        {/* Critical Health Banner */}
+        {isCriticalHealth && (
+          <div
+            className="fixed left-0 right-0 top-0 z-[3000] border-b border-red-500/30 bg-red-500/20 px-4 py-2 text-center backdrop-blur-md"
+            role="alert"
+            aria-live="assertive"
+          >
+            <div className="flex items-center justify-center gap-4">
+              <span className="font-medium text-red-400 text-sm">
+                ⚠️ System health critical - Some services may be unavailable
+              </span>
+              <Button
+                className="h-6 rounded-full border border-red-500/30 bg-red-500/20 px-3 text-xs text-red-400 hover:bg-red-500/30"
+                onClick={() => window.location.reload()}
+                size="sm"
+                variant="ghost"
+              >
+                Retry Connection
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Menu Bar Layer */}
         <LayerErrorBoundary fallback={null} layerName="Menu Bar">

@@ -144,6 +144,15 @@ export const Route = createFileRoute("/api/agentfs/export")({
               throw new Error("not_file");
             }
           } catch {
+            try {
+              const metricsPkg = "@alfred/api/services/agentfs-metrics";
+              const { recordCasMiss } = await import(
+                /* @vite-ignore */ metricsPkg
+              );
+              recordCasMiss();
+            } catch {
+              // best-effort
+            }
             return new Response(JSON.stringify({ error: "not_found" }), {
               status: 404,
               headers: {
@@ -162,6 +171,16 @@ export const Route = createFileRoute("/api/agentfs/export")({
             await touchAgentfsCasLastAccessed({ sha });
           } catch {
             // ignore - don't fail the download if tracking fails
+          }
+
+          try {
+            const metricsPkg = "@alfred/api/services/agentfs-metrics";
+            const { recordCasHit } = await import(
+              /* @vite-ignore */ metricsPkg
+            );
+            recordCasHit();
+          } catch {
+            // best-effort
           }
 
           const name = `agentfs-cas-${sha.slice(0, 12)}.tar.gz`;
@@ -293,12 +312,59 @@ export const Route = createFileRoute("/api/agentfs/export")({
           const { exportAgentfsRunToCas } = await import(
             /* @vite-ignore */ casPkg
           );
-          const cas = await exportAgentfsRunToCas({
-            runId,
-            relDir: runId,
-            rootAbs: path.resolve(process.cwd(), ".agentfs"),
-            projectId: access.projectId,
-          });
+          let cas: { sha: string; absPath: string };
+          try {
+            cas = await exportAgentfsRunToCas({
+              runId,
+              relDir: runId,
+              rootAbs: path.resolve(process.cwd(), ".agentfs"),
+              projectId: access.projectId,
+            });
+          } catch (error) {
+            try {
+              const auditPkg = "@alfred/agent/utils/audit";
+              const { recordAudit } = await import(/* @vite-ignore */ auditPkg);
+              await recordAudit({
+                userId: session.user.id,
+                projectId: access.projectId,
+                action: "agentfs.op.cas_export",
+                resource: { kind: "agentfs_run", id: runId },
+                decision: "deny",
+                context: {
+                  success: false,
+                  runId,
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : String(error ?? ""),
+                },
+              });
+            } catch {
+              // best-effort
+            }
+            return new Response(JSON.stringify({ error: "export_failed" }), {
+              status: 500,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store",
+              },
+            });
+          }
+
+          try {
+            const auditPkg = "@alfred/agent/utils/audit";
+            const { recordAudit } = await import(/* @vite-ignore */ auditPkg);
+            await recordAudit({
+              userId: session.user.id,
+              projectId: access.projectId,
+              action: "agentfs.op.cas_export",
+              resource: { kind: "agentfs_run", id: runId },
+              decision: "allow",
+              context: { success: true, runId, sha: cas.sha },
+            });
+          } catch {
+            // best-effort
+          }
           const name = `agentfs-${safeRunId(runId)}-${cas.sha.slice(0, 12)}.tar.gz`;
           return new Response(Bun.file(cas.absPath).stream(), {
             status: 200,

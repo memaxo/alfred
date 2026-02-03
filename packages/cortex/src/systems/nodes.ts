@@ -67,7 +67,8 @@ export class NodeSystem implements RenderSystem {
     // Check for compilation errors
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
-      if (message.type === "error") {}
+      if (message.type === "error") {
+      }
     }
 
     // Create uniform buffer

@@ -18,7 +18,7 @@ if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
 
-import type { WorkflowEvent } from "@alfred/type";
+import type { PipelineEvent } from "@alfred/pipeline";
 
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
@@ -49,6 +49,7 @@ let toObservable: typeof import("../utils/stream").toObservable;
 
 let runCognitiveLoop: typeof import("@alfred/runtime/loops/cognitive").runCognitiveLoop;
 let cognitiveRepo: typeof import("@alfred/db").cognitiveRepo;
+let userRepo: typeof import("@alfred/db").userRepo;
 
 let idle: typeof import("@alfred/cognitive/state").idle;
 let initialAutonomy: typeof import("@alfred/cognitive/state").initialAutonomy;
@@ -73,10 +74,10 @@ const completeEvent = (outcome: any) =>
     ts: now(),
   }) as any;
 
-const interruptEvent = (reason: string) =>
+const interruptEvent = (reason: string, priority: 1 | 2 | 3 = 1) =>
   ({
     _: "interrupt",
-    priority: 1,
+    priority,
     reason,
     ts: now(),
   }) as any;
@@ -89,10 +90,12 @@ async function resetTables() {
     const { db } = await import("@alfred/db");
     const { cognitiveEvents, cognitiveSnapshots } =
       await import("@alfred/db/schema/cognitive");
+    const { preferences } = await import("@alfred/db/schema/user");
     const { workflowEvents, workflowRuns } =
       await import("@alfred/db/schema/workflow");
     await db.delete(cognitiveEvents);
     await db.delete(cognitiveSnapshots);
+    await db.delete(preferences);
     await db.delete(workflowEvents);
     await db.delete(workflowRuns);
   } catch {
@@ -110,7 +113,7 @@ beforeAll(async () => {
 
   // Load cognitive components
   ({ runCognitiveLoop } = await import("@alfred/runtime/loops/cognitive"));
-  ({ cognitiveRepo } = await import("@alfred/db"));
+  ({ cognitiveRepo, userRepo } = await import("@alfred/db"));
   ({ idle, initialAutonomy } = await import("@alfred/cognitive/state"));
   ({ applyTransition } = await import("@alfred/cognitive/transition"));
 
@@ -153,6 +156,7 @@ describe("Workflow → Cognitive Integration", () => {
       const streamId = stream("wf-triggers-cog");
 
       // First, simulate cognitive input for the workflow task
+      await runCognitiveLoop(ctx, streamId, inputEvent("Plan workflow task"));
       const cogResult = await runCognitiveLoop(
         ctx,
         streamId,
@@ -163,14 +167,14 @@ describe("Workflow → Cognitive Integration", () => {
 
       // Workflow would then execute based on cognitive state
       const caller = await harness.createCaller();
-      const events: WorkflowEvent[] = [];
+      const events: PipelineEvent[] = [];
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Execute task from cognitive loop",
       });
-      const observable = toObservable<WorkflowEvent>(subscription);
+      const observable = toObservable<PipelineEvent>(subscription);
 
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => resolve(), 10_000);
@@ -203,6 +207,11 @@ describe("Workflow → Cognitive Integration", () => {
         streamId,
         inputEvent("Execute workflow task")
       );
+      await runCognitiveLoop(
+        ctx,
+        streamId,
+        inputEvent("Execute workflow task")
+      );
 
       // Simulate workflow completion
       const outcome = { _: "success" as const, duration: 500, result: "done" };
@@ -214,6 +223,49 @@ describe("Workflow → Cognitive Integration", () => {
 
       // Should be in reflecting state
       expect(cogResult.state._).toBe("reflecting");
+    });
+
+    it("pipeline completion persists autonomy baseline preference", async () => {
+      const caller = await harness.createCaller();
+      const events: PipelineEvent[] = [];
+
+      const subscription = await caller.streamPipeline({
+        auto: "low" as const,
+        mode: "sequential" as const,
+        requirement: "Persist autonomy baseline preference",
+      });
+      const observable = toObservable<PipelineEvent>(subscription);
+
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => resolve(), 15_000);
+        const sub = observable.subscribe({
+          complete: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          error: () => {
+            clearTimeout(timeout);
+            sub.unsubscribe?.();
+            resolve();
+          },
+          next: (event) => events.push(event),
+        });
+      });
+
+      expect(events.length).toBeGreaterThan(0);
+
+      const prefs = await userRepo.getPreferences("wf-cog-test-user");
+      const baseline = prefs.find(
+        (p) => p.key === "cognitive.autonomyBaseline"
+      );
+      expect(baseline).toBeDefined();
+
+      const raw = baseline?.value;
+      const level = typeof raw === "number" ? raw : Number(raw);
+      expect(Number.isFinite(level)).toBe(true);
+      expect(level).toBeGreaterThanOrEqual(0);
+      expect(level).toBeLessThanOrEqual(1);
     });
 
     it("workflow failure increases cognitive frustration", async () => {
@@ -366,7 +418,7 @@ describe("Workflow → Cognitive Integration", () => {
 
       // Simulate supervisor detecting a loop by creating interrupt event
       // (In real flow, supervisor would detect this and create the event)
-      const interruptEvt = interruptEvent("boredom_loop_detected");
+      const interruptEvt = interruptEvent("boredom_loop_detected", 2);
       const result = await runCognitiveLoop(ctx, streamId, interruptEvt);
 
       // Verify interrupt event was persisted
@@ -398,6 +450,7 @@ describe("Workflow → Cognitive Integration", () => {
 
       // Complete flow
       await runCognitiveLoop(ctx, streamId, inputEvent("Learning task"));
+      await runCognitiveLoop(ctx, streamId, inputEvent("Learning task"));
 
       const successOutcome = {
         _: "success" as const,
@@ -414,13 +467,16 @@ describe("Workflow → Cognitive Integration", () => {
 
       // Events should record the learning
       const events = await cognitiveRepo.getAllEvents(streamId);
-      expect(events.length).toBe(2);
-      expect(events[1]?.type).toBe("complete");
+      expect(events.length).toBe(3);
+      expect(events[0]?.type).toBe("input");
+      expect(events[1]?.type).toBe("input");
+      expect(events[2]?.type).toBe("complete");
     });
 
     it("failure outcomes trigger error analysis", async () => {
       const streamId = stream("failure-analysis");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Failing task"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Failing task"));
 
       const failureOutcome = {
@@ -441,6 +497,7 @@ describe("Workflow → Cognitive Integration", () => {
     it("partial outcomes track completed and failed steps", async () => {
       const streamId = stream("partial-tracking");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Multi-step task"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Multi-step task"));
 
       const partialOutcome = {
@@ -470,6 +527,7 @@ describe("Cognitive → Workflow Integration", () => {
       expect(state._).toBe("idle");
 
       // Input should transition to thinking
+      await runCognitiveLoop(ctx, streamId, inputEvent("New workflow request"));
       const result = await runCognitiveLoop(
         ctx,
         streamId,
@@ -484,6 +542,7 @@ describe("Cognitive → Workflow Integration", () => {
     it("thinking state generates workflow execution effect", async () => {
       const streamId = stream("thinking-effect");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Execute workflow"));
       const result = await runCognitiveLoop(
         ctx,
         streamId,
@@ -499,6 +558,7 @@ describe("Cognitive → Workflow Integration", () => {
       const streamId = stream("reflecting-complete");
 
       // Full cycle
+      await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
       const result = await runCognitiveLoop(
         ctx,
@@ -573,14 +633,14 @@ describe("Cross-Boundary Event Flow", () => {
 
     // Workflow events
     const caller = await harness.createCaller();
-    const workflowEvents: WorkflowEvent[] = [];
+    const workflowEvents: PipelineEvent[] = [];
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Workflow task",
     });
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => resolve(), 10_000);
@@ -607,27 +667,17 @@ describe("Cross-Boundary Event Flow", () => {
     expect(workflowEvents.length).toBeGreaterThan(0);
   });
 
-  it("maintains consistency across subsystems", async () => {
-    const streamId = stream("consistency");
-
-    // Start cognitive processing
-    const cogStart = await runCognitiveLoop(
-      ctx,
-      streamId,
-      inputEvent("Consistency test")
-    );
-    expect(cogStart.state._).toBe("thinking");
-
-    // Start workflow
+  it("workflow runId stream records cognitive input + complete events", async () => {
     const caller = await harness.createCaller();
+    const workflowEvents: PipelineEvent[] = [];
     let runId: string | undefined;
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
-      requirement: "Consistency workflow",
+      requirement: "Workflow should emit cognitive events",
     });
-    const observable = toObservable<WorkflowEvent>(subscription);
+    const observable = toObservable<PipelineEvent>(subscription);
 
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => resolve(), 10_000);
@@ -643,8 +693,66 @@ describe("Cross-Boundary Event Flow", () => {
           resolve();
         },
         next: (event) => {
-          if (event._ === "run" && (event as any).id) {
-            runId = (event as any).id;
+          workflowEvents.push(event);
+          if (event.type === "pipeline:start") {
+            ({ runId } = event);
+          }
+        },
+      });
+    });
+
+    expect(workflowEvents.length).toBeGreaterThan(0);
+    expect(runId).toBeDefined();
+    if (!runId) {
+      return;
+    }
+
+    const cogEvents = await cognitiveRepo.getAllEvents(runId);
+    const types = cogEvents.map((e) => e.type);
+    expect(types).toContain("input");
+    expect(types).toContain("complete");
+    expect(cogEvents.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("maintains consistency across subsystems", async () => {
+    const streamId = stream("consistency");
+
+    // Start cognitive processing
+    await runCognitiveLoop(ctx, streamId, inputEvent("Consistency test"));
+    const cogStart = await runCognitiveLoop(
+      ctx,
+      streamId,
+      inputEvent("Consistency test")
+    );
+    expect(cogStart.state._).toBe("thinking");
+
+    // Start workflow
+    const caller = await harness.createCaller();
+    let runId: string | undefined;
+
+    const subscription = await caller.streamPipeline({
+      auto: "low" as const,
+      mode: "sequential" as const,
+      requirement: "Consistency workflow",
+    });
+    const observable = toObservable<PipelineEvent>(subscription);
+
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => resolve(), 10_000);
+      const sub = observable.subscribe({
+        complete: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        error: () => {
+          clearTimeout(timeout);
+          sub.unsubscribe?.();
+          resolve();
+        },
+        next: (event) => {
+          if (event.type === "pipeline:start") {
+            ({ runId } = event);
           }
         },
       });

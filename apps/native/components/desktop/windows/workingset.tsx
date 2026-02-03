@@ -136,7 +136,7 @@ export function WorkingsetWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (items.length === 0 ? (
+        ) : items.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             Empty. Add a resource above.
           </Text>
@@ -193,7 +193,7 @@ export function WorkingsetWindow(_props: WindowComponentProps) {
               );
             })}
           </View>
-        ))}
+        )}
       </View>
     </ScrollView>
   );

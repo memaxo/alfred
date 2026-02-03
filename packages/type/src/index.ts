@@ -25,6 +25,9 @@ export * from "./events";
 export * from "./events.zod";
 // Exa API types
 export * from "./exa";
+// Executor management types
+export * from "./executor";
+export * from "./executor.zod";
 // Concierge Focus domain types
 export * from "./focus";
 export * from "./focus.zod";

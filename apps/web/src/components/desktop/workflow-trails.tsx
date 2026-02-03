@@ -248,7 +248,7 @@ function TrailPathComponent({
         d={pathD}
         fill="none"
         initial="initial"
-        stroke={isFailed ? "#EF4444" : (isCompleted ? "#10B981" : "#A855F7")}
+        stroke={isFailed ? "#EF4444" : isCompleted ? "#10B981" : "#A855F7"}
         strokeLinecap="round"
         strokeWidth={3}
         transition={transition}
@@ -344,9 +344,9 @@ export function WorkflowTrails({ className }: WorkflowTrailsProps) {
       const status: WorkflowTrail["status"] =
         step.status === "failed"
           ? "failed"
-          : (step.status === "completed"
+          : step.status === "completed"
             ? "completed"
-            : "active");
+            : "active";
 
       if (existingTrail) {
         // Keep existing timing but update completion/failure status

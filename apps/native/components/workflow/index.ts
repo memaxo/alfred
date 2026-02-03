@@ -1,5 +1,4 @@
-export { WorkflowTimeline } from "./WorkflowTimeline";
-export type { WorkflowTimelineProps, WorkflowPhase } from "./WorkflowTimeline";
-
-export { ErrorPanel } from "./ErrorPanel";
-export type { ErrorPanelProps } from "./ErrorPanel";
+export { ApprovalPanel } from "./ApprovalPanel";
+export { ExecutionTimeline } from "./ExecutionTimeline";
+export { StepCard, type WorkflowStep } from "./StepCard";
+export { VariableInspector } from "./VariableInspector";

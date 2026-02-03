@@ -122,7 +122,7 @@ export function CodeWindow({ window: _window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (listQuery.error ? (
+        ) : listQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {listQuery.error.message}
           </Text>
@@ -150,7 +150,7 @@ export function CodeWindow({ window: _window }: WindowComponentProps) {
               </TouchableOpacity>
             ))}
           </View>
-        ))}
+        )}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

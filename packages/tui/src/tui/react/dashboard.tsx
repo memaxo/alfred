@@ -11,6 +11,7 @@ import type { KeyEvent } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useState } from "react";
 
+import { getApiClient } from "../api/client";
 import { type Command, createStandardCommands } from "../input/commands";
 import { StoresContext, type TuiStores } from "./hooks/stores";
 import { ChatMode, DebugMode, HelpMode, PlanMode } from "./modes";
@@ -101,6 +102,22 @@ export function Dashboard({
       setActiveMode(mode);
     },
     [callbacks]
+  );
+
+  const handleExecutePlan = useCallback(
+    async (runId: string) => {
+      const client = getApiClient();
+      const result = await client.executeWorkflow(runId);
+      if (result.data) {
+        // Close plan mode and return to dashboard
+        setMode("none");
+        // Show success feedback (could be enhanced with a toast/notification)
+      } else if (result.error) {
+        // Handle error - could show error modal
+        console.error("Failed to execute workflow:", result.error);
+      }
+    },
+    [setMode]
   );
 
   // Create standard commands
@@ -349,6 +366,7 @@ export function Dashboard({
         <PlanMode
           isOpen={activeMode === "plan"}
           onClose={() => setMode("none")}
+          onExecute={handleExecutePlan}
         />
       </box>
     </StoresContext.Provider>

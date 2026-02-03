@@ -320,12 +320,92 @@ export function useVoiceSessionWeb() {
     [audio, protocol]
   );
 
+  // Error recovery helpers
+  const getErrorRecovery = useCallback(
+    (err: string | null) => {
+      if (!err) return null;
+
+      const errorLower = err.toLowerCase();
+
+      if (errorLower.includes("webrtc") || errorLower.includes("connection")) {
+        return {
+          type: "connection" as const,
+          actions: [
+            {
+              label: "Retry with WebSocket",
+              action: () => {
+                setError(null);
+                // Force WebSocket by disabling WebRTC temporarily
+                void startStreaming();
+              },
+            },
+            {
+              label: "Switch to text mode",
+              action: () => {
+                // This would be handled by parent component
+                window.dispatchEvent(new CustomEvent("voice:switch-to-text"));
+              },
+            },
+          ],
+        };
+      }
+
+      if (
+        errorLower.includes("microphone") ||
+        errorLower.includes("permission")
+      ) {
+        return {
+          type: "permission" as const,
+          actions: [
+            {
+              label: "Check permissions",
+              action: () => {
+                void navigator.mediaDevices
+                  .getUserMedia({ audio: true })
+                  .then(() => {
+                    setError(null);
+                    void startStreaming();
+                  })
+                  .catch(() => {
+                    setError("Microphone permission denied");
+                  });
+              },
+            },
+          ],
+        };
+      }
+
+      return {
+        type: "unknown" as const,
+        actions: [
+          {
+            label: "Retry",
+            action: () => {
+              setError(null);
+              void startStreaming();
+            },
+          },
+          {
+            label: "Cancel",
+            action: () => {
+              setError(null);
+            },
+          },
+        ],
+      };
+    },
+    [startStreaming]
+  );
+
+  const errorRecovery = getErrorRecovery(protocol.state.error || error);
+
   return {
     state: session.state,
     isRecording: protocol.state.status === "recording",
     isProcessing: protocol.state.status === "processing",
     lastResponse,
     error: protocol.state.error || error,
+    errorRecovery,
     start: async () => {}, // Legacy
     stopAndTranscribe: async () => {}, // Legacy
     speechToSpeech: async () => {}, // Legacy
@@ -344,9 +424,9 @@ export function useVoiceSessionWeb() {
       supported: webrtc.supported || protocol.supported,
       transport: webrtc.state.sessionId
         ? ("webrtc" as const)
-        : (protocol.state.sessionId
+        : protocol.state.sessionId
           ? ("ws" as const)
-          : null),
+          : null,
       status: webrtc.state.sessionId
         ? webrtc.state.status
         : protocol.state.status,

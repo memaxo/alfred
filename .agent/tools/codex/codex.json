@@ -1,0 +1,13 @@
+{
+  "threadId": "thread-no-usage",
+  "auto": "read",
+  "result": "",
+  "artifacts": [],
+  "metadata": {
+    "agentName": "codex",
+    "autonomyLevel": "read",
+    "resumedFromThread": false,
+    "threadId": "thread-no-usage",
+    "workingDirectory": "/Users/jackmazac/Development/alfred"
+  }
+}

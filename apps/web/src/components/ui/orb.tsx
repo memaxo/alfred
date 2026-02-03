@@ -2,6 +2,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import { useReducedMotion } from "@/components/desktop/accessibility/hooks";
+
 export type AgentState = null | "thinking" | "listening" | "talking";
 
 interface OrbProps {
@@ -101,7 +103,7 @@ function Scene({
     // Deterministic noise based on seed so visuals are stable in tests.
     const size = 128;
     const data = new Uint8Array(size * size * 4);
-    const rand = splitmix32(seed ?? 0x6F_72_62); // "orb" seed
+    const rand = splitmix32(seed ?? 0x6f_72_62); // "orb" seed
     for (let i = 0; i < data.length; i += 4) {
       const v = Math.floor(rand() * 256);
       data[i] = v;
@@ -124,6 +126,7 @@ function Scene({
   const manualOutRef = useRef<number>(manualOutput ?? 0);
   const curInRef = useRef(0);
   const curOutRef = useRef(0);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     agentRef.current = agentState;
@@ -183,7 +186,23 @@ function Scene({
     return () => observer.disconnect();
   }, []);
 
+  // Performance optimization: Pause animation when not visible or reduced motion
+  const isPausedRef = useRef(false);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isPausedRef.current = document.hidden;
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   useFrame((_, delta: number) => {
+    // Skip frame if paused (tab not visible) or reduced motion preferred
+    if (isPausedRef.current || prefersReducedMotion) return;
+
     const mat = circleRef.current?.material;
     if (!mat) {
       return;
@@ -305,12 +324,13 @@ function Scene({
 function splitmix32(a: number) {
   return () => {
     a |= 0;
-    a = (a + 0x9E_37_79_B9) | 0;
+    a = (a + 0x9e_37_79_b9) | 0;
     let t = a ^ (a >>> 16);
-    t = Math.imul(t, 0x21_F0_AA_AD);
+    t = Math.imul(t, 0x21_f0_aa_ad);
     t ^= t >>> 15;
-    t = Math.imul(t, 0x73_5A_2D_97);
-    return ((t ^= t >>> 15) >>> 0) / 4_294_967_296;
+    t = Math.imul(t, 0x73_5a_2d_97);
+    t ^= t >>> 15;
+    return (t >>> 0) / 4_294_967_296;
   };
 }
 

@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
@@ -7,6 +7,7 @@ import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
 } from "@/components/cognitive-feedback/dialog";
+import { useFocusTrap } from "@/components/desktop/accessibility/hooks";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
@@ -137,6 +138,9 @@ function WorkflowDrawerBody({
   onNavigateFull,
   onNavigateToMindscape,
 }: WorkflowDrawerBodyProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(drawerRef, drawerOpen);
+
   const queryRunId = drawerOpen && runId ? runId : "";
   const runQuery = trpc.workflow.get.useQuery(
     { runId: queryRunId },
@@ -242,7 +246,7 @@ function WorkflowDrawerBody({
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div ref={drawerRef} className="flex h-full flex-col">
       <div className="flex items-center justify-between border-white/10 border-b px-5 py-4">
         <div>
           <p className="text-[11px] text-biolum-faint uppercase tracking-wide">
@@ -293,7 +297,7 @@ function WorkflowDrawerBody({
             <Loader2 className="h-4 w-4 animate-spin" />
             <p className="text-sm">Loading workflow…</p>
           </div>
-        ) : (runQuery.isError || !runQuery.data ? (
+        ) : runQuery.isError || !runQuery.data ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-biolum">
             <p className="font-semibold">Unable to load workflow run.</p>
             <p className="text-biolum-dim text-sm">
@@ -348,7 +352,7 @@ function WorkflowDrawerBody({
             reasoningLoading={reasoningQuery.isLoading}
             workflow={runQuery.data}
           />
-        ))}
+        )}
       </div>
       <CognitiveFeedbackDialog
         draft={feedbackDraft}

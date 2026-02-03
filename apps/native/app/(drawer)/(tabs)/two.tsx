@@ -139,7 +139,7 @@ export default function TabTwo() {
                       size="small"
                       color={theme.colors.biolum.faint}
                     />
-                  ) : (count > 0 ? (
+                  ) : count > 0 ? (
                     <View
                       style={[
                         styles.badge,
@@ -150,7 +150,7 @@ export default function TabTwo() {
                         {count}
                       </BiolumText>
                     </View>
-                  ) : null)}
+                  ) : null}
 
                   <Ionicons
                     name="chevron-forward"

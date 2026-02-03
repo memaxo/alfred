@@ -61,7 +61,7 @@ export function AdminWindow({ window: _window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (statusQuery.error ? (
+        ) : statusQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {statusQuery.error.message}
           </Text>
@@ -69,7 +69,7 @@ export function AdminWindow({ window: _window }: WindowComponentProps) {
           <Text className="mt-2 font-mono text-[10px] text-muted-foreground">
             {statusText.slice(0, 2500)}
           </Text>
-        ))}
+        )}
 
         <View className="mt-3 flex-row flex-wrap gap-2">
           <TouchableOpacity
@@ -125,7 +125,7 @@ export function AdminWindow({ window: _window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (logsQuery.error ? (
+        ) : logsQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {logsQuery.error.message}
           </Text>
@@ -133,7 +133,7 @@ export function AdminWindow({ window: _window }: WindowComponentProps) {
           <Text className="mt-3 font-mono text-[10px] text-muted-foreground">
             {String((logsQuery.data as any)?.logs ?? "").slice(0, 6000)}
           </Text>
-        ))}
+        )}
       </View>
     </ScrollView>
   );

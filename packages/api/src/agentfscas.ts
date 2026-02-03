@@ -11,6 +11,8 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
+import { recordCasHit, recordCasMiss } from "./services/agentfs-metrics";
+
 export interface AgentfsCasMeta {
   sha: string;
   runId: string;
@@ -47,7 +49,7 @@ async function listTarInputs(relDir: string): Promise<string[]> {
 
   const walk = async (absDir: string, relDirPosix: string): Promise<void> => {
     const ents = await readdir(absDir, { withFileTypes: true });
-    ents.sort((a, b) => (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
+    ents.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
     for (const ent of ents) {
       const childRel = path.posix.join(relDirPosix, ent.name);
@@ -215,10 +217,13 @@ export async function exportAgentfsRunToCas(args: {
       sizeBytes = 0;
     }
 
-    if (!existsSync(finalAbs)) {
+    const alreadyExists = existsSync(finalAbs);
+    if (!alreadyExists) {
       await rename(tmpAbs, finalAbs);
+      recordCasMiss();
     } else {
       await rm(tmpAbs, { force: true });
+      recordCasHit();
       try {
         const st = await stat(finalAbs);
         sizeBytes = st.size;

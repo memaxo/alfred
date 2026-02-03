@@ -1,3 +1,4 @@
+import { resolveStreamId } from "@alfred/cognitive";
 import { logger } from "@alfred/logger";
 import { TransitionGuard } from "@alfred/resilience/transitions";
 
@@ -113,6 +114,67 @@ export class PipelineRunner {
       stopIndex,
       [],
       [],
+      signal
+    );
+  }
+
+  /**
+   * Resume pipeline from a snapshot until (and including) a specific stage.
+   * Useful for atomic stepping without replaying earlier stages.
+   */
+  async *resumeUntilStage(
+    snapshot: PipelineSnapshot,
+    input: PipelineInput,
+    stopAfter: StageName,
+    signal?: AbortSignal
+  ): AsyncGenerator<PipelineEvent, unknown, void> {
+    await Promise.resolve();
+    // Validate snapshot matches input
+    if (snapshot.runId !== input.runId) {
+      throw new Error(
+        `Snapshot runId "${snapshot.runId}" does not match input runId "${input.runId}"`
+      );
+    }
+
+    // Cannot resume completed pipelines
+    if (snapshot.status === "completed") {
+      throw new Error("Cannot resume completed pipeline");
+    }
+
+    const stopIndex = STAGE_ORDER.indexOf(stopAfter);
+    if (stopIndex === -1) {
+      throw new Error(`Unknown stage: ${stopAfter}`);
+    }
+
+    // Determine starting stage index
+    const startStageIndex = snapshot.lastCompletedStageIndex + 1;
+
+    if (startStageIndex >= STAGE_ORDER.length) {
+      throw new Error("No stages remaining to execute");
+    }
+
+    const startStage = STAGE_ORDER[startStageIndex] as StageName;
+
+    logger.info("pipeline_resume_until", {
+      runId: input.runId,
+      fromStage: startStage,
+      untilStage: stopAfter,
+      skippedStages: STAGE_ORDER.slice(0, startStageIndex),
+    });
+
+    // Emit resume event
+    const resumeEvent = createEvent("pipeline:resume", {
+      fromStage: startStage,
+    });
+    yield resumeEvent;
+    this.emit(resumeEvent);
+
+    return yield* this.executeFromStageUntil(
+      input,
+      startStageIndex,
+      stopIndex,
+      snapshot.contextEntries,
+      snapshot.stageResults,
       signal
     );
   }
@@ -286,9 +348,23 @@ export class PipelineRunner {
 
       // Emit start event only if starting from beginning
       if (startStageIndex === 0) {
+        const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+        const cognitiveStreamId =
+          input.cognitive?.streamId ??
+          resolveStreamId({ surface: "pipeline", runId: input.runId });
+        const autonomyLevelRaw = input.cognitive?.autonomyLevel;
+        const autonomyLevel =
+          typeof autonomyLevelRaw === "number" &&
+          Number.isFinite(autonomyLevelRaw)
+            ? clamp01(autonomyLevelRaw)
+            : 0.5;
+
         ctx.set("authz", input.authz ?? null);
         ctx.set("workspace", input.workspace);
         ctx.set("userId", input.userId);
+        ctx.set("cognitiveStreamId", cognitiveStreamId);
+        ctx.set("autonomyLevel", autonomyLevel);
         ctx.set("linearAuthz", input.linear?.authz ?? null);
         ctx.set("linearSessionId", input.linear?.sessionId ?? null);
         ctx.set("linearSpace", input.linear?.space ?? null);
@@ -302,6 +378,14 @@ export class PipelineRunner {
         assertWithinTransitionLimit(startEvent.type);
         yield startEvent;
         this.emit(startEvent);
+      }
+
+      // If caller requested a stage that was already completed, surface its output.
+      if (stopStageIndex < startStageIndex) {
+        const stopStage = STAGE_ORDER[stopStageIndex] as StageName | undefined;
+        if (stopStage) {
+          lastStageOutput = ctx.get(`${stopStage}Output`);
+        }
       }
 
       let stageInput: unknown =
@@ -533,10 +617,24 @@ export class PipelineRunner {
 
       // Emit start event only if starting from beginning
       if (startStageIndex === 0) {
+        const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+        const cognitiveStreamId =
+          input.cognitive?.streamId ??
+          resolveStreamId({ surface: "pipeline", runId: input.runId });
+        const autonomyLevelRaw = input.cognitive?.autonomyLevel;
+        const autonomyLevel =
+          typeof autonomyLevelRaw === "number" &&
+          Number.isFinite(autonomyLevelRaw)
+            ? clamp01(autonomyLevelRaw)
+            : 0.5;
+
         // Persist cross-stage inputs in context for resume and observers.
         ctx.set("authz", input.authz ?? null);
         ctx.set("workspace", input.workspace);
         ctx.set("userId", input.userId);
+        ctx.set("cognitiveStreamId", cognitiveStreamId);
+        ctx.set("autonomyLevel", autonomyLevel);
         ctx.set("linearAuthz", input.linear?.authz ?? null);
         ctx.set("linearSessionId", input.linear?.sessionId ?? null);
         ctx.set("linearSpace", input.linear?.space ?? null);

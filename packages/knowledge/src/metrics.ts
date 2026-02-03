@@ -15,7 +15,8 @@ function elapsedMs(start: bigint): number {
 }
 
 function logBudget(_label: string, duration: number, budgetMs: number): void {
-  if (duration > budgetMs) {}
+  if (duration > budgetMs) {
+  }
 }
 
 export function measureSync<T>(

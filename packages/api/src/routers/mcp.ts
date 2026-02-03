@@ -123,9 +123,9 @@ export const mcpRouter = router({
       const auth =
         authType === "bearer"
           ? { bearerEnv: input.bearerEnv ?? null }
-          : (authType
+          : authType
             ? null
-            : undefined);
+            : undefined;
 
       const row = await updateMcpServer(userId, input.id, {
         ...(input.label ? { label: input.label } : {}),

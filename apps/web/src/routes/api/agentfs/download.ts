@@ -228,9 +228,9 @@ export const Route = createFileRoute("/api/agentfs/download")({
           const buf =
             typeof raw === "string"
               ? Buffer.from(raw, "utf8")
-              : (Buffer.isBuffer(raw)
+              : Buffer.isBuffer(raw)
                 ? raw
-                : Buffer.from(raw));
+                : Buffer.from(raw);
 
           const body = new Blob([Uint8Array.from(buf)]);
 

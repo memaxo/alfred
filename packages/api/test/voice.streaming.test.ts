@@ -34,6 +34,7 @@ describe("authorizeVoiceStreamRequest", () => {
     createAuditLogMock = vi.fn();
     mock.module("@alfred/db/repo/policy", () => ({
       createAuditLog: createAuditLogMock,
+      queryAuditLogs: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
     }));
 
     // Import after mocks are set up

@@ -15,4 +15,4 @@
 13. **Hybrid execution backends.** Isolate volatile implementations behind a backend resolver pattern (e.g., `resolveBackend()`) to allow environment-based switching between legacy and new implementations during refactors.
 14. **Cache handoff propagation.** Any workflow event consumer that emits `context` receipts must also propagate the paired `data-cache-handoff` metadata so downstream UIs can display cache hits.
 15. **Agent transport parity.** When users switch between assistant and orchestrator agents, the chat transport must swap to the matching HTTP endpoint (e.g., `/api/orchestrator`) so events stream from the correct backend.
-16. **Vite Externalization.** All server-only packages (`@alfred/db`, `@alfred/agent`, `@alfred/policy`) MUST be explicitly listed in `ssr.external` in `apps/web/vite.config.ts` to ensure they remain external during SSR.
+16. **Vite Externalization.** All server-only packages (e.g. `@alfred/db`, `@alfred/agent`, `@alfred/policy`, `@alfred/plan`, `@alfred/pipeline`, `@alfred/codeprint`) MUST be kept external in `apps/web/vite.config.ts` (SSR + build externals) so they never bundle into the client.

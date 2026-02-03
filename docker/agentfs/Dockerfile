@@ -44,7 +44,7 @@ COPY --from=codex /src/codex-rs/target/release/codex /usr/local/bin/codex
 COPY --from=codex /opt/ast-grep/bin/sg /usr/local/bin/sg
 RUN ln -s /usr/local/bin/sg /usr/local/bin/ast-grep || true
 
-ARG OPENCODE_VERSION=1.1.11
+ARG OPENCODE_VERSION=1.1.49
 ARG TARGETARCH
 RUN set -eux; \
     case "${TARGETARCH:-amd64}" in \

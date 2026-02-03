@@ -16,9 +16,9 @@ export function toTRPCError(
   const message =
     error instanceof Error
       ? error.message
-      : (typeof error === "string"
+      : typeof error === "string"
         ? error
-        : defaultMessage);
+        : defaultMessage;
   if (message === "biometric_required") {
     return new TRPCError({ code: "PRECONDITION_FAILED", message });
   }

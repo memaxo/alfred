@@ -4,12 +4,32 @@ import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 mock.module("ai", () => ({
+  consumeStream: async () => [],
+  convertToModelMessages: () => [],
   generateObject: () => {
     throw new Error("mock_ai_disabled");
   },
+  generateId: () => `mock-${Date.now()}`,
   generateText: () => {
     throw new Error("mock_ai_disabled");
   },
+  pruneMessages: (messages: unknown) => messages,
+  simulateStreamingMiddleware: () => ({}),
+  stepCountIs: () => () => false,
+  streamObject: () => {
+    throw new Error("mock_ai_disabled");
+  },
+  streamText: () => {
+    throw new Error("mock_ai_disabled");
+  },
+  ToolLoopAgent: class ToolLoopAgent {
+    constructor(_settings: unknown) {
+      void _settings;
+    }
+  },
+  tool: (definition: unknown) => definition,
+  validateUIMessages: (messages: unknown) => messages,
+  wrapLanguageModel: ({ model }: { model: unknown }) => model,
 }));
 
 mock.module("@alfred/runtime/orchestrator/summary", () => ({

@@ -46,7 +46,7 @@ export function NotesWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (notes.length === 0 ? (
+        ) : notes.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No notes yet.
           </Text>
@@ -88,7 +88,7 @@ export function NotesWindow(_props: WindowComponentProps) {
               );
             })}
           </View>
-        ))}
+        )}
       </View>
     </ScrollView>
   );

@@ -15,6 +15,7 @@ import {
   unwrapEventEnvelope,
   wrapEventEnvelope,
 } from "@alfred/agent/utils/envelope";
+import { util } from "@alfred/cognitive";
 import {
   idle,
   initialAutonomy,
@@ -22,7 +23,7 @@ import {
   updateAutonomy,
 } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
-import { cognitiveRepo } from "@alfred/db";
+import { cognitiveRepo, userRepo } from "@alfred/db";
 import {
   cognitiveEntropyEventsTotal,
   cognitivePhysiologyGauge,
@@ -30,6 +31,47 @@ import {
 
 // Temporary: Autonomy Logic (to be expanded)
 const createInitialAutonomy = () => initialAutonomy(Date.now());
+const AUTONOMY_BASELINE_PREF_KEY = "cognitive.autonomyBaseline";
+
+async function loadAutonomyBaseline(
+  ctx: RuntimeContext
+): Promise<number | null> {
+  try {
+    const userIdRaw = ctx.get("userId");
+    const projectIdRaw = ctx.get("projectId");
+    const userId = typeof userIdRaw === "string" ? userIdRaw : null;
+    const projectId =
+      typeof projectIdRaw === "string" ? projectIdRaw : undefined;
+    if (!userId) {
+      return null;
+    }
+
+    const prefs = await userRepo.getPreferences(userId, projectId);
+    const row = prefs.find((p) => p.key === AUTONOMY_BASELINE_PREF_KEY);
+    const value = row?.value;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return util.clamp01(value);
+    }
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return util.clamp01(parsed);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function seedAutonomy(now: number, baseline: number): AutonomyGradient {
+  const base = initialAutonomy(now);
+  return {
+    ...base,
+    level: util.autonomy(util.clamp01(baseline)),
+    lastUpdate: timestamp(now),
+  };
+}
 
 export type CognitiveEffect =
   | { type: "generate_response"; input: string }
@@ -126,8 +168,16 @@ export async function runCognitiveLoop(
     events = await cognitiveRepo.getEventsSince(streamId, snapshot.createdAt);
   } else {
     state = idle(Date.now());
-    autonomy = createInitialAutonomy();
     events = await cognitiveRepo.getAllEvents(streamId);
+    if (events.length === 0) {
+      const baseline = await loadAutonomyBaseline(_ctx);
+      autonomy =
+        baseline === null
+          ? createInitialAutonomy()
+          : seedAutonomy(Date.now(), baseline);
+    } else {
+      autonomy = createInitialAutonomy();
+    }
   }
 
   // Replay history (NO metrics recording during replay - only for new events)
@@ -181,9 +231,9 @@ export async function runCognitiveLoop(
         ? (state.options.find(
             (opt) => opt.id === inputContent || opt.id.includes(inputContent)
           ) ?? state.options[0])
-        : (eventToApply._ === "timeout"
+        : eventToApply._ === "timeout"
           ? state.options[0]
-          : undefined);
+          : undefined;
 
       if (selected) {
         const riskMax = selected.risks
@@ -464,7 +514,7 @@ export async function runCognitiveLoop(
     resource: "user",
     data: eventToApply,
   });
-  await cognitiveRepo.appendEvent(streamId, eventToApply._, {
+  const inserted = await cognitiveRepo.appendEvent(streamId, eventToApply._, {
     v: envelope.v,
     id: envelope.id,
     type: envelope.type,
@@ -473,6 +523,7 @@ export async function runCognitiveLoop(
     data: envelope.data,
   });
 
+  let lastEventId = inserted.id;
   if (gateInterrupt) {
     const gateEnvelope = wrapEventEnvelope({
       id: crypto.randomUUID(),
@@ -480,14 +531,30 @@ export async function runCognitiveLoop(
       resource: "user",
       data: gateInterrupt,
     });
-    await cognitiveRepo.appendEvent(streamId, gateInterrupt._, {
-      v: gateEnvelope.v,
-      id: gateEnvelope.id,
-      type: gateEnvelope.type,
-      createdAt: gateEnvelope.createdAt,
-      resource: gateEnvelope.resource,
-      data: gateEnvelope.data,
-    });
+    const insertedGate = await cognitiveRepo.appendEvent(
+      streamId,
+      gateInterrupt._,
+      {
+        v: gateEnvelope.v,
+        id: gateEnvelope.id,
+        type: gateEnvelope.type,
+        createdAt: gateEnvelope.createdAt,
+        resource: gateEnvelope.resource,
+        data: gateEnvelope.data,
+      }
+    );
+    lastEventId = insertedGate.id;
+  }
+
+  // Snapshot for fast state hydration (best-effort; must not block callers).
+  try {
+    await cognitiveRepo.saveSnapshot(
+      streamId,
+      stateWithAutonomy as unknown as Record<string, unknown>,
+      lastEventId
+    );
+  } catch {
+    // Swallow snapshot failures; event log remains source of truth.
   }
 
   const effects = gatedMessage

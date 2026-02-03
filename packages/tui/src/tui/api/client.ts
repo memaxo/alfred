@@ -254,6 +254,16 @@ export class ApiClient {
     });
   }
 
+  async executeWorkflow(
+    runId: string
+  ): Promise<ApiResult<{ runId: string; status: string }>> {
+    const url = `${this.baseUrl}/api/trpc/workflow.phase.executeByRunId`;
+    return await fetchJson(url, {
+      body: JSON.stringify({ runId }),
+      method: "POST",
+    });
+  }
+
   async getWorkflowEvents(
     runId: string,
     limit = 100

@@ -88,6 +88,7 @@ export interface GeneratePlanOptions {
   maxPhases?: number;
   preferParallel?: boolean;
   agentTypes?: AgentType[];
+  autonomyLevel?: number;
 }
 
 // Re-export core types

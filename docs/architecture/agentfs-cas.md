@@ -2,6 +2,8 @@
 
 Purpose: Document the canonical pattern for AgentFS portable archives and content-addressed storage (CAS), including access control, on-disk layout, and retention.
 
+See also: `docs/architecture/agentfs-audit.md`
+
 ## On-disk layout
 
 - Run directories: `.agentfs/<runId>/...`

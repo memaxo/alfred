@@ -327,6 +327,15 @@ export const Route = createFileRoute("/api/agentfs/restore")({
                 throw new Error("not_file");
               }
             } catch {
+              try {
+                const metricsPkg = "@alfred/api/services/agentfs-metrics";
+                const { recordCasMiss } = await import(
+                  /* @vite-ignore */ metricsPkg
+                );
+                recordCasMiss();
+              } catch {
+                // best-effort
+              }
               return new Response(JSON.stringify({ error: "not_found" }), {
                 status: 404,
                 headers: {
@@ -345,6 +354,16 @@ export const Route = createFileRoute("/api/agentfs/restore")({
               await touchAgentfsCasLastAccessed({ sha: casSha });
             } catch {
               // ignore - don't fail the restore if tracking fails
+            }
+
+            try {
+              const metricsPkg = "@alfred/api/services/agentfs-metrics";
+              const { recordCasHit } = await import(
+                /* @vite-ignore */ metricsPkg
+              );
+              recordCasHit();
+            } catch {
+              // best-effort
             }
           } else {
             await writeBodyToFile({ body: request.body, filePath: tmpArchive });
@@ -579,6 +598,20 @@ export const Route = createFileRoute("/api/agentfs/restore")({
           }
 
           const dbPath = path.posix.join(destRunDirRel, db);
+          try {
+            const auditPkg = "@alfred/agent/utils/audit";
+            const { recordAudit } = await import(/* @vite-ignore */ auditPkg);
+            await recordAudit({
+              userId: session.user.id,
+              projectId: metaProjectId ?? null,
+              action: "agentfs.op.cas_restore",
+              resource: { kind: "agentfs_run", id: runId },
+              decision: "allow",
+              context: { success: true, runId, sha: casSha },
+            });
+          } catch {
+            // best-effort
+          }
           return new Response(
             JSON.stringify({ runId, dbPath, projectId: metaProjectId }),
             {

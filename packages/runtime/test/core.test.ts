@@ -323,6 +323,31 @@ describe("WorkflowRuntime", () => {
     }, 5000);
   });
 
+  describe("Cognitive bridge", () => {
+    it("emits cognitive input + complete events via injected runCognitiveLoop", async () => {
+      const calls: { streamId: string; event: unknown }[] = [];
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        runCognitiveLoop: async (_ctx, streamId, event) => {
+          calls.push({ streamId, event });
+        },
+      });
+
+      for await (const _event of runtime.stream) {
+        void _event;
+      }
+
+      const types = calls.map((c) => (c.event as { _?: unknown })._);
+      expect(types).toContain("input");
+      expect(types).toContain("complete");
+
+      const streamIds = new Set(calls.map((c) => c.streamId));
+      expect(streamIds.size).toBe(1);
+      expect([...streamIds][0]).toBe(runtime.runId);
+    });
+  });
+
   describe("Public API", () => {
     it("provides required RunPlanV6 interface", () => {
       const runtime = createRuntime({

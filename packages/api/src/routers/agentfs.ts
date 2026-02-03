@@ -9,6 +9,12 @@ import {
   type AgentFSStreamCursor,
   type AgentFSStreamEvent,
   READ_SCOPES,
+  WRITE_SCOPES,
+  executorConfigPublicSchema,
+  executorConfigWriteSchema,
+  executorHealthSchema,
+  executorKindSchema,
+  executorStatusSchema,
 } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -24,6 +30,8 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+
+import type { AuditAction } from "../agentfs/domain";
 
 import { requirePolicy } from "../gate";
 import { requireScopes } from "../middleware/scopes";
@@ -493,6 +501,79 @@ async function enforceAgentfsProjectAccess(args: {
   return res;
 }
 
+async function resolveSearchRunIds(args: {
+  ctx: { session: unknown | null };
+  projectId?: string | null;
+  runIds?: readonly string[];
+}): Promise<string[] | undefined> {
+  const userId = getUserIdForAgentfsAccess(args.ctx);
+
+  if (args.runIds && args.runIds.length > 0) {
+    for (const runId of args.runIds) {
+      const access = await checkAgentfsAccess({
+        baseDir: null,
+        requestedProjectId: args.projectId ?? null,
+        runId,
+        userId,
+      });
+      if (!access.allow) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            access.reason === "run_not_owned"
+              ? "agentfs_run_forbidden"
+              : "agentfs_project_mismatch",
+        });
+      }
+    }
+    return [...args.runIds];
+  }
+
+  if (!args.projectId) {
+    return undefined;
+  }
+
+  try {
+    const { workflowRepo } = await import("@alfred/db");
+    if (typeof workflowRepo.listRuns !== "function") {
+      return undefined;
+    }
+
+    const limit = 1000;
+    let offset = 0;
+    const out: string[] = [];
+
+    while (true) {
+      const page = await workflowRepo.listRuns({
+        userId,
+        projectId: args.projectId,
+        limit,
+        offset,
+      });
+      if (!Array.isArray(page) || page.length === 0) {
+        break;
+      }
+      for (const row of page) {
+        const { id } = row as { id?: unknown };
+        if (typeof id === "string") {
+          out.push(id);
+        }
+      }
+      if (page.length < limit) {
+        break;
+      }
+      offset += limit;
+      if (offset >= 10_000) {
+        break;
+      }
+    }
+
+    return out.length > 0 ? out : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 interface StatShape {
   ino?: unknown;
   size?: unknown;
@@ -519,13 +600,138 @@ function toDirEntry(name: string, stat: unknown, inoFallback: number) {
   };
 }
 
+const EXECUTOR_KV_PREFIX = "executor:";
+const EXECUTOR_KV_REDACTED_VALUE = "[redacted]" as const;
+
+function isExecutorKvKey(key: string): boolean {
+  return key.startsWith(EXECUTOR_KV_PREFIX);
+}
+
+function maybeRedactKvEntryValue<T>(entry: { key: string; value: T }): {
+  value: T | typeof EXECUTOR_KV_REDACTED_VALUE;
+  redacted: boolean;
+} {
+  if (isExecutorKvKey(entry.key)) {
+    return { redacted: true, value: EXECUTOR_KV_REDACTED_VALUE };
+  }
+  return { redacted: false, value: entry.value };
+}
+
+function isIpv4Literal(hostname: string): boolean {
+  const m = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) {
+    return false;
+  }
+  for (const seg of m.slice(1)) {
+    const n = Number(seg);
+    if (!Number.isFinite(n) || n < 0 || n > 255) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function ipv4ToU32(hostname: string): number {
+  const parts = hostname.split(".").map((p) => Number(p));
+  return (
+    (((parts[0] ?? 0) << 24) |
+      ((parts[1] ?? 0) << 16) |
+      ((parts[2] ?? 0) << 8) |
+      (parts[3] ?? 0)) >>>
+    0
+  );
+}
+
+function inCidr(u32: number, base: string, bits: number): boolean {
+  const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
+  const baseU32 = ipv4ToU32(base);
+  return (u32 & mask) === (baseU32 & mask);
+}
+
+function assertSafeExecutorHttpBaseUrl(raw: string): string {
+  const override = process.env.ALFRED_EXECUTOR_HTTP_ALLOW_HOSTNAMES === "1";
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "executor_http_baseurl_invalid",
+    });
+  }
+
+  if (!(url.protocol === "http:" || url.protocol === "https:")) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "executor_http_baseurl_protocol_invalid",
+    });
+  }
+
+  if (url.username || url.password) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "executor_http_baseurl_userinfo_forbidden",
+    });
+  }
+
+  const hostname = url.hostname.trim().toLowerCase();
+  if (!hostname) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "executor_http_baseurl_invalid",
+    });
+  }
+
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1"
+  ) {
+    return url.toString().replace(/\/$/, "");
+  }
+
+  if (isIpv4Literal(hostname)) {
+    const u32 = ipv4ToU32(hostname);
+    const isLoopback = inCidr(u32, "127.0.0.0", 8);
+    const isPriv10 = inCidr(u32, "10.0.0.0", 8);
+    const isPriv172 = inCidr(u32, "172.16.0.0", 12);
+    const isPriv192 = inCidr(u32, "192.168.0.0", 16);
+    if (isLoopback || isPriv10 || isPriv172 || isPriv192) {
+      return url.toString().replace(/\/$/, "");
+    }
+  }
+
+  const isIpv6Literal = hostname.includes(":");
+  if (isIpv6Literal) {
+    const h = hostname;
+    const isLoopback = h === "::1";
+    const isUla = h.startsWith("fd") || h.startsWith("fc");
+    if (isLoopback || isUla) {
+      return url.toString().replace(/\/$/, "");
+    }
+  }
+
+  if (override) {
+    return url.toString().replace(/\/$/, "");
+  }
+
+  throw new TRPCError({
+    code: "BAD_REQUEST",
+    message: "executor_http_baseurl_unsafe",
+  });
+}
+
 export const agentfsRouter = router({
   // ─────────────────────────────────────────────────────────────────────────
   // Workspace Management Procedures
   // ─────────────────────────────────────────────────────────────────────────
 
   applyChanges: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] })) // Explicit scope for applying to host
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    ) // Explicit scope for applying to host
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -723,7 +929,7 @@ export const agentfsRouter = router({
 
         return {
           checkpoints: [...merged.values()].sort((a, b) =>
-            a.createdAt < b.createdAt ? 1 : (a.createdAt > b.createdAt ? -1 : 0)
+            a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
           ),
         };
       } finally {
@@ -732,7 +938,11 @@ export const agentfsRouter = router({
     }),
 
   clearRetention: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -761,7 +971,11 @@ export const agentfsRouter = router({
     }),
 
   cloneCheckpoint: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -779,93 +993,125 @@ export const agentfsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_path_invalid",
-        });
-      }
-
-      await enforceAgentfsProjectAccess({
-        ctx,
-        runId: input.runId,
-        dbPath: input.dbPath,
-        baseDir: null,
-        projectId: input.projectId,
-      });
-
-      const checkpointId = sanitizeCheckpointId(input.checkpointId);
-      if (!checkpointId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_checkpoint_id_invalid",
-        });
-      }
-
-      const srcDbPath = input.dbPath.replaceAll("\\", "/");
-      const srcAbsDbPath = path.resolve(process.cwd(), srcDbPath);
-      const srcSnapshotAbs = `${srcAbsDbPath}.checkpoint-${checkpointId}`;
-
-      const srcSt = await stat(srcSnapshotAbs).catch(() => null);
-      if (!srcSt?.isFile()) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "agentfs_checkpoint_not_found",
-        });
-      }
-
-      const base = path.posix.basename(srcDbPath);
-      const targetRunId = sanitizeRunId(
-        input.targetRunId ? input.targetRunId : randomUUID().slice(0, 12)
-      );
-      if (!targetRunId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_run_id_invalid",
-        });
-      }
-
-      await mkdir(path.resolve(process.cwd(), ".agentfs"), { recursive: true });
-
-      const dstDir = `.agentfs/${targetRunId}`;
-      const dstAbsDir = path.resolve(process.cwd(), dstDir);
       try {
-        await mkdir(dstAbsDir, { recursive: false });
-      } catch (error) {
-        const code = (error as { code?: string } | null)?.code;
-        if (code === "EEXIST") {
+        if (
+          !isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })
+        ) {
           throw new TRPCError({
-            code: "CONFLICT",
-            message: "agentfs_run_exists",
+            code: "BAD_REQUEST",
+            message: "agentfs_path_invalid",
           });
         }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "agentfs_clone_failed",
+
+        await enforceAgentfsProjectAccess({
+          ctx,
+          runId: input.runId,
+          dbPath: input.dbPath,
+          baseDir: null,
+          projectId: input.projectId,
         });
-      }
 
-      const dstDbPath = `${dstDir}/${base}`;
-      const dstAbsDbPath = path.resolve(process.cwd(), dstDbPath);
-
-      await copyFile(srcSnapshotAbs, dstAbsDbPath);
-
-      for (const suffix of ["-wal", "-shm"]) {
-        const src = `${srcSnapshotAbs}${suffix}`;
-        const dst = `${dstAbsDbPath}${suffix}`;
-        try {
-          await stat(src);
-          await copyFile(src, dst);
-        } catch {
-          // ignore
+        const checkpointId = sanitizeCheckpointId(input.checkpointId);
+        if (!checkpointId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "agentfs_checkpoint_id_invalid",
+          });
         }
-      }
 
-      return { runId: targetRunId, dbPath: dstDbPath };
+        const srcDbPath = input.dbPath.replaceAll("\\", "/");
+        const srcAbsDbPath = path.resolve(process.cwd(), srcDbPath);
+        const srcSnapshotAbs = `${srcAbsDbPath}.checkpoint-${checkpointId}`;
+
+        const srcSt = await stat(srcSnapshotAbs).catch(() => null);
+        if (!srcSt?.isFile()) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "agentfs_checkpoint_not_found",
+          });
+        }
+
+        const base = path.posix.basename(srcDbPath);
+        const targetRunId = sanitizeRunId(
+          input.targetRunId ? input.targetRunId : randomUUID().slice(0, 12)
+        );
+        if (!targetRunId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "agentfs_run_id_invalid",
+          });
+        }
+
+        await mkdir(path.resolve(process.cwd(), ".agentfs"), {
+          recursive: true,
+        });
+
+        const dstDir = `.agentfs/${targetRunId}`;
+        const dstAbsDir = path.resolve(process.cwd(), dstDir);
+        try {
+          await mkdir(dstAbsDir, { recursive: false });
+        } catch (error) {
+          const code = (error as { code?: string } | null)?.code;
+          if (code === "EEXIST") {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "agentfs_run_exists",
+            });
+          }
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "agentfs_clone_failed",
+          });
+        }
+
+        const dstDbPath = `${dstDir}/${base}`;
+        const dstAbsDbPath = path.resolve(process.cwd(), dstDbPath);
+
+        await copyFile(srcSnapshotAbs, dstAbsDbPath);
+
+        for (const suffix of ["-wal", "-shm"]) {
+          const src = `${srcSnapshotAbs}${suffix}`;
+          const dst = `${dstAbsDbPath}${suffix}`;
+          try {
+            await stat(src);
+            await copyFile(src, dst);
+          } catch {
+            // ignore
+          }
+        }
+
+        const result = { runId: targetRunId, dbPath: dstDbPath };
+        await recordAgentfsOp({
+          ctx,
+          action: "checkpoint_restore",
+          success: true,
+          projectId: input.projectId ?? null,
+          runId: input.runId,
+          extra: { targetRunId },
+        });
+        return result;
+      } catch (error) {
+        await recordAgentfsOp({
+          ctx,
+          action: "checkpoint_restore",
+          success: false,
+          projectId: input.projectId ?? null,
+          runId: input.runId,
+          extra: {
+            error: error instanceof Error ? error.message : String(error ?? ""),
+            targetRunId: input.targetRunId ?? null,
+          },
+        });
+        throw error;
+      }
     }),
 
   cloneRun: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -884,66 +1130,90 @@ export const agentfsRouter = router({
         targetRunId: z.string().min(1).max(200).optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      if (!isSafeAgentfsDbPath(input.source)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_path_invalid",
-        });
-      }
-
-      const srcDbPath = input.source.dbPath.replaceAll("\\", "/");
-      const srcAbsDbPath = path.resolve(process.cwd(), srcDbPath);
-      const base = path.posix.basename(srcDbPath);
-
-      const targetRunId = sanitizeRunId(
-        input.targetRunId ? input.targetRunId : randomUUID().slice(0, 12)
-      );
-      if (!targetRunId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_run_id_invalid",
-        });
-      }
-
-      const dstDir = `.agentfs/${targetRunId}`;
-      const dstAbsDir = path.resolve(process.cwd(), dstDir);
-
-      await mkdir(path.resolve(process.cwd(), ".agentfs"), { recursive: true });
-
+    .mutation(async ({ input, ctx }) => {
       try {
-        await mkdir(dstAbsDir, { recursive: false });
-      } catch (error) {
-        const code = (error as { code?: string } | null)?.code;
-        if (code === "EEXIST") {
+        if (!isSafeAgentfsDbPath(input.source)) {
           throw new TRPCError({
-            code: "CONFLICT",
-            message: "agentfs_run_exists",
+            code: "BAD_REQUEST",
+            message: "agentfs_path_invalid",
           });
         }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "agentfs_clone_failed",
-        });
-      }
 
-      const dstDbPath = `${dstDir}/${base}`;
-      const dstAbsDbPath = path.resolve(process.cwd(), dstDbPath);
+        const srcDbPath = input.source.dbPath.replaceAll("\\", "/");
+        const srcAbsDbPath = path.resolve(process.cwd(), srcDbPath);
+        const base = path.posix.basename(srcDbPath);
 
-      await copyFile(srcAbsDbPath, dstAbsDbPath);
-
-      for (const suffix of ["-wal", "-shm"]) {
-        const src = `${srcAbsDbPath}${suffix}`;
-        const dst = `${dstAbsDbPath}${suffix}`;
-        try {
-          await stat(src);
-          await copyFile(src, dst);
-        } catch {
-          // ignore
+        const targetRunId = sanitizeRunId(
+          input.targetRunId ? input.targetRunId : randomUUID().slice(0, 12)
+        );
+        if (!targetRunId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "agentfs_run_id_invalid",
+          });
         }
-      }
 
-      return { runId: targetRunId, dbPath: dstDbPath };
+        const dstDir = `.agentfs/${targetRunId}`;
+        const dstAbsDir = path.resolve(process.cwd(), dstDir);
+
+        await mkdir(path.resolve(process.cwd(), ".agentfs"), {
+          recursive: true,
+        });
+
+        try {
+          await mkdir(dstAbsDir, { recursive: false });
+        } catch (error) {
+          const code = (error as { code?: string } | null)?.code;
+          if (code === "EEXIST") {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "agentfs_run_exists",
+            });
+          }
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "agentfs_clone_failed",
+          });
+        }
+
+        const dstDbPath = `${dstDir}/${base}`;
+        const dstAbsDbPath = path.resolve(process.cwd(), dstDbPath);
+
+        await copyFile(srcAbsDbPath, dstAbsDbPath);
+
+        for (const suffix of ["-wal", "-shm"]) {
+          const src = `${srcAbsDbPath}${suffix}`;
+          const dst = `${dstAbsDbPath}${suffix}`;
+          try {
+            await stat(src);
+            await copyFile(src, dst);
+          } catch {
+            // ignore
+          }
+        }
+
+        const result = { runId: targetRunId, dbPath: dstDbPath };
+        await recordAgentfsOp({
+          ctx,
+          action: "run_clone",
+          success: true,
+          runId: input.source.runId,
+          extra: { targetRunId },
+        });
+        return result;
+      } catch (error) {
+        await recordAgentfsOp({
+          ctx,
+          action: "run_clone",
+          success: false,
+          runId: input.source.runId,
+          extra: {
+            error: error instanceof Error ? error.message : String(error ?? ""),
+            targetRunId: input.targetRunId ?? null,
+          },
+        });
+        throw error;
+      }
     }),
 
   compareRuns: authedProcedure
@@ -1545,15 +1815,472 @@ export const agentfsRouter = router({
         });
 
         const kvRaw = await fsdb.kv.list();
-        const entries = kvRaw.map((e: AgentFSKVEntry) => ({
-          key: e.key,
-          value: e.value,
-          type: typeof e.value,
-          createdAt: new Date((e.created_at ?? 0) * 1000).toISOString(),
-          updatedAt: new Date((e.updated_at ?? 0) * 1000).toISOString(),
-        }));
+        const entries = kvRaw.map((e: AgentFSKVEntry) => {
+          const redacted = maybeRedactKvEntryValue({
+            key: e.key,
+            value: e.value,
+          });
+          return {
+            key: e.key,
+            value: redacted.value,
+            type: redacted.redacted ? "redacted" : typeof e.value,
+            createdAt: new Date((e.created_at ?? 0) * 1000).toISOString(),
+            updatedAt: new Date((e.updated_at ?? 0) * 1000).toISOString(),
+          };
+        });
 
         return { entries };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  executorConfigGet: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const runId = typeof rec.runId === "string" ? rec.runId : "unknown";
+        return { kind: "agentfs_file", id: `${runId}:/` };
+      })
+    )
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        kind: executorKindSchema,
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const { fsdb, baseDir } = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        await enforceAgentfsProjectAccess({
+          ctx,
+          runId: input.runId,
+          dbPath: input.dbPath,
+          baseDir,
+          projectId: input.projectId,
+        });
+
+        const key = `executor:${input.kind}:config`;
+        const raw = await fsdb.kv.get<unknown>(key);
+        const parsed = raw ? executorConfigPublicSchema.safeParse(raw) : null;
+        return {
+          exists: Boolean(raw),
+          config: parsed?.success ? parsed.data : null,
+          valid: parsed ? parsed.success : false,
+        };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  executorConfigSet: authedProcedure
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const runId = typeof rec.runId === "string" ? rec.runId : "unknown";
+        return { kind: "agentfs_file", id: `${runId}:/` };
+      })
+    )
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        config: executorConfigWriteSchema,
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const { fsdb, baseDir } = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        await enforceAgentfsProjectAccess({
+          ctx,
+          runId: input.runId,
+          dbPath: input.dbPath,
+          baseDir,
+          projectId: input.projectId,
+        });
+
+        const kind = input.config.kind;
+        const keyConfig = `executor:${kind}:config`;
+        const keySecrets = `executor:${kind}:secrets`;
+
+        let nextSecrets: unknown | undefined;
+        let passwordSet = false;
+
+        if (kind === "opencode") {
+          const cfg = input.config as Extract<
+            z.infer<typeof executorConfigWriteSchema>,
+            { kind: "opencode" }
+          >;
+
+          if (cfg.transport === "http") {
+            const baseUrl = cfg.http?.baseUrl;
+            if (baseUrl) {
+              assertSafeExecutorHttpBaseUrl(baseUrl);
+            }
+          }
+
+          const prevSecrets = await fsdb.kv.get<unknown>(keySecrets);
+          const prevHttp =
+            prevSecrets && typeof prevSecrets === "object"
+              ? (prevSecrets as Record<string, unknown>).http
+              : undefined;
+          const prevPassword =
+            prevHttp && typeof prevHttp === "object"
+              ? (prevHttp as Record<string, unknown>).password
+              : undefined;
+
+          const nextPassword = cfg.http?.password;
+          const password =
+            typeof nextPassword === "string"
+              ? nextPassword
+              : typeof prevPassword === "string"
+                ? prevPassword
+                : undefined;
+          passwordSet = typeof password === "string" && password.length > 0;
+
+          if (password) {
+            nextSecrets = {
+              http: { password },
+              kind,
+              v: cfg.v,
+            };
+            await fsdb.kv.set(keySecrets, nextSecrets);
+          }
+
+          const publicCfg = {
+            acp: cfg.acp,
+            defaultExecProfile: cfg.defaultExecProfile,
+            http: cfg.http
+              ? {
+                  baseUrl: cfg.http.baseUrl,
+                  passwordSet,
+                  username: cfg.http.username,
+                }
+              : undefined,
+            kind,
+            transport: cfg.transport,
+            v: cfg.v,
+          };
+
+          const parsedPublic = executorConfigPublicSchema.safeParse(publicCfg);
+          if (!parsedPublic.success) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "executor_config_invalid",
+            });
+          }
+
+          await fsdb.kv.set(keyConfig, parsedPublic.data);
+          return {
+            config: parsedPublic.data,
+            exists: true,
+          };
+        }
+
+        if (kind === "codex") {
+          await fsdb.kv.set(keyConfig, input.config);
+          return { config: input.config, exists: true };
+        }
+
+        await fsdb.kv.set(keyConfig, input.config);
+        return { config: input.config, exists: true };
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  executorStatus: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const runId = typeof rec.runId === "string" ? rec.runId : "unknown";
+        return { kind: "agentfs_file", id: `${runId}:/` };
+      })
+    )
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        kind: executorKindSchema,
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const { fsdb, baseDir } = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        await enforceAgentfsProjectAccess({
+          ctx,
+          runId: input.runId,
+          dbPath: input.dbPath,
+          baseDir,
+          projectId: input.projectId,
+        });
+
+        const expectedName = `alfred-agentfs-${sanitizeRunId(input.runId)}`;
+        const expectedCw = "/workspace";
+
+        const keyConfig = `executor:${input.kind}:config`;
+        const raw = await fsdb.kv.get<unknown>(keyConfig);
+        const parsed = raw ? executorConfigPublicSchema.safeParse(raw) : null;
+        const issues = parsed?.success
+          ? undefined
+          : parsed
+            ? parsed.error.issues.map((i) => i.message)
+            : undefined;
+
+        const supports = (() => {
+          if (input.kind === "droid") {
+            return {
+              execProfiles: ["default"] as const,
+              transports: undefined,
+            };
+          }
+          if (input.kind === "codex") {
+            return {
+              execProfiles: ["default", "server"] as const,
+              transports: undefined,
+            };
+          }
+          return {
+            execProfiles: ["default", "server"] as const,
+            transports: ["acp", "http"] as const,
+          };
+        })();
+
+        const res = {
+          config: {
+            exists: Boolean(raw),
+            issues,
+            valid: parsed ? parsed.success : false,
+          },
+          containerContext: {
+            expectedCw,
+            expectedName,
+            present: input.kind !== "droid",
+          },
+          kind: input.kind,
+          supports,
+        };
+
+        return executorStatusSchema.parse(res);
+      } finally {
+        await fsdb.close();
+      }
+    }),
+
+  executorHealth: authedProcedure
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
+    .use(
+      requirePolicy("agentfs.read", (raw) => {
+        const rec = (raw ?? {}) as Record<string, unknown>;
+        const runId = typeof rec.runId === "string" ? rec.runId : "unknown";
+        return { kind: "agentfs_file", id: `${runId}:/` };
+      })
+    )
+    .input(
+      z.object({
+        runId: z.string().min(1).max(200),
+        dbPath: z.string().min(1).max(500),
+        kind: executorKindSchema,
+        projectId: z.string().uuid().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      if (!isSafeAgentfsDbPath({ runId: input.runId, dbPath: input.dbPath })) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "agentfs_path_invalid",
+        });
+      }
+
+      const { fsdb, baseDir } = await loadAgentfs({
+        runId: input.runId,
+        dbPath: input.dbPath,
+      });
+
+      try {
+        await enforceAgentfsProjectAccess({
+          ctx,
+          runId: input.runId,
+          dbPath: input.dbPath,
+          baseDir,
+          projectId: input.projectId,
+        });
+
+        const checkedAt = new Date().toISOString();
+        const keyConfig = `executor:${input.kind}:config`;
+        const rawCfg = await fsdb.kv.get<unknown>(keyConfig);
+        const parsedCfg = rawCfg
+          ? executorConfigPublicSchema.safeParse(rawCfg)
+          : null;
+        if (!parsedCfg?.success) {
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: rawCfg
+              ? "executor_config_invalid"
+              : "executor_config_missing",
+            kind: input.kind,
+            ok: false,
+          });
+        }
+
+        if (input.kind !== "opencode") {
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: "executor_health_unsupported",
+            kind: input.kind,
+            ok: false,
+          });
+        }
+
+        const cfg = parsedCfg.data as Extract<
+          z.infer<typeof executorConfigPublicSchema>,
+          { kind: "opencode" }
+        >;
+
+        if (cfg.transport !== "http") {
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: "opencode_health_acp_unsupported",
+            kind: input.kind,
+            ok: false,
+          });
+        }
+
+        const baseUrl = cfg.http?.baseUrl;
+        if (!baseUrl) {
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: "opencode_http_baseurl_required",
+            kind: input.kind,
+            ok: false,
+          });
+        }
+
+        const safeBaseUrl = assertSafeExecutorHttpBaseUrl(baseUrl);
+
+        const keySecrets = `executor:${input.kind}:secrets`;
+        const rawSecrets = await fsdb.kv.get<unknown>(keySecrets);
+        const secretsHttp =
+          rawSecrets && typeof rawSecrets === "object"
+            ? (rawSecrets as Record<string, unknown>).http
+            : undefined;
+        const password =
+          secretsHttp && typeof secretsHttp === "object"
+            ? (secretsHttp as Record<string, unknown>).password
+            : undefined;
+
+        const username = cfg.http?.username;
+        const passwordSet = cfg.http?.passwordSet === true;
+        if (
+          passwordSet &&
+          !(typeof username === "string" && username.length > 0)
+        ) {
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: "opencode_http_username_required",
+            kind: input.kind,
+            ok: false,
+          });
+        }
+        if (
+          passwordSet &&
+          !(typeof password === "string" && password.length > 0)
+        ) {
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: "opencode_http_password_missing",
+            kind: input.kind,
+            ok: false,
+          });
+        }
+
+        const ac = new AbortController();
+        const t = setTimeout(() => ac.abort(), 2000);
+        try {
+          const headers = new Headers();
+          if (passwordSet && username && typeof password === "string") {
+            const token = Buffer.from(
+              `${username}:${password}`,
+              "utf8"
+            ).toString("base64");
+            headers.set("authorization", `Basic ${token}`);
+          }
+
+          const res = await fetch(`${safeBaseUrl}/path`, {
+            headers,
+            method: "GET",
+            signal: ac.signal,
+          });
+
+          if (!res.ok) {
+            return executorHealthSchema.parse({
+              checkedAt,
+              details: `opencode_http_unhealthy:${res.status}`,
+              kind: input.kind,
+              ok: false,
+            });
+          }
+
+          return executorHealthSchema.parse({
+            checkedAt,
+            kind: input.kind,
+            ok: true,
+          });
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          return executorHealthSchema.parse({
+            checkedAt,
+            details: `opencode_http_unhealthy:${msg}`,
+            kind: input.kind,
+            ok: false,
+          });
+        } finally {
+          clearTimeout(t);
+        }
       } finally {
         await fsdb.close();
       }
@@ -1617,7 +2344,11 @@ export const agentfsRouter = router({
     }),
 
   pinRun: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -1626,20 +2357,40 @@ export const agentfsRouter = router({
       })
     )
     .input(z.object({ runId: z.string().min(1).max(200) }))
-    .mutation(async ({ input }) => {
-      const runId = sanitizeRunId(input.runId);
-      if (!runId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_run_id_invalid",
-        });
-      }
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const runId = sanitizeRunId(input.runId);
+        if (!runId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "agentfs_run_id_invalid",
+          });
+        }
 
-      const runDir = path.resolve(process.cwd(), ".agentfs", runId);
-      const keep = path.join(runDir, ".keep");
-      await mkdir(runDir, { recursive: true });
-      await writeFile(keep, new Date().toISOString(), "utf8");
-      return { ok: true };
+        const runDir = path.resolve(process.cwd(), ".agentfs", runId);
+        const keep = path.join(runDir, ".keep");
+        await mkdir(runDir, { recursive: true });
+        await writeFile(keep, new Date().toISOString(), "utf8");
+
+        await recordAgentfsOp({
+          ctx,
+          action: "pin_set",
+          success: true,
+          runId: input.runId,
+        });
+        return { ok: true };
+      } catch (error) {
+        await recordAgentfsOp({
+          ctx,
+          action: "pin_set",
+          success: false,
+          runId: input.runId,
+          extra: {
+            error: error instanceof Error ? error.message : String(error ?? ""),
+          },
+        });
+        throw error;
+      }
     }),
 
   runStats: authedProcedure
@@ -1709,7 +2460,11 @@ export const agentfsRouter = router({
     }),
 
   setRetention: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -1796,12 +2551,18 @@ export const agentfsRouter = router({
         }));
 
         const kvRaw = await fsdb.kv.list();
-        const kvStore = kvRaw.map((e: AgentFSKVEntry) => ({
-          key: e.key,
-          value: e.value,
-          createdAt: e.created_at,
-          updatedAt: e.updated_at,
-        }));
+        const kvStore = kvRaw.map((e: AgentFSKVEntry) => {
+          const redacted = maybeRedactKvEntryValue({
+            key: e.key,
+            value: e.value,
+          });
+          return {
+            key: e.key,
+            value: redacted.value,
+            createdAt: e.created_at,
+            updatedAt: e.updated_at,
+          };
+        });
 
         const maxToolCallId =
           toolCallsRaw.length > 0
@@ -1981,12 +2742,18 @@ export const agentfsRouter = router({
               }));
 
             const kvRaw = await currentFsdb.kv.list();
-            const kvStore = kvRaw.map((e: AgentFSKVEntry) => ({
-              key: e.key,
-              value: e.value,
-              createdAt: e.created_at,
-              updatedAt: e.updated_at,
-            }));
+            const kvStore = kvRaw.map((e: AgentFSKVEntry) => {
+              const redacted = maybeRedactKvEntryValue({
+                key: e.key,
+                value: e.value,
+              });
+              return {
+                key: e.key,
+                value: redacted.value,
+                createdAt: e.created_at,
+                updatedAt: e.updated_at,
+              };
+            });
 
             const diffRaw = await currentFsdb.diff().catch(() => []);
             const changes = [...diffRaw].sort(
@@ -2128,7 +2895,11 @@ export const agentfsRouter = router({
     }),
 
   unpinRun: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -2137,23 +2908,43 @@ export const agentfsRouter = router({
       })
     )
     .input(z.object({ runId: z.string().min(1).max(200) }))
-    .mutation(async ({ input }) => {
-      const runId = sanitizeRunId(input.runId);
-      if (!runId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "agentfs_run_id_invalid",
-        });
-      }
-
-      const runDir = path.resolve(process.cwd(), ".agentfs", runId);
-      const keep = path.join(runDir, ".keep");
+    .mutation(async ({ input, ctx }) => {
       try {
-        await unlink(keep);
-      } catch {
-        // ignore
+        const runId = sanitizeRunId(input.runId);
+        if (!runId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "agentfs_run_id_invalid",
+          });
+        }
+
+        const runDir = path.resolve(process.cwd(), ".agentfs", runId);
+        const keep = path.join(runDir, ".keep");
+        try {
+          await unlink(keep);
+        } catch {
+          // ignore
+        }
+
+        await recordAgentfsOp({
+          ctx,
+          action: "pin_clear",
+          success: true,
+          runId: input.runId,
+        });
+        return { ok: true };
+      } catch (error) {
+        await recordAgentfsOp({
+          ctx,
+          action: "pin_clear",
+          success: false,
+          runId: input.runId,
+          extra: {
+            error: error instanceof Error ? error.message : String(error ?? ""),
+          },
+        });
+        throw error;
       }
-      return { ok: true };
     }),
 
   workspacesList: authedProcedure
@@ -2287,22 +3078,32 @@ export const agentfsRouter = router({
   // ─────────────────────────────────────────────────────────────────────────
 
   quarantineList: authedProcedure
-    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
         id: "quarantine:/",
       }))
     )
-    .input(z.object({ limit: z.number().int().min(1).max(1000).default(100) }))
+    .input(
+      z.object({
+        cursor: z.string().min(1).max(500).optional(),
+        limit: z.number().int().min(1).max(1000).default(100),
+        type: z.enum(["run", "cas"]).optional(),
+      })
+    )
     .query(async ({ input }) => {
       const { listQuarantine } = await import("../services/agentfs-quarantine");
-      const result = await listQuarantine({ limit: input.limit });
+      const result = await listQuarantine({
+        cursor: input.cursor,
+        limit: input.limit,
+        type: input.type,
+      });
       return { items: result.entries, nextCursor: result.nextCursor };
     }),
 
   quarantineInspect: authedProcedure
-    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -2325,7 +3126,11 @@ export const agentfsRouter = router({
     }),
 
   quarantineRestore: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -2334,16 +3139,67 @@ export const agentfsRouter = router({
       })
     )
     .input(z.object({ id: z.string().min(1).max(200) }))
-    .mutation(async ({ input }) => {
-      const { restoreQuarantineItem } =
+    .mutation(async ({ input, ctx }) => {
+      const { inspectQuarantineItem, restoreQuarantineItem } =
         await import("../services/agentfs-quarantine");
+
+      const item = await inspectQuarantineItem(input.id).catch(() => null);
+
+      const resource =
+        item?.type === "run"
+          ? { kind: "agentfs_quarantine", id: `run:${item.id}` }
+          : item?.type === "cas"
+            ? { kind: "agentfs_quarantine", id: `cas:${item.id}` }
+            : { kind: "agentfs_quarantine", id: input.id };
+      const runId = item?.type === "run" ? item.id : undefined;
+      const sha = item?.type === "cas" ? item.id : undefined;
+
       const result = await restoreQuarantineItem(input.id);
       if (!result.success) {
+        await recordAgentfsOp({
+          ctx,
+          action: "quarantine_restore",
+          success: false,
+          runId,
+          sha,
+          resource,
+          extra: { error: result.error ?? "agentfs_quarantine_restore_failed" },
+        });
+
+        if (result.error === "agentfs_quarantine_not_found") {
+          throw new TRPCError({ code: "NOT_FOUND", message: "not_found" });
+        }
+        if (result.error === "agentfs_quarantine_pinned") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "pinned",
+          });
+        }
+        if (result.error === "agentfs_quarantine_target_exists") {
+          throw new TRPCError({ code: "CONFLICT", message: "target_exists" });
+        }
+        if (
+          result.error === "agentfs_quarantine_invalid_target" ||
+          result.error === "agentfs_quarantine_no_target" ||
+          result.error === "agentfs_quarantine_corrupt_metadata"
+        ) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: result.error || "Failed to restore quarantine item",
         });
       }
+
+      await recordAgentfsOp({
+        ctx,
+        action: "quarantine_restore",
+        success: true,
+        runId,
+        sha,
+        resource,
+        extra: { newPath: result.newPath },
+      });
       return result;
     }),
 
@@ -2360,10 +3216,10 @@ export const agentfsRouter = router({
       }))
     )
     .input(z.object({ projectId: z.string().uuid().optional() }))
-    .query(async () => {
+    .query(async ({ input }) => {
       const { calculateStorageMetrics } =
         await import("../services/agentfs-metrics");
-      return calculateStorageMetrics();
+      return calculateStorageMetrics({ projectId: input.projectId });
     }),
 
   metricsCas: authedProcedure
@@ -2384,7 +3240,11 @@ export const agentfsRouter = router({
   // ─────────────────────────────────────────────────────────────────────────
 
   batchDelete: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2432,14 +3292,35 @@ export const agentfsRouter = router({
       });
 
       // Merge access failures with operation failures
-      return {
+      const merged = {
         ...result,
         failed: [...failed, ...result.failed],
       };
+      await recordAgentfsOp({
+        ctx,
+        action: "batch_delete",
+        success: merged.failed.length === 0,
+        projectId: input.projectId ?? null,
+        resource: { kind: "agentfs_batch", id: "delete" },
+        extra: {
+          dryRun: input.dryRun,
+          requested: input.runIds.length,
+          accessible: accessibleRunIds.length,
+          deleted: merged.deleted.length,
+          skippedPinned: merged.skippedPinned.length,
+          failed: merged.failed.length,
+          bytesFreed: merged.bytesFreed,
+        },
+      });
+      return merged;
     }),
 
   batchPin: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2483,14 +3364,33 @@ export const agentfsRouter = router({
       const { batchPin } = await import("../services/agentfs-batch");
       const result = await batchPin(accessibleRunIds);
 
-      return {
+      const merged = {
         ...result,
         failed: [...failed, ...result.failed],
       };
+      await recordAgentfsOp({
+        ctx,
+        action: "batch_pin",
+        success: merged.failed.length === 0,
+        projectId: input.projectId ?? null,
+        resource: { kind: "agentfs_batch", id: "pin" },
+        extra: {
+          requested: input.runIds.length,
+          accessible: accessibleRunIds.length,
+          pinned: merged.pinned.length,
+          alreadyPinned: merged.alreadyPinned.length,
+          failed: merged.failed.length,
+        },
+      });
+      return merged;
     }),
 
   batchUnpin: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2534,14 +3434,33 @@ export const agentfsRouter = router({
       const { batchUnpin } = await import("../services/agentfs-batch");
       const result = await batchUnpin(accessibleRunIds);
 
-      return {
+      const merged = {
         ...result,
         failed: [...failed, ...result.failed],
       };
+      await recordAgentfsOp({
+        ctx,
+        action: "batch_unpin",
+        success: merged.failed.length === 0,
+        projectId: input.projectId ?? null,
+        resource: { kind: "agentfs_batch", id: "unpin" },
+        extra: {
+          requested: input.runIds.length,
+          accessible: accessibleRunIds.length,
+          unpinned: merged.unpinned.length,
+          notPinned: merged.notPinned.length,
+          failed: merged.failed.length,
+        },
+      });
+      return merged;
     }),
 
   batchExport: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2608,10 +3527,25 @@ export const agentfsRouter = router({
         }
       }
 
-      return {
+      const merged = {
         archives,
         failed: [...failed, ...exportFailed],
       };
+      await recordAgentfsOp({
+        ctx,
+        action: "batch_export",
+        success: merged.failed.length === 0,
+        projectId: input.projectId ?? null,
+        resource: { kind: "agentfs_batch", id: "export" },
+        extra: {
+          store: input.store,
+          requested: input.runIds.length,
+          accessible: accessibleRunIds.length,
+          archives: merged.archives.length,
+          failed: merged.failed.length,
+        },
+      });
+      return merged;
     }),
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -2629,6 +3563,7 @@ export const agentfsRouter = router({
     .input(
       z.object({
         pattern: z.string().min(1).max(500),
+        runIds: z.array(z.string().min(1).max(200)).min(1).max(1000).optional(),
         projectId: z.string().uuid().optional(),
         agentType: z.string().optional(),
         dateFrom: z.string().datetime().optional(),
@@ -2637,10 +3572,16 @@ export const agentfsRouter = router({
         limit: z.number().int().min(1).max(1000).default(100),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { searchFiles } = await import("../services/agentfs-search");
+      const runIds = await resolveSearchRunIds({
+        ctx,
+        projectId: input.projectId ?? null,
+        runIds: input.runIds,
+      });
       return searchFiles(input.pattern, {
-        projectId: input.projectId,
+        runIds,
+        projectId: runIds ? undefined : input.projectId,
         agentType: input.agentType,
         dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
         dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
@@ -2660,6 +3601,8 @@ export const agentfsRouter = router({
     .input(
       z.object({
         keyPattern: z.string().min(1).max(500),
+        valuePattern: z.string().min(1).max(500).optional(),
+        runIds: z.array(z.string().min(1).max(200)).min(1).max(1000).optional(),
         projectId: z.string().uuid().optional(),
         agentType: z.string().optional(),
         dateFrom: z.string().datetime().optional(),
@@ -2667,15 +3610,25 @@ export const agentfsRouter = router({
         limit: z.number().int().min(1).max(1000).default(100),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { searchKv } = await import("../services/agentfs-search");
-      return searchKv(input.keyPattern, {
-        projectId: input.projectId,
-        agentType: input.agentType,
-        dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
-        dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
-        limit: input.limit,
+      const runIds = await resolveSearchRunIds({
+        ctx,
+        projectId: input.projectId ?? null,
+        runIds: input.runIds,
       });
+      return searchKv(
+        input.keyPattern,
+        {
+          runIds,
+          projectId: runIds ? undefined : input.projectId,
+          agentType: input.agentType,
+          dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
+          dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
+          limit: input.limit,
+        },
+        input.valuePattern
+      );
     }),
 
   searchToolCalls: authedProcedure
@@ -2689,6 +3642,8 @@ export const agentfsRouter = router({
     .input(
       z.object({
         namePattern: z.string().min(1).max(500),
+        paramsPattern: z.string().min(1).max(500).optional(),
+        runIds: z.array(z.string().min(1).max(200)).min(1).max(1000).optional(),
         projectId: z.string().uuid().optional(),
         agentType: z.string().optional(),
         dateFrom: z.string().datetime().optional(),
@@ -2696,15 +3651,25 @@ export const agentfsRouter = router({
         limit: z.number().int().min(1).max(1000).default(100),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { searchToolCalls } = await import("../services/agentfs-search");
-      return searchToolCalls(input.namePattern, {
-        projectId: input.projectId,
-        agentType: input.agentType,
-        dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
-        dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
-        limit: input.limit,
+      const runIds = await resolveSearchRunIds({
+        ctx,
+        projectId: input.projectId ?? null,
+        runIds: input.runIds,
       });
+      return searchToolCalls(
+        input.namePattern,
+        {
+          runIds,
+          projectId: runIds ? undefined : input.projectId,
+          agentType: input.agentType,
+          dateFrom: input.dateFrom ? new Date(input.dateFrom) : undefined,
+          dateTo: input.dateTo ? new Date(input.dateTo) : undefined,
+          limit: input.limit,
+        },
+        input.paramsPattern
+      );
     }),
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -2712,7 +3677,7 @@ export const agentfsRouter = router({
   // ─────────────────────────────────────────────────────────────────────────
 
   retentionPreview: authedProcedure
-    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2722,6 +3687,7 @@ export const agentfsRouter = router({
     .input(
       z.object({
         retentionDays: z.number().int().min(1).max(3650).optional(),
+        casRetentionDays: z.number().int().min(1).max(3650).optional(),
         maxBytes: z.number().int().min(0).optional(),
         casMaxBytes: z.number().int().min(0).optional(),
       })
@@ -2731,13 +3697,14 @@ export const agentfsRouter = router({
         await import("../services/agentfs-retention");
       return generateRetentionPreview({
         retentionDays: input.retentionDays,
+        casRetentionDays: input.casRetentionDays,
         maxBytes: input.maxBytes,
         casMaxBytes: input.casMaxBytes,
       });
     }),
 
   retentionSimulate: authedProcedure
-    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2747,6 +3714,7 @@ export const agentfsRouter = router({
     .input(
       z.object({
         retentionDays: z.number().int().min(1).max(3650).optional(),
+        casRetentionDays: z.number().int().min(1).max(3650).optional(),
         maxBytes: z.number().int().min(0).optional(),
         casMaxBytes: z.number().int().min(0).optional(),
       })
@@ -2755,13 +3723,14 @@ export const agentfsRouter = router({
       const { simulateCleanup } = await import("../services/agentfs-retention");
       return simulateCleanup({
         retentionDays: input.retentionDays,
+        casRetentionDays: input.casRetentionDays,
         maxBytes: input.maxBytes,
         casMaxBytes: input.casMaxBytes,
       });
     }),
 
   retentionViolations: authedProcedure
-    .use(requireScopes({ required: ["agentfs.read"] }))
+    .use(requireScopes({ required: READ_SCOPES.AGENTFS }))
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
@@ -2788,6 +3757,7 @@ export const agentfsRouter = router({
     )
     .input(
       z.object({
+        cursor: z.string().min(1).max(500).optional(),
         projectId: z.string().uuid().optional(),
         runId: z.string().min(1).max(200).optional(),
         from: z.string().datetime().optional(),
@@ -2798,6 +3768,7 @@ export const agentfsRouter = router({
     .query(async ({ input }) => {
       const { listCasArchives } = await import("../services/agentfs-cas");
       return listCasArchives({
+        cursor: input.cursor,
         projectId: input.projectId,
         runId: input.runId,
         from: input.from ? new Date(input.from) : undefined,
@@ -2829,7 +3800,11 @@ export const agentfsRouter = router({
     }),
 
   casDelete: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", (raw) => {
         const rec = (raw ?? {}) as Record<string, unknown>;
@@ -2838,15 +3813,41 @@ export const agentfsRouter = router({
       })
     )
     .input(z.object({ sha: z.string().min(1).max(200) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { deleteCasArchive } = await import("../services/agentfs-cas");
       const result = await deleteCasArchive(input.sha);
       if (!result.success) {
+        await recordAgentfsOp({
+          ctx,
+          action: "cas_delete",
+          success: false,
+          sha: input.sha,
+          resource: { kind: "agentfs_cas", id: input.sha },
+          extra: { error: result.error ?? "agentfs_cas_delete_failed" },
+        });
+
+        if (result.error === "agentfs_cas_archive_not_found") {
+          throw new TRPCError({ code: "NOT_FOUND", message: "not_found" });
+        }
+        if (result.error === "agentfs_cas_archive_pinned") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "pinned",
+          });
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: result.error || "Failed to delete CAS archive",
         });
       }
+
+      await recordAgentfsOp({
+        ctx,
+        action: "cas_delete",
+        success: true,
+        sha: input.sha,
+        resource: { kind: "agentfs_cas", id: input.sha },
+      });
       return result;
     }),
 
@@ -2864,16 +3865,41 @@ export const agentfsRouter = router({
     }),
 
   casCleanup: authedProcedure
-    .use(requireScopes({ required: ["agentfs.write"] }))
+    .use(
+      requireScopes({
+        required: [READ_SCOPES.AGENTFS, WRITE_SCOPES.AGENTFS],
+      })
+    )
     .use(
       requirePolicy("agentfs.read", () => ({
         kind: "agentfs_file",
         id: "cas:/",
       }))
     )
-    .mutation(async () => {
-      const { cleanupOrphanedCas } = await import("../services/agentfs-cas");
-      return cleanupOrphanedCas();
+    .mutation(async ({ ctx }) => {
+      try {
+        const { cleanupOrphanedCas } = await import("../services/agentfs-cas");
+        const result = await cleanupOrphanedCas();
+        await recordAgentfsOp({
+          ctx,
+          action: "cas_cleanup",
+          success: true,
+          resource: { kind: "agentfs_cas", id: "/" },
+          extra: result,
+        });
+        return result;
+      } catch (error) {
+        await recordAgentfsOp({
+          ctx,
+          action: "cas_cleanup",
+          success: false,
+          resource: { kind: "agentfs_cas", id: "/" },
+          extra: {
+            error: error instanceof Error ? error.message : String(error ?? ""),
+          },
+        });
+        throw error;
+      }
     }),
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -2900,11 +3926,12 @@ export const agentfsRouter = router({
         limit: z.number().int().min(1).max(1000).default(100),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const userId = getUserIdForAgentfsAccess({ session: ctx.session });
       const { queryAuditLog } = await import("../services/agentfs-audit");
       return queryAuditLog({
         runId: input.runId,
-        userId: input.userId,
+        userId,
         action: input.action,
         resource: input.resource,
         from: input.from ? new Date(input.from) : undefined,
@@ -2923,9 +3950,10 @@ export const agentfsRouter = router({
       }))
     )
     .input(z.object({ limit: z.number().int().min(1).max(1000).default(50) }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { getRecentActivity } = await import("../services/agentfs-audit");
-      const entries = await getRecentActivity(input.limit);
+      const userId = getUserIdForAgentfsAccess({ session: ctx.session });
+      const entries = await getRecentActivity(userId, input.limit);
       return { entries };
     }),
 
@@ -2943,9 +3971,10 @@ export const agentfsRouter = router({
         to: z.string().datetime(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { getAccessStats } = await import("../services/agentfs-audit");
-      return getAccessStats(new Date(input.from), new Date(input.to));
+      const userId = getUserIdForAgentfsAccess({ session: ctx.session });
+      return getAccessStats(userId, new Date(input.from), new Date(input.to));
     }),
 });
 
@@ -3045,4 +4074,56 @@ function extractDiff(parameters: unknown, result: unknown): string | null {
     }
   }
   return null;
+}
+
+async function recordAgentfsOp(args: {
+  ctx: { session: unknown | null };
+  action: AuditAction;
+  success: boolean;
+  projectId?: string | null;
+  runId?: string;
+  sha?: string;
+  resource?: { kind: string; id?: string };
+  extra?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const {
+      action,
+      ctx,
+      extra,
+      projectId,
+      resource: resourceOverride,
+      runId,
+      sha,
+      success,
+    } = args;
+    const userId = getUserIdForAgentfsAccess(ctx);
+    const { recordAudit } = await import("@alfred/agent/utils/audit");
+    let resource = resourceOverride;
+    if (!resource) {
+      if (sha) {
+        resource = { kind: "agentfs_cas", id: sha };
+      } else if (runId) {
+        resource = { kind: "agentfs_run", id: runId };
+      } else {
+        resource = { kind: "agentfs" };
+      }
+    }
+
+    await recordAudit({
+      userId,
+      projectId: projectId ?? null,
+      action: `agentfs.op.${action}`,
+      resource,
+      decision: success ? "allow" : "deny",
+      context: {
+        success,
+        runId,
+        sha,
+        ...(extra ?? {}),
+      },
+    });
+  } catch {
+    // Audit must never affect operation flow.
+  }
 }

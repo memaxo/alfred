@@ -72,5 +72,5 @@ Harden SSR build process to prevent server-only code leakage into client bundles
 # Next Steps for Hardening
 
 1.  **Audit API Routes**: Systematically scan `apps/web/src/routes/api` for top-level imports of `@alfred/*` server packages and refactor them to use the variable-based dynamic import pattern.
-2.  **Build Verification Script**: Create a CI script (`scripts/verify-build.ts`) that runs `vite build` for the web app and analyzes the output bundle. Fail the build if strings like "drizzle-orm", "postgres", or "openai" are found in the client chunks.
+2.  **Build Verification Script**: Create a CI script (`scripts/verify-build.ts`) that runs `vite build` for the web app and analyzes the output bundle. Fail the build if strings like "drizzle-orm", "postgres", or "api.openai.com" are found in the client chunks.
 3.  **Automated Test Suite**: Create a lightweight "Smoke Test" Playwright suite that runs against the **production build** (not just dev server) to catch bundling issues early.

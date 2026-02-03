@@ -31,6 +31,7 @@ if (SHOULD_RUN) {
 
   mock.module("@alfred/db/repo/policy", () => ({
     createAuditLog: async () => {},
+    queryAuditLogs: async () => ({ rows: [], totalCount: 0 }),
   }));
 }
 

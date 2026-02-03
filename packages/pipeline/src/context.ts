@@ -95,6 +95,8 @@ export function exportContextStorage(
     "trackerState",
     "reviewGateState",
     "fixAttempts",
+    "cognitiveStreamId",
+    "autonomyLevel",
     "linearSessionId",
     "linearTeamId",
     "executeOutput",

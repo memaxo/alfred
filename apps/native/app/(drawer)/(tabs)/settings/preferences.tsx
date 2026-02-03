@@ -9,20 +9,134 @@ import { Stack } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
+  Pressable,
   RefreshControl,
-  Text,
+  ScrollView,
+  StyleSheet,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Container } from "@/components/container";
+import {
+  VoidContainer,
+  HUDSurface,
+  BodyText,
+  CaptionText,
+  TitleText,
+} from "@/components/foundation";
 import {
   usePreferenceDelete,
   usePreferenceList,
   usePreferenceSet,
 } from "@/hooks/use-trpc";
+
+interface PreferenceItemProps {
+  item: {
+    key: string;
+    value?: unknown;
+  };
+  editingKey: string | null;
+  editValue: string;
+  onEdit: (key: string, value: string) => void;
+  onSave: (key: string) => void;
+  onCancel: () => void;
+  onDelete: (key: string) => void;
+  isSaving: boolean;
+  isDeleting: boolean;
+}
+
+function PreferenceItem({
+  item,
+  editingKey,
+  editValue,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete,
+  isSaving,
+  isDeleting,
+}: PreferenceItemProps) {
+  const isEditing = editingKey === item.key;
+  const displayValue =
+    typeof item.value === "string" ? item.value : JSON.stringify(item.value);
+
+  return (
+    <HUDSurface elevation={1} style={styles.preferenceCard}>
+      <View style={styles.preferenceHeader}>
+        <BodyText style={styles.preferenceKey}>{item.key}</BodyText>
+        {!isEditing && (
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => onEdit(item.key, displayValue)}
+              style={({ pressed }) => [
+                styles.iconButton,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              <Ionicons name="create-outline" size={18} color="#00D9FF" />
+            </Pressable>
+            <Pressable
+              onPress={() => onDelete(item.key)}
+              style={({ pressed }) => [
+                styles.iconButton,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FF3366" />
+              ) : (
+                <Ionicons name="trash-outline" size={18} color="#FF3366" />
+              )}
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      {isEditing ? (
+        <View style={styles.editContainer}>
+          <TextInput
+            style={styles.input}
+            onChangeText={(text) => onEdit(item.key, text)}
+            value={editValue}
+            placeholder="Enter value..."
+            placeholderTextColor="rgba(255,255,255,0.3)"
+          />
+          <View style={styles.editActions}>
+            <Pressable
+              onPress={() => onSave(item.key)}
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.saveButton,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <BodyText style={styles.saveButtonText}>Save</BodyText>
+              )}
+            </Pressable>
+            <Pressable
+              onPress={onCancel}
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.cancelButton,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              <BodyText>Cancel</BodyText>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <CaptionText color="dim" style={styles.preferenceValue}>
+          {displayValue}
+        </CaptionText>
+      )}
+    </HUDSurface>
+  );
+}
 
 export default function PreferencesScreen() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -47,6 +161,11 @@ export default function PreferencesScreen() {
     },
   });
 
+  const handleEdit = useCallback((key: string, value: string) => {
+    setEditingKey(key);
+    setEditValue(value);
+  }, []);
+
   const handleSave = useCallback(
     (key: string) => {
       setPreferenceMutation.mutate({
@@ -57,6 +176,11 @@ export default function PreferencesScreen() {
     [editValue, setPreferenceMutation]
   );
 
+  const handleCancel = useCallback(() => {
+    setEditingKey(null);
+    setEditValue("");
+  }, []);
+
   const handleDelete = useCallback(
     (key: string) => {
       deletePreferenceMutation.mutate({ key });
@@ -65,99 +189,151 @@ export default function PreferencesScreen() {
   );
 
   return (
-    <Container>
-      <Stack.Screen
-        options={{
-          title: "Preferences",
-        }}
-      />
+    <VoidContainer gradient="ambient" noise={true} noiseOpacity={0.03}>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: "Preferences" }} />
 
-      {preferencesQuery.isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#00D9FF" size="large" />
+        <View style={styles.header}>
+          <TitleText size="large">Preferences</TitleText>
+          <CaptionText color="dim">Customize assistant behavior</CaptionText>
         </View>
-      ) : (
-        <FlatList
-          className="flex-1"
-          contentContainerStyle={{ padding: 16 }}
-          data={preferencesQuery.data ?? []}
-          keyExtractor={(item) => item.key}
-          refreshControl={
-            <RefreshControl
-              onRefresh={() => preferencesQuery.refetch()}
-              refreshing={preferencesQuery.isRefetching}
-            />
-          }
-          renderItem={({ item }) => (
-            <View className="mb-3 rounded-lg border border-border bg-card p-4">
-              <View className="mb-2 flex-row items-start justify-between">
-                <View className="flex-1">
-                  <Text className="mb-1 font-semibold text-foreground">
-                    {item.key}
-                  </Text>
-                  {editingKey === item.key ? (
-                    <View className="mt-2 flex-row gap-2">
-                      <TextInput
-                        className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
-                        onChangeText={setEditValue}
-                        value={editValue}
-                      />
-                      <TouchableOpacity
-                        className="rounded-lg bg-primary px-3 py-2"
-                        onPress={() => handleSave(item.key)}
-                      >
-                        <Text className="text-primary-foreground">Save</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        className="rounded-lg border border-border px-3 py-2"
-                        onPress={() => {
-                          setEditingKey(null);
-                          setEditValue("");
-                        }}
-                      >
-                        <Text className="text-foreground">Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <Text className="text-muted-foreground text-sm">
-                      {typeof item.value === "string"
-                        ? item.value
-                        : JSON.stringify(item.value)}
-                    </Text>
-                  )}
-                </View>
-                {editingKey !== item.key && (
-                  <View className="ml-2 flex-row gap-2">
-                    <TouchableOpacity
-                      onPress={() => {
-                        setEditingKey(item.key);
-                        setEditValue(
-                          typeof item.value === "string"
-                            ? item.value
-                            : JSON.stringify(item.value)
-                        );
-                      }}
-                    >
-                      <Ionicons
-                        color="#00D9FF"
-                        name="create-outline"
-                        size={18}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item.key)}>
-                      <Ionicons
-                        color="#FF3366"
-                        name="trash-outline"
-                        size={18}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-        />
-      )}
-    </Container>
+
+        {preferencesQuery.isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color="#00D9FF" size="large" />
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                onRefresh={() => preferencesQuery.refetch()}
+                refreshing={preferencesQuery.isRefetching}
+                tintColor="#00D9FF"
+              />
+            }
+          >
+            {preferencesQuery.data?.map((item) => (
+              <PreferenceItem
+                key={item.key}
+                item={item}
+                editingKey={editingKey}
+                editValue={editValue}
+                onEdit={handleEdit}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onDelete={handleDelete}
+                isSaving={setPreferenceMutation.isPending}
+                isDeleting={deletePreferenceMutation.isPending}
+              />
+            ))}
+
+            {preferencesQuery.data?.length === 0 && (
+              <HUDSurface elevation={1} style={styles.emptyCard}>
+                <Ionicons
+                  name="options-outline"
+                  size={48}
+                  color="rgba(255,255,255,0.2)"
+                />
+                <BodyText style={styles.emptyText}>No preferences set</BodyText>
+                <CaptionText color="dim">
+                  Preferences will appear here when configured
+                </CaptionText>
+              </HUDSurface>
+            )}
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </VoidContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  preferenceCard: {
+    marginBottom: 12,
+    padding: 16,
+  },
+  preferenceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  preferenceKey: {
+    flex: 1,
+    fontWeight: "600",
+  },
+  preferenceValue: {
+    lineHeight: 20,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 8,
+  },
+  iconButtonPressed: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  editContainer: {
+    marginTop: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
+    padding: 12,
+    color: "#fff",
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  actionButtonPressed: {
+    opacity: 0.8,
+  },
+  saveButton: {
+    backgroundColor: "#00D9FF",
+  },
+  saveButtonText: {
+    color: "#000",
+    fontWeight: "600",
+  },
+  cancelButton: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  emptyCard: {
+    padding: 32,
+    alignItems: "center",
+  },
+  emptyText: {
+    marginTop: 16,
+    marginBottom: 4,
+  },
+});

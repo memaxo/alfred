@@ -7,7 +7,7 @@ const FORBIDDEN_STRINGS = [
   "postgres://",
   "googleapis",
   "@alfred/db",
-  "openai", // Check for OpenAI SDK leakage
+  "api.openai.com", // Check for OpenAI SDK leakage
   "process.env.OPENAI_API_KEY", // Check for secret leakage
   "process.env.DATABASE_URL",
 ];
@@ -55,9 +55,8 @@ async function verifyBuild() {
 
           // Allow list for known false positives
           const isFalsePositive =
-            (forbidden === "googleapis" &&
-              context.includes("storage.googleapis.com")) ||
-            (forbidden === "openai" && context.includes('["local","openai"]'));
+            forbidden === "googleapis" &&
+            context.includes("storage.googleapis.com");
 
           if (!isFalsePositive) {
             console.error(

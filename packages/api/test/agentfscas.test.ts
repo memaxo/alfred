@@ -16,8 +16,7 @@ describe("agentfs cas", () => {
     await rm(rootAbs, { force: true, recursive: true });
 
     const runId = "run-cas";
-    const runDirRel = path.posix.join(".agentfs-test", runId);
-    const runDirAbs = path.resolve(process.cwd(), runDirRel);
+    const runDirAbs = path.join(rootAbs, runId);
     await mkdir(runDirAbs, { recursive: true });
     await writeFile(path.join(runDirAbs, "agentfs.db"), "db", "utf8");
     await writeFile(path.join(runDirAbs, "a.txt"), "a", "utf8");
@@ -25,13 +24,13 @@ describe("agentfs cas", () => {
     await writeFile(path.join(runDirAbs, "sub", "b.txt"), "b", "utf8");
 
     const a = await exportAgentfsRunToCas({
-      relDir: runDirRel,
+      relDir: runId,
       rootAbs,
       runId,
     });
 
     const b = await exportAgentfsRunToCas({
-      relDir: runDirRel,
+      relDir: runId,
       rootAbs,
       runId,
     });

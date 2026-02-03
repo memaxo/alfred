@@ -21,6 +21,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { ScreenErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/offline-banner";
 import { OnboardingScreen } from "@/components/onboarding/onboarding-screen";
+import { OrbProvider } from "@/components/orb";
 import { SheetProvider } from "@/contexts/sheet";
 import { ToastProvider } from "@/contexts/toast";
 import { useDeepLinkHandler } from "@/hooks/use-deep-link";
@@ -103,7 +104,7 @@ function RootLayoutInner() {
     } else {
       analytics.reset();
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, session?.user?.email, session?.user?.name]);
 
   // Initialize local database and sync engine (deferred until after first render)
   React.useEffect(() => {
@@ -247,17 +248,19 @@ function RootLayoutInner() {
         <ToastProvider>
           <SheetProvider>
             <ScreenErrorBoundary>
-              <OfflineBanner />
-              <Stack>
-                <Stack.Screen
-                  name="(drawer)"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="modal"
-                  options={{ title: "Modal", presentation: "modal" }}
-                />
-              </Stack>
+              <OrbProvider>
+                <OfflineBanner />
+                <Stack>
+                  <Stack.Screen
+                    name="(drawer)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="modal"
+                    options={{ title: "Modal", presentation: "modal" }}
+                  />
+                </Stack>
+              </OrbProvider>
             </ScreenErrorBoundary>
           </SheetProvider>
         </ToastProvider>

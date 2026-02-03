@@ -194,9 +194,9 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
     const message =
       typeof payload.message === "string"
         ? payload.message
-        : (typeof payload.data === "string"
+        : typeof payload.data === "string"
           ? payload.data
-          : "");
+          : "";
     return { type: "notice", message };
   }
 

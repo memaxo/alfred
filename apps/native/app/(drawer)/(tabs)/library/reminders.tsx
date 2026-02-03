@@ -2,6 +2,7 @@
  * Reminders List Screen
  *
  * Displays all user reminders with filtering and search.
+ * Styled with ALFRED's "Signal in the Void" design system.
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -13,20 +14,26 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
 
 import type { RemindRouterOutputs } from "@/utils/trpc-types";
 
-import { Container } from "@/components/container";
+import {
+  BodyText,
+  CaptionText,
+  FluidButton,
+  HUDSurface,
+  VoidContainer,
+} from "@/components/foundation";
 import { ListSkeleton } from "@/components/loading-skeleton";
 import {
   useReminderDelete,
   useReminderFire,
   useReminderList,
 } from "@/hooks/use-trpc";
+import { useVoidTheme } from "@/hooks/use-void-theme";
 import { haptics } from "@/lib/haptics";
 import {
   type FilterOption,
@@ -96,6 +103,7 @@ const reminderFilterOptions: FilterOption<ReminderItem>[] = [
 
 export default function RemindersListScreen() {
   const router = useRouter();
+  const theme = useVoidTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("due-asc");
   const [filterBy, setFilterBy] = useState<string>("all");
@@ -186,34 +194,50 @@ export default function RemindersListScreen() {
   );
 
   return (
-    <Container>
+    <VoidContainer gradient="ambient" noise noiseOpacity={0.03}>
       <Stack.Screen
         options={{
           title: "Reminders",
+          headerStyle: { backgroundColor: theme.colors.void.deep },
+          headerTintColor: theme.colors.biolum.bright,
           headerRight: () => (
             <Pressable
-              className="mr-4"
+              style={styles.headerButton}
               onPress={() => router.push("library/reminders/new")}
-              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              hitSlop={8}
             >
-              <Ionicons color="#00FF88" name="add" size={24} />
+              {({ pressed }) => (
+                <Ionicons
+                  color={theme.colors.semantic.success}
+                  name="add"
+                  size={24}
+                  style={pressed ? styles.pressed : undefined}
+                />
+              )}
             </Pressable>
           ),
         }}
       />
 
-      <View className="flex-1">
+      <View style={styles.content}>
         {/* Search, filter, and sort bar */}
-        <View className="border-border border-b bg-background px-4 py-3">
-          <View className="mb-2 flex-row items-center rounded-lg border border-border bg-surface px-3 py-2">
-            <Ionicons color="#5A6B7D" name="search-outline" size={20} />
+        <View style={styles.controlsBar}>
+          <HUDSurface elevation={1} style={styles.searchInputContainer}>
+            <Ionicons
+              color={theme.colors.biolum.dim}
+              name="search-outline"
+              size={20}
+            />
             <TextInput
               accessibilityLabel="Search reminders"
               accessibilityRole="search"
-              className="ml-2 flex-1 text-foreground"
+              style={[
+                styles.searchInput,
+                { color: theme.colors.biolum.bright },
+              ]}
               onChangeText={setSearchQuery}
               placeholder="Search reminders..."
-              placeholderTextColor="#5A6B7D"
+              placeholderTextColor={theme.colors.biolum.faint}
               value={searchQuery}
             />
             {searchQuery ? (
@@ -221,65 +245,96 @@ export default function RemindersListScreen() {
                 accessibilityLabel="Clear search"
                 accessibilityRole="button"
                 onPress={() => setSearchQuery("")}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                hitSlop={8}
               >
-                <Ionicons color="#5A6B7D" name="close-circle" size={20} />
+                {({ pressed }) => (
+                  <Ionicons
+                    color={theme.colors.biolum.dim}
+                    name="close-circle"
+                    size={20}
+                    style={pressed ? styles.pressed : undefined}
+                  />
+                )}
               </Pressable>
             ) : null}
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Ionicons color="#5A6B7D" name="filter-outline" size={16} />
-            <Text className="text-muted-foreground text-sm">Filter:</Text>
+          </HUDSurface>
+
+          {/* Filter row */}
+          <View style={styles.filterRow}>
+            <Ionicons
+              color={theme.colors.biolum.faint}
+              name="filter-outline"
+              size={16}
+            />
+            <CaptionText>Filter:</CaptionText>
             {reminderFilterOptions.map((option) => (
               <Pressable
                 accessibilityLabel={`Filter ${option.label}`}
                 accessibilityRole="button"
-                className={`rounded-full px-3 py-1 ${
-                  filterBy === option.key
-                    ? "bg-primary"
-                    : "border border-border bg-surface"
-                }`}
                 key={option.key}
                 onPress={() => setFilterBy(option.key)}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                style={[
+                  styles.filterPill,
+                  {
+                    backgroundColor:
+                      filterBy === option.key
+                        ? theme.colors.glass.active
+                        : theme.colors.glass.surface,
+                    borderColor:
+                      filterBy === option.key
+                        ? theme.colors.semantic.success
+                        : theme.colors.glass.border,
+                  },
+                ]}
               >
-                <Text
-                  className={`text-xs ${
-                    filterBy === option.key
-                      ? "font-semibold text-primary-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </Text>
+                {({ pressed }) => (
+                  <CaptionText
+                    color={filterBy === option.key ? "bright" : "dim"}
+                    style={pressed ? styles.pressed : undefined}
+                  >
+                    {option.label}
+                  </CaptionText>
+                )}
               </Pressable>
             ))}
           </View>
-          <View className="mt-2 flex-row items-center gap-2">
-            <Ionicons color="#5A6B7D" name="funnel-outline" size={16} />
-            <Text className="text-muted-foreground text-sm">Sort:</Text>
+
+          {/* Sort row */}
+          <View style={styles.sortRow}>
+            <Ionicons
+              color={theme.colors.biolum.faint}
+              name="funnel-outline"
+              size={16}
+            />
+            <CaptionText>Sort:</CaptionText>
             {reminderSortOptions.map((option) => (
               <Pressable
                 accessibilityLabel={`Sort by ${option.label}`}
                 accessibilityRole="button"
-                className={`rounded-full px-3 py-1 ${
-                  sortBy === option.key
-                    ? "bg-primary"
-                    : "border border-border bg-surface"
-                }`}
                 key={option.key}
                 onPress={() => setSortBy(option.key)}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                style={[
+                  styles.sortPill,
+                  {
+                    backgroundColor:
+                      sortBy === option.key
+                        ? theme.colors.glass.active
+                        : theme.colors.glass.surface,
+                    borderColor:
+                      sortBy === option.key
+                        ? theme.colors.semantic.success
+                        : theme.colors.glass.border,
+                  },
+                ]}
               >
-                <Text
-                  className={`text-xs ${
-                    sortBy === option.key
-                      ? "font-semibold text-primary-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </Text>
+                {({ pressed }) => (
+                  <CaptionText
+                    color={sortBy === option.key ? "bright" : "dim"}
+                    style={pressed ? styles.pressed : undefined}
+                  >
+                    {option.label}
+                  </CaptionText>
+                )}
               </Pressable>
             ))}
           </View>
@@ -287,12 +342,11 @@ export default function RemindersListScreen() {
 
         {/* Reminders list */}
         {remindersQuery.isLoading ? (
-          <View className="flex-1 px-4 py-4">
+          <View style={styles.loadingContainer}>
             <ListSkeleton count={5} />
           </View>
-        ) : (sortedReminders && sortedReminders.length > 0 ? (
+        ) : sortedReminders && sortedReminders.length > 0 ? (
           <FlashList
-            className="flex-1"
             contentContainerStyle={styles.listContent}
             data={sortedReminders}
             keyExtractor={(item) => item.id}
@@ -300,8 +354,11 @@ export default function RemindersListScreen() {
             estimatedItemSize={120}
             ListFooterComponent={
               remindersQuery.isLoading && offset > 0 ? (
-                <View className="py-4">
-                  <ActivityIndicator color="#00FF88" size="small" />
+                <View style={styles.footer}>
+                  <ActivityIndicator
+                    color={theme.colors.semantic.success}
+                    size="small"
+                  />
                 </View>
               ) : null
             }
@@ -314,33 +371,36 @@ export default function RemindersListScreen() {
                   remindersQuery.refetch();
                 }}
                 refreshing={remindersQuery.isRefetching}
+                tintColor={theme.colors.semantic.success}
               />
             }
             renderItem={renderReminderItem}
           />
         ) : (
-          <View className="flex-1 items-center justify-center p-8">
-            <Ionicons color="#5A6B7D" name="notifications-outline" size={48} />
-            <Text className="mt-4 text-center text-lg text-muted-foreground">
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              color={theme.colors.biolum.faint}
+              name="notifications-outline"
+              size={48}
+            />
+            <BodyText color="dim" style={styles.emptyText}>
               {searchQuery
                 ? "No reminders match your search"
                 : "No reminders yet. Create your first reminder!"}
-            </Text>
+            </BodyText>
             {!searchQuery && (
-              <Pressable
-                className="mt-4 rounded-lg bg-primary px-6 py-3"
+              <FluidButton
+                label="Create Reminder"
                 onPress={() => router.push("library/reminders/new")}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-              >
-                <Text className="font-semibold text-primary-foreground">
-                  Create Reminder
-                </Text>
-              </Pressable>
+                variant="primary"
+                size="medium"
+                style={styles.createButton}
+              />
             )}
           </View>
-        ))}
+        )}
       </View>
-    </Container>
+    </VoidContainer>
   );
 }
 
@@ -351,7 +411,9 @@ interface ReminderItemProps {
   router: ReturnType<typeof useRouter>;
 }
 
-function ReminderItem({ item, onDelete, onFire, router }: ReminderItemProps) {
+function ReminderItem({ item, onDelete, onFire }: ReminderItemProps) {
+  const theme = useVoidTheme();
+
   const formatDueDate = (due: string | Date) => {
     if (!due) {
       return "No due date";
@@ -376,69 +438,112 @@ function ReminderItem({ item, onDelete, onFire, router }: ReminderItemProps) {
     return date.toLocaleDateString();
   };
 
+  const getDueDateColor = (due: string | Date) => {
+    if (!due) return theme.colors.biolum.dim;
+    const date = typeof due === "string" ? new Date(due) : due;
+    const now = new Date();
+    const diff = date.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days < 0) return theme.colors.semantic.error;
+    if (days === 0) return theme.colors.semantic.warning;
+    return theme.colors.semantic.success;
+  };
+
   return (
     <Link asChild href={`library/reminders/${item.id}`}>
-      <Pressable
-        className="mb-3 rounded-lg border border-border bg-card p-4"
-        style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-      >
-        <View className="mb-2 flex-row items-start justify-between">
-          <View className="flex-1">
-            <Text className="mb-1 font-semibold text-foreground text-lg">
-              {item.title}
-            </Text>
-            {item.description ? (
-              <Text
-                className="mb-2 text-muted-foreground text-sm"
-                numberOfLines={2}
-              >
-                {item.description}
-              </Text>
-            ) : null}
-            <View className="flex-row items-center gap-4">
-              <View className="flex-row items-center gap-1">
-                <Ionicons color="#00FF88" name="time-outline" size={14} />
-                <Text className="text-muted-foreground text-xs">
-                  {formatDueDate(item.due)}
-                </Text>
-              </View>
-              {item.fired ? (
-                <View className="flex-row items-center gap-1">
-                  <Ionicons color="#00FF88" name="checkmark-circle" size={14} />
-                  <Text className="text-muted-foreground text-xs">
-                    Completed
-                  </Text>
+      <Pressable>
+        {({ pressed }) => (
+          <HUDSurface
+            elevation={1}
+            active={pressed}
+            glow={item.fired === true}
+            style={[styles.reminderCard, pressed && styles.pressed]}
+          >
+            <View style={styles.reminderContent}>
+              <View style={styles.reminderMain}>
+                <BodyText
+                  color="bright"
+                  style={styles.reminderTitle}
+                  numberOfLines={1}
+                >
+                  {item.title}
+                </BodyText>
+                {item.description ? (
+                  <BodyText
+                    color="dim"
+                    numberOfLines={2}
+                    style={styles.reminderDescription}
+                  >
+                    {item.description}
+                  </BodyText>
+                ) : null}
+                <View style={styles.reminderMeta}>
+                  <View style={styles.metaItem}>
+                    <Ionicons
+                      color={getDueDateColor(item.due)}
+                      name="time-outline"
+                      size={14}
+                    />
+                    <CaptionText style={{ color: getDueDateColor(item.due) }}>
+                      {formatDueDate(item.due)}
+                    </CaptionText>
+                  </View>
+                  {item.fired ? (
+                    <View style={styles.metaItem}>
+                      <Ionicons
+                        color={theme.colors.semantic.success}
+                        name="checkmark-circle"
+                        size={14}
+                      />
+                      <CaptionText color="standard">Completed</CaptionText>
+                    </View>
+                  ) : null}
                 </View>
-              ) : null}
+              </View>
+              <View style={styles.reminderActions}>
+                {!item.fired && (
+                  <Pressable
+                    accessibilityLabel="Mark as complete"
+                    accessibilityRole="button"
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onFire(item.id);
+                    }}
+                    hitSlop={8}
+                  >
+                    {({ pressed: completePressed }) => (
+                      <Ionicons
+                        color={theme.colors.semantic.success}
+                        name="checkmark-circle-outline"
+                        size={24}
+                        style={completePressed ? styles.pressed : undefined}
+                      />
+                    )}
+                  </Pressable>
+                )}
+                <Pressable
+                  accessibilityLabel="Delete reminder"
+                  accessibilityRole="button"
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.id);
+                  }}
+                  hitSlop={8}
+                >
+                  {({ pressed: deletePressed }) => (
+                    <Ionicons
+                      color={theme.colors.semantic.error}
+                      name="trash-outline"
+                      size={20}
+                      style={deletePressed ? styles.pressed : undefined}
+                    />
+                  )}
+                </Pressable>
+              </View>
             </View>
-          </View>
-          <View className="ml-2 flex-row gap-2">
-            {!item.fired && (
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onFire(item.id);
-                }}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-              >
-                <Ionicons
-                  color="#00FF88"
-                  name="checkmark-circle-outline"
-                  size={20}
-                />
-              </Pressable>
-            )}
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                onDelete(item.id);
-              }}
-              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-            >
-              <Ionicons color="#FF3366" name="trash-outline" size={18} />
-            </Pressable>
-          </View>
-        </View>
+          </HUDSurface>
+        )}
       </Pressable>
     </Link>
   );
@@ -455,7 +560,113 @@ const MemoizedReminderItem = memo(
 );
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+  },
+  headerButton: {
+    marginRight: 16,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  controlsBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  filterPill: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  sortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  sortPill: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  loadingContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
   listContent: {
     padding: 16,
+  },
+  footer: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  emptyText: {
+    marginTop: 16,
+    textAlign: "center",
+  },
+  createButton: {
+    marginTop: 16,
+  },
+  reminderCard: {
+    marginBottom: 12,
+    padding: 16,
+  },
+  reminderContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  reminderMain: {
+    flex: 1,
+  },
+  reminderTitle: {
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  reminderDescription: {
+    marginBottom: 8,
+  },
+  reminderMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  reminderActions: {
+    marginLeft: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 });

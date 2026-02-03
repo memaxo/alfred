@@ -1,7 +1,15 @@
-import { AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  RefreshCw,
+  FileText,
+  MessageSquare,
+} from "lucide-react";
 import { useState } from "react";
 
 import { BiolumBadge } from "@/components/tremor";
+import { Button } from "@/components/ui/button";
 
 export interface WorkflowError {
   message: string;
@@ -16,6 +24,9 @@ export interface WorkflowErrorPanelProps {
   error: WorkflowError;
   runId: string;
   className?: string;
+  onRetry?: () => void;
+  onViewLogs?: () => void;
+  onReportIssue?: () => void;
 }
 
 const commonIssues: Record<string, string[]> = {
@@ -73,6 +84,9 @@ export function WorkflowErrorPanel({
   error,
   runId,
   className,
+  onRetry,
+  onViewLogs,
+  onReportIssue,
 }: WorkflowErrorPanelProps) {
   const [showStack, setShowStack] = useState(false);
   const [showContext, setShowContext] = useState(false);
@@ -102,14 +116,51 @@ export function WorkflowErrorPanel({
         </div>
       </div>
 
+      {/* Recovery Actions */}
+      <div className="flex flex-wrap gap-2">
+        {onRetry && (
+          <Button
+            className="rounded-full"
+            onClick={onRetry}
+            size="sm"
+            variant="default"
+          >
+            <RefreshCw className="mr-1 h-3 w-3" />
+            Retry with same input
+          </Button>
+        )}
+        {onViewLogs && (
+          <Button
+            className="rounded-full"
+            onClick={onViewLogs}
+            size="sm"
+            variant="outline"
+          >
+            <FileText className="mr-1 h-3 w-3" />
+            View logs
+          </Button>
+        )}
+        {onReportIssue && (
+          <Button
+            className="rounded-full"
+            onClick={onReportIssue}
+            size="sm"
+            variant="ghost"
+          >
+            <MessageSquare className="mr-1 h-3 w-3" />
+            Report issue
+          </Button>
+        )}
+      </div>
+
       {/* Suggested Solutions */}
       <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
         <h4 className="mb-3 font-medium text-biolum text-sm">
           Suggested Solutions
         </h4>
         <ul className="space-y-2">
-          {suggestions.map((solution, idx) => (
-            <li className="flex gap-2 text-biolum-dim text-sm" key={idx}>
+          {suggestions.map((solution) => (
+            <li className="flex gap-2 text-biolum-dim text-sm" key={solution}>
               <span className="text-biolum">•</span>
               {solution}
             </li>

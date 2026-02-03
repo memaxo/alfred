@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import type { AutonomyLevel } from "@/components/autonomy-slider";
@@ -19,13 +19,77 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 const TOTAL_STEPS = 5;
+const ONBOARDING_PROGRESS_KEY = "alfred_onboarding_progress";
+
+interface OnboardingProgress {
+  currentStep: number;
+  autonomy: AutonomyLevel;
+  timestamp: number;
+}
+
+function saveProgress(progress: OnboardingProgress): void {
+  try {
+    localStorage.setItem(ONBOARDING_PROGRESS_KEY, JSON.stringify(progress));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function loadProgress(): OnboardingProgress | null {
+  try {
+    const stored = localStorage.getItem(ONBOARDING_PROGRESS_KEY);
+    if (stored) {
+      return JSON.parse(stored) as OnboardingProgress;
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
+function clearProgress(): void {
+  try {
+    localStorage.removeItem(ONBOARDING_PROGRESS_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 function OnboardingRoute() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [autonomy, setAutonomy] = useState<AutonomyLevel>("low");
+  const [hasResumed, setHasResumed] = useState(false);
 
   const setPreference = trpc.preference.set.useMutation();
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const saved = loadProgress();
+    if (saved && !hasResumed) {
+      const hoursSinceSave = (Date.now() - saved.timestamp) / (1000 * 60 * 60);
+      // Only resume if saved within last 7 days
+      if (hoursSinceSave < 24 * 7) {
+        setCurrentStep(saved.currentStep);
+        setAutonomy(saved.autonomy);
+        setHasResumed(true);
+        toast.info(`Resumed onboarding from step ${saved.currentStep}`);
+      } else {
+        clearProgress();
+      }
+    }
+  }, [hasResumed]);
+
+  // Save progress when step or autonomy changes
+  useEffect(() => {
+    if (currentStep > 1 && currentStep < TOTAL_STEPS) {
+      saveProgress({
+        currentStep,
+        autonomy,
+        timestamp: Date.now(),
+      });
+    }
+  }, [currentStep, autonomy]);
 
   const handleNext = useCallback(() => {
     if (currentStep < TOTAL_STEPS) {
@@ -54,6 +118,9 @@ function OnboardingRoute() {
         value: true,
         confidence: 1,
       });
+
+      // Clear saved progress
+      clearProgress();
 
       toast.success("Welcome to ALFRED!");
       navigate({ to: "/" });

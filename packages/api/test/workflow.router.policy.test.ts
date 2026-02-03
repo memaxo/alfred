@@ -26,6 +26,7 @@ mock.module("@alfred/policy", () => ({
 // No-op audit
 mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: vi.fn().mockResolvedValue(),
+  queryAuditLogs: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
 }));
 
 // Stub workflow repo persistence

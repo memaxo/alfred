@@ -35,6 +35,10 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
         | undefined;
       const userId = context.get("userId") as string | undefined;
       const projectId = context.get("projectId") as string | undefined;
+      const autonomyLevel = context.get("autonomyLevel") as number | undefined;
+      const cognitivePhysiology = context.get("cognitivePhysiology") as
+        | Record<string, unknown>
+        | undefined;
 
       const generator = executePlanPhase(
         input,
@@ -45,6 +49,11 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
         {
           userId,
           projectId,
+          cognitive: {
+            autonomyLevel:
+              typeof autonomyLevel === "number" ? autonomyLevel : undefined,
+            physiology: cognitivePhysiology,
+          },
           createAiAdapter: this.createAiAdapter,
         }
       );

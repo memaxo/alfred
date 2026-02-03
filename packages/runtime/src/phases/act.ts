@@ -129,12 +129,65 @@ function buildActMessages(
   runId: string,
   input: RuntimeInput,
   context?: ExecutionContext | null,
-  planSummary?: string | null
+  planSummary?: string | null,
+  cognitive?: {
+    autonomyLevel?: number;
+    physiology?: unknown;
+  }
 ): UIMessage[] {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  const isNum = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value);
+
   const sections: string[] = [
     `Requirement:\n${input.requirement}`,
     `Auto Level: ${input.auto}`,
   ];
+
+  if (typeof cognitive?.autonomyLevel === "number") {
+    sections.push(
+      `Cognitive autonomyLevel (0..1): ${cognitive.autonomyLevel.toFixed(2)}`
+    );
+  }
+
+  const physiology = cognitive?.physiology;
+  if (isRecord(physiology)) {
+    const energy = physiology.energy;
+    const boredom = physiology.boredom;
+    const frustration = physiology.frustration;
+    const entropy = physiology.entropy;
+
+    if (
+      isNum(energy) &&
+      isNum(boredom) &&
+      isNum(frustration) &&
+      isNum(entropy)
+    ) {
+      sections.push(
+        [
+          "Cognitive physiology (0..1):",
+          `- energy: ${energy.toFixed(2)}`,
+          `- boredom: ${boredom.toFixed(2)}`,
+          `- frustration: ${frustration.toFixed(2)}`,
+          `- entropy: ${entropy.toFixed(2)}`,
+        ].join("\n")
+      );
+    }
+  }
+
+  if (
+    typeof cognitive?.autonomyLevel === "number" &&
+    cognitive.autonomyLevel < 0.65
+  ) {
+    sections.push(
+      [
+        "Steering:",
+        "- Autonomy is LOW. Prefer cautious, sequential execution.",
+        "- Summarize verification steps clearly before finishing.",
+      ].join("\n")
+    );
+  }
 
   if (planSummary) {
     sections.push(`Plan Summary:\n${planSummary}`);
@@ -198,7 +251,11 @@ export async function* executeActPhase(
   planSummary?: string | null,
   userId?: string,
   deps?: ActPhaseDeps,
-  projectId?: string
+  projectId?: string,
+  cognitive?: {
+    autonomyLevel?: number;
+    physiology?: unknown;
+  }
 ): AsyncGenerator<WorkflowEvent, ActResult, void> {
   yield { _: "notice", message: "execution_started" } as WorkflowEvent;
 
@@ -271,7 +328,8 @@ export async function* executeActPhase(
     runId,
     input,
     cachedContext,
-    planSummary
+    planSummary,
+    cognitive
   );
 
   const toolGraphMessages = buildToolGraphMessages(actMessages);

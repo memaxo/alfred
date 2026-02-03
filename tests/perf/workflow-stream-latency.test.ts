@@ -32,7 +32,8 @@ if (enforceWorkflowPlanPolicyMock) {
   }));
 }
 
-if (!useRealLatencyMode) {}
+if (!useRealLatencyMode) {
+}
 
 const baseInput = {
   requirement: "Measure workflow latency",

@@ -2,6 +2,7 @@ import type { Workspace } from "@alfred/agent/environment/types";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
 import type { RuntimeMcpServer } from "@alfred/mcp";
+import type { ExecutorConfigPublic } from "@alfred/type";
 import type { WorkflowEvent } from "@alfred/type/plan";
 
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
@@ -25,6 +26,7 @@ import {
   signalsInterventionsTotal,
   signalsJudgeLatencySeconds,
 } from "@alfred/metrics";
+import { executorConfigPublicSchema } from "@alfred/type";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setTimeout as setNodeTimeout } from "node:timers";
@@ -162,9 +164,9 @@ function isServerStartFailure(
   const code =
     executor === "codex"
       ? "codex_server_start_failed"
-      : (executor === "opencode"
+      : executor === "opencode"
         ? "opencode_server_start_failed"
-        : undefined);
+        : undefined;
   if (!code) {
     return false;
   }
@@ -464,21 +466,55 @@ export async function runAgent({
 
   const startedAt = Date.now();
   const executor = normalizeAgentType(spec.agentType);
+  const executorConfig = isAgentFSWorkspace(workspaceEnv)
+    ? await readExecutorConfigFromAgentfs({
+        agent: workspaceEnv.getAgent(),
+        kind: executor,
+      })
+    : null;
   const execProfileExplicit = normalizeExecProfile(spec.profile);
   const profileRaw =
     typeof spec.profile === "string" ? spec.profile.trim() : "";
   const supportsServer = executor === "codex" || executor === "opencode";
   const execProfileStrict =
     process.env.ORCH_EXEC_PROFILE_STRICT?.trim() === "1";
+  const execProfileFromConfig = (() => {
+    if (!supportsServer || !executorConfig) {
+      return;
+    }
+    if (executorConfig.kind !== executor) {
+      return;
+    }
+    const cfg = executorConfig as Extract<
+      ExecutorConfigPublic,
+      {
+        defaultExecProfile?: unknown;
+      }
+    >;
+    const next = cfg.defaultExecProfile;
+    if (next !== "default" && next !== "server") {
+      return;
+    }
+    if (next === "server" && !containerName) {
+      return;
+    }
+    return next;
+  })();
   const execProfile =
     execProfileExplicit ??
+    execProfileFromConfig ??
     (profileRaw.length === 0 && supportsServer && containerName
       ? "server"
       : undefined);
   const codexCliProfile =
     executor === "codex" && profileRaw.length > 0 && !execProfileExplicit
       ? profileRaw
-      : undefined;
+      : executor === "codex" &&
+          executorConfig?.kind === "codex" &&
+          typeof executorConfig.profile === "string" &&
+          executorConfig.profile.length > 0
+        ? executorConfig.profile
+        : undefined;
 
   // Runtime MCP: deterministic escalation with immediate tool-call receipt.
   // We use an agent-local AbortController so the MCP server can request abort
@@ -638,6 +674,11 @@ export async function runAgent({
               model: spec.model,
               profile: codexCliProfile,
               authz,
+              timeoutSec:
+                executorConfig?.kind === "codex" &&
+                typeof executorConfig.timeoutSec === "number"
+                  ? executorConfig.timeoutSec
+                  : undefined,
               env: mcpToken
                 ? {
                     CODEX_HOME: codexHomeEnv,
@@ -736,6 +777,21 @@ export async function runAgent({
             cw: spec.workingDirectory,
             model: spec.model,
             authz,
+            command:
+              executorConfig?.kind === "droid" &&
+              typeof executorConfig.command === "string"
+                ? executorConfig.command
+                : undefined,
+            args:
+              executorConfig?.kind === "droid" &&
+              Array.isArray(executorConfig.args)
+                ? executorConfig.args
+                : undefined,
+            timeoutSec:
+              executorConfig?.kind === "droid" &&
+              typeof executorConfig.timeoutSec === "number"
+                ? executorConfig.timeoutSec
+                : undefined,
             env: mcpToken
               ? {
                   HOME: droidHomeOnHost,
@@ -748,7 +804,7 @@ export async function runAgent({
       } else {
         const { toolOpenCode } =
           await import("@alfred/agent/orchestrator/tool/opencode/index");
-        const opencodeTransport = (() => {
+        const opencodeTransportEnv = (() => {
           const raw = process.env.ORCH_OPENCODE_TRANSPORT?.trim().toLowerCase();
           if (raw === "http") {
             return "http" as const;
@@ -758,11 +814,48 @@ export async function runAgent({
           }
           return;
         })();
+        const opencodeCfg =
+          executorConfig?.kind === "opencode" ? executorConfig : null;
+        const opencodeTransport =
+          opencodeCfg?.transport ?? opencodeTransportEnv ?? undefined;
+        const opencodeHttpBaseUrl =
+          opencodeTransport === "http" ? opencodeCfg?.http?.baseUrl : undefined;
+        const opencodeHttpUsername =
+          opencodeTransport === "http"
+            ? opencodeCfg?.http?.username
+            : undefined;
+        const opencodeHttpPassword =
+          opencodeTransport === "http" &&
+          opencodeCfg?.http?.passwordSet === true &&
+          isAgentFSWorkspace(workspaceEnv)
+            ? await readOpencodeHttpPasswordFromAgentfs({
+                agent: workspaceEnv.getAgent(),
+              })
+            : undefined;
+        const opencodeAcpCmd =
+          opencodeTransport === "acp" ? opencodeCfg?.acp?.cmd : undefined;
+        const opencodeAcpArgs =
+          opencodeTransport === "acp" ? opencodeCfg?.acp?.args : undefined;
         const run = (nextProfile: ExecProfile | undefined) =>
           toolOpenCode.execute({
             input: {
               action: "exec",
               ...(opencodeTransport ? { transport: opencodeTransport } : {}),
+              ...(opencodeTransport === "http" && opencodeHttpBaseUrl
+                ? { baseUrl: opencodeHttpBaseUrl }
+                : {}),
+              ...(opencodeTransport === "http" && opencodeHttpUsername
+                ? { username: opencodeHttpUsername }
+                : {}),
+              ...(opencodeTransport === "http" && opencodeHttpPassword
+                ? { password: opencodeHttpPassword }
+                : {}),
+              ...(opencodeTransport === "acp" && opencodeAcpCmd
+                ? { cmd: opencodeAcpCmd }
+                : {}),
+              ...(opencodeTransport === "acp" && opencodeAcpArgs
+                ? { args: opencodeAcpArgs }
+                : {}),
               execProfile: nextProfile,
               prompt,
               auto: spec.auto,
@@ -1223,6 +1316,45 @@ export async function runAgent({
   }
 }
 
+async function readExecutorConfigFromAgentfs(args: {
+  agent: { kv: { get: <T>(key: string) => Promise<T> } };
+  kind: "codex" | "droid" | "opencode";
+}): Promise<ExecutorConfigPublic | null> {
+  try {
+    const raw = await args.agent.kv.get<unknown>(
+      `executor:${args.kind}:config`
+    );
+    const parsed = executorConfigPublicSchema.safeParse(raw);
+    if (parsed.success && parsed.data.kind === args.kind) {
+      return parsed.data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function readOpencodeHttpPasswordFromAgentfs(args: {
+  agent: { kv: { get: <T>(key: string) => Promise<T> } };
+}): Promise<string | undefined> {
+  try {
+    const raw = await args.agent.kv.get<unknown>("executor:opencode:secrets");
+    if (!raw || typeof raw !== "object") {
+      return;
+    }
+    const { http } = raw as { http?: unknown };
+    if (!http || typeof http !== "object") {
+      return;
+    }
+    const { password } = http as { password?: unknown };
+    return typeof password === "string" && password.length > 0
+      ? password
+      : undefined;
+  } catch {
+    return;
+  }
+}
+
 function buildAgentPrompt(
   spec: AgentSpec,
   task: SubTask | undefined,
@@ -1234,9 +1366,9 @@ function buildAgentPrompt(
   const runtimeEscalateTool =
     executor === "codex" || executor === "droid"
       ? "mcp__alfred_runtime__escalate"
-      : (executor === "opencode"
+      : executor === "opencode"
         ? "alfred_runtime_escalate"
-        : "escalate");
+        : "escalate";
 
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
@@ -1375,9 +1507,9 @@ function createAgentWriter(
                 status:
                   inner.status === "failed"
                     ? "failed"
-                    : (inner.status === "completed"
+                    : inner.status === "completed"
                       ? "completed"
-                      : "running"),
+                      : "running",
                 ts,
                 type: "agent/command",
               }

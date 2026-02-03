@@ -5,6 +5,7 @@
  */
 
 import { AlertTriangle, Bell, Check, Info, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   Notification,
@@ -64,6 +65,8 @@ export function NotificationCenter({
   className,
 }: NotificationCenterProps) {
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Group notifications
   const grouped = notifications.reduce(
@@ -78,12 +81,84 @@ export function NotificationCenter({
     {} as Record<string, Notification[]>
   );
 
+  // Flatten notifications for keyboard navigation
+  const flatNotifications = notifications;
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (flatNotifications.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedIndex((prev) =>
+            prev < flatNotifications.length - 1 ? prev + 1 : prev
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (focusedIndex >= 0) {
+            const notification = flatNotifications[focusedIndex];
+            if (notification) {
+              onMarkRead(notification.id);
+            }
+          }
+          break;
+        case "Delete":
+        case "d":
+        case "D":
+          e.preventDefault();
+          if (focusedIndex >= 0) {
+            const notification = flatNotifications[focusedIndex];
+            if (notification) {
+              onDismiss(notification.id);
+              // Adjust focus after dismissal
+              if (focusedIndex >= flatNotifications.length - 1) {
+                setFocusedIndex(Math.max(0, flatNotifications.length - 2));
+              }
+            }
+          }
+          break;
+        case "Escape":
+          // Let parent handle close
+          break;
+      }
+    },
+    [flatNotifications, focusedIndex, onDismiss, onMarkRead]
+  );
+
+  // Focus management
+  useEffect(() => {
+    if (containerRef.current && focusedIndex >= 0) {
+      const items = containerRef.current.querySelectorAll('[role="listitem"]');
+      const item = items[focusedIndex] as HTMLElement | undefined;
+      item?.focus();
+    }
+  }, [focusedIndex]);
+
+  // Reset focus when notifications change
+  useEffect(() => {
+    if (focusedIndex >= flatNotifications.length) {
+      setFocusedIndex(Math.max(0, flatNotifications.length - 1));
+    }
+  }, [flatNotifications.length, focusedIndex]);
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "flex w-80 flex-col rounded-xl border border-white/10 bg-void-surface shadow-xl",
         className
       )}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-label="Notification center"
+      tabIndex={0}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-white/5 border-b p-3">
@@ -178,6 +253,14 @@ function NotificationItem({
         !notification.read && "bg-white/5"
       )}
       onClick={onMarkRead}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onMarkRead();
+        }
+      }}
+      role="listitem"
+      tabIndex={0}
     >
       <div className="flex gap-2">
         <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", iconColor)} />

@@ -17,9 +17,11 @@ import { TextInput as VoidTextInput } from "@/components/form/TextInput";
 import {
   BiolumText,
   CaptionText,
+  DisplayText,
   TitleText,
 } from "@/components/foundation/BiolumText";
 import { FluidButton } from "@/components/foundation/FluidButton";
+import { GlowBorder } from "@/components/foundation/GlowBorder";
 import { HUDSurface } from "@/components/foundation/HUDSurface";
 import { VoidContainer } from "@/components/foundation/VoidContainer";
 import { VoiceSelector } from "@/components/voice-selector";
@@ -265,23 +267,32 @@ export default function ProfileTab() {
         {/* User Info */}
         <HUDSurface elevation={2} style={styles.card}>
           <View style={styles.userHeader}>
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: theme.colors.glass.surface },
-              ]}
+            <GlowBorder
+              active
+              pulsing
+              color={theme.colors.accent.cyan}
+              borderRadius={32}
+              borderWidth={2}
+              style={styles.avatarGlow}
             >
-              <Ionicons
-                name="person"
-                size={32}
-                color={theme.colors.biolum.standard}
-              />
-            </View>
+              <View
+                style={[
+                  styles.avatar,
+                  { backgroundColor: theme.colors.glass.surface },
+                ]}
+              >
+                <Ionicons
+                  name="person"
+                  size={32}
+                  color={theme.colors.biolum.standard}
+                />
+              </View>
+            </GlowBorder>
             <View style={styles.userInfo}>
-              <BiolumText variant="title" size="small" color="full">
+              <DisplayText size="medium" color="full">
                 {session.user.name}
-              </BiolumText>
-              <CaptionText size="medium" color="dim">
+              </DisplayText>
+              <CaptionText size="medium" color="dim" mono>
                 {session.user.email}
               </CaptionText>
             </View>
@@ -379,7 +390,7 @@ export default function ProfileTab() {
 
           {isLoadingPasskeys ? (
             <ActivityIndicator color={theme.colors.biolum.standard} />
-          ) : (passkeys.length > 0 ? (
+          ) : passkeys.length > 0 ? (
             <View style={styles.passkeyList}>
               {passkeys.map((pk) => (
                 <View
@@ -412,7 +423,7 @@ export default function ProfileTab() {
             <CaptionText size="medium" color="dim" style={styles.noPasskeys}>
               No passkeys registered yet.
             </CaptionText>
-          ))}
+          )}
 
           <FluidButton
             label={
@@ -462,6 +473,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+  },
+  avatarGlow: {
+    borderRadius: 32,
   },
   avatar: {
     width: 64,

@@ -60,11 +60,21 @@ export class PlanStage implements PipelineStage<ContextOutput, PlanOutput> {
       userId: ctx.userId,
     };
 
+    let preferParallel = ctx.config.maxParallel > 1;
+    const autonomyLevel = ctx.get<number>("autonomyLevel");
+    if (typeof autonomyLevel === "number" && Number.isFinite(autonomyLevel)) {
+      preferParallel = preferParallel && autonomyLevel >= 0.65;
+    }
+
     let structuredPlan: unknown;
     try {
       structuredPlan = await generatePlan(intent as never, research as never, {
+        autonomyLevel:
+          typeof autonomyLevel === "number" && Number.isFinite(autonomyLevel)
+            ? autonomyLevel
+            : undefined,
         maxPhases: 6,
-        preferParallel: ctx.config.maxParallel > 1,
+        preferParallel,
       });
     } catch (error) {
       // Fallback: build a deterministic plan from bucket-based subtasks
@@ -94,7 +104,7 @@ export class PlanStage implements PipelineStage<ContextOutput, PlanOutput> {
         phases,
         resources: {
           agentCount: Math.max(1, Math.min(ctx.config.maxParallel, 5)),
-          strategy: ctx.config.maxParallel > 1 ? "parallel" : "sequential",
+          strategy: preferParallel ? "parallel" : "sequential",
           isolation: "agentfs",
         },
         title: ctx.requirement.length > 0 ? ctx.requirement : "Plan",

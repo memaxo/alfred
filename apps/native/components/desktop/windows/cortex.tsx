@@ -1,3 +1,4 @@
+import { resolveStreamId } from "@alfred/cognitive/stream";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -7,14 +8,25 @@ import {
   View,
 } from "react-native";
 
+import { useAuthClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
 import type { WindowComponentProps } from "./types";
 
 export function CortexWindow(_props: WindowComponentProps) {
-  const stateQuery = trpc.cognitive.state.useQuery({ streamId: "default" });
+  const authClient = useAuthClient();
+  const { data: session } = authClient.useSession();
+  const streamId = useMemo(() => {
+    return resolveStreamId({
+      surface: "system",
+      userId: session?.user.id,
+      fallback: "default",
+    });
+  }, [session?.user.id]);
+
+  const stateQuery = trpc.cognitive.state.useQuery({ streamId });
   const physQuery = trpc.cognitive.physiologyGet.useQuery({
-    streamId: "default",
+    streamId,
   });
 
   const stateText = useMemo(() => {
@@ -63,7 +75,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (stateQuery.error ? (
+        ) : stateQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {stateQuery.error.message}
           </Text>
@@ -71,7 +83,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <Text className="mt-3 font-mono text-[10px] text-muted-foreground">
             {stateText}
           </Text>
-        ))}
+        )}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">
@@ -80,7 +92,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (physQuery.error ? (
+        ) : physQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {physQuery.error.message}
           </Text>
@@ -88,7 +100,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <Text className="mt-3 font-mono text-[10px] text-muted-foreground">
             {physText}
           </Text>
-        ))}
+        )}
       </View>
     </ScrollView>
   );

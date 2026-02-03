@@ -21,7 +21,7 @@
    - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`) for heavy `mock.module()` usage
    - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock)
    - avoid relying on "reset" semantics for module mocks across files
-   - export stubs for every symbol imported by the code under test (missing exports can crash at module eval)
+   - export stubs for every symbol imported by the code under test; Bun replaces the full export surface, so missing exports crash at module eval
 
 7. **Centralized mock reset registry.** Test-kit modules auto-register reset functions via `registerMockReset()`:
    - preload's `afterEach` automatically calls all registered reset functions
@@ -47,7 +47,7 @@
 
 14. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
-15. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
+15. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres://`, `drizzle-orm`, `api.openai.com`).
 
 16. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
 

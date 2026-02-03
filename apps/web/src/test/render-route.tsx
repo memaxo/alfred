@@ -58,9 +58,9 @@ export function createTestTrpcClient(
         const map =
           op.type === "query"
             ? handlers.queries
-            : (op.type === "mutation"
+            : op.type === "mutation"
               ? handlers.mutations
-              : handlers.subscriptions);
+              : handlers.subscriptions;
         const handler = map?.[op.path];
 
         if (op.type === "subscription") {

@@ -5,7 +5,7 @@
  * Orchestrates workflow phases, handles cancellation/resume, integrates domain packages.
  */
 
-import type { Event } from "@alfred/cognitive/state";
+import type { Event, Outcome } from "@alfred/cognitive/state";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
 
@@ -18,13 +18,14 @@ import { randomUUID } from "node:crypto";
 
 import type { AiAdapter } from "./adapters/ai";
 
-import { runCognitiveLoop } from "./loops/cognitive";
+import { runCognitiveLoop as defaultRunCognitiveLoop } from "./loops/cognitive";
 import {
   runtimeExecutionDurationSeconds,
   runtimeExecutionsTotal,
 } from "./metrics";
 import {
   type WorkflowRuntime as IWorkflowRuntime,
+  type RunCognitiveLoop,
   type ResumePayload,
   type RuntimeInput,
   type RuntimeOptions,
@@ -74,11 +75,47 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   private readonly supervisorHeartbeatMs: number;
   private readonly supervisorCheckIntervalMs: number;
   private supervisorInterruptReason: string | null = null;
+  private readonly runCognitiveLoop: RunCognitiveLoop;
   private readonly createAiAdapter?: (runId: string) => AiAdapter;
   private supervisorActive = false;
   private externalAbortHandler?: () => void;
   private supervisorGateReject: ((error: Error) => void) | null = null;
   private supervisorGateFired = false;
+
+  private updateCognitiveContext(result: unknown): void {
+    const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+    const isRecord = (value: unknown): value is Record<string, unknown> =>
+      typeof value === "object" && value !== null && !Array.isArray(value);
+    const isNum = (value: unknown): value is number =>
+      typeof value === "number" && Number.isFinite(value);
+
+    const stateValue = isRecord(result) ? (result.state as unknown) : null;
+    const state = isRecord(stateValue) ? stateValue : null;
+    if (!state) {
+      return;
+    }
+
+    const autonomyValue = state.autonomy;
+    if (isRecord(autonomyValue) && isNum(autonomyValue.level)) {
+      this.runtimeContext.set("autonomyLevel", clamp01(autonomyValue.level));
+    }
+
+    const physiologyValue = state.physiology;
+    if (
+      isRecord(physiologyValue) &&
+      isNum(physiologyValue.energy) &&
+      isNum(physiologyValue.boredom) &&
+      isNum(physiologyValue.frustration) &&
+      isNum(physiologyValue.entropy)
+    ) {
+      this.runtimeContext.set("cognitivePhysiology", {
+        energy: clamp01(physiologyValue.energy),
+        boredom: clamp01(physiologyValue.boredom),
+        frustration: clamp01(physiologyValue.frustration),
+        entropy: clamp01(physiologyValue.entropy),
+      });
+    }
+  }
 
   constructor(options: RuntimeOptions) {
     const { createAiAdapter } = options;
@@ -106,6 +143,8 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       validated.supervisorCheckIntervalMs ??
       DEFAULT_SUPERVISOR_CHECK_INTERVAL_MS;
     this.createAiAdapter = createAiAdapter;
+    this.runCognitiveLoop =
+      validated.runCognitiveLoop ?? defaultRunCognitiveLoop;
 
     // Initialize runtime state
     this.state = {
@@ -229,6 +268,27 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       auto: this._input.auto ?? "low",
       interactive: this._input.interactive,
     });
+
+    // Initialize run-scoped cognitive stream (best-effort; must not break runtime)
+    try {
+      const inputEvent: Event = {
+        _: "input",
+        content: this._input.requirement,
+        source: "user",
+        ts: timestamp(this.workflowStartTime),
+      };
+      const result = await this.runCognitiveLoop(
+        this.runtimeContext,
+        this.runId,
+        inputEvent
+      );
+      this.updateCognitiveContext(result);
+    } catch (error) {
+      logger.warn("workflow_runtime_cognitive_input_failed", {
+        runId: this.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     const supervisorGate = this.createSupervisorGate();
     let workflowTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -472,6 +532,48 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
       throw reportedError;
     } finally {
+      // Emit terminal cognitive outcome (best-effort; must not break runtime)
+      try {
+        const status = this.state.finalStatus;
+        let outcome: Outcome | null = null;
+        if (status === "completed") {
+          outcome = {
+            _: "success",
+            duration: Date.now() - this.workflowStartTime,
+            result: { runId: this.runId, status: "completed" },
+          };
+        } else if (status === "failed") {
+          outcome = {
+            _: "failure",
+            error: this.state.finalMessage ?? "workflow_failed",
+            recoverable: true,
+          };
+        } else if (status === "cancelled") {
+          outcome = { _: "cancelled", reason: "workflow_cancelled" };
+        } else if (status === "suspended") {
+          outcome = { _: "cancelled", reason: "workflow_suspended" };
+        }
+
+        if (outcome) {
+          const completeEvent: Event = {
+            _: "complete",
+            outcome,
+            ts: timestamp(Date.now()),
+          };
+          const out = await this.runCognitiveLoop(
+            this.runtimeContext,
+            this.runId,
+            completeEvent
+          );
+          this.updateCognitiveContext(out);
+        }
+      } catch (error) {
+        logger.warn("workflow_runtime_cognitive_complete_failed", {
+          runId: this.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
       this.stopSupervisorWatchers();
       if (workflowTimeout) {
         clearTimeout(workflowTimeout);
@@ -564,11 +666,12 @@ export class WorkflowRuntime implements IWorkflowRuntime {
               priority: 2,
               ts: timestamp(Date.now()),
             };
-            await runCognitiveLoop(
+            const out = await this.runCognitiveLoop(
               this.runtimeContext,
               this.runId,
               interruptEvent
             );
+            this.updateCognitiveContext(out);
           } catch (error) {
             logger.error("supervisor_physiology_cognitive_bridge_failed", {
               runId: this.runId,
@@ -639,11 +742,12 @@ export class WorkflowRuntime implements IWorkflowRuntime {
             priority: 2, // Medium priority for supervisor interrupts
             ts: timestamp(Date.now()),
           };
-          await runCognitiveLoop(
+          const out = await this.runCognitiveLoop(
             this.runtimeContext,
             this.runId,
             interruptEvent
           );
+          this.updateCognitiveContext(out);
         } catch (error) {
           // Log but don't block workflow interruption
           logger.error("supervisor_cognitive_bridge_failed", {

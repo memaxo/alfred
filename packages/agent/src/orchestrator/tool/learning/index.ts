@@ -230,9 +230,9 @@ export const toolLearnMistake = {
       const baseConfidence =
         input.severity === "high"
           ? 0.9
-          : (input.severity === "medium"
+          : input.severity === "medium"
             ? 0.7
-            : 0.5);
+            : 0.5;
 
       const hookEvent: LearnHeuristicProposedEvent = {
         type: "learn:heuristic:proposed",

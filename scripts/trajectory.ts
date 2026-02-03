@@ -241,7 +241,7 @@ async function main() {
 
   const runIds = args.runIds.length
     ? args.runIds
-    : (args.userId
+    : args.userId
       ? (
           await workflowRepo.listRuns({
             userId: args.userId,
@@ -250,7 +250,7 @@ async function main() {
             offset: args.offset,
           })
         ).map((r) => r.id)
-      : []);
+      : [];
 
   if (runIds.length === 0) {
     process.stderr.write("No runs selected. Provide --runId or --userId.\n");

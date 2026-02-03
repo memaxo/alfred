@@ -2,6 +2,7 @@
  * Bookmarks List Screen
  *
  * Displays all bookmarks with search and filtering.
+ * Styled with ALFRED's "Signal in the Void" design system.
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -15,17 +16,23 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
 
-import { Container } from "@/components/container";
+import {
+  BodyText,
+  CaptionText,
+  FluidButton,
+  HUDSurface,
+  VoidContainer,
+} from "@/components/foundation";
 import {
   useBookmarkCreate,
   useBookmarkDelete,
   useBookmarkList,
 } from "@/hooks/use-trpc";
+import { useVoidTheme } from "@/hooks/use-void-theme";
 import { haptics } from "@/lib/haptics";
 
 type BookmarkItem = NonNullable<
@@ -34,6 +41,7 @@ type BookmarkItem = NonNullable<
 
 export default function BookmarksListScreen() {
   const _router = useRouter();
+  const theme = useVoidTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [limit] = useState(50);
@@ -130,76 +138,93 @@ export default function BookmarksListScreen() {
   });
 
   return (
-    <Container>
+    <VoidContainer gradient="ambient" noise noiseOpacity={0.03}>
       <Stack.Screen
         options={{
           title: "Bookmarks",
+          headerStyle: { backgroundColor: theme.colors.void.deep },
+          headerTintColor: theme.colors.biolum.bright,
         }}
       />
 
-      <View className="flex-1">
+      <View style={styles.content}>
         {/* Add bookmark form */}
-        <View className="border-border border-b bg-background px-4 py-3">
-          <View className="flex-row gap-2">
+        <View style={styles.addForm}>
+          <HUDSurface elevation={1} style={styles.inputRow}>
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
-              className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
+              style={[styles.urlInput, { color: theme.colors.biolum.bright }]}
               keyboardType="url"
               onChangeText={setUrlInput}
               placeholder="Paste URL to bookmark..."
-              placeholderTextColor="#5A6B7D"
+              placeholderTextColor={theme.colors.biolum.faint}
               value={urlInput}
             />
-            <Pressable
-              className="rounded-lg bg-primary px-4 py-2"
-              disabled={createMutation.isPending || !urlInput.trim()}
+            <FluidButton
               onPress={handleCreate}
-              style={({ pressed }) => [
-                pressed &&
-                  !createMutation.isPending &&
-                  urlInput.trim() && { opacity: 0.7 },
-              ]}
-            >
-              {createMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Ionicons color="#FFFFFF" name="add" size={20} />
-              )}
-            </Pressable>
-          </View>
+              disabled={createMutation.isPending || !urlInput.trim()}
+              loading={createMutation.isPending}
+              variant="primary"
+              size="small"
+              icon={
+                createMutation.isPending ? (
+                  <ActivityIndicator
+                    color={theme.colors.biolum.full}
+                    size="small"
+                  />
+                ) : (
+                  <Ionicons
+                    color={theme.colors.biolum.full}
+                    name="add"
+                    size={20}
+                  />
+                )
+              }
+            />
+          </HUDSurface>
         </View>
 
         {/* Search bar */}
-        <View className="border-border border-b bg-background px-4 py-3">
-          <View className="flex-row items-center rounded-lg border border-border bg-surface px-3 py-2">
-            <Ionicons color="#5A6B7D" name="search-outline" size={20} />
+        <View style={styles.searchBar}>
+          <HUDSurface elevation={1} style={styles.searchInputContainer}>
+            <Ionicons
+              color={theme.colors.biolum.dim}
+              name="search-outline"
+              size={20}
+            />
             <TextInput
-              className="ml-2 flex-1 text-foreground"
+              style={[
+                styles.searchInput,
+                { color: theme.colors.biolum.bright },
+              ]}
               onChangeText={setSearchQuery}
               placeholder="Search bookmarks..."
-              placeholderTextColor="#5A6B7D"
+              placeholderTextColor={theme.colors.biolum.faint}
               value={searchQuery}
             />
             {searchQuery ? (
-              <Pressable
-                onPress={() => setSearchQuery("")}
-                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-              >
-                <Ionicons color="#5A6B7D" name="close-circle" size={20} />
+              <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+                {({ pressed }) => (
+                  <Ionicons
+                    color={theme.colors.biolum.dim}
+                    name="close-circle"
+                    size={20}
+                    style={pressed ? styles.pressed : undefined}
+                  />
+                )}
               </Pressable>
             ) : null}
-          </View>
+          </HUDSurface>
         </View>
 
         {/* Bookmarks list */}
         {bookmarksQuery.isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#00D9FF" size="large" />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={theme.colors.accent.cyan} size="large" />
           </View>
-        ) : (filteredBookmarks && filteredBookmarks.length > 0 ? (
+        ) : filteredBookmarks && filteredBookmarks.length > 0 ? (
           <FlashList
-            className="flex-1"
             contentContainerStyle={styles.listContent}
             data={filteredBookmarks}
             keyExtractor={(item) => item.id}
@@ -207,8 +232,11 @@ export default function BookmarksListScreen() {
             estimatedItemSize={100}
             ListFooterComponent={
               bookmarksQuery.isLoading && offset > 0 ? (
-                <View className="py-4">
-                  <ActivityIndicator color="#00D9FF" size="small" />
+                <View style={styles.footer}>
+                  <ActivityIndicator
+                    color={theme.colors.accent.cyan}
+                    size="small"
+                  />
                 </View>
               ) : null
             }
@@ -221,22 +249,27 @@ export default function BookmarksListScreen() {
                   bookmarksQuery.refetch();
                 }}
                 refreshing={bookmarksQuery.isRefetching}
+                tintColor={theme.colors.accent.cyan}
               />
             }
             renderItem={renderBookmarkItem}
           />
         ) : (
-          <View className="flex-1 items-center justify-center p-8">
-            <Ionicons color="#5A6B7D" name="bookmark-outline" size={48} />
-            <Text className="mt-4 text-center text-lg text-muted-foreground">
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              color={theme.colors.biolum.faint}
+              name="bookmark-outline"
+              size={48}
+            />
+            <BodyText color="dim" style={styles.emptyText}>
               {searchQuery
                 ? "No bookmarks match your search"
                 : "No bookmarks yet. Add your first bookmark above!"}
-            </Text>
+            </BodyText>
           </View>
-        ))}
+        )}
       </View>
-    </Container>
+    </VoidContainer>
   );
 }
 
@@ -247,48 +280,78 @@ interface BookmarkItemProps {
 }
 
 function BookmarkItem({ item, onOpenUrl, onDelete }: BookmarkItemProps) {
+  const theme = useVoidTheme();
+
   return (
-    <View className="mb-3 rounded-lg border border-border bg-card p-4">
-      <View className="mb-2 flex-row items-start justify-between">
-        <View className="flex-1">
-          <Text
+    <HUDSurface elevation={1} style={styles.bookmarkCard}>
+      <View style={styles.bookmarkContent}>
+        <View style={styles.bookmarkMain}>
+          <BodyText
             accessibilityRole="header"
-            className="mb-1 font-semibold text-foreground text-lg"
+            color="bright"
+            style={styles.bookmarkTitle}
+            numberOfLines={1}
           >
             {item.title || "Untitled Bookmark"}
-          </Text>
+          </BodyText>
           {item.description ? (
-            <Text
-              className="mb-2 text-muted-foreground text-sm"
+            <BodyText
+              color="dim"
               numberOfLines={2}
+              style={styles.bookmarkDescription}
             >
               {item.description}
-            </Text>
+            </BodyText>
           ) : null}
           <Pressable
             accessibilityLabel={`Open ${item.url}`}
             accessibilityRole="link"
-            className="flex-row items-center gap-1"
             onPress={() => onOpenUrl(item.url)}
-            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            style={styles.urlContainer}
           >
-            <Ionicons color="#00D9FF" name="link-outline" size={14} />
-            <Text className="text-primary text-xs" numberOfLines={1}>
-              {item.url}
-            </Text>
+            {({ pressed }) => (
+              <View style={[styles.urlRow, pressed && styles.pressed]}>
+                <View
+                  style={[
+                    styles.faviconPlaceholder,
+                    { borderColor: theme.colors.accent.cyan },
+                  ]}
+                >
+                  <Ionicons
+                    color={theme.colors.accent.cyan}
+                    name="link-outline"
+                    size={12}
+                  />
+                </View>
+                <CaptionText
+                  mono
+                  color="standard"
+                  numberOfLines={1}
+                  style={styles.urlText}
+                >
+                  {item.url}
+                </CaptionText>
+              </View>
+            )}
           </Pressable>
         </View>
         <Pressable
           accessibilityLabel="Delete bookmark"
           accessibilityRole="button"
-          className="ml-2"
           onPress={() => onDelete(item.id)}
-          style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          hitSlop={8}
         >
-          <Ionicons color="#FF3366" name="trash-outline" size={18} />
+          {({ pressed }) => (
+            <Ionicons
+              color={theme.colors.semantic.error}
+              name="trash-outline"
+              size={20}
+              style={pressed ? styles.pressed : undefined}
+            />
+          )}
         </Pressable>
       </View>
-    </View>
+    </HUDSurface>
   );
 }
 
@@ -302,7 +365,101 @@ const MemoizedBookmarkItem = memo(
 );
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  addForm: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  urlInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 4,
+  },
+  searchBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   listContent: {
     padding: 16,
+  },
+  footer: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  emptyText: {
+    marginTop: 16,
+    textAlign: "center",
+  },
+  bookmarkCard: {
+    marginBottom: 12,
+    padding: 16,
+  },
+  bookmarkContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  bookmarkMain: {
+    flex: 1,
+  },
+  bookmarkTitle: {
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  bookmarkDescription: {
+    marginBottom: 8,
+  },
+  urlContainer: {
+    marginTop: 4,
+  },
+  urlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  faviconPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  urlText: {
+    flex: 1,
   },
 });

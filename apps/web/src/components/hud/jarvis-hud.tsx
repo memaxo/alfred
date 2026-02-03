@@ -134,9 +134,9 @@ function getDefaultStatusItems(state: AmbientState): StatusItem[] {
       status:
         state.user.fatiguePrediction < 0.4
           ? "nominal"
-          : (state.user.fatiguePrediction < 0.7
+          : state.user.fatiguePrediction < 0.7
             ? "warning"
-            : "critical"),
+            : "critical",
     },
   ];
 }

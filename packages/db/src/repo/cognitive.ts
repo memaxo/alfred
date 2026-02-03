@@ -29,6 +29,7 @@ export async function appendEvent(
       payload,
       parentId: options?.parentId ?? null,
       seq: options?.seq ?? null,
+      lamport: Date.now(),
     })
     .returning();
   if (!event) {
@@ -52,13 +53,17 @@ export async function saveSnapshot(
 export async function getLatestSnapshot(
   streamId: string
 ): Promise<typeof cognitiveSnapshots.$inferSelect | undefined> {
-  const [snapshot] = await db
-    .select()
+  const [row] = await db
+    .select({ snapshot: cognitiveSnapshots, lastEvent: cognitiveEvents })
     .from(cognitiveSnapshots)
+    .leftJoin(
+      cognitiveEvents,
+      eq(cognitiveEvents.id, cognitiveSnapshots.lastEventId)
+    )
     .where(eq(cognitiveSnapshots.streamId, streamId))
-    .orderBy(desc(cognitiveSnapshots.createdAt))
+    .orderBy(desc(cognitiveEvents.lamport), desc(cognitiveSnapshots.createdAt))
     .limit(1);
-  return snapshot;
+  return row?.snapshot;
 }
 
 export async function getEventsSince(
@@ -74,7 +79,7 @@ export async function getEventsSince(
         gt(cognitiveEvents.createdAt, since)
       )
     )
-    .orderBy(asc(cognitiveEvents.createdAt));
+    .orderBy(asc(cognitiveEvents.createdAt), asc(cognitiveEvents.lamport));
 }
 
 /**
@@ -88,7 +93,20 @@ export async function getAllEvents(
     .select()
     .from(cognitiveEvents)
     .where(eq(cognitiveEvents.streamId, streamId))
-    .orderBy(asc(cognitiveEvents.createdAt));
+    .orderBy(asc(cognitiveEvents.createdAt), asc(cognitiveEvents.lamport));
+}
+
+export async function getLatestEvents(
+  streamId: string,
+  limit: number
+): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
+  const safeLimit = Math.max(1, Math.min(200, limit));
+  return await db
+    .select()
+    .from(cognitiveEvents)
+    .where(eq(cognitiveEvents.streamId, streamId))
+    .orderBy(desc(cognitiveEvents.createdAt), desc(cognitiveEvents.lamport))
+    .limit(safeLimit);
 }
 
 /**

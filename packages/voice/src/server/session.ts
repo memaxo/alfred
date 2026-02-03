@@ -144,9 +144,9 @@ export class VoiceSession {
             const confidence =
               typeof result.vadConfidence === "number"
                 ? Math.max(0, Math.min(1, result.vadConfidence))
-                : (transcript.trim().length > 0
+                : transcript.trim().length > 0
                   ? 0.8
-                  : 0);
+                  : 0;
             const out = await hooks.registry.emit(
               {
                 type: "voice:stt:after",

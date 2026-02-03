@@ -413,6 +413,7 @@ export interface RetentionPreview {
   readonly totalCas: number;
   readonly parameters: {
     readonly retentionDays: number;
+    readonly casRetentionDays: number;
     readonly maxBytes: number | null;
     readonly casMaxBytes: number | null;
   };
@@ -437,6 +438,7 @@ export interface CleanupNowResult {
  */
 export interface CasArchiveInfo {
   readonly sha: string;
+  readonly runId: string;
   readonly sizeBytes: number;
   readonly createdAt: Date;
   readonly lastAccessedAt: Date | null;
@@ -467,9 +469,16 @@ export type AuditAction =
   | "checkpoint_restore"
   | "cas_export"
   | "cas_restore"
+  | "cas_delete"
+  | "cas_cleanup"
+  | "quarantine_restore"
   | "run_delete"
   | "pin_set"
-  | "pin_clear";
+  | "pin_clear"
+  | "batch_delete"
+  | "batch_export"
+  | "batch_pin"
+  | "batch_unpin";
 
 /**
  * Audit log entry.

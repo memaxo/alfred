@@ -129,16 +129,69 @@ export async function listQuarantine(
   }
 
   // Sort by quarantine date (newest first)
-  entries.sort((a, b) => b.quarantinedAt.getTime() - a.quarantinedAt.getTime());
+  entries.sort((a, b) => {
+    const t = b.quarantinedAt.getTime() - a.quarantinedAt.getTime();
+    if (t !== 0) {
+      return t;
+    }
+    return path
+      .basename(b.quarantinePath)
+      .localeCompare(path.basename(a.quarantinePath));
+  });
 
   // Apply limit
   const limit = options.limit ?? 100;
-  const limited = entries.slice(0, limit);
+  const cursor = options.cursor ? parseQuarantineCursor(options.cursor) : null;
+  const filtered = cursor
+    ? entries.filter((e) => isAfterQuarantineCursor(e, cursor))
+    : entries;
+  const limited = filtered.slice(0, limit);
 
   return {
     entries: limited,
-    nextCursor: entries.length > limit ? String(limit) : undefined,
+    nextCursor:
+      filtered.length > limit
+        ? formatQuarantineCursor(limited.at(-1) ?? null)
+        : undefined,
   };
+}
+
+function parseQuarantineCursor(
+  cursor: string
+): { atMs: number; name: string } | null {
+  const [tsRaw, name] = cursor.split(":", 2);
+  if (!tsRaw || !name) {
+    return null;
+  }
+  const atMs = Number(tsRaw);
+  if (!Number.isFinite(atMs) || atMs <= 0) {
+    return null;
+  }
+  return { atMs, name };
+}
+
+function formatQuarantineCursor(
+  item: QuarantineEntry | null
+): string | undefined {
+  if (!item) {
+    return undefined;
+  }
+  return `${item.quarantinedAt.getTime()}:${path.basename(item.quarantinePath)}`;
+}
+
+function isAfterQuarantineCursor(
+  item: QuarantineEntry,
+  cursor: { atMs: number; name: string }
+): boolean {
+  const t = item.quarantinedAt.getTime();
+  if (t < cursor.atMs) {
+    return true;
+  }
+  if (t > cursor.atMs) {
+    return false;
+  }
+  // Same timestamp: we sort name desc, so "after" means smaller name.
+  return path.basename(item.quarantinePath) < cursor.name;
 }
 
 export interface InspectQuarantineOptions {

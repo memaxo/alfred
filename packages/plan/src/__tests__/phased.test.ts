@@ -255,9 +255,9 @@ describe("generatePlanVariants", () => {
               name: "Phase 1",
               description: hint.includes("speed")
                 ? "Fast approach"
-                : (hint.includes("robust")
+                : hint.includes("robust")
                   ? "Robust approach"
-                  : "Balanced approach"),
+                  : "Balanced approach",
               tasks: [],
               dependsOn: [],
               estimatedDurationMs: 600_000,

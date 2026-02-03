@@ -663,9 +663,9 @@ function renderToolInvocation(
   const errorText =
     state === "output-denied"
       ? "Denied"
-      : (typeof invocation.errorText === "string"
+      : typeof invocation.errorText === "string"
         ? invocation.errorText
-        : undefined);
+        : undefined;
 
   return (
     <Tool defaultOpen={state !== "output-available"}>
@@ -695,9 +695,9 @@ function renderToolInvocation(
         ) : null}
         {state === "output-available" && output !== undefined ? (
           <ToolOutput errorText={undefined} output={output} />
-        ) : (state === "output-error" || state === "output-denied" ? (
+        ) : state === "output-error" || state === "output-denied" ? (
           <ToolOutput errorText={errorText} output={output} />
-        ) : null)}
+        ) : null}
       </ToolContent>
     </Tool>
   );

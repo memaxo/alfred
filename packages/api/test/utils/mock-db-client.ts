@@ -576,6 +576,15 @@ function applyMockDbClient(): void {
   // No-op policy audit logging during tests
   mock.module("@alfred/db/repo/policy", () => ({
     createAuditLog: async () => {},
+    queryAuditLogs: async () => ({ rows: [], totalCount: 0 }),
+    createApproval: async () => {},
+    getApproval: async () => null,
+    getPendingApprovals: async () => [],
+    approveApproval: async () => null,
+    denyApproval: async () => null,
+    expireApprovals: async () => [],
+    getAuditLogs: async () => [],
+    getAuditLogsByTrace: async () => [],
   }));
 }
 

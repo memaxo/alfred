@@ -1,7 +1,7 @@
 // AgentFS Search Service
 // Cross-run content search respecting sensitivity classification
 
-import { Database } from "bun:sqlite";
+import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -45,6 +45,7 @@ function isSensitivePath(filePath: string): boolean {
 
 export interface SearchFilters {
   projectId?: string;
+  runIds?: string[];
   agentType?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -61,10 +62,7 @@ interface RunInfo {
   projectId?: string;
 }
 
-async function collectRuns(
-  filters: SearchFilters,
-  runIds?: string[]
-): Promise<RunInfo[]> {
+async function collectRuns(filters: SearchFilters): Promise<RunInfo[]> {
   const agentfsDir = getAgentfsDir(filters.rootAbs);
   const runs: RunInfo[] = [];
 
@@ -73,6 +71,7 @@ async function collectRuns(
   }
 
   const entries = await readdir(agentfsDir, { withFileTypes: true });
+  const runIdSet = filters.runIds ? new Set(filters.runIds) : null;
 
   for (const entry of entries) {
     if (!entry.isDirectory()) {
@@ -84,8 +83,7 @@ async function collectRuns(
 
     const runId = entry.name;
 
-    // If specific runIds provided, filter to those
-    if (runIds && !runIds.includes(runId)) {
+    if (runIdSet && !runIdSet.has(runId)) {
       continue;
     }
 
@@ -297,7 +295,8 @@ export async function searchFiles(
 
 export async function searchKv(
   keyPattern: string,
-  filters: SearchFilters = {}
+  filters: SearchFilters = {},
+  valuePattern?: string
 ): Promise<KvSearchResult[]> {
   const results: KvSearchResult[] = [];
   const limit = Math.min(
@@ -309,6 +308,9 @@ export async function searchKv(
 
   // Convert keyPattern to SQL LIKE pattern
   const likePattern = keyPattern.replaceAll("*", "%").replaceAll("?", "_");
+  const likeValuePattern = valuePattern
+    ? valuePattern.replaceAll("*", "%").replaceAll("?", "_")
+    : null;
 
   for (const run of runs) {
     if (results.length >= limit) {
@@ -318,10 +320,20 @@ export async function searchKv(
     try {
       const db = new Database(run.dbPath, { readonly: true });
       try {
+        const whereParts = ["key LIKE ?"];
+        const args: SQLQueryBindings[] = [likePattern];
+        if (likeValuePattern) {
+          whereParts.push("value LIKE ?");
+          args.push(likeValuePattern);
+        }
+        args.push(limit - results.length);
+
         const stmt = db.prepare(
-          `SELECT key, value, updated_at FROM kv_store WHERE key LIKE ? LIMIT ?`
+          `SELECT key, value, updated_at FROM kv_store WHERE ${whereParts.join(
+            " AND "
+          )} LIMIT ?`
         );
-        const entries = stmt.all(likePattern, limit - results.length) as {
+        const entries = stmt.all(...args) as {
           key: string;
           value: string;
           updated_at: number;
@@ -360,7 +372,8 @@ export async function searchKv(
 
 export async function searchToolCalls(
   namePattern: string,
-  filters: SearchFilters = {}
+  filters: SearchFilters = {},
+  paramsPattern?: string
 ): Promise<ToolCallSearchResult[]> {
   const results: ToolCallSearchResult[] = [];
   const limit = Math.min(
@@ -372,6 +385,9 @@ export async function searchToolCalls(
 
   // Convert namePattern to SQL LIKE pattern
   const likePattern = namePattern.replaceAll("*", "%").replaceAll("?", "_");
+  const likeParamsPattern = paramsPattern
+    ? paramsPattern.replaceAll("*", "%").replaceAll("?", "_")
+    : null;
 
   for (const run of runs) {
     if (results.length >= limit) {
@@ -381,14 +397,22 @@ export async function searchToolCalls(
     try {
       const db = new Database(run.dbPath, { readonly: true });
       try {
+        const whereParts = ["name LIKE ?"];
+        const args: SQLQueryBindings[] = [likePattern];
+        if (likeParamsPattern) {
+          whereParts.push("parameters LIKE ?");
+          args.push(likeParamsPattern);
+        }
+        args.push(limit - results.length);
+
         const stmt = db.prepare(
-          `SELECT id, name, parameters, result, started_at 
-           FROM tool_calls 
-           WHERE name LIKE ? 
-           ORDER BY started_at DESC 
+          `SELECT id, name, parameters, result, started_at
+           FROM tool_calls
+           WHERE ${whereParts.join(" AND ")}
+           ORDER BY started_at DESC
            LIMIT ?`
         );
-        const calls = stmt.all(likePattern, limit - results.length) as {
+        const calls = stmt.all(...args) as {
           id: number;
           name: string;
           parameters: string;

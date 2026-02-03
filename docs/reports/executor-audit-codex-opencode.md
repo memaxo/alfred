@@ -9,7 +9,8 @@ Scope: **ALFRED itself** (not apps ALFRED generates). Pure static analysis only.
 - **High-level standardization exists**: `packages/runtime/src/orchestrator/agent.ts` dispatches by `AgentSpec.agentType` (`codex|droid|opencode`) and supports `execProfile` (`default|server`) with deterministic server fallback rules and strict-mode.
 - **Executor server lifecycle is standardized** via a shared server registry keyed by `(containerName, executor, profile)` with deterministic cleanup on workflow completion (`stopAllServers("workflow_complete")`).
 - **Major drift risk**: there are **two Codex tool entrypoints** (`packages/agent/src/orchestrator/tool/codex.ts` and `packages/agent/src/orchestrator/tool/codex/index.ts`) and `packages/agent/src/v6.ts` imports `./orchestrator/tool/codex` (which resolves to the legacy `codex.ts` file). This makes “Codex tool” behavior dependent on import site, and can silently drop newer features (server profile, output schema, AgentFS audit path, etc.).
-- **OpenCode integration is minimally functional** (ACP over stdio), but **under-leverages upstream capabilities**: ALFRED’s ACP client stubs file operations and only handles a small subset of session update event kinds (missing “thought”, “plan”, diffs, etc. that OpenCode can emit).
+- **OpenCode integration supports both ACP and HTTP**: ALFRED can run OpenCode over ACP stdio and (optionally) via the OpenCode HTTP server using `@opencode-ai/sdk` (`packages/agent/src/orchestrator/tool/opencode/http.ts`). Observability and event normalization gaps remain (thought/plan/diff → artifacts).
+- **Executor management surface is missing**: there is no first-class, typed API for configuring, introspecting, and health-checking executors. See `docs/reports/executor-api-management.md` for the management-layer gap matrix and contract.
 
 ## What “Executor Interface” Means in ALFRED (today)
 
@@ -126,8 +127,7 @@ Underutilized / not leveraged (likely high-value):
 
 ### 2) ACP capability mismatch for OpenCode
 
-- ALFRED advertises filesystem capabilities in ACP initialize calls (fs read/write enabled), but the actual implementations are placeholders returning empty content.
-- This is a correctness and quality risk: upstream OpenCode ACP agent appears designed to leverage those capabilities.
+- **Status (updated)**: OpenCode ACP filesystem capabilities are implemented (read/write) with path allowlisting + container-aware resolution in `packages/agent/src/orchestrator/tool/opencode/exec.ts`. Remaining gaps are primarily event mapping and artifact capture rather than empty FS stubs.
 
 ### 3) Event normalization asymmetry
 

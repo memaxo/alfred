@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@alfred/agent": "workspace:*",
+    "@alfred/cognitive": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/mcp": "workspace:*",

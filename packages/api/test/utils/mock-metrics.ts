@@ -110,13 +110,22 @@ for (const match of metricsSource.matchAll(exportStarRegex)) {
 }
 
 metricsStub.metricsRegistry = {};
-vi.spyOn(metricsStub, "recordVoiceStt").mockImplementation();
-vi.spyOn(metricsStub, "recordVoiceTts").mockImplementation();
-vi.spyOn(metricsStub, "recordStreamEvent").mockImplementation();
-vi.spyOn(metricsStub, "startStreamTimer").mockImplementation(() => vi.fn());
-vi.spyOn(metricsStub, "getMetricsSnapshot").mockImplementation(() => "metrics");
-vi.spyOn(metricsStub, "getMetricsJSON").mockImplementation(() => []);
-vi.spyOn(metricsStub, "initMetricsHooks").mockImplementation();
+for (const [name, value] of Object.entries({
+  getMetricsJSON: vi.fn(() => []),
+  getMetricsSnapshot: vi.fn(() => "metrics"),
+  initMetricsHooks: vi.fn(),
+  recordStreamEvent: vi.fn(),
+  recordVoiceStt: vi.fn(),
+  recordVoiceTts: vi.fn(),
+  startStreamTimer: vi.fn(() => vi.fn()),
+})) {
+  Object.defineProperty(metricsStub, name, {
+    value,
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
+}
 
 // Workflow runner metrics commonly needed by workflow tests
 metricsStub.runnerStepsTotal = createMetricStub();

@@ -51,7 +51,7 @@ export function VisualWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (query.error ? (
+        ) : query.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {query.error.message}
           </Text>
@@ -80,7 +80,7 @@ export function VisualWindow(_props: WindowComponentProps) {
               )}
             </View>
           </>
-        ))}
+        )}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

@@ -65,6 +65,10 @@ export interface PipelineInput {
   workspace: string;
   userId: string;
   authz?: string;
+  cognitive?: {
+    streamId?: string;
+    autonomyLevel?: number;
+  };
   linear?: {
     sessionId: string;
     space: string;

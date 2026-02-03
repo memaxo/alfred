@@ -40,12 +40,28 @@ export function TileZonePreview() {
             duration: reduced ? 0.2 : undefined,
           }}
         >
+          {/* Ghost window preview */}
+          <div className="absolute inset-4 rounded-xl border border-biolum/20 bg-void-surface/30">
+            {/* Window chrome preview */}
+            <div className="flex items-center gap-2 border-b border-biolum/10 px-3 py-2">
+              <div className="h-2 w-2 rounded-full bg-biolum/30" />
+              <div className="h-2 w-2 rounded-full bg-biolum/30" />
+              <div className="h-2 w-2 rounded-full bg-biolum/30" />
+              <div className="ml-2 h-1.5 w-24 rounded bg-biolum/20" />
+            </div>
+            {/* Window content preview */}
+            <div className="p-4 space-y-2">
+              <div className="h-2 w-3/4 rounded bg-biolum/10" />
+              <div className="h-2 w-1/2 rounded bg-biolum/10" />
+            </div>
+          </div>
+
           <div className="flex h-full items-center justify-center">
             <motion.div
               animate={
                 reduced ? { opacity: 0.6 } : { opacity: [0.4, 0.8, 0.4] }
               }
-              className="flex flex-col items-center gap-2 rounded-full bg-void-surface/60 p-4 px-6 shadow-2xl ring-1 ring-biolum/30"
+              className="flex flex-col items-center gap-2 rounded-full bg-void-surface/80 p-4 px-6 shadow-2xl ring-1 ring-biolum/30"
               transition={
                 reduced
                   ? { duration: 0.2 }

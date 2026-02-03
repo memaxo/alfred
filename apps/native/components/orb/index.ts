@@ -12,6 +12,9 @@ export {
   type OrbState,
 } from "./constants";
 export { ControlBar } from "./control-bar";
+export { FloatingOrb } from "./FloatingOrb";
+export { OrbProvider, useOrb } from "./OrbProvider";
+export { QuickActionsOverlay } from "./QuickActionsOverlay";
 export { useOrbState } from "./hooks/use-orb-state";
 export { usePerformanceConfig } from "./hooks/use-performance";
 export { Orb, type OrbProps } from "./orb";

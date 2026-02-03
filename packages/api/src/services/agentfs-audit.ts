@@ -1,61 +1,82 @@
-// AgentFS Access Audit Service
-// Audit log querying and compliance
+// AgentFS Access Audit Service (DB-backed)
+//
+// Uses the central policy audit log table (`db_logs`) for storage.
 
-import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { readdir } from "node:fs/promises";
-import path from "node:path";
+import type {
+  AuditAction,
+  AuditLogEntry,
+  AuditLogResult,
+} from "../agentfs/domain";
 
-import type { AuditLogEntry, AuditLogResult } from "../agentfs/domain";
+const ACTION_PREFIX = "agentfs.op.";
+const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
+  "file_read",
+  "file_write",
+  "run_clone",
+  "checkpoint_restore",
+  "cas_export",
+  "cas_restore",
+  "cas_delete",
+  "cas_cleanup",
+  "quarantine_restore",
+  "run_delete",
+  "pin_set",
+  "pin_clear",
+  "batch_delete",
+  "batch_export",
+  "batch_pin",
+  "batch_unpin",
+]);
 
-const AUDIT_LOG_FILENAME = "audit.log";
-
-interface AuditLogLine {
-  timestamp: string;
-  level: string;
-  runId?: string;
-  userId?: string;
-  action: string;
-  resource: string;
-  success: boolean;
-  details?: Record<string, unknown>;
-}
-
-function getAgentfsDir(rootAbs?: string): string {
-  return rootAbs
-    ? path.join(rootAbs, ".agentfs")
-    : path.join(process.cwd(), ".agentfs");
-}
-
-async function readAuditLogFile(filePath: string): Promise<AuditLogLine[]> {
+function parseJsonField(value: unknown): unknown {
+  if (!value || typeof value !== "string") {
+    return value;
+  }
   try {
-    const content = await Bun.file(filePath).text();
-    const lines = content.trim().split("\n");
-    const entries: AuditLogLine[] = [];
-
-    for (const line of lines) {
-      try {
-        const parsed = JSON.parse(line);
-        entries.push(parsed);
-      } catch {
-        // Skip malformed lines
-      }
-    }
-
-    return entries;
+    return JSON.parse(value);
   } catch {
-    return [];
+    return value;
   }
 }
 
-function generateStableId(entry: AuditLogLine): string {
-  // Create deterministic ID from entry data instead of Math.random()
-  const hash = createHash("sha256");
-  hash.update(entry.timestamp);
-  hash.update(entry.action);
-  hash.update(entry.resource);
-  hash.update(entry.runId || "");
-  return hash.digest("hex").slice(0, 16);
+function normalizeActionFilter(action: string): string {
+  return action.startsWith(ACTION_PREFIX)
+    ? action
+    : `${ACTION_PREFIX}${action}`;
+}
+
+function parseAction(action: string): AuditAction | null {
+  if (action.startsWith(ACTION_PREFIX)) {
+    const suffix = action.slice(ACTION_PREFIX.length);
+    return ALLOWED_ACTIONS.has(suffix) ? (suffix as AuditAction) : null;
+  }
+  return ALLOWED_ACTIONS.has(action) ? (action as AuditAction) : null;
+}
+
+function parseResource(resource: string): { runId?: string; casSha?: string } {
+  if (resource.startsWith("agentfs_run:")) {
+    return { runId: resource.slice("agentfs_run:".length) };
+  }
+  if (resource.startsWith("agentfs_cas:")) {
+    return { casSha: resource.slice("agentfs_cas:".length) };
+  }
+  if (resource.startsWith("agentfs_file:")) {
+    const rest = resource.slice("agentfs_file:".length);
+    const idx = rest.indexOf(":");
+    if (idx > 0) {
+      return { runId: rest.slice(0, idx) };
+    }
+  }
+  if (resource.startsWith("agentfs_quarantine:")) {
+    const rest = resource.slice("agentfs_quarantine:".length);
+    if (rest.startsWith("run:")) {
+      return { runId: rest.slice("run:".length) };
+    }
+    if (rest.startsWith("cas:")) {
+      return { casSha: rest.slice("cas:".length) };
+    }
+  }
+  return {};
 }
 
 export interface AuditQuery {
@@ -69,38 +90,6 @@ export interface AuditQuery {
   limit?: number;
 }
 
-function matchesQuery(entry: AuditLogLine, query: AuditQuery): boolean {
-  if (query.runId && entry.runId !== query.runId) {
-    return false;
-  }
-  if (query.userId && entry.userId !== query.userId) {
-    return false;
-  }
-  if (query.action && entry.action !== query.action) {
-    return false;
-  }
-  if (query.resource && !entry.resource.includes(query.resource)) {
-    return false;
-  }
-  if (query.from) {
-    const entryTime = new Date(entry.timestamp).getTime();
-    if (entryTime < query.from.getTime()) {
-      return false;
-    }
-  }
-  if (query.to) {
-    const entryTime = new Date(entry.timestamp).getTime();
-    if (entryTime > query.to.getTime()) {
-      return false;
-    }
-  }
-  if (query.successOnly !== undefined && entry.success !== query.successOnly) {
-    return false;
-  }
-
-  return true;
-}
-
 export interface QueryAuditLogOptions {
   rootAbs?: string;
 }
@@ -109,86 +98,104 @@ export async function queryAuditLog(
   query: AuditQuery = {},
   options: QueryAuditLogOptions = {}
 ): Promise<AuditLogResult> {
-  const agentfsDir = getAgentfsDir(options.rootAbs);
+  void options;
+
+  if (!process.env.DATABASE_URL) {
+    return { entries: [], totalCount: 0, hasMore: false };
+  }
+
+  const policyRepo = await import("@alfred/db/repo/policy");
+  const action = query.action ? normalizeActionFilter(query.action) : undefined;
+
+  const resourceAll =
+    query.runId && query.resource ? [query.runId, query.resource] : undefined;
+  const resource =
+    query.runId && !query.resource
+      ? query.runId
+      : !query.runId && query.resource
+        ? query.resource
+        : undefined;
+
+  const decision =
+    query.successOnly === true
+      ? "allow"
+      : query.successOnly === false
+        ? "deny"
+        : undefined;
+
+  const { rows, totalCount } = await policyRepo.queryAuditLogs({
+    userId: query.userId,
+    actionPrefix: ACTION_PREFIX,
+    action,
+    resource,
+    resourceAll,
+    from: query.from,
+    to: query.to,
+    decision,
+    limit: query.limit ?? 100,
+    offset: 0,
+  });
+
   const entries: AuditLogEntry[] = [];
-
-  // Read global audit log if it exists
-  const globalLogPath = path.join(agentfsDir, AUDIT_LOG_FILENAME);
-  if (existsSync(globalLogPath)) {
-    const lines = await readAuditLogFile(globalLogPath);
-    for (const line of lines) {
-      if (matchesQuery(line, query)) {
-        entries.push({
-          id: generateStableId(line),
-          timestamp: new Date(line.timestamp),
-          userId: line.userId || "system",
-          action: line.action as AuditLogEntry["action"],
-          runId: line.runId,
-          casSha: undefined,
-          details: line.details || {},
-          ipAddress: line.details?.ip as string | undefined,
-          userAgent: line.details?.userAgent as string | undefined,
-          success: line.success,
-        });
-      }
+  for (const row of rows) {
+    const actionParsed = parseAction(row.action);
+    if (!actionParsed) {
+      continue;
     }
+
+    const timestampRaw = row.timestamp;
+    const timestamp =
+      timestampRaw instanceof Date
+        ? timestampRaw
+        : typeof timestampRaw === "string" || typeof timestampRaw === "number"
+          ? new Date(timestampRaw)
+          : new Date(0);
+    const details = parseJsonField(row.context);
+    const resourceIds = parseResource(row.resource);
+    const detailsRec =
+      details && typeof details === "object"
+        ? (details as Record<string, unknown>)
+        : null;
+    const runId =
+      resourceIds.runId ??
+      (detailsRec && typeof detailsRec.runId === "string"
+        ? detailsRec.runId
+        : undefined);
+    const casSha =
+      resourceIds.casSha ??
+      (detailsRec && typeof detailsRec.sha === "string"
+        ? detailsRec.sha
+        : undefined);
+    const decisionAllow = row.decision === "allow";
+    const success =
+      typeof (details as { success?: unknown } | null)?.success === "boolean"
+        ? (details as { success: boolean }).success
+        : decisionAllow;
+
+    const ipAddress =
+      typeof (details as { ip?: unknown } | null)?.ip === "string"
+        ? (details as { ip: string }).ip
+        : undefined;
+    const userAgent =
+      typeof (details as { userAgent?: unknown } | null)?.userAgent === "string"
+        ? (details as { userAgent: string }).userAgent
+        : undefined;
+
+    entries.push({
+      id: row.id,
+      timestamp,
+      userId: row.userId,
+      action: actionParsed,
+      runId,
+      casSha,
+      details: details ?? {},
+      ipAddress,
+      userAgent,
+      success,
+    });
   }
 
-  // Read per-run audit logs if runId filter is set or we're doing a full scan
-  if (query.runId || !query.action) {
-    try {
-      const runDirs = await readdir(agentfsDir, { withFileTypes: true });
-      for (const dir of runDirs) {
-        if (!dir.isDirectory()) {
-          continue;
-        }
-        if (dir.name === "cas" || dir.name === "quarantine") {
-          continue;
-        }
-
-        // If querying specific runId, only check that run
-        if (query.runId && dir.name !== query.runId) {
-          continue;
-        }
-
-        const runLogPath = path.join(agentfsDir, dir.name, AUDIT_LOG_FILENAME);
-        if (existsSync(runLogPath)) {
-          const lines = await readAuditLogFile(runLogPath);
-          for (const line of lines) {
-            if (matchesQuery(line, query)) {
-              entries.push({
-                id: generateStableId(line),
-                timestamp: new Date(line.timestamp),
-                userId: line.userId || "system",
-                action: line.action as AuditLogEntry["action"],
-                runId: line.runId || dir.name,
-                casSha: undefined,
-                details: line.details || {},
-                ipAddress: line.details?.ip as string | undefined,
-                userAgent: line.details?.userAgent as string | undefined,
-                success: line.success,
-              });
-            }
-          }
-        }
-      }
-    } catch {
-      // Directory doesn't exist or not readable
-    }
-  }
-
-  // Sort by timestamp (newest first)
-  entries.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-  // Apply limit
-  const limit = query.limit ?? 100;
-  const limited = entries.slice(0, limit);
-
-  return {
-    entries: limited,
-    totalCount: entries.length,
-    hasMore: entries.length > limit,
-  };
+  return { entries, totalCount, hasMore: totalCount > entries.length };
 }
 
 export interface GetRecentActivityOptions {
@@ -196,10 +203,11 @@ export interface GetRecentActivityOptions {
 }
 
 export async function getRecentActivity(
+  userId: string,
   limit: number = 50,
   options: GetRecentActivityOptions = {}
 ): Promise<readonly AuditLogEntry[]> {
-  const result = await queryAuditLog({ limit }, options);
+  const result = await queryAuditLog({ userId, limit }, options);
   return result.entries;
 }
 
@@ -208,6 +216,7 @@ export interface GetAccessStatsOptions {
 }
 
 export async function getAccessStats(
+  userId: string,
   from: Date,
   to: Date,
   options: GetAccessStatsOptions = {}
@@ -217,7 +226,10 @@ export async function getAccessStats(
   topActions: { action: string; count: number }[];
   topUsers: { userId: string; count: number }[];
 }> {
-  const result = await queryAuditLog({ from, to, limit: 10_000 }, options);
+  const result = await queryAuditLog(
+    { userId, from, to, limit: 10_000 },
+    options
+  );
   const { entries } = result;
 
   const actionCounts = new Map<string, number>();
@@ -227,7 +239,6 @@ export async function getAccessStats(
   for (const entry of entries) {
     actionCounts.set(entry.action, (actionCounts.get(entry.action) || 0) + 1);
     userCounts.set(entry.userId, (userCounts.get(entry.userId) || 0) + 1);
-    // Fix: Use entry.success instead of entry.action for success count
     if (entry.success === true) {
       successCount++;
     }

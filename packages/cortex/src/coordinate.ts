@@ -249,8 +249,8 @@ export function computeSemanticBasis(
   const seed = 42;
   let state = seed;
   for (let i = 0; i < basis.length; i++) {
-    state = (state * 1_103_515_245 + 12_345) & 0x7F_FF_FF_FF;
-    basis[i] = (state / 0x7F_FF_FF_FF - 0.5) * 2;
+    state = (state * 1_103_515_245 + 12_345) & 0x7f_ff_ff_ff;
+    basis[i] = (state / 0x7f_ff_ff_ff - 0.5) * 2;
   }
 
   // Normalize rows

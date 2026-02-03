@@ -202,9 +202,9 @@ export async function findRelevantFiles(
   const liteFusionEnabled = liteFusionRaw.length > 0 && liteFusionRaw !== "0";
   const liteFusionMode =
     liteFusionRaw === "1"
-      ? (isRerankAvailable()
+      ? isRerankAvailable()
         ? "rerank"
-        : "hash")
+        : "hash"
       : liteFusionRaw;
 
   if (liteFusionEnabled && candidates.length > 0) {

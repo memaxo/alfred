@@ -31,10 +31,15 @@ export const VOID_PALETTE = {
     glow: "rgba(255, 255, 255, 0.03)",
   },
   semantic: {
-    success: oklchToRgb(0.75, 0.05, 145),
-    warning: oklchToRgb(0.75, 0.05, 85),
-    error: oklchToRgb(0.75, 0.05, 25),
+    success: "#00FF88", // Green glow for success states
+    warning: "#FFB800", // Yellow/orange for warnings
+    error: "#FF4444", // Red for errors
     info: oklchToRgb(0.75, 0.05, 230),
+  },
+  accent: {
+    cyan: "#00D9FF", // Primary accent - cyan glow
+    purple: "#9D4EDD", // Secondary accent
+    gold: "#FFD700", // Tertiary accent
   },
 } as const;
 

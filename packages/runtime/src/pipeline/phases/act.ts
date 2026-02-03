@@ -40,9 +40,38 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         | undefined;
       const userId = context.get("userId") as string | undefined;
       const projectId = context.get("projectId") as string | undefined;
+      const autonomyLevel = context.get("autonomyLevel") as number | undefined;
+      const cognitivePhysiology = context.get("cognitivePhysiology") as
+        | Record<string, unknown>
+        | undefined;
+
+      const shouldForceSequential =
+        (typeof autonomyLevel === "number" && autonomyLevel < 0.65) ||
+        (cognitivePhysiology &&
+          typeof cognitivePhysiology.frustration === "number" &&
+          cognitivePhysiology.frustration > 0.75);
+
+      const effectiveMode =
+        input.mode ?? (shouldForceSequential ? "sequential" : "parallel");
+      const effectiveToolgraph =
+        shouldForceSequential && effectiveMode === "sequential"
+          ? {
+              ...(input.toolgraph ?? {}),
+              maxParallel: 1,
+            }
+          : input.toolgraph;
+
+      const steeredInput: RuntimeInput =
+        effectiveMode === input.mode && effectiveToolgraph === input.toolgraph
+          ? input
+          : {
+              ...input,
+              mode: effectiveMode,
+              toolgraph: effectiveToolgraph,
+            };
 
       const generator = executeActPhase(
-        input,
+        steeredInput,
         this.runId,
         signal,
         this.model,
@@ -55,7 +84,12 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         this.createAiAdapter
           ? { createAiAdapter: this.createAiAdapter }
           : undefined,
-        projectId
+        projectId,
+        {
+          autonomyLevel:
+            typeof autonomyLevel === "number" ? autonomyLevel : undefined,
+          physiology: cognitivePhysiology,
+        }
       );
       let result: { escalated: boolean; reason?: string } | undefined;
 

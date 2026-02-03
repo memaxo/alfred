@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 // Mock AI SDK generateObject
 const mockGenerateObject = mock();
 mock.module("ai", () => ({
+  convertToModelMessages: () => [],
   generateObject: mockGenerateObject,
+  pruneMessages: (messages: unknown) => messages,
 }));
 
 // Mock @alfred/agent/v6
@@ -217,5 +219,39 @@ describe("Plan Generation", () => {
     expect(plan.phases[2].dependsOn).toContain("phase-1");
     expect(plan.phases[2].dependsOn).toContain("phase-2");
     expect(plan.resources.strategy).toBe("sequential");
+  });
+
+  it("should include autonomy steering in Optimization Hint", async () => {
+    mockGenerateObject.mockResolvedValue({
+      object: {
+        phases: [
+          {
+            id: "phase-1",
+            name: "Logic & API",
+            description: "Update server-side logic",
+            dependsOn: [],
+            estimatedDurationMs: 60_000,
+            agentType: "codex",
+            tasks: [],
+          },
+        ],
+        resources: {
+          agentCount: 1,
+          strategy: "sequential",
+          isolation: "agentfs",
+        },
+        evaluationCriteria: [],
+      },
+    });
+
+    await generatePlan(mockIntent, mockResearch as any, { autonomyLevel: 0.2 });
+
+    const call = mockGenerateObject.mock.calls[0]?.[0] as
+      | { prompt?: unknown }
+      | undefined;
+    expect(typeof call?.prompt).toBe("string");
+    const prompt = String(call?.prompt ?? "");
+    expect(prompt).toContain("Optimization Hint:");
+    expect(prompt).toContain("Cognitive autonomyLevel is 0.20");
   });
 });

@@ -155,7 +155,7 @@ export async function createWebrtcSession(input: {
     audioSender,
     rtpPayloadType: null,
     rtpSeq: Math.floor(Math.random() * 65_535),
-    rtpTimestamp: Math.floor(Math.random() * 0xFF_FF_FF_FF),
+    rtpTimestamp: Math.floor(Math.random() * 0xff_ff_ff_ff),
     registryId: "",
     runtime: input.runtime,
     hooks: undefined,
@@ -879,7 +879,7 @@ async function sendOpusRtp(sess: WebrtcSession, opus: Buffer) {
     ssrc,
     marker: false,
   });
-  sess.rtpSeq = (sess.rtpSeq + 1) & 0xFF_FF;
+  sess.rtpSeq = (sess.rtpSeq + 1) & 0xff_ff;
   sess.rtpTimestamp = (sess.rtpTimestamp + 960) >>> 0;
   const packet = new RtpPacket(header, opus);
   const { sendRtp } = sess.audioSender as unknown as { sendRtp?: unknown };

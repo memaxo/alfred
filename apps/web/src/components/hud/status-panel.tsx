@@ -344,9 +344,9 @@ export function StatusIndicator({
           boxShadow:
             status === "nominal"
               ? "0 0 6px rgba(52, 211, 153, 0.4)"
-              : (status === "critical"
+              : status === "critical"
                 ? "0 0 8px rgba(248, 113, 113, 0.6)"
-                : "0 0 6px rgba(34, 211, 238, 0.4)"),
+                : "0 0 6px rgba(34, 211, 238, 0.4)",
         }}
         transition={
           reduceMotion

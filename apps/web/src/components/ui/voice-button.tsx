@@ -164,9 +164,9 @@ export const VoiceButton = ({
             : "h-5 w-24 rounded-sm border",
           isRecording
             ? "bg-primary/10 dark:bg-primary/5"
-            : (size === "icon"
+            : size === "icon"
               ? "border-0 bg-muted/50"
-              : "border-border bg-muted/50"),
+              : "border-border bg-muted/50",
           waveformClassName
         )}
       >

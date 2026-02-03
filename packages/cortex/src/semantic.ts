@@ -79,8 +79,8 @@ function createRandomBasis(dimensions: number): Float32Array {
   // Use a fixed seed for reproducibility
   let seed = 42;
   const random = () => {
-    seed = (seed * 1_103_515_245 + 12_345) & 0x7F_FF_FF_FF;
-    return seed / 0x7F_FF_FF_FF;
+    seed = (seed * 1_103_515_245 + 12_345) & 0x7f_ff_ff_ff;
+    return seed / 0x7f_ff_ff_ff;
   };
 
   // Generate random vectors

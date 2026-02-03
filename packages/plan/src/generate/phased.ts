@@ -79,6 +79,16 @@ function buildVariantHint(
     );
   }
 
+  if (
+    typeof options.autonomyLevel === "number" &&
+    Number.isFinite(options.autonomyLevel)
+  ) {
+    const level = Math.max(0, Math.min(1, options.autonomyLevel));
+    parts.push(
+      `Cognitive autonomyLevel is ${level.toFixed(2)} (0..1). If below 0.65, add explicit review gates and avoid parallel execution.`
+    );
+  }
+
   if (options.agentTypes && options.agentTypes.length > 0) {
     parts.push(
       "Prefer agent types: ".concat(options.agentTypes.join(", "), ".")
@@ -252,9 +262,9 @@ export async function generatePlan(
   const strategy =
     options?.preferParallel === true
       ? "parallel"
-      : (options?.preferParallel === false
+      : options?.preferParallel === false
         ? "sequential"
-        : raw.resources?.strategy || "sequential");
+        : raw.resources?.strategy || "sequential";
 
   return {
     id,

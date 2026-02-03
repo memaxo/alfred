@@ -613,9 +613,9 @@ export function CodexWindow({ id, data, selected }: NodeProps) {
                           className={
                             entry.channel === "stderr"
                               ? "text-red-400"
-                              : (entry.channel === "system"
+                              : entry.channel === "system"
                                 ? "text-biolum-dim"
-                                : "text-zinc-300")
+                                : "text-zinc-300"
                           }
                           key={entry.id}
                         >

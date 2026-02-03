@@ -97,9 +97,9 @@ function VoiceTuner() {
                 className={`font-mono uppercase ${
                   voiceSession.stream.status === "recording"
                     ? "animate-pulse text-red-400"
-                    : (voiceSession.stream.status === "processing"
+                    : voiceSession.stream.status === "processing"
                       ? "text-blue-400"
-                      : "text-biolum-dim")
+                      : "text-biolum-dim"
                 }`}
               >
                 {voiceSession.stream.status}

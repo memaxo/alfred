@@ -99,9 +99,9 @@ export function Stepper({
                       pillSize[size],
                       isActive
                         ? "border-biolum bg-biolum/10 text-biolum"
-                        : (isCompleted
+                        : isCompleted
                           ? "border-biolum bg-biolum text-background"
-                          : "border-white/20 bg-void-surface/50 text-biolum-dim")
+                          : "border-white/20 bg-void-surface/50 text-biolum-dim"
                     )}
                   >
                     {isCompleted ? (

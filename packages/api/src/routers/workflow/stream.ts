@@ -11,6 +11,7 @@ import { authedProcedure, rateLimit } from "../../trpc";
 import { toTRPCError } from "../../utils/error";
 import { enforceWorkflowPlanPolicy } from "../../workflow/access";
 import { WorkflowCheckpointStorage } from "../../workflow/checkpoint";
+import { createCognitiveBridge } from "../../workflow/cognitive";
 import { attachHooksObserver } from "../../workflow/hooks";
 import { linearInputSchema, workflowInputSchema } from "../../workflow/input";
 import { createPipelineEventPersister } from "../../workflow/persist";
@@ -32,6 +33,7 @@ export const workflowStreamPipelineProcedure = authedProcedure
 
       const startPipeline = async () => {
         const abortController = new AbortController();
+        const startedAt = Date.now();
         const runId = input.runId ?? crypto.randomUUID();
 
         try {
@@ -158,9 +160,20 @@ export const workflowStreamPipelineProcedure = authedProcedure
             typeof rawInput.workspace === "string" &&
             rawInput.workspace.length > 0
               ? rawInput.workspace
-              : (typeof rawInput.cw === "string" && rawInput.cw.length > 0
+              : typeof rawInput.cw === "string" && rawInput.cw.length > 0
                 ? rawInput.cw
-                : process.cwd());
+                : process.cwd();
+
+          const cognitive = createCognitiveBridge({
+            requirement: input.requirement,
+            runId,
+            source: "pipeline",
+            startedAtMs: startedAt,
+            userId: session.user.id,
+            workspace,
+          });
+
+          const autonomyLevel = await cognitive.ensureInput();
 
           const runner = new PipelineRunner({
             enableLearning: true,
@@ -252,6 +265,10 @@ export const workflowStreamPipelineProcedure = authedProcedure
           const pipelineInput = {
             authz:
               typeof rawInput.authz === "string" ? rawInput.authz : undefined,
+            cognitive: {
+              autonomyLevel: autonomyLevel ?? undefined,
+              streamId: cognitive.streamId,
+            },
             linear: normalizedLinear
               ? {
                   sessionId: normalizedLinear.sessionId ?? "",
@@ -283,6 +300,7 @@ export const workflowStreamPipelineProcedure = authedProcedure
                 | "failed"
                 | "suspended" = "running";
               let finalError: string | null = null;
+              let wroteCognitiveComplete = false;
 
               for await (const _event of runner.run(
                 pipelineInput,
@@ -296,6 +314,159 @@ export const workflowStreamPipelineProcedure = authedProcedure
                   finalError = _event.error;
                 } else if (_event.type === "pipeline:suspend") {
                   finalStatus = "suspended";
+                }
+
+                // Best-effort: emit cognitive evidence from agent outcomes (keeps pipeline DB-free).
+                if (_event.type === "agent:complete") {
+                  try {
+                    const { status } = _event.outcome;
+                    let similarity: number | undefined;
+                    if (status === "success") {
+                      similarity = 1;
+                    } else if (status === "failure") {
+                      similarity = 0;
+                    } else if (status === "timeout" || status === "stuck") {
+                      similarity = 0;
+                    } else if (status === "escalated") {
+                      similarity = 0.25;
+                    }
+
+                    const feedbackEvent: Event = {
+                      _: "feedback",
+                      expected: `agent:${_event.agentId}:success`,
+                      actual: `agent:${_event.agentId}:${status}`,
+                      similarity,
+                      ts: timestamp(_event.timestamp),
+                    };
+                    const { runCognitiveLoop } =
+                      await import("@alfred/runtime/cognitive");
+                    await runCognitiveLoop(
+                      cognitiveRuntimeCtx,
+                      cognitiveStreamId,
+                      feedbackEvent
+                    );
+                  } catch (error) {
+                    logger.warn(
+                      "workflow_stream_cognitive_agent_feedback_failed",
+                      {
+                        error:
+                          error instanceof Error
+                            ? error.message
+                            : String(error),
+                        runId,
+                        agentId: _event.agentId,
+                      }
+                    );
+                  }
+                } else if (
+                  _event.type === "agent:escalate-request" &&
+                  _event.severity === "blocking"
+                ) {
+                  try {
+                    const interruptEvent: Event = {
+                      _: "interrupt",
+                      reason: `agent_escalate_request:${_event.reason}`,
+                      priority: 2,
+                      ts: timestamp(_event.timestamp),
+                    };
+                    const { runCognitiveLoop } =
+                      await import("@alfred/runtime/cognitive");
+                    await runCognitiveLoop(
+                      cognitiveRuntimeCtx,
+                      cognitiveStreamId,
+                      interruptEvent
+                    );
+                  } catch (error) {
+                    logger.warn(
+                      "workflow_stream_cognitive_escalate_interrupt_failed",
+                      {
+                        error:
+                          error instanceof Error
+                            ? error.message
+                            : String(error),
+                        runId,
+                        agentId: _event.agentId,
+                      }
+                    );
+                  }
+                }
+
+                if (
+                  !wroteCognitiveComplete &&
+                  (_event.type === "pipeline:complete" ||
+                    _event.type === "pipeline:failed" ||
+                    _event.type === "pipeline:suspend")
+                ) {
+                  wroteCognitiveComplete = true;
+                  try {
+                    const outcome: Outcome =
+                      _event.type === "pipeline:complete"
+                        ? {
+                            _: "success",
+                            duration: Date.now() - startedAt,
+                            result: { runId, status: "completed" },
+                          }
+                        : _event.type === "pipeline:failed"
+                          ? {
+                              _: "failure",
+                              error: _event.error,
+                              recoverable: true,
+                            }
+                          : {
+                              _: "cancelled",
+                              reason: "workflow_suspended",
+                            };
+
+                    const completeEvent: Event = {
+                      _: "complete",
+                      outcome,
+                      ts: timestamp(Date.now()),
+                    };
+                    const { runCognitiveLoop } =
+                      await import("@alfred/runtime/cognitive");
+                    const result = await runCognitiveLoop(
+                      cognitiveRuntimeCtx,
+                      cognitiveStreamId,
+                      completeEvent
+                    );
+
+                    const rawLevel = (
+                      result.state as unknown as {
+                        autonomy?: { level?: unknown };
+                      }
+                    ).autonomy?.level;
+                    if (
+                      typeof rawLevel === "number" &&
+                      Number.isFinite(rawLevel)
+                    ) {
+                      try {
+                        await userRepo.setPreference(
+                          session.user.id,
+                          AUTONOMY_BASELINE_PREF_KEY,
+                          Math.max(0, Math.min(1, rawLevel)),
+                          1,
+                          "pipeline"
+                        );
+                      } catch (error) {
+                        logger.warn(
+                          "workflow_stream_autonomy_baseline_set_failed",
+                          {
+                            error:
+                              error instanceof Error
+                                ? error.message
+                                : String(error),
+                            runId,
+                          }
+                        );
+                      }
+                    }
+                  } catch (error) {
+                    logger.warn("workflow_stream_cognitive_complete_failed", {
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                      runId,
+                    });
+                  }
                 }
               }
 

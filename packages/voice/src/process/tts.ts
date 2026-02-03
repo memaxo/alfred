@@ -197,7 +197,7 @@ export class TTSPool {
                     const val = float32[i];
                     if (val !== undefined) {
                       const s = Math.max(-1, Math.min(1, val));
-                      int16[i] = s < 0 ? s * 0x80_00 : s * 0x7F_FF;
+                      int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
                     }
                   }
                   const audioBase64 = Buffer.from(int16.buffer).toString(
@@ -226,7 +226,7 @@ export class TTSPool {
             continue;
           }
           const s = Math.max(-1, Math.min(1, val));
-          int16[i] = s < 0 ? s * 0x80_00 : s * 0x7F_FF;
+          int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
         }
         const audioBase64 = Buffer.from(int16.buffer).toString("base64");
 

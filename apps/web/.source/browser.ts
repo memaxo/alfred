@@ -7,5 +7,6 @@ const create = browser<typeof Config, import("fumadocs-mdx/runtime/types").Inter
   DocData: {
   }
 }>();
-const browserCollections = {};
+const browserCollections = {
+};
 export default browserCollections;

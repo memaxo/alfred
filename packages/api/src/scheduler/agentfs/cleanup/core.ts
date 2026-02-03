@@ -26,16 +26,19 @@ export interface CasEvaluation {
   isPinned: boolean;
 }
 
-export interface EvaluatedRun {
-  entry: RunEntry;
-  action: "delete" | "autopin" | "skip";
-  reason: string;
-}
+export type RunCleanupDeleteReason = "age" | "size_cap";
+export type RunCleanupAutopinReason = "failure_context";
+export type RunCleanupReason = RunCleanupDeleteReason | RunCleanupAutopinReason;
 
+export type EvaluatedRun =
+  | { entry: RunEntry; action: "delete"; reason: RunCleanupDeleteReason }
+  | { entry: RunEntry; action: "autopin"; reason: RunCleanupAutopinReason };
+
+export type CasCleanupReason = "age" | "size_cap";
 export interface EvaluatedCas {
   entry: CasEntry;
-  action: "delete" | "skip";
-  reason: string;
+  action: "delete";
+  reason: CasCleanupReason;
 }
 
 /**

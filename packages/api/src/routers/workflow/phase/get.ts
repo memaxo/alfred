@@ -97,9 +97,9 @@ export const workflowPhaseGetPlanProcedure = phaseExecuteProcedure
       const execPlansRecord: Record<string, string> =
         execPlansRaw instanceof Map
           ? Object.fromEntries(execPlansRaw)
-          : (Array.isArray(execPlansRaw)
+          : Array.isArray(execPlansRaw)
             ? Object.fromEntries(execPlansRaw)
-            : execPlansRaw);
+            : execPlansRaw;
 
       const result = {
         context: contextOutput

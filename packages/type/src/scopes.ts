@@ -37,6 +37,7 @@ export const READ_SCOPES = {
 /** Write scopes - allow creating/updating/deleting data */
 export const WRITE_SCOPES = {
   ALL: "write:*",
+  AGENTFS: "write:agentfs",
   TODOS: "write:todos",
   NOTES: "write:notes",
   REMINDERS: "write:reminders",
@@ -150,7 +151,7 @@ export const ROUTER_SCOPES: Record<
   string,
   { read: ReadScope; write?: WriteScope }
 > = {
-  agentfs: { read: READ_SCOPES.AGENTFS },
+  agentfs: { read: READ_SCOPES.AGENTFS, write: WRITE_SCOPES.AGENTFS },
   todo: { read: READ_SCOPES.TODOS, write: WRITE_SCOPES.TODOS },
   note: { read: READ_SCOPES.NOTES, write: WRITE_SCOPES.NOTES },
   remind: { read: READ_SCOPES.REMINDERS, write: WRITE_SCOPES.REMINDERS },

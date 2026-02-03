@@ -28,7 +28,8 @@ import {
   Zap,
 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { List, LayoutGrid } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,9 @@ const nodeTypes = {
 
 export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [showListView, setShowListView] = useState(false);
+  const [focusedPhaseIndex, setFocusedPhaseIndex] = useState<number>(-1);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const initialNodes: Node[] = useMemo(
     () =>
@@ -271,6 +275,52 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
     [plan.phases, selectedPhaseId]
   );
 
+  // Keyboard navigation for list view
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!showListView) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedPhaseIndex((prev) =>
+            prev < plan.phases.length - 1 ? prev + 1 : prev
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedPhaseIndex((prev) => (prev > 0 ? prev - 1 : prev));
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (focusedPhaseIndex >= 0) {
+            const phase = plan.phases[focusedPhaseIndex];
+            if (phase) {
+              setSelectedPhaseId(phase.id);
+              setShowListView(false);
+            }
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          setShowListView(false);
+          setFocusedPhaseIndex(-1);
+          break;
+      }
+    },
+    [showListView, plan.phases, focusedPhaseIndex]
+  );
+
+  // Focus management for list view
+  useEffect(() => {
+    if (showListView && listRef.current) {
+      listRef.current.focus();
+      if (focusedPhaseIndex === -1 && plan.phases.length > 0) {
+        setFocusedPhaseIndex(0);
+      }
+    }
+  }, [showListView, plan.phases.length, focusedPhaseIndex]);
+
   return (
     <div className="relative flex h-full min-h-[400px] w-full bg-void">
       <div className="relative flex-1">
@@ -312,8 +362,99 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
             >
               <Plus className="mr-1 h-3 w-3" /> Add Phase
             </Button>
+            <Button
+              className="h-8 border border-white/10 bg-void-surface/60 font-bold text-[10px] text-biolum-dim uppercase tracking-widest shadow-lg hover:bg-biolum/10 hover:text-biolum"
+              onClick={() => setShowListView(!showListView)}
+              size="sm"
+              variant="ghost"
+            >
+              {showListView ? (
+                <LayoutGrid className="mr-1 h-3 w-3" />
+              ) : (
+                <List className="mr-1 h-3 w-3" />
+              )}
+              {showListView ? "Canvas View" : "List View"}
+            </Button>
           </Panel>
         </ReactFlow>
+
+        {/* Keyboard-accessible List View Overlay */}
+        {showListView && (
+          <div
+            ref={listRef}
+            className="absolute inset-0 z-50 bg-void-surface/95 backdrop-blur-xl"
+            onKeyDown={handleListKeyDown}
+            role="dialog"
+            aria-label="Phases list view"
+            tabIndex={0}
+          >
+            <div className="flex h-full flex-col p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-bold text-biolum text-sm uppercase tracking-wider">
+                  Phases ({plan.phases.length})
+                </h2>
+                <Button
+                  className="h-8"
+                  onClick={() => setShowListView(false)}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <X className="mr-1 h-3 w-3" /> Close
+                </Button>
+              </div>
+              <div
+                className="flex-1 overflow-y-auto"
+                role="listbox"
+                aria-label="Select a phase"
+              >
+                {plan.phases.map((phase, index) => (
+                  <div
+                    key={phase.id}
+                    className={`mb-2 cursor-pointer rounded-lg border p-3 transition-colors ${
+                      index === focusedPhaseIndex
+                        ? "border-biolum bg-biolum/10"
+                        : "border-white/10 bg-void-surface/60 hover:border-biolum/30"
+                    } ${selectedPhaseId === phase.id ? "ring-1 ring-biolum" : ""}`}
+                    onClick={() => {
+                      setSelectedPhaseId(phase.id);
+                      setShowListView(false);
+                    }}
+                    onMouseEnter={() => setFocusedPhaseIndex(index)}
+                    role="option"
+                    aria-selected={index === focusedPhaseIndex}
+                    tabIndex={-1}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-biolum">
+                        {AGENT_ICONS[
+                          phase.agentType as keyof typeof AGENT_ICONS
+                        ] ?? AGENT_ICONS.codex}
+                      </span>
+                      <span className="font-medium text-biolum text-sm">
+                        {phase.name}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-biolum-dim text-xs line-clamp-2">
+                      {phase.description}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-[10px] text-biolum-faint">
+                      <span className="uppercase">{phase.agentType}</span>
+                      <span>·</span>
+                      <span>
+                        {Math.round(phase.estimatedDurationMs / 1000)}s
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 border-white/10 border-t pt-4 text-biolum-faint text-xs">
+                <p>
+                  Use arrow keys to navigate, Enter to select, Escape to close
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedPhase && (

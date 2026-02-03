@@ -183,9 +183,9 @@ function ensureWindowWorkspaceIds(
     const workspaceId =
       typeof w.workspaceId === "number"
         ? clampWorkspaceId(w.workspaceId)
-        : (typeof data.workspaceId === "number"
+        : typeof data.workspaceId === "number"
           ? clampWorkspaceId(data.workspaceId)
-          : (membership.get(id) ?? 1));
+          : (membership.get(id) ?? 1);
 
     out.push({ ...(w as unknown as WindowInstance), workspaceId });
   }

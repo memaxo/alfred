@@ -145,7 +145,7 @@ Tools: `sense`, `think`, `act`, `learn`.
 13. **Hybrid execution backends.** Isolate volatile implementations behind a backend resolver pattern (e.g., `resolveBackend()`) to allow environment-based switching between legacy and new implementations during refactors.
 14. **Cache handoff propagation.** Any workflow event consumer that emits `context` receipts must also propagate the paired `data-cache-handoff` metadata so downstream UIs can display cache hits.
 15. **Agent transport parity.** When users switch between assistant and orchestrator agents, the chat transport must swap to the matching HTTP endpoint (e.g., `/api/orchestrator`) so events stream from the correct backend.
-16. **Vite Externalization.** All server-only packages (`@alfred/db`, `@alfred/agent`, `@alfred/policy`) MUST be explicitly listed in `ssr.external` in `apps/web/vite.config.ts` to ensure they remain external during SSR.
+16. **Vite Externalization.** All server-only packages (e.g. `@alfred/db`, `@alfred/agent`, `@alfred/policy`, `@alfred/plan`, `@alfred/pipeline`, `@alfred/codeprint`) MUST be kept external in `apps/web/vite.config.ts` (SSR + build externals) so they never bundle into the client.
 
 <!-- Source: .ruler/05-testing.md -->
 
@@ -172,7 +172,7 @@ Tools: `sense`, `think`, `act`, `learn`.
    - prefer **one test file per Bun process** (`ALFRED_TEST_ISOLATE_FILES=1`) for heavy `mock.module()` usage
    - avoid async `mock.module()` factories; do not `await import(...)` inside the factory (can deadlock)
    - avoid relying on "reset" semantics for module mocks across files
-   - export stubs for every symbol imported by the code under test (missing exports can crash at module eval)
+   - export stubs for every symbol imported by the code under test; Bun replaces the full export surface, so missing exports crash at module eval
 
 7. **Centralized mock reset registry.** Test-kit modules auto-register reset functions via `registerMockReset()`:
    - preload's `afterEach` automatically calls all registered reset functions
@@ -198,7 +198,7 @@ Tools: `sense`, `think`, `act`, `learn`.
 
 14. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
-15. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
+15. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres://`, `drizzle-orm`, `api.openai.com`).
 
 16. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
 

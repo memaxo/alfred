@@ -20,6 +20,10 @@
       "types": "./dist/flows.d.ts",
       "default": "./src/flows.ts"
     },
+    "./stream": {
+      "types": "./dist/stream.d.ts",
+      "default": "./src/stream.ts"
+    },
     "./transition": {
       "types": "./dist/transition.d.ts",
       "default": "./src/transition.ts"

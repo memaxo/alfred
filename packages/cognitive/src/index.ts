@@ -20,6 +20,7 @@ export { type LoopConfig, LoopDetector, type LoopResult } from "./loop.js";
 export * from "./metrics.js";
 export * as physiology from "./physiology/index.js";
 export * as plan from "./plan/index.js";
+export * from "./stream.js";
 export * from "./schemas.js";
 export * as state from "./state/index.js";
 export * from "./state.js";

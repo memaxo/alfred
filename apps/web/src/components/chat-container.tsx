@@ -14,7 +14,7 @@ import type { UIMessage } from "@alfred/type/stream";
 type AssistantUIMessage = UIMessage;
 
 import { Chat } from "@alfred/ui";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
 
@@ -33,6 +33,7 @@ import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { useFocusedContext } from "@/hooks/use-focused-context";
 import { useMessageEdit } from "@/hooks/use-message-edit";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 import { getMessageText } from "@/utils/message";
 
 import { Actions } from "./actions";
@@ -100,6 +101,44 @@ export function ChatContainer({
   } = useCognitiveFeedback();
 
   const focused = useFocusedContext();
+
+  const { queueMessage, pendingMessages, retryAll, removeFromQueue } =
+    useOfflineQueue();
+
+  // Handle sending with offline queue support
+  const handleSendWithQueue = useCallback(
+    (text: string) => {
+      if (!navigator.onLine) {
+        const queued = queueMessage(text);
+        if (queued) {
+          toast.info("Message queued - will send when online");
+        } else {
+          toast.error("Unable to queue message");
+        }
+        return;
+      }
+      handleSend(text);
+    },
+    [queueMessage, handleSend]
+  );
+
+  // Retry queued messages when coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      if (pendingMessages.length > 0) {
+        const messagesToRetry = retryAll();
+        for (const message of messagesToRetry) {
+          handleSend(message.text);
+        }
+        if (messagesToRetry.length > 0) {
+          toast.success(`Sent ${messagesToRetry.length} queued messages`);
+        }
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [pendingMessages, retryAll, handleSend]);
 
   const partRenderer = useMemo(
     () =>
@@ -239,6 +278,12 @@ export function ChatContainer({
               autoFocus
               className="min-h-[100px] bg-background"
               onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelEditing();
+                }
+              }}
               placeholder="Edit your message..."
               value={editText}
             />
@@ -327,17 +372,17 @@ export function ChatContainer({
                 itemContent={renderMessage}
                 ListComponent={Virtuoso}
                 messages={messages}
-                onSend={handleSend}
+                onSend={handleSendWithQueue}
                 onVoice={toggleVoice}
                 perf
                 placeholder={
                   currentAgent === "assistant"
-                    ? (focused.label
+                    ? focused.label
                       ? `Ask about ${focused.label}...`
-                      : "Ask Alfred how to help…")
-                    : (focused.label
+                      : "Ask Alfred how to help…"
+                    : focused.label
                       ? `Ask the orchestrator about ${focused.label}...`
-                      : "Ask the orchestrator to plan or coordinate…")
+                      : "Ask the orchestrator to plan or coordinate…"
                 }
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}
@@ -354,6 +399,30 @@ export function ChatContainer({
             )}
           </div>
         </div>
+
+        {/* Offline queue indicator */}
+        {pendingMessages.length > 0 && (
+          <div className="border-t bg-yellow-500/10 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-yellow-600 text-sm">
+                {pendingMessages.length} message
+                {pendingMessages.length === 1 ? "" : "s"} queued (offline)
+              </p>
+              <Button
+                onClick={() => {
+                  for (const message of pendingMessages) {
+                    handleSend(message.text);
+                    removeFromQueue(message.id);
+                  }
+                }}
+                size="sm"
+                variant="outline"
+              >
+                Retry Now
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Error display */}
         {error && (

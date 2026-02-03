@@ -125,7 +125,7 @@ let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
   caller = await createTestCaller({
-    scopes: ["read:agentfs", "agentfs.write"],
+    scopes: ["read:agentfs", "write:agentfs"],
   });
 });
 
@@ -675,5 +675,198 @@ describe("agentfs router", () => {
         process.env.ALFRED_AGENTFS_MAX_EVENTS = prev;
       }
     }
+  });
+
+  describe("executor management", () => {
+    const makeAgentfs = () => ({
+      close: closeMock,
+      diff: diffMock,
+      fs: { readdir: readdirMock, stat: statMock, readFile: readFileMock },
+      getDatabase: getDatabaseMock,
+      kv: {
+        list: kvListMock,
+        get: kvGetMock,
+        set: kvSetMock,
+        delete: vi.fn(),
+      },
+      tools: { getRecent: getRecentMock },
+    });
+
+    it("requires auth", async () => {
+      const unauthed = await createUnauthedCaller();
+      await expect(
+        unauthed.agentfs.executorStatus({
+          dbPath: ".agentfs/run-1/agent.db",
+          kind: "opencode",
+          runId: "run-1",
+        })
+      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    });
+
+    it("requires read:agentfs scope", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const noScopes = await createTestCaller({ scopes: [] });
+      await expect(
+        noScopes.agentfs.executorStatus({
+          dbPath: ".agentfs/run-1/agent.db",
+          kind: "opencode",
+          runId: "run-1",
+        })
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+
+    it("sets and gets redacted config (no secrets returned)", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      const setRes = await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          http: {
+            baseUrl: "http://127.0.0.1:4096",
+            password: "secret",
+            username: "alfred",
+          },
+          kind: "opencode",
+          transport: "http",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+
+      expect(setRes.exists).toBe(true);
+      expect(setRes.config).toMatchObject({
+        kind: "opencode",
+        transport: "http",
+        v: 1,
+      });
+      expect(
+        (
+          setRes.config as {
+            http?: { password?: unknown; passwordSet?: unknown };
+          }
+        ).http
+      ).toMatchObject({ passwordSet: true });
+
+      const getRes = await caller.agentfs.executorConfigGet({
+        dbPath: ".agentfs/run-1/agent.db",
+        kind: "opencode",
+        runId: "run-1",
+      });
+
+      expect(getRes.exists).toBe(true);
+      expect(getRes.config).toMatchObject({
+        kind: "opencode",
+        transport: "http",
+        v: 1,
+      });
+      expect(
+        (
+          getRes.config as {
+            http?: { password?: unknown; passwordSet?: unknown };
+          }
+        ).http
+      ).toMatchObject({ passwordSet: true });
+    });
+
+    it("rejects unsafe baseUrl", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      await expect(
+        caller.agentfs.executorConfigSet({
+          dbPath: ".agentfs/run-1/agent.db",
+          config: {
+            http: {
+              baseUrl: "http://example.com",
+            },
+            kind: "opencode",
+            transport: "http",
+            v: 1,
+          },
+          runId: "run-1",
+        })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    });
+
+    it("redacts executor:* keys in kvList + snapshot", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      kvListMock.mockResolvedValue([
+        { key: "executor:opencode:config", value: { kind: "opencode" } },
+        { key: "k", value: "v" },
+      ]);
+
+      const kvRes = await caller.agentfs.kvList({
+        dbPath: ".agentfs/run-1/agent.db",
+        runId: "run-1",
+      });
+      const execEntry = kvRes.entries.find((e) =>
+        e.key.startsWith("executor:")
+      );
+      expect(execEntry?.value).toBe("[redacted]");
+
+      openMock.mockResolvedValue({
+        close: closeMock,
+        diff: diffMock,
+        fs: { readdir: readdirMock, stat: statMock, readFile: readFileMock },
+        getDatabase: getDatabaseMock,
+        kv: { list: kvListMock },
+        tools: { getRecent: getRecentMock },
+      });
+      const snap = await caller.agentfs.snapshot({
+        dbPath: ".agentfs/run-1/agent.db",
+        dir: "/workspace",
+        runId: "run-1",
+      });
+      const kvExec = snap.kvStore.find((e) => e.key.startsWith("executor:"));
+      expect(kvExec?.value).toBe("[redacted]");
+    });
+
+    it("health-checks opencode http without leaking secrets", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          http: {
+            baseUrl: "http://127.0.0.1:4096",
+            password: "secret",
+            username: "alfred",
+          },
+          kind: "opencode",
+          transport: "http",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response("ok", { status: 200 }));
+      try {
+        const health = await caller.agentfs.executorHealth({
+          dbPath: ".agentfs/run-1/agent.db",
+          kind: "opencode",
+          runId: "run-1",
+        });
+        expect(health.kind).toBe("opencode");
+        expect(health.ok).toBe(true);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
   });
 });

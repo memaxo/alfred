@@ -164,9 +164,9 @@ export function CompilationView({ runId }: CompilationViewProps) {
                           color={
                             agent.status === "success"
                               ? "green"
-                              : (agent.status === "failed"
+                              : agent.status === "failed"
                                 ? "red"
-                                : "yellow")
+                                : "yellow"
                           }
                         />
                         <span className="font-mono text-xs">
@@ -209,9 +209,9 @@ export function CompilationView({ runId }: CompilationViewProps) {
                           color={
                             stage.status === "success"
                               ? "green"
-                              : (stage.status === "failed"
+                              : stage.status === "failed"
                                 ? "red"
-                                : "gray")
+                                : "gray"
                           }
                         />
                         <span className="capitalize">

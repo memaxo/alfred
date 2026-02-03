@@ -1,77 +1,109 @@
 import { metricsRegistry } from "@alfred/metrics/registry";
 import client from "prom-client";
 
-export const codexExecRunsTotal = new client.Counter({
+function getOrCreateCounter<const Labels extends readonly string[]>(args: {
+  name: string;
+  help: string;
+  labelNames: Labels;
+}): client.Counter<Labels[number]> {
+  const existing = metricsRegistry.getSingleMetric(args.name);
+  if (existing) {
+    if (existing instanceof client.Counter) {
+      return existing as client.Counter<Labels[number]>;
+    }
+    throw new Error(`metric_name_conflict:${args.name}`);
+  }
+  return new client.Counter({
+    help: args.help,
+    labelNames: args.labelNames,
+    name: args.name,
+    registers: [metricsRegistry],
+  });
+}
+
+function getOrCreateHistogram<const Labels extends readonly string[]>(args: {
+  name: string;
+  help: string;
+  labelNames: Labels;
+  buckets: number[];
+}): client.Histogram<Labels[number]> {
+  const existing = metricsRegistry.getSingleMetric(args.name);
+  if (existing) {
+    if (existing instanceof client.Histogram) {
+      return existing as client.Histogram<Labels[number]>;
+    }
+    throw new Error(`metric_name_conflict:${args.name}`);
+  }
+  return new client.Histogram({
+    buckets: args.buckets,
+    help: args.help,
+    labelNames: args.labelNames,
+    name: args.name,
+    registers: [metricsRegistry],
+  });
+}
+
+export const codexExecRunsTotal = getOrCreateCounter({
   name: "codex_exec_runs_total",
   help: "Count of Codex exec runs grouped by autonomy level and exit code.",
   labelNames: ["auto", "exit_code"] as const,
-  registers: [metricsRegistry],
 });
 
-export const codexExecDurationSeconds = new client.Histogram({
+export const codexExecDurationSeconds = getOrCreateHistogram({
   name: "codex_exec_duration_seconds",
   help: "Duration of Codex exec runs in seconds.",
   labelNames: ["auto"] as const,
   buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
-  registers: [metricsRegistry],
 });
 
-export const codexErrorsTotal = new client.Counter({
+export const codexErrorsTotal = getOrCreateCounter({
   name: "codex_errors_total",
   help: "Count of Codex executor errors grouped by stage.",
   labelNames: ["stage"] as const,
-  registers: [metricsRegistry],
 });
 
-export const codexSessionValidationDurationSeconds = new client.Histogram({
+export const codexSessionValidationDurationSeconds = getOrCreateHistogram({
   name: "codex_session_validation_duration_seconds",
   help: "Duration spent validating whether a Codex session can resume.",
   labelNames: ["outcome"] as const,
   buckets: [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
-  registers: [metricsRegistry],
 });
 
-export const codexSessionContinuityTotal = new client.Counter({
+export const codexSessionContinuityTotal = getOrCreateCounter({
   name: "codex_session_continuity_total",
   help: "Count of Codex session continuity events (resume success/failure).",
   labelNames: ["status"] as const,
-  registers: [metricsRegistry],
 });
 
-export const codexStructuredOutputValidationTotal = new client.Counter({
+export const codexStructuredOutputValidationTotal = getOrCreateCounter({
   name: "codex_structured_output_validation_total",
   help: "Count of structured output validation results.",
   labelNames: ["status"] as const,
-  registers: [metricsRegistry],
 });
 
-export const codexLinearIntegrationLatencySeconds = new client.Histogram({
+export const codexLinearIntegrationLatencySeconds = getOrCreateHistogram({
   name: "codex_linear_integration_latency_seconds",
   help: "Latency from Codex event emission to Linear activity creation.",
   labelNames: ["event_type"] as const,
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
-  registers: [metricsRegistry],
 });
 
-export const codexLinearActivitiesEmittedTotal = new client.Counter({
+export const codexLinearActivitiesEmittedTotal = getOrCreateCounter({
   name: "codex_linear_activities_emitted_total",
   help: "Count of Codex-originated Linear activities grouped by type and mode.",
   labelNames: ["type", "mode"] as const,
-  registers: [metricsRegistry],
 });
 
-export const codexLinearActivitiesDroppedTotal = new client.Counter({
+export const codexLinearActivitiesDroppedTotal = getOrCreateCounter({
   name: "codex_linear_activities_dropped_total",
   help: "Count of Codex events dropped due to rate limiting grouped by reason.",
   labelNames: ["reason"] as const,
-  registers: [metricsRegistry],
 });
 
-export const codexLinearActivityBatchesTotal = new client.Counter({
+export const codexLinearActivityBatchesTotal = getOrCreateCounter({
   name: "codex_linear_activity_batches_total",
   help: "Count of Codex Linear batch processing outcomes grouped by status.",
   labelNames: ["status"] as const,
-  registers: [metricsRegistry],
 });
 
 // Hook registration for lazy wiring

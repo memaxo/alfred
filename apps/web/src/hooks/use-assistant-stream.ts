@@ -11,6 +11,8 @@ import {
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useAnnounce } from "@/components/desktop/accessibility/hooks";
+
 export type AssistantActionStatus =
   | "pending"
   | "running"
@@ -164,9 +166,9 @@ export function deriveActions(
           error:
             state === "output-denied"
               ? "Denied"
-              : (typeof part.errorText === "string"
+              : typeof part.errorText === "string"
                 ? part.errorText
-                : existing?.error),
+                : existing?.error,
         });
       }
     }
@@ -192,6 +194,9 @@ export function useAssistantStream(
     initialConversationId ?? undefined
   );
   const mountedRef = useRef(true);
+  const { announcePolite, announceAssertive } = useAnnounce();
+  const previousStatusRef = useRef<string>("ready");
+
   const trackedFetch = useCallback(
     async (
       input: Parameters<typeof fetch>[0],
@@ -261,6 +266,24 @@ export function useAssistantStream(
       onError(chat.error);
     }
   }, [chat.error, onError]);
+
+  // Announce status changes to screen readers
+  useEffect(() => {
+    const currentStatus = chat.status;
+    const previousStatus = previousStatusRef.current;
+
+    // Only announce on status transitions
+    if (currentStatus !== previousStatus) {
+      if (currentStatus === "streaming") {
+        announcePolite("Assistant is thinking");
+      } else if (currentStatus === "error" && chat.error) {
+        announceAssertive(`Error: ${chat.error.message}`);
+      } else if (previousStatus === "streaming" && currentStatus === "ready") {
+        announcePolite("Response complete");
+      }
+      previousStatusRef.current = currentStatus;
+    }
+  }, [chat.status, chat.error, announcePolite, announceAssertive]);
 
   const actions = useMemo(
     () => deriveActions(chat.messages as AssistantUIMessage[]),

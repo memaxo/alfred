@@ -31,8 +31,45 @@ async function calculateDirSize(dirPath: string): Promise<number> {
   return total;
 }
 
-export async function calculateStorageMetrics(): Promise<StorageMetrics> {
-  const agentfsDir = getAgentfsDir();
+async function readProjectIdFile(absPath: string): Promise<string | null> {
+  try {
+    if (!existsSync(absPath)) {
+      return null;
+    }
+    const raw = await Bun.file(absPath).text();
+    const trimmed = raw.trim();
+    return trimmed ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readCasMetaProjectId(args: {
+  casDirAbs: string;
+  sha: string;
+}): Promise<string | null> {
+  const metaAbs = path.join(args.casDirAbs, `${args.sha}.json`);
+  try {
+    if (!existsSync(metaAbs)) {
+      return null;
+    }
+    const raw = await Bun.file(metaAbs).text();
+    const parsed = JSON.parse(raw) as unknown;
+    const rec = parsed as { projectId?: unknown };
+    const projectId =
+      typeof rec.projectId === "string" ? rec.projectId.trim() : "";
+    return projectId ? projectId : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function calculateStorageMetrics(args?: {
+  projectId?: string;
+  rootAbs?: string;
+}): Promise<StorageMetrics> {
+  const agentfsDir = args?.rootAbs ?? getAgentfsDir();
+  const onlyProjectId = args?.projectId ?? null;
 
   let runsBytes = 0;
   let casBytes = 0;
@@ -60,27 +97,28 @@ export async function calculateStorageMetrics(): Promise<StorageMetrics> {
     const fullPath = path.join(agentfsDir, entry.name);
 
     if (entry.name === "cas") {
-      casBytes = await calculateDirSize(fullPath);
+      // CAS handled below so we can attribute bytes to projects.
+      continue;
     } else if (entry.name === "quarantine") {
-      quarantineBytes = await calculateDirSize(fullPath);
+      // Quarantine isn't currently attributed per-project; include it only in the global view.
+      if (!onlyProjectId) {
+        quarantineBytes = await calculateDirSize(fullPath);
+      }
     } else {
       // Regular run directory
+      // Check for .project file
+      const projectId = await readProjectIdFile(
+        path.join(fullPath, ".project")
+      );
+      if (onlyProjectId && projectId !== onlyProjectId) {
+        continue;
+      }
+
       const sizeBytes = await calculateDirSize(fullPath);
       runsBytes += sizeBytes;
 
       // Check for .keep file (pinned)
       const pinned = existsSync(path.join(fullPath, ".keep"));
-
-      // Check for .project file
-      let projectId: string | null = null;
-      try {
-        const projectFile = path.join(fullPath, ".project");
-        if (existsSync(projectFile)) {
-          projectId = await Bun.file(projectFile).text();
-        }
-      } catch {
-        projectId = null;
-      }
 
       // Check for .retention file
       let retentionDays: number | null = null;
@@ -162,17 +200,46 @@ export async function calculateStorageMetrics(): Promise<StorageMetrics> {
       const casFiles = await readdir(casDir);
       for (const f of casFiles) {
         if (f.endsWith(".tar.gz")) {
+          const sha = f.replace(".tar.gz", "");
+          const projectId = await readCasMetaProjectId({
+            casDirAbs: casDir,
+            sha,
+          });
+          if (onlyProjectId && projectId !== onlyProjectId) {
+            continue;
+          }
+
           archiveCount++;
-          // Check for .keep file
-          const keepFile = path.join(casDir, f.replace(".tar.gz", ".keep"));
-          if (existsSync(keepFile)) {
-            pinnedCount++;
-            try {
-              const s = await stat(path.join(casDir, f));
+          try {
+            const s = await stat(path.join(casDir, f));
+            casBytes += s.size;
+
+            const keepFile = path.join(casDir, `${sha}.keep`);
+            if (existsSync(keepFile)) {
+              pinnedCount++;
               pinnedBytes += s.size;
-            } catch {
-              // Ignore
             }
+
+            if (projectId) {
+              const existing = byProject.get(projectId);
+              if (existing) {
+                byProject.set(projectId, {
+                  ...existing,
+                  casBytes: existing.casBytes + s.size,
+                  archiveCount: existing.archiveCount + 1,
+                });
+              } else {
+                byProject.set(projectId, {
+                  projectId,
+                  runsBytes: 0,
+                  casBytes: s.size,
+                  runCount: 0,
+                  archiveCount: 1,
+                });
+              }
+            }
+          } catch {
+            // Ignore
           }
         }
       }
@@ -205,11 +272,24 @@ export async function getCasMetrics(): Promise<{
   misses: number;
   ratio: number;
 }> {
-  // These would be tracked in a real implementation
-  // For now, return placeholder values
-  return {
-    hits: 0,
-    misses: 0,
-    ratio: 0,
-  };
+  const hits = casHits;
+  const misses = casMisses;
+  const total = hits + misses;
+  return { hits, misses, ratio: total > 0 ? hits / total : 0 };
+}
+
+let casHits = 0;
+let casMisses = 0;
+
+export function recordCasHit(): void {
+  casHits += 1;
+}
+
+export function recordCasMiss(): void {
+  casMisses += 1;
+}
+
+export function resetCasMetricsForTests(): void {
+  casHits = 0;
+  casMisses = 0;
 }

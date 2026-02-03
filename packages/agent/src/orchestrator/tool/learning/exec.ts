@@ -403,9 +403,9 @@ export async function executeLearnMistake(args: {
         confidence:
           args.input.severity === "high"
             ? 0.9
-            : (args.input.severity === "medium"
+            : args.input.severity === "medium"
               ? 0.75
-              : 0.6),
+              : 0.6,
         source: "explicit_mistake",
         recordedAt: new Date().toISOString(),
       },

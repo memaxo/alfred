@@ -23,6 +23,7 @@ Object.assign(dbModuleStub.deployRepo, {
 
 mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: mock(() => Promise.resolve()),
+  queryAuditLogs: mock(() => Promise.resolve({ rows: [], totalCount: 0 })),
 }));
 
 mock.module("@alfred/agent/orchestrator/tool/docker", () => ({

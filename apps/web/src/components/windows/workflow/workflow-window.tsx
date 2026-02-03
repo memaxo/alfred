@@ -45,6 +45,7 @@ import {
 import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 
+import { WorkflowCognitiveBadge } from "./cognitive";
 import { CompilationView } from "./compilation-view";
 import { EventInspector } from "./event-inspector";
 import { ExecutionPanel } from "./execution-panel";
@@ -313,7 +314,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
         id: s.id,
         name: s.name,
         status,
-        progress: status === "completed" ? 100 : (status === "running" ? 10 : 0),
+        progress: status === "completed" ? 100 : status === "running" ? 10 : 0,
         tasks: [
           {
             id: s.id,
@@ -674,6 +675,8 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                     ) : null}
                   </GenUIErrorBoundary>
                 ) : null}
+
+                {runId ? <WorkflowCognitiveBadge streamId={runId} /> : null}
 
                 <ExecutionPanel
                   className="h-[300px]"

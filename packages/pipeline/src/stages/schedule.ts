@@ -16,10 +16,18 @@ export class ScheduleStage implements PipelineStage<
     ctx: PipelineContext
   ): Promise<ScheduleOutput> {
     const { strategy } = input.structuredPlan.resources;
-    const executionMode =
-      ctx.config.maxParallel > 1 && strategy !== "sequential"
-        ? "parallel"
-        : "sequential";
+    const autonomyLevel = ctx.get<number>("autonomyLevel");
+    const canParallelize =
+      ctx.config.maxParallel > 1 && strategy !== "sequential";
+    let executionMode: "parallel" | "sequential" = "sequential";
+    if (canParallelize) {
+      executionMode = "parallel";
+    }
+    if (typeof autonomyLevel === "number" && Number.isFinite(autonomyLevel)) {
+      if (autonomyLevel < 0.65) {
+        executionMode = "sequential";
+      }
+    }
 
     ctx.emit(
       createEvent("stage:progress", {

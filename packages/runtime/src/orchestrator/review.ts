@@ -174,7 +174,7 @@ async function updateReviewProgress(
   const pattern = new RegExp(`- \\[[ x]\\] \\[${escapeRegExp(checkId)}\\].*`);
   const stamp = new Date().toISOString();
   const label =
-    status === "passed" ? "PASS" : (status === "failed" ? "FAIL" : "RUNNING");
+    status === "passed" ? "PASS" : status === "failed" ? "FAIL" : "RUNNING";
   const mark = status === "passed" ? "x" : " ";
   const replacement =
     `- [${mark}] [${checkId}] ${label} (${stamp}) ${note}`.trim();

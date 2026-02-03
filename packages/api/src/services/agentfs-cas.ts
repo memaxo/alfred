@@ -30,6 +30,7 @@ async function readCasMetadata(
 
   return {
     sha: meta.sha,
+    runId: meta.runId,
     sizeBytes: meta.sizeBytes,
     createdAt: new Date(meta.createdAt),
     lastAccessedAt: meta.lastAccessedAt ? new Date(meta.lastAccessedAt) : null,
@@ -47,6 +48,7 @@ function isPinned(sha: string, rootAbs?: string): boolean {
 }
 
 export interface CasListOptions {
+  cursor?: string;
   projectId?: string;
   runId?: string;
   from?: Date;
@@ -82,6 +84,9 @@ export async function listCasArchives(
     if (options.projectId && meta.projectId !== options.projectId) {
       continue;
     }
+    if (options.runId && meta.runId !== options.runId) {
+      continue;
+    }
     if (options.from && meta.createdAt < options.from) {
       continue;
     }
@@ -92,17 +97,69 @@ export async function listCasArchives(
     archives.push(meta);
   }
 
-  // Sort by creation date (newest first)
-  archives.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  // Sort by creation date (newest first), tie-break by sha (desc) for stable cursoring.
+  archives.sort((a, b) => {
+    const t = b.createdAt.getTime() - a.createdAt.getTime();
+    if (t !== 0) {
+      return t;
+    }
+    return b.sha.localeCompare(a.sha);
+  });
 
   // Apply limit
   const limit = options.limit ?? 100;
-  const limited = archives.slice(0, limit);
+  const cursor = options.cursor ? parseCasCursor(options.cursor) : null;
+  const filtered = cursor
+    ? archives.filter((a) => isAfterCasCursor(a, cursor))
+    : archives;
+  const limited = filtered.slice(0, limit);
 
   return {
     archives: limited,
-    nextCursor: archives.length > limit ? String(limit) : undefined,
+    nextCursor:
+      filtered.length > limit
+        ? formatCasCursor(limited.at(-1) ?? null)
+        : undefined,
   };
+}
+
+function parseCasCursor(
+  cursor: string
+): { createdAtMs: number; sha: string } | null {
+  const [tsRaw, sha] = cursor.split(":", 2);
+  if (!tsRaw || !sha) {
+    return null;
+  }
+  const createdAtMs = Number(tsRaw);
+  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) {
+    return null;
+  }
+  if (!/^[a-f0-9]{64}$/i.test(sha)) {
+    return null;
+  }
+  return { createdAtMs, sha: sha.toLowerCase() };
+}
+
+function formatCasCursor(item: CasArchiveInfo | null): string | undefined {
+  if (!item) {
+    return undefined;
+  }
+  return `${item.createdAt.getTime()}:${item.sha}`;
+}
+
+function isAfterCasCursor(
+  item: CasArchiveInfo,
+  cursor: { createdAtMs: number; sha: string }
+): boolean {
+  const t = item.createdAt.getTime();
+  if (t < cursor.createdAtMs) {
+    return true;
+  }
+  if (t > cursor.createdAtMs) {
+    return false;
+  }
+  // Same timestamp: we sort sha desc, so "after" means smaller sha.
+  return item.sha < cursor.sha;
 }
 
 export interface GetCasMetadataOptions {

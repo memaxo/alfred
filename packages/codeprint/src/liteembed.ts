@@ -1,6 +1,6 @@
 function hash32(str: string): number {
   // FNV-1a 32-bit
-  let h = 0x81_1C_9D_C5;
+  let h = 0x81_1c_9d_c5;
   for (let i = 0; i < str.length; i++) {
     h ^= str.codePointAt(i) ?? 0;
     h = Math.imul(h, 0x01_00_01_93);

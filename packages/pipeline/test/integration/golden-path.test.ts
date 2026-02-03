@@ -4,12 +4,32 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 mock.module("ai", () => ({
+  consumeStream: async () => [],
+  convertToModelMessages: () => [],
   generateObject: () => {
     throw new Error("mock_ai_disabled");
   },
+  generateId: () => `mock-${Date.now()}`,
   generateText: () => {
     throw new Error("mock_ai_disabled");
   },
+  pruneMessages: (messages: unknown) => messages,
+  simulateStreamingMiddleware: () => ({}),
+  stepCountIs: () => () => false,
+  streamObject: () => {
+    throw new Error("mock_ai_disabled");
+  },
+  streamText: () => {
+    throw new Error("mock_ai_disabled");
+  },
+  ToolLoopAgent: class ToolLoopAgent {
+    constructor(_settings: unknown) {
+      void _settings;
+    }
+  },
+  tool: (definition: unknown) => definition,
+  validateUIMessages: (messages: unknown) => messages,
+  wrapLanguageModel: ({ model }: { model: unknown }) => model,
 }));
 
 mock.module("@alfred/runtime/orchestrator/agent", () => ({
@@ -99,6 +119,18 @@ describe("Golden Path Pipeline", () => {
     // Verify pipeline completed
     const completeEvent = events.find((e) => e.type === "pipeline:complete");
     expect(completeEvent).toBeDefined();
+
+    // Verify cognitive context is initialized at pipeline start
+    const cognitiveStreamIdSet = events.find(
+      (e) => e.type === "context:set" && e.key === "cognitiveStreamId"
+    );
+    expect(cognitiveStreamIdSet).toBeDefined();
+    expect((cognitiveStreamIdSet as { value?: unknown }).value).toBe(runId);
+
+    const autonomyLevelSet = events.find(
+      (e) => e.type === "context:set" && e.key === "autonomyLevel"
+    );
+    expect(autonomyLevelSet).toBeDefined();
 
     // Verify execute output is persisted in context for summarize stage
     const executeOutputSet = events.find(

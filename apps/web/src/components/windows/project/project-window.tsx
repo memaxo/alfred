@@ -227,7 +227,7 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
                 <div className="flex items-center justify-center py-8 text-biolum-faint text-sm">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
                 </div>
-              ) : (projects.length === 0 ? (
+              ) : projects.length === 0 ? (
                 <p className="py-8 text-center text-biolum-faint text-sm">
                   No projects yet. Detect one above.
                 </p>
@@ -261,7 +261,7 @@ export function ProjectWindow({ id, data, selected }: NodeProps) {
                     </li>
                   ))}
                 </ul>
-              ))}
+              )}
             </div>
           </ScrollArea>
 

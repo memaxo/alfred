@@ -44,6 +44,25 @@ export class ExecuteStage implements PipelineStage<
 > {
   readonly name = "execute" as const;
 
+  private autoFromAutonomy(
+    autonomyLevel: number | undefined
+  ): "read" | "low" | "medium" | "high" {
+    if (typeof autonomyLevel !== "number" || !Number.isFinite(autonomyLevel)) {
+      return "medium";
+    }
+    const v = Math.max(0, Math.min(1, autonomyLevel));
+    if (v < 0.2) {
+      return "read";
+    }
+    if (v < 0.4) {
+      return "low";
+    }
+    if (v < 0.65) {
+      return "medium";
+    }
+    return "high";
+  }
+
   private normalizeId(value: unknown): string | null {
     if (typeof value !== "string") {
       return null;
@@ -474,7 +493,7 @@ export class ExecuteStage implements PipelineStage<
 
           // Build agent spec using actual function
           const agentSpec = buildAgentSpec(subtask, ctx.runId, ctx.workspace, {
-            auto: "medium",
+            auto: this.autoFromAutonomy(ctx.get<number>("autonomyLevel")),
           });
           agentSpec.execPlanPath = execPlans.get(subtask.id) ?? "";
 

@@ -32,6 +32,7 @@ let workflowEventsTable: typeof import("@alfred/db/schema/workflow").workflowEve
 
 mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: async () => {},
+  queryAuditLogs: async () => ({ rows: [], totalCount: 0 }),
 }));
 
 mock.module("@alfred/policy", () => ({

@@ -60,7 +60,7 @@ export function KnowledgeWindow(_props: WindowComponentProps) {
           <View className="py-4">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (statsQuery.error ? (
+        ) : statsQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {statsQuery.error.message}
           </Text>
@@ -79,7 +79,7 @@ export function KnowledgeWindow(_props: WindowComponentProps) {
               patterns: {String((statsQuery.data as any)?.patterns ?? 0)}
             </Text>
           </View>
-        ))}
+        )}
       </View>
 
       <View className="mb-4 rounded-lg border border-border bg-card p-4">
@@ -166,7 +166,7 @@ export function KnowledgeWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : (entities.length === 0 ? (
+        ) : entities.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No results.
           </Text>
@@ -192,7 +192,7 @@ export function KnowledgeWindow(_props: WindowComponentProps) {
               </TouchableOpacity>
             ))}
           </View>
-        ))}
+        )}
       </View>
     </ScrollView>
   );

@@ -152,7 +152,7 @@ export function NoteWindow({ window, onClose }: WindowComponentProps) {
         <View className="py-8">
           <ActivityIndicator color="#00D9FF" />
         </View>
-      ) : (query.error ? (
+      ) : query.error ? (
         <View className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
           <Text className="text-destructive text-sm">
             {query.error.message || "Failed to load note"}
@@ -212,7 +212,7 @@ export function NoteWindow({ window, onClose }: WindowComponentProps) {
             </TouchableOpacity>
           </View>
         </View>
-      ))}
+      )}
     </ScrollView>
   );
 }

@@ -5,12 +5,9 @@ type AssistantUIMessage = UIMessage;
 
 import { MessageSquare, Mic } from "lucide-react";
 import { useCallback, useEffect } from "react";
+import { Virtuoso } from "react-virtuoso";
 import { z } from "zod";
 
-import {
-  Conversation,
-  ConversationContent,
-} from "@/components/ai-elements/conversation";
 import {
   PromptInput,
   PromptInputFooter,
@@ -155,26 +152,30 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
       windowType="chat"
     >
       <div className="flex h-[550px] flex-col">
-        <Conversation>
-          <ConversationContent className="flex-1 overflow-y-auto p-4">
-            {messages.length === 0 ? (
-              <p className="py-8 text-center text-biolum-faint text-sm">
-                Start a conversation...
-              </p>
-            ) : (
-              messages.map((message) => {
+        <div className="flex-1 overflow-hidden">
+          {messages.length === 0 ? (
+            <p className="py-8 text-center text-biolum-faint text-sm">
+              Start a conversation...
+            </p>
+          ) : (
+            <Virtuoso
+              data={messages}
+              itemContent={(_index, message) => {
                 const isEditingCurrent = isEditing(message.id);
 
                 if (isEditingCurrent) {
                   return (
-                    <div
-                      className="mb-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3"
-                      key={message.id}
-                    >
+                    <div className="mb-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3">
                       <Textarea
                         autoFocus
                         className="min-h-[80px] border-white/10 bg-transparent text-sm"
                         onChange={(e) => setEditText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelEditing();
+                          }
+                        }}
                         placeholder="Edit your message..."
                         value={editText}
                       />
@@ -199,20 +200,22 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
                 }
 
                 return (
-                  <ChatMessage
-                    actions={renderMessageActions(
-                      message as AssistantUIMessage
-                    )}
-                    content={message.parts as AssistantPart[]}
-                    key={message.id}
-                    renderPart={renderPart}
-                    role={message.role as AssistantUIMessage["role"]}
-                  />
+                  <div className="p-4">
+                    <ChatMessage
+                      actions={renderMessageActions(
+                        message as AssistantUIMessage
+                      )}
+                      content={message.parts as AssistantPart[]}
+                      renderPart={renderPart}
+                      role={message.role as AssistantUIMessage["role"]}
+                    />
+                  </div>
                 );
-              })
-            )}
-          </ConversationContent>
-        </Conversation>
+              }}
+              followOutput="auto"
+            />
+          )}
+        </div>
         <div className="border-white/10 border-t p-3">
           <PromptInput onSubmit={handleSubmit}>
             <PromptInputTextarea placeholder="Type a message..." />
