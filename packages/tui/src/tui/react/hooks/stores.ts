@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 
+import type { AgentFSSubscription } from "../../subscriptions/agentfs";
 import type { CognitiveStateStore } from "../../subscriptions/cognitive";
 import type { FocusStore } from "../../subscriptions/focus";
 import type { MetricsStore } from "../../subscriptions/metrics";
@@ -12,6 +13,7 @@ export interface TuiStores {
   voice: VoiceStore;
   metrics: MetricsStore;
   focus: FocusStore;
+  agentfs: AgentFSSubscription;
 }
 
 export const StoresContext = createContext<TuiStores | null>(null);
@@ -38,4 +40,8 @@ export function useMetricsStore(): MetricsStore | null {
 
 export function useFocusStore(): FocusStore | null {
   return useStores()?.focus ?? null;
+}
+
+export function useAgentFSStore(): AgentFSSubscription | null {
+  return useStores()?.agentfs ?? null;
 }

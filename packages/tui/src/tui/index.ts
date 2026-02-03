@@ -14,6 +14,7 @@ import {
   showCursor,
   writeAt,
 } from "./renderer";
+import { createAgentFSSubscription } from "./subscriptions/agentfs";
 import {
   createCognitiveStore,
   setupCognitiveSubscription,
@@ -64,6 +65,7 @@ export class TuiApp {
   private readonly workflowStore = createWorkflowStore();
   private readonly voiceStore = createVoiceStore();
   private readonly metricsStore = createMetricsStore();
+  private readonly agentfsStore = createAgentFSSubscription();
 
   constructor(options: TuiOptions = {}) {
     this.options = {
@@ -406,6 +408,7 @@ export class TuiApp {
       workflow: this.workflowStore,
       metrics: this.metricsStore,
       voice: this.voiceStore,
+      agentfs: this.agentfsStore,
     };
   }
 

@@ -20,6 +20,7 @@ import {
   FocusPanel,
   KnowledgePanel,
   MetricsPanel,
+  ToolCallsPanel,
   VoicePanel,
   WorkflowPanel,
 } from "./panels";
@@ -44,7 +45,8 @@ type PanelId =
   | "workflow"
   | "metrics"
   | "voice"
-  | "knowledge";
+  | "knowledge"
+  | "toolcalls";
 type ModeId = "none" | "chat" | "debug" | "plan" | "help";
 
 const PANELS: PanelId[] = [
@@ -54,6 +56,7 @@ const PANELS: PanelId[] = [
   "metrics",
   "voice",
   "knowledge",
+  "toolcalls",
 ];
 
 export function Dashboard({
@@ -179,7 +182,7 @@ export function Dashboard({
       }
 
       // Number keys for direct panel access
-      if (/^[1-6]$/.test(event.name)) {
+      if (/^[1-7]$/.test(event.name)) {
         const index = Number.parseInt(event.name, 10) - 1;
         if (index < PANELS.length) {
           setFocusedIndex(index);
@@ -191,13 +194,15 @@ export function Dashboard({
 
   useKeyboard(handleKeyboard);
 
-  // Calculate layout
+  // Calculate layout for 7 panels
   const headerHeight = 3;
   const footerHeight = 2;
   const contentHeight = height - headerHeight - footerHeight;
   const leftWidth = Math.floor(width * 0.5);
   const rightWidth = width - leftWidth;
-  const thirdHeight = Math.floor(contentHeight / 3);
+  // Left column: 3 panels, Right column: 4 panels
+  const leftThirdHeight = Math.floor(contentHeight / 3);
+  const rightQuarterHeight = Math.floor(contentHeight / 4);
 
   return (
     <StoresContext.Provider value={stores}>
@@ -218,50 +223,57 @@ export function Dashboard({
 
         {/* Main content area */}
         <box height={contentHeight} top={headerHeight} width={width}>
-          {/* Left column */}
+          {/* Left column: 3 panels */}
           <FocusPanel
             focused={focusedPanel === "focus"}
-            height={thirdHeight}
+            height={leftThirdHeight}
             width={leftWidth}
             x={0}
             y={0}
           />
           <CognitivePanel
             focused={focusedPanel === "cognitive"}
-            height={thirdHeight}
+            height={leftThirdHeight}
             width={leftWidth}
             x={0}
-            y={thirdHeight}
+            y={leftThirdHeight}
           />
           <WorkflowPanel
             focused={focusedPanel === "workflow"}
-            height={contentHeight - thirdHeight * 2}
+            height={contentHeight - leftThirdHeight * 2}
             width={leftWidth}
             x={0}
-            y={thirdHeight * 2}
+            y={leftThirdHeight * 2}
           />
 
-          {/* Right column */}
+          {/* Right column: 4 panels */}
           <MetricsPanel
             focused={focusedPanel === "metrics"}
-            height={thirdHeight}
+            height={rightQuarterHeight}
             width={rightWidth}
             x={leftWidth}
             y={0}
           />
           <VoicePanel
             focused={focusedPanel === "voice"}
-            height={thirdHeight}
+            height={rightQuarterHeight}
             width={rightWidth}
             x={leftWidth}
-            y={thirdHeight}
+            y={rightQuarterHeight}
           />
           <KnowledgePanel
             focused={focusedPanel === "knowledge"}
-            height={contentHeight - thirdHeight * 2}
+            height={rightQuarterHeight}
             width={rightWidth}
             x={leftWidth}
-            y={thirdHeight * 2}
+            y={rightQuarterHeight * 2}
+          />
+          <ToolCallsPanel
+            focused={focusedPanel === "toolcalls"}
+            height={contentHeight - rightQuarterHeight * 3}
+            width={rightWidth}
+            x={leftWidth}
+            y={rightQuarterHeight * 3}
           />
         </box>
 
@@ -273,7 +285,7 @@ export function Dashboard({
           width={width}
         >
           <text
-            content="[Tab] Navigate | [q] Quit | [?] Help | [Ctrl+D] Debug | [Ctrl+T] Chat | [1-6] Panels"
+            content="[Tab] Navigate | [q] Quit | [?] Help | [Ctrl+D] Debug | [Ctrl+T] Chat | [1-7] Panels"
             style={{ fg: "#8A9199" }}
           />
         </box>

@@ -16,6 +16,7 @@ import type { ToolCallInfo } from "../../subscriptions/agentfs";
 
 import { colors } from "../../theme";
 import { bold, dim, fg } from "../../typography";
+import { useAgentFSStore } from "../hooks/stores";
 
 // Basic syntax style for JSON
 const jsonStyle = SyntaxStyle.fromStyles({
@@ -30,9 +31,6 @@ interface ToolCallsPanelProps {
   width: number;
   height: number;
   focused: boolean;
-  toolCalls: ToolCallInfo[];
-  loading: boolean;
-  error: string | null;
   x?: number;
   y?: number;
 }
@@ -41,12 +39,31 @@ export function ToolCallsPanel({
   width,
   height,
   focused,
-  toolCalls,
-  loading,
-  error,
   x,
   y,
 }: ToolCallsPanelProps) {
+  const store = useAgentFSStore();
+  const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Subscribe to AgentFS store updates
+  useEffect(() => {
+    if (!store) {
+      setLoading(false);
+      setError("AgentFS store not available");
+      return;
+    }
+
+    const unsubscribe = store.subscribe((state) => {
+      setToolCalls(state.toolCalls);
+      setLoading(state.isLoading);
+      setError(state.error);
+    });
+
+    return unsubscribe;
+  }, [store]);
+
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
 

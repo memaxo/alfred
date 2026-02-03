@@ -55,7 +55,7 @@ export type AgentFSSubscriptionCallback = (
 ) => void;
 export type AgentFSUnsubscribe = () => void;
 
-class AgentFSSubscription {
+export class AgentFSSubscription {
   private state: AgentFSSubscriptionState = {
     runId: null,
     dbPath: null,
