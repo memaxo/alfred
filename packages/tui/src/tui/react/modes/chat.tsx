@@ -131,6 +131,9 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
+      // Track tool calls to match with results
+      const pendingTools = new Map<string, string>();
+
       try {
         const history: UIMessage[] = [...messages, userMsg].map((m) => ({
           content: m.content,
@@ -165,7 +168,20 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
               )
             );
           } else if (chunk.type === "tool-call-start") {
+            pendingTools.set(chunk.toolCallId, chunk.toolName);
             accumulatedContent += `\n> Calling ${chunk.toolName}...`;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, content: accumulatedContent } : m
+              )
+            );
+          } else if (chunk.type === "tool-call-result") {
+            const toolName = pendingTools.get(chunk.toolCallId) ?? "Tool";
+            pendingTools.delete(chunk.toolCallId);
+            const resultText = chunk.isError
+              ? `\n> ✗ ${toolName} failed: ${chunk.content ?? "Unknown error"}`
+              : `\n> ✓ ${toolName} completed`;
+            accumulatedContent += resultText;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId ? { ...m, content: accumulatedContent } : m
