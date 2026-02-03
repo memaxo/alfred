@@ -313,18 +313,18 @@ describe("terminal router", () => {
     });
 
     it("throws NOT_FOUND for invalid sessionId", async () => {
-      let error: unknown;
+      let caught: unknown;
       try {
         await caller.terminal.write({
           sessionId: "invalid-id",
           data: "test",
         });
       } catch (error) {
-        error = error;
+        caught = error;
       }
-      expect(error).toBeDefined();
-      expect(error).toBeInstanceOf(TRPCError);
-      expect((error as TRPCError).code).toBe("NOT_FOUND");
+      expect(caught).toBeDefined();
+      expect(caught).toBeInstanceOf(TRPCError);
+      expect((caught as TRPCError).code).toBe("NOT_FOUND");
     });
   });
 
