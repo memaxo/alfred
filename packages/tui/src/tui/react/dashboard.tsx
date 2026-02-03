@@ -16,6 +16,7 @@ import { StoresContext, type TuiStores } from "./hooks/stores";
 import { ChatMode, DebugMode, HelpMode, PlanMode } from "./modes";
 import { CommandPalette, Modal } from "./overlays";
 import {
+  AgentFSPanel,
   CognitivePanel,
   FocusPanel,
   KnowledgePanel,
@@ -46,7 +47,8 @@ type PanelId =
   | "metrics"
   | "voice"
   | "knowledge"
-  | "toolcalls";
+  | "toolcalls"
+  | "agentfs";
 type ModeId = "none" | "chat" | "debug" | "plan" | "help";
 
 const PANELS: PanelId[] = [
@@ -57,6 +59,7 @@ const PANELS: PanelId[] = [
   "voice",
   "knowledge",
   "toolcalls",
+  "agentfs",
 ];
 
 export function Dashboard({
@@ -182,7 +185,7 @@ export function Dashboard({
       }
 
       // Number keys for direct panel access
-      if (/^[1-7]$/.test(event.name)) {
+      if (/^[1-8]$/.test(event.name)) {
         const index = Number.parseInt(event.name, 10) - 1;
         if (index < PANELS.length) {
           setFocusedIndex(index);
@@ -194,15 +197,14 @@ export function Dashboard({
 
   useKeyboard(handleKeyboard);
 
-  // Calculate layout for 7 panels
+  // Calculate layout for 8 panels
   const headerHeight = 3;
   const footerHeight = 2;
   const contentHeight = height - headerHeight - footerHeight;
   const leftWidth = Math.floor(width * 0.5);
   const rightWidth = width - leftWidth;
-  // Left column: 3 panels, Right column: 4 panels
-  const leftThirdHeight = Math.floor(contentHeight / 3);
-  const rightQuarterHeight = Math.floor(contentHeight / 4);
+  // Both columns: 4 panels each
+  const quarterHeight = Math.floor(contentHeight / 4);
 
   return (
     <StoresContext.Provider value={stores}>
@@ -223,57 +225,64 @@ export function Dashboard({
 
         {/* Main content area */}
         <box height={contentHeight} top={headerHeight} width={width}>
-          {/* Left column: 3 panels */}
+          {/* Left column: 4 panels */}
           <FocusPanel
             focused={focusedPanel === "focus"}
-            height={leftThirdHeight}
+            height={quarterHeight}
             width={leftWidth}
             x={0}
             y={0}
           />
           <CognitivePanel
             focused={focusedPanel === "cognitive"}
-            height={leftThirdHeight}
+            height={quarterHeight}
             width={leftWidth}
             x={0}
-            y={leftThirdHeight}
+            y={quarterHeight}
           />
           <WorkflowPanel
             focused={focusedPanel === "workflow"}
-            height={contentHeight - leftThirdHeight * 2}
+            height={quarterHeight}
             width={leftWidth}
             x={0}
-            y={leftThirdHeight * 2}
+            y={quarterHeight * 2}
+          />
+          <AgentFSPanel
+            focused={focusedPanel === "agentfs"}
+            height={contentHeight - quarterHeight * 3}
+            width={leftWidth}
+            x={0}
+            y={quarterHeight * 3}
           />
 
           {/* Right column: 4 panels */}
           <MetricsPanel
             focused={focusedPanel === "metrics"}
-            height={rightQuarterHeight}
+            height={quarterHeight}
             width={rightWidth}
             x={leftWidth}
             y={0}
           />
           <VoicePanel
             focused={focusedPanel === "voice"}
-            height={rightQuarterHeight}
+            height={quarterHeight}
             width={rightWidth}
             x={leftWidth}
-            y={rightQuarterHeight}
+            y={quarterHeight}
           />
           <KnowledgePanel
             focused={focusedPanel === "knowledge"}
-            height={rightQuarterHeight}
+            height={quarterHeight}
             width={rightWidth}
             x={leftWidth}
-            y={rightQuarterHeight * 2}
+            y={quarterHeight * 2}
           />
           <ToolCallsPanel
             focused={focusedPanel === "toolcalls"}
-            height={contentHeight - rightQuarterHeight * 3}
+            height={contentHeight - quarterHeight * 3}
             width={rightWidth}
             x={leftWidth}
-            y={rightQuarterHeight * 3}
+            y={quarterHeight * 3}
           />
         </box>
 
@@ -285,7 +294,7 @@ export function Dashboard({
           width={width}
         >
           <text
-            content="[Tab] Navigate | [q] Quit | [?] Help | [Ctrl+D] Debug | [Ctrl+T] Chat | [1-7] Panels"
+            content="[Tab] Navigate | [q] Quit | [?] Help | [Ctrl+D] Debug | [Ctrl+T] Chat | [1-8] Panels"
             style={{ fg: "#8A9199" }}
           />
         </box>

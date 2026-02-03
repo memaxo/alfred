@@ -2,6 +2,7 @@
  * React Panel Components
  */
 
+export { AgentFSPanel } from "./agentfs";
 export { CognitivePanel } from "./cognitive";
 export { FocusPanel } from "./focus";
 export { KnowledgePanel } from "./knowledge";
