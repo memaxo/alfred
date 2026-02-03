@@ -164,9 +164,9 @@ function isServerStartFailure(
   const code =
     executor === "codex"
       ? "codex_server_start_failed"
-      : executor === "opencode"
+      : (executor === "opencode"
         ? "opencode_server_start_failed"
-        : undefined;
+        : undefined);
   if (!code) {
     return false;
   }
@@ -509,12 +509,12 @@ export async function runAgent({
   const codexCliProfile =
     executor === "codex" && profileRaw.length > 0 && !execProfileExplicit
       ? profileRaw
-      : executor === "codex" &&
+      : (executor === "codex" &&
           executorConfig?.kind === "codex" &&
           typeof executorConfig.profile === "string" &&
           executorConfig.profile.length > 0
         ? executorConfig.profile
-        : undefined;
+        : undefined);
 
   // Runtime MCP: deterministic escalation with immediate tool-call receipt.
   // We use an agent-local AbortController so the MCP server can request abort
@@ -1317,7 +1317,7 @@ export async function runAgent({
 }
 
 async function readExecutorConfigFromAgentfs(args: {
-  agent: { kv: { get: <T>(key: string) => Promise<T> } };
+  agent: { kv: { get: <T>(key: string) => Promise<T | undefined> } };
   kind: "codex" | "droid" | "opencode";
 }): Promise<ExecutorConfigPublic | null> {
   try {
@@ -1335,7 +1335,7 @@ async function readExecutorConfigFromAgentfs(args: {
 }
 
 async function readOpencodeHttpPasswordFromAgentfs(args: {
-  agent: { kv: { get: <T>(key: string) => Promise<T> } };
+  agent: { kv: { get: <T>(key: string) => Promise<T | undefined> } };
 }): Promise<string | undefined> {
   try {
     const raw = await args.agent.kv.get<unknown>("executor:opencode:secrets");
@@ -1366,9 +1366,9 @@ function buildAgentPrompt(
   const runtimeEscalateTool =
     executor === "codex" || executor === "droid"
       ? "mcp__alfred_runtime__escalate"
-      : executor === "opencode"
+      : (executor === "opencode"
         ? "alfred_runtime_escalate"
-        : "escalate";
+        : "escalate");
 
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
@@ -1507,9 +1507,9 @@ function createAgentWriter(
                 status:
                   inner.status === "failed"
                     ? "failed"
-                    : inner.status === "completed"
+                    : (inner.status === "completed"
                       ? "completed"
-                      : "running",
+                      : "running"),
                 ts,
                 type: "agent/command",
               }
