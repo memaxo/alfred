@@ -7,11 +7,11 @@
  *
  * This subscription is intentionally lightweight and supports:
  * - snapshot (initial state)
- * - stream (live updates via tRPC subscription)
+ * - polling (live-ish updates via repeated snapshot calls)
  * - mock fallback when auth / SDK / runtime wiring is unavailable
  */
 
-import type { AgentFSStreamCursor, AgentFSStreamEvent } from "@alfred/type";
+import { getApiClient } from "../api/client";
 
 export interface DirEntry {
   name: string;
@@ -68,8 +68,7 @@ export class AgentFSSubscription {
   };
 
   private readonly subs = new Set<AgentFSSubscriptionCallback>();
-  private unsubscribeStream: (() => void) | null = null;
-  private cursor: AgentFSStreamCursor | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private seq = 0;
 
   subscribe(cb: AgentFSSubscriptionCallback): AgentFSUnsubscribe {
@@ -91,7 +90,7 @@ export class AgentFSSubscription {
       error: null,
     }));
 
-    this.disconnectStreamOnly();
+    this.stopPolling();
     void this.connectAsync({ runId, dbPath, seq });
 
     return () => this.disconnect();
@@ -99,7 +98,7 @@ export class AgentFSSubscription {
 
   disconnect(): void {
     this.seq++;
-    this.disconnectStreamOnly();
+    this.stopPolling();
     this.setState((prev) => ({
       ...prev,
       runId: null,
@@ -113,17 +112,15 @@ export class AgentFSSubscription {
     }));
   }
 
-  private disconnectStreamOnly(): void {
-    if (this.unsubscribeStream) {
-      try {
-        this.unsubscribeStream();
-      } catch {
-        // ignore
-      } finally {
-        this.unsubscribeStream = null;
-      }
+  private stopPolling(): void {
+    if (!this.pollTimer) {
+      return;
     }
-    this.cursor = null;
+    try {
+      clearInterval(this.pollTimer);
+    } finally {
+      this.pollTimer = null;
+    }
   }
 
   private setState(
@@ -155,116 +152,71 @@ export class AgentFSSubscription {
     }
 
     try {
-      const { appRouter } = await import("@alfred/api/router");
-      const { createCliContext } = await import("../../cli/context");
-      const ctx = await createCliContext();
-      if (seq !== this.seq) {
-        return;
-      }
-      const caller = appRouter.createCaller({
-        ...ctx,
-        policy: { obligations: [] },
-      });
+      const client = getApiClient();
 
-      const snapshot = await caller.agentfs.snapshot({
-        runId,
-        dbPath,
-        dir: "/workspace",
-      });
-      if (seq !== this.seq) {
-        return;
-      }
+      const fetchOnce = async () => {
+        const { data, error } = await client.agentfsSnapshot({
+          dbPath,
+          dir: "/workspace",
+          runId,
+        });
+        if (seq !== this.seq) {
+          return;
+        }
+        if (error || !data) {
+          throw new Error(error?.message ?? "agentfs_snapshot_failed");
+        }
 
-      this.cursor = snapshot.cursor;
-      this.setState((prev) => ({
-        ...prev,
-        isConnected: true,
-        isLoading: false,
-        error: null,
-        entries: snapshot.entries as DirEntry[],
-        toolCalls: (snapshot.toolCalls as any[]).map((c) => ({
-          id: c.id,
-          name: c.name,
-          started_at: c.startedAt,
-          completed_at: c.completedAt,
-          duration_ms: c.durationMs,
-          error: c.error ?? undefined,
-          parameters: c.parameters,
-          result: c.result,
-        })),
-        kvStore: (snapshot.kvStore as any[]).map((e) => ({
-          key: e.key,
-          value: e.value,
-          created_at: e.createdAt,
-          updated_at: e.updatedAt,
-        })),
-      }));
+        const toolCalls = (data.toolCalls as any[])
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            started_at: c.startedAt,
+            completed_at: c.completedAt,
+            duration_ms: c.durationMs,
+            error: c.error ?? undefined,
+            parameters: c.parameters,
+            result: c.result,
+          }))
+          .sort((a, b) => a.id - b.id);
 
-      const subscription = await caller.agentfs.stream({
-        runId,
-        dbPath,
-        dir: "/workspace",
-        cursor: this.cursor ?? undefined,
-        pollMs: 500,
-      });
+        this.setState((prev) => ({
+          ...prev,
+          isConnected: true,
+          isLoading: false,
+          error: null,
+          entries: data.entries as DirEntry[],
+          toolCalls,
+          kvStore: (data.kvStore as any[]).map((e) => ({
+            key: e.key,
+            value: e.value,
+            created_at: e.createdAt,
+            updated_at: e.updatedAt,
+          })),
+        }));
+      };
+
+      await fetchOnce();
       if (seq !== this.seq) {
         return;
       }
 
-      const inner = subscription.subscribe({
-        next: (event: AgentFSStreamEvent) => {
+      const t = setInterval(() => {
+        void fetchOnce().catch((error) => {
           if (seq !== this.seq) {
             return;
           }
-          if (event.type === "data") {
-            this.cursor = event.cursor;
-            this.setState((prev) => ({
-              ...prev,
-              isConnected: true,
-              isLoading: false,
-              error: null,
-              entries: event.entries ?? prev.entries,
-              toolCalls: event.toolCalls
-                ? mergeToolCalls(prev.toolCalls, event.toolCalls)
-                : prev.toolCalls,
-              kvStore: event.kvStore
-                ? event.kvStore.map((e) => ({
-                    key: e.key,
-                    value: e.value,
-                    created_at: e.createdAt,
-                    updated_at: e.updatedAt,
-                  }))
-                : prev.kvStore,
-            }));
-            return;
-          }
-
-          if (event.type === "error") {
-            this.setState((prev) => ({
-              ...prev,
-              isLoading: false,
-              error: event.message,
-            }));
-          }
-        },
-        error: (err) => {
-          if (seq !== this.seq) {
-            return;
-          }
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = error instanceof Error ? error.message : String(error);
           this.setState((prev) => ({
             ...prev,
+            isConnected: false,
             isLoading: false,
             error: msg,
           }));
-        },
-      });
-
-      if (seq === this.seq) {
-        this.unsubscribeStream = () => inner.unsubscribe();
-      } else {
-        inner.unsubscribe();
-      }
+        });
+      }, 1000);
+      (t as unknown as { unref?: () => void }).unref?.();
+      this.pollTimer = t;
     } catch (error) {
       // Fallback to mock when anything goes wrong (auth not set up, SDK missing, etc.)
       const msg = error instanceof Error ? error.message : String(error);
@@ -315,39 +267,4 @@ export class AgentFSSubscription {
 
 export function createAgentFSSubscription(): AgentFSSubscription {
   return new AgentFSSubscription();
-}
-
-function mergeToolCalls(
-  prev: ToolCallInfo[],
-  incoming: {
-    id: number;
-    name: string;
-    startedAt: number;
-    completedAt: number;
-    durationMs: number;
-    error?: string | null;
-    parameters?: unknown;
-    result?: unknown;
-  }[]
-): ToolCallInfo[] {
-  const seen = new Set(prev.map((c) => c.id));
-  const next = [...prev];
-  for (const c of incoming) {
-    if (seen.has(c.id)) {
-      continue;
-    }
-    seen.add(c.id);
-    next.push({
-      id: c.id,
-      name: c.name,
-      started_at: c.startedAt,
-      completed_at: c.completedAt,
-      duration_ms: c.durationMs,
-      error: c.error ?? undefined,
-      parameters: c.parameters,
-      result: c.result,
-    });
-  }
-  next.sort((a, b) => a.id - b.id);
-  return next;
 }

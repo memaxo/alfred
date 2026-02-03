@@ -16,7 +16,59 @@ import type { Workflow } from "../../subscriptions/workflow";
 import { getApiClient } from "../../api/client";
 import { colors, progressChars } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
-import { useWorkflowStore } from "../hooks/stores";
+import {
+  useAgentFSStore,
+  useSelectionStore,
+  useWorkflowStore,
+} from "../hooks/stores";
+
+type StageName = Parameters<
+  ReturnType<typeof getApiClient>["phaseStep"]
+>[0]["untilStage"];
+
+const STAGES: readonly StageName[] = [
+  "init",
+  "context",
+  "plan",
+  "schedule",
+  "execute",
+  "review",
+  "learn",
+  "summarize",
+] as const;
+
+function parseStage(value: string | null | undefined): StageName | null {
+  if (!value) {
+    return null;
+  }
+  return STAGES.includes(value as StageName) ? (value as StageName) : null;
+}
+
+async function resolveToolAuthz(): Promise<string | null> {
+  const normalize = (value: string | null | undefined): string | null => {
+    if (!value) {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+    return trimmed.startsWith("Bearer ") ? trimmed : `Bearer ${trimmed}`;
+  };
+
+  const env = normalize(process.env.ALFRED_TOOL_AUTHZ);
+  if (env) {
+    return env;
+  }
+  try {
+    const { loadCredentials } = await import("../../../cli/credentials");
+    const creds = await loadCredentials();
+    const token = creds?.toolAuthz?.token;
+    return normalize(token);
+  } catch {
+    return null;
+  }
+}
 
 interface WorkflowPanelProps {
   width: number;
@@ -118,11 +170,17 @@ export function WorkflowPanel({
   y,
 }: WorkflowPanelProps) {
   const store = useWorkflowStore();
+  const agentfs = useAgentFSStore();
+  const selection = useSelectionStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [selectedEvents, setSelectedEvents] = useState<WorkflowEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [action, setAction] = useState<{
+    kind: "idle" | "working" | "ok" | "error";
+    message: string;
+  }>({ kind: "idle", message: "" });
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -154,6 +212,11 @@ export function WorkflowPanel({
 
     return unsub;
   }, [store]);
+
+  useEffect(() => {
+    const wf = workflows[selectedIndex];
+    selection?.setRunId(wf?.id ?? null);
+  }, [selection, workflows, selectedIndex]);
 
   const loadWorkflowDetail = useCallback(async (runId: string) => {
     setLoading(true);
@@ -202,6 +265,111 @@ export function WorkflowPanel({
 
       // Actions
       const client = getApiClient();
+      if (event.name === "r") {
+        setAction({ kind: "working", message: "Preparing AgentFS..." });
+        const authz = await resolveToolAuthz();
+        if (!authz) {
+          setAction({
+            kind: "error",
+            message:
+              "No tool authz found. Run `alfred token issue ...` or set ALFRED_TOOL_AUTHZ.",
+          });
+          return;
+        }
+
+        const prepared = await client.phasePrepare({
+          authz,
+          runId: workflow.id,
+        });
+        if (prepared.error || !prepared.data) {
+          setAction({
+            kind: "error",
+            message: prepared.error?.message ?? "prepare_failed",
+          });
+          return;
+        }
+
+        agentfs?.connect(prepared.data.runId, prepared.data.dbPath);
+        setAction({
+          kind: "ok",
+          message: `AgentFS ready (${truncate(prepared.data.containerName, 24)})`,
+        });
+        return;
+      }
+
+      if (event.name === "n") {
+        setAction({ kind: "working", message: "Stepping to next stage..." });
+        const status = await client.phaseStatus(workflow.id);
+        const next = status.data ? parseStage(status.data.nextStage) : null;
+        if (!next) {
+          setAction({
+            kind: "error",
+            message: status.error?.message ?? "no_next_stage",
+          });
+          return;
+        }
+
+        const authz = await resolveToolAuthz();
+        if (next === "execute" && !authz) {
+          setAction({
+            kind: "error",
+            message:
+              "No tool authz found. Run `alfred token issue ...` or set ALFRED_TOOL_AUTHZ.",
+          });
+          return;
+        }
+
+        const stepped = await client.phaseStep({
+          authz: authz ?? undefined,
+          runId: workflow.id,
+          untilStage: next,
+        });
+        if (stepped.error || !stepped.data) {
+          setAction({
+            kind: "error",
+            message: stepped.error?.message ?? "step_failed",
+          });
+          return;
+        }
+
+        setAction({
+          kind: "ok",
+          message: `Stepped → ${stepped.data.untilStage} (${stepped.data.durationMs}ms)`,
+        });
+        return;
+      }
+
+      if (event.name === "e") {
+        setAction({ kind: "working", message: "Stepping until execute..." });
+        const authz = await resolveToolAuthz();
+        if (!authz) {
+          setAction({
+            kind: "error",
+            message:
+              "No tool authz found. Run `alfred token issue ...` or set ALFRED_TOOL_AUTHZ.",
+          });
+          return;
+        }
+        const stepped = await client.phaseStep({
+          authz,
+          runId: workflow.id,
+          untilStage: "execute",
+        });
+        if (stepped.error || !stepped.data) {
+          setAction({
+            kind: "error",
+            message: stepped.error?.message ?? "step_execute_failed",
+          });
+          return;
+        }
+
+        setAction({
+          kind: "ok",
+          message: `Stepped → ${stepped.data.untilStage} (${stepped.data.durationMs}ms)`,
+        });
+        return;
+      }
+
       if (event.name === "p" || event.name === " ") {
         if (workflow.status === "executing") {
           await client.suspendWorkflow(workflow.id);
@@ -216,7 +384,7 @@ export function WorkflowPanel({
         return;
       }
     },
-    [focused, workflows, selectedIndex, viewMode, loadWorkflowDetail]
+    [agentfs, focused, workflows, selectedIndex, viewMode, loadWorkflowDetail]
   );
 
   useKeyboard(handleKeyboard);
@@ -379,13 +547,35 @@ export function WorkflowPanel({
         {!viewMode && workflows.length > 0 && (
           <>
             <text content="" />
-            <text content={dim("  [↑↓]nav [Enter]details [p]ause [c]ancel")} />
+            <text
+              content={dim(
+                "  [↑↓]nav [Enter]details [n]next [r]prepare [e]exec [p]ause [c]ancel"
+              )}
+            />
           </>
         )}
         {workflows.length > 0 && viewMode === "list" && (
           <>
             <text content="" />
-            <text content={dim("  [↑↓]nav [Enter]details [p]ause [c]ancel")} />
+            <text
+              content={dim(
+                "  [↑↓]nav [Enter]details [n]next [r]prepare [e]exec [p]ause [c]ancel"
+              )}
+            />
+          </>
+        )}
+        {action.kind !== "idle" && action.message.length > 0 && (
+          <>
+            <text content="" />
+            <text
+              content={
+                action.kind === "error"
+                  ? fg(colors.error)(`✗ ${action.message}`)
+                  : (action.kind === "ok"
+                    ? fg(colors.success)(`✓ ${action.message}`)
+                    : dim(`… ${action.message}`))
+              }
+            />
           </>
         )}
       </scrollbox>

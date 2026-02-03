@@ -4,6 +4,7 @@ import type { AgentFSSubscription } from "../../subscriptions/agentfs";
 import type { CognitiveStateStore } from "../../subscriptions/cognitive";
 import type { FocusStore } from "../../subscriptions/focus";
 import type { MetricsStore } from "../../subscriptions/metrics";
+import type { SelectionStore } from "../../subscriptions/selection";
 import type { VoiceStore } from "../../subscriptions/voice";
 import type { WorkflowStore } from "../../subscriptions/workflow";
 
@@ -14,6 +15,7 @@ export interface TuiStores {
   metrics: MetricsStore;
   focus: FocusStore;
   agentfs: AgentFSSubscription;
+  selection: SelectionStore;
 }
 
 export const StoresContext = createContext<TuiStores | null>(null);
@@ -44,4 +46,8 @@ export function useFocusStore(): FocusStore | null {
 
 export function useAgentFSStore(): AgentFSSubscription | null {
   return useStores()?.agentfs ?? null;
+}
+
+export function useSelectionStore(): SelectionStore | null {
+  return useStores()?.selection ?? null;
 }

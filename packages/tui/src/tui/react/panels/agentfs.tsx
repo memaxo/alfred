@@ -15,7 +15,7 @@ import type { DirEntry, KVEntry } from "../../subscriptions/agentfs";
 
 import { colors } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
-import { useAgentFSStore } from "../hooks/stores";
+import { useAgentFSStore, useSelectionStore } from "../hooks/stores";
 
 interface AgentFSPanelProps {
   width: number;
@@ -33,9 +33,11 @@ export function AgentFSPanel({
   y,
 }: AgentFSPanelProps) {
   const store = useAgentFSStore();
+  const selection = useSelectionStore();
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [kvStore, setKvStore] = useState<KVEntry[]>([]);
   const [runId, setRunId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -59,6 +61,16 @@ export function AgentFSPanel({
 
     return unsubscribe;
   }, [store]);
+
+  useEffect(() => {
+    if (!selection) {
+      return;
+    }
+    const unsub = selection.subscribe((s) => {
+      setSelectedRunId(s.runId);
+    });
+    return unsub;
+  }, [selection]);
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -162,6 +174,13 @@ export function AgentFSPanel({
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const hint =
+    selectedRunId && !runId
+      ? `Selected ${truncate(selectedRunId, 12)} (not attached). Use Workflows panel [r] prepare.`
+      : (selectedRunId && runId && selectedRunId !== runId
+        ? `Viewing ${truncate(runId, 12)} (selected ${truncate(selectedRunId, 12)}).`
+        : null);
+
   return (
     <box
       border
@@ -176,6 +195,12 @@ export function AgentFSPanel({
       width={width}
     >
       <scrollbox focused={focused}>
+        {hint && (
+          <>
+            <text content={dim(`  ${hint}`)} />
+            <text content="" />
+          </>
+        )}
         {/* Tabs */}
         <text
           content={`${

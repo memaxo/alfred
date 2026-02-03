@@ -218,7 +218,7 @@ export function Dashboard({
   // < 80 cols: Single panel focus mode
   // 80-120 cols: Two column split mode
   // > 120 cols: Multi-panel dashboard mode (default)
-  const layoutMode = width < 80 ? "focus" : width < 120 ? "split" : "dashboard";
+  const layoutMode = width < 80 ? "focus" : (width < 120 ? "split" : "dashboard");
 
   // Calculate layout dimensions
   const headerHeight = 3;
@@ -236,7 +236,12 @@ export function Dashboard({
   const quarterHeight = Math.floor(contentHeight / 4);
 
   // Determine which panels to show based on layout mode
-  const showLeftColumn = !isFocusMode || focusedPanel === "focus" || focusedPanel === "cognitive" || focusedPanel === "workflow" || focusedPanel === "agentfs";
+  const showLeftColumn =
+    !isFocusMode ||
+    focusedPanel === "focus" ||
+    focusedPanel === "cognitive" ||
+    focusedPanel === "workflow" ||
+    focusedPanel === "agentfs";
   const showRightColumn = !isFocusMode && rightWidth > 0;
 
   return (
@@ -291,7 +296,11 @@ export function Dashboard({
               {(isFocusMode ? focusedPanel === "agentfs" : true) && (
                 <AgentFSPanel
                   focused={focusedPanel === "agentfs"}
-                  height={isFocusMode ? contentHeight : contentHeight - quarterHeight * 3}
+                  height={
+                    isFocusMode
+                      ? contentHeight
+                      : contentHeight - quarterHeight * 3
+                  }
                   width={leftWidth}
                   x={0}
                   y={isFocusMode ? 0 : quarterHeight * 3}

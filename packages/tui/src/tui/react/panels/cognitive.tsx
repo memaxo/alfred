@@ -16,6 +16,7 @@ import type {
   CognitiveTransition,
 } from "../../subscriptions/cognitive";
 
+import { getApiClient } from "../../api/client";
 import {
   autonomyColor,
   colors,
@@ -23,8 +24,8 @@ import {
   phaseColor,
   progressChars,
 } from "../../theme";
-import { bold, dim, fg } from "../../typography";
-import { useCognitiveStore } from "../hooks/stores";
+import { bold, dim, fg, truncate } from "../../typography";
+import { useCognitiveStore, useSelectionStore } from "../hooks/stores";
 
 interface CognitivePanelProps {
   width: number;
@@ -123,8 +124,17 @@ export function CognitivePanel({
   y,
 }: CognitivePanelProps) {
   const store = useCognitiveStore();
-  const [state, setState] = useState<CognitiveState | null>(null);
-  const [transitions, setTransitions] = useState<CognitiveTransition[]>([]);
+  const selection = useSelectionStore();
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [systemState, setSystemState] = useState<CognitiveState | null>(null);
+  const [systemTransitions, setSystemTransitions] = useState<
+    CognitiveTransition[]
+  >([]);
+  const [runState, setRunState] = useState<CognitiveState | null>(null);
+  const [runTransitions, setRunTransitions] = useState<CognitiveTransition[]>(
+    []
+  );
+  const [runError, setRunError] = useState<string | null>(null);
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -134,12 +144,113 @@ export function CognitivePanel({
     }
 
     const unsub = store.subscribe((newState) => {
-      setState(newState);
-      setTransitions(store.getHistory());
+      setSystemState(newState);
+      setSystemTransitions(store.getHistory());
     });
 
     return unsub;
   }, [store]);
+
+  useEffect(() => {
+    if (!selection) {
+      return;
+    }
+    const unsub = selection.subscribe((s) => {
+      setSelectedRunId(s.runId);
+    });
+    return unsub;
+  }, [selection]);
+
+  useEffect(() => {
+    if (!selectedRunId) {
+      setRunState(null);
+      setRunTransitions([]);
+      setRunError(null);
+      return;
+    }
+
+    let alive = true;
+    const client = getApiClient();
+
+    const parsePhase = (raw: unknown): CognitiveState["phase"] => {
+      return raw === "idle" ||
+        raw === "capturing" ||
+        raw === "thinking" ||
+        raw === "deciding" ||
+        raw === "executing" ||
+        raw === "reflecting"
+        ? raw
+        : "idle";
+    };
+
+    const parseNum = (raw: unknown, fallback: number): number => {
+      return typeof raw === "number" && Number.isFinite(raw) ? raw : fallback;
+    };
+
+    const tick = async () => {
+      const res = await client.getCognitiveState(selectedRunId);
+      if (!alive) {
+        return;
+      }
+      if (res.error || !res.data) {
+        setRunError(res.error?.message ?? "cognitive_state_fetch_failed");
+        return;
+      }
+
+      const phase = parsePhase(res.data.phase);
+      const stateObj = res.data.state as unknown as {
+        physiology?: Record<string, unknown>;
+      };
+      const physiology = stateObj.physiology ?? {};
+      const autonomyObj = res.data.autonomy as unknown as Record<
+        string,
+        unknown
+      >;
+
+      const next: CognitiveState = {
+        autonomy: {
+          confidence: parseNum(
+            autonomyObj.confidence,
+            parseNum(autonomyObj.level, 0.5)
+          ),
+          level: parseNum(autonomyObj.level, 0.5),
+          threshold: parseNum(autonomyObj.threshold, 0.5),
+        },
+        phase,
+        physiology: {
+          boredom: parseNum(physiology.boredom, 0),
+          energy: parseNum(physiology.energy, 0.5),
+          frustration: parseNum(physiology.frustration, 0),
+        },
+        timestamp: typeof res.data.ts === "number" ? res.data.ts : Date.now(),
+      };
+
+      setRunError(null);
+      setRunState((prev) => {
+        if (prev && prev.phase !== next.phase) {
+          setRunTransitions((hist) => {
+            const updated: CognitiveTransition[] = [
+              ...hist,
+              { from: prev.phase, to: next.phase, timestamp: next.timestamp },
+            ];
+            return updated.length > 20 ? updated.slice(-20) : updated;
+          });
+        }
+        return next;
+      });
+    };
+
+    void tick();
+    const t = setInterval(() => {
+      void tick();
+    }, 2000);
+    (t as unknown as { unref?: () => void }).unref?.();
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [selectedRunId]);
 
   const handleKeyboard = useCallback((_event: KeyEvent) => {
     // Cognitive panel has no special key handling yet
@@ -147,6 +258,13 @@ export function CognitivePanel({
   }, []);
 
   useKeyboard(handleKeyboard);
+
+  const usingRun = selectedRunId !== null;
+  const state = usingRun ? runState : systemState;
+  const transitions = usingRun ? runTransitions : systemTransitions;
+  const title = usingRun
+    ? `Cognitive: ${truncate(selectedRunId ?? "", 12)}`
+    : "Cognitive";
 
   if (!state) {
     return (
@@ -158,12 +276,21 @@ export function CognitivePanel({
           borderColor: borderColor ?? "#FFFFFF",
           borderStyle: "single",
         }}
-        title="Cognitive"
+        title={title}
         top={y}
         width={width}
       >
         <text content="" />
-        <text content={dim("  Awaiting cognitive state...")} />
+        <text
+          content={dim(
+            usingRun
+              ? "  Select a workflow and run [r] prepare to start AgentFS + cognitive."
+              : "  Awaiting cognitive state..."
+          )}
+        />
+        {usingRun && runError && (
+          <text content={fg(colors.error)(`  ${runError}`)} />
+        )}
         <text content="" />
       </box>
     );
@@ -186,11 +313,17 @@ export function CognitivePanel({
         borderColor: borderColor ?? "#FFFFFF",
         borderStyle: "single",
       }}
-      title="Cognitive"
+      title={title}
       top={y}
       width={width}
     >
       <scrollbox focused={focused}>
+        {usingRun && runError && (
+          <>
+            <text content={fg(colors.error)(`✗ ${runError}`)} />
+            <text content="" />
+          </>
+        )}
         <text content={renderPhaseLine(phase)} />
         <text content="" />
 

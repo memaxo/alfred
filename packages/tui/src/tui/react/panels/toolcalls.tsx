@@ -15,8 +15,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { ToolCallInfo } from "../../subscriptions/agentfs";
 
 import { colors } from "../../theme";
-import { bold, dim, fg } from "../../typography";
-import { useAgentFSStore } from "../hooks/stores";
+import { bold, dim, fg, truncate } from "../../typography";
+import { useAgentFSStore, useSelectionStore } from "../hooks/stores";
 
 // Basic syntax style for JSON
 const jsonStyle = SyntaxStyle.fromStyles({
@@ -43,7 +43,10 @@ export function ToolCallsPanel({
   y,
 }: ToolCallsPanelProps) {
   const store = useAgentFSStore();
+  const selection = useSelectionStore();
   const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,12 +60,23 @@ export function ToolCallsPanel({
 
     const unsubscribe = store.subscribe((state) => {
       setToolCalls(state.toolCalls);
+      setRunId(state.runId);
       setLoading(state.isLoading);
       setError(state.error);
     });
 
     return unsubscribe;
   }, [store]);
+
+  useEffect(() => {
+    if (!selection) {
+      return;
+    }
+    const unsub = selection.subscribe((s) => {
+      setSelectedRunId(s.runId);
+    });
+    return unsub;
+  }, [selection]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
@@ -214,9 +228,9 @@ export function ToolCallsPanel({
             content={`${bold("Status:")} ${
               call.error
                 ? fg(colors.error)("Failed")
-                : !call.completed_at
+                : (!call.completed_at
                   ? fg(colors.warning)("Running")
-                  : fg(colors.success)("Success")
+                  : fg(colors.success)("Success"))
             }`}
           />
           <text
@@ -278,6 +292,15 @@ export function ToolCallsPanel({
     value: c.id,
   }));
 
+  const title = runId ? `Tool Calls: ${truncate(runId, 12)}` : "Tool Calls";
+  const hint =
+    selectedRunId && !runId
+      ? `Selected ${truncate(selectedRunId, 12)} (not attached). Use Workflows panel [r] prepare.`
+      : (selectedRunId && runId && selectedRunId !== runId
+        ? `Viewing ${truncate(runId, 12)} (selected ${truncate(selectedRunId, 12)}).`
+        : null);
+  const headerExtra = hint ? 1 : 0;
+
   return (
     <box
       border
@@ -287,10 +310,11 @@ export function ToolCallsPanel({
         borderColor: borderColor ?? "#FFFFFF",
         borderStyle: "single",
       }}
-      title="Tool Calls"
+      title={title}
       top={y}
       width={width}
     >
+      {hint && <text content={dim(`  ${hint}`)} />}
       <text
         content={bold(dim("  Status     Tool               Duration    Time"))}
       />
@@ -301,7 +325,7 @@ export function ToolCallsPanel({
       ) : (
         <select
           focused={focused}
-          height={height - 5}
+          height={height - 5 - headerExtra}
           onChange={(index: number) => {
             setSelectedIndex(index);
           }}

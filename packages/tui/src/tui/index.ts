@@ -32,6 +32,7 @@ import {
   setupMetricsSubscription,
 } from "./subscriptions/metrics";
 import { resolveMode } from "./subscriptions/mode";
+import { createSelectionStore } from "./subscriptions/selection";
 import {
   createVoiceStore,
   setupVoiceSubscription,
@@ -66,6 +67,7 @@ export class TuiApp {
   private readonly voiceStore = createVoiceStore();
   private readonly metricsStore = createMetricsStore();
   private readonly agentfsStore = createAgentFSSubscription();
+  private readonly selectionStore = createSelectionStore();
 
   constructor(options: TuiOptions = {}) {
     this.options = {
@@ -409,6 +411,7 @@ export class TuiApp {
       metrics: this.metricsStore,
       voice: this.voiceStore,
       agentfs: this.agentfsStore,
+      selection: this.selectionStore,
     };
   }
 
