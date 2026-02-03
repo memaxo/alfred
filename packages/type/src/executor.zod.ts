@@ -4,8 +4,6 @@ export const executorKindSchema = z
   .enum(["opencode", "codex", "droid"])
   .describe("Executor backend identifier.");
 
-export type ExecutorKind = z.infer<typeof executorKindSchema>;
-
 export const executorExecProfileSchema = z
   .enum(["default", "server"])
   .describe("Executor execution profile (default or long-lived server).");
