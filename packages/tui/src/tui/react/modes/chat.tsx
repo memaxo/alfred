@@ -26,6 +26,7 @@ import { colors } from "../../theme";
 import { fg } from "../../typography";
 import { MessageContent } from "../components/message";
 import { MODELS, ModelPicker, type ModelOption } from "../overlays/modelpicker";
+import { formatToolResult } from "../toolresult";
 
 export interface ChatModeProps {
   isOpen: boolean;
@@ -178,9 +179,11 @@ export function ChatMode({ isOpen, onClose }: ChatModeProps) {
           } else if (chunk.type === "tool-call-result") {
             const toolName = pendingTools.get(chunk.toolCallId) ?? "Tool";
             pendingTools.delete(chunk.toolCallId);
-            const resultText = chunk.isError
-              ? `\n> ✗ ${toolName} failed: ${chunk.content ?? "Unknown error"}`
-              : `\n> ✓ ${toolName} completed`;
+            const resultText = formatToolResult({
+              content: chunk.content,
+              isError: chunk.isError,
+              toolName,
+            });
             accumulatedContent += resultText;
             setMessages((prev) =>
               prev.map((m) =>

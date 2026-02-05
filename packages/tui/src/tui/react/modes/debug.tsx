@@ -12,7 +12,10 @@ import type { KeyEvent } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
 
+import type { MetricsState } from "../../subscriptions/metrics";
+
 import { getApiClient } from "../../api/client";
+import { useMetricsStore } from "../hooks/stores";
 
 export interface DebugModeProps {
   isOpen: boolean;
@@ -25,14 +28,6 @@ interface CognitiveData {
   phase: string;
   autonomy: number;
   since?: number;
-}
-
-interface MetricsData {
-  requestsPerMin: number;
-  latencyP50: number;
-  latencyP99: number;
-  errorRate: number;
-  latencyHistory: number[];
 }
 
 interface ActiveData {
@@ -58,13 +53,24 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
   const { width, height } = useTerminalDimensions();
   const [focusedPanel, setFocusedPanel] = useState<DebugPanel>("cognitive");
   const [cognitive, setCognitive] = useState<CognitiveData | null>(null);
-  const [metrics, setMetrics] = useState<MetricsData | null>(null);
+  const [metrics, setMetrics] = useState<MetricsState | null>(null);
   const [active, setActive] = useState<ActiveData | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const apiClient = getApiClient();
+  const metricsStore = useMetricsStore();
+
+  useEffect(() => {
+    if (!metricsStore) {
+      return;
+    }
+    const unsub = metricsStore.subscribe((state) => {
+      setMetrics(state);
+    });
+    return unsub;
+  }, [metricsStore]);
 
   const refresh = useCallback(async () => {
     if (isRefreshing || !isOpen) {
@@ -96,19 +102,6 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
           subscriptions: 0,
         });
       }
-
-      // Generate mock metrics
-      setMetrics((prev) => {
-        const history = prev?.latencyHistory ?? [];
-        const newLatency = 30 + Math.random() * 40;
-        return {
-          requestsPerMin: Math.floor(800 + Math.random() * 400),
-          latencyP50: Math.floor(35 + Math.random() * 20),
-          latencyP99: Math.floor(100 + Math.random() * 50),
-          errorRate: Math.random() * 0.5,
-          latencyHistory: [...history.slice(-19), newLatency],
-        };
-      });
 
       // Container logs (best-effort)
       const containers = await apiClient.listContainers("running");
@@ -194,6 +187,31 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
   const leftWidth = Math.floor(width / 2) - 1;
   const rightWidth = width - leftWidth - 3;
 
+  const metricsSummary = metrics
+    ? (() => {
+        const totalRequests = metrics.system.requestsPerMinute;
+        const errorRate =
+          totalRequests > 0
+            ? (metrics.system.errorsPerMinute / totalRequests) * 100
+            : 0;
+        const routerCount = Math.max(1, metrics.routers.length);
+        const sum = metrics.routers.reduce(
+          (acc, router) => {
+            acc.p50 += router.latency.p50;
+            acc.p99 += router.latency.p99;
+            return acc;
+          },
+          { p50: 0, p99: 0 }
+        );
+        return {
+          errorRate,
+          latencyP50: Math.round(sum.p50 / routerCount),
+          latencyP99: Math.round(sum.p99 / routerCount),
+          requestsPerMin: totalRequests,
+        };
+      })()
+    : null;
+
   return (
     <box
       height={height}
@@ -275,18 +293,18 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
                   attributes: 1, // BOLD
                 }}
               />
-              {metrics ? (
+              {metricsSummary ? (
                 <>
                   <text
-                    content={`  Requests: ${metrics.requestsPerMin}/min`}
+                    content={`  Requests: ${metricsSummary.requestsPerMin}/min`}
                     style={{ fg: "#E6E6E6" }}
                   />
                   <text
-                    content={`  Latency: ${metrics.latencyP50}ms p50`}
+                    content={`  Latency: ${metricsSummary.latencyP50}ms p50`}
                     style={{ fg: "#E6E6E6" }}
                   />
                   <text
-                    content={`  Errors: ${metrics.errorRate.toFixed(1)}%`}
+                    content={`  Errors: ${metricsSummary.errorRate.toFixed(1)}%`}
                     style={{ fg: "#E06C75" }}
                   />
                 </>

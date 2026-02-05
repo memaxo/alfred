@@ -9,9 +9,12 @@
 import type { KeyEvent } from "@opentui/core";
 
 import { useKeyboard } from "@opentui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Workflow } from "../../subscriptions/workflow";
+import type {
+  Workflow,
+  WorkflowEvent as WorkflowStoreEvent,
+} from "../../subscriptions/workflow";
 
 import { getApiClient } from "../../api/client";
 import { colors, progressChars } from "../../theme";
@@ -21,6 +24,7 @@ import {
   useSelectionStore,
   useWorkflowStore,
 } from "../hooks/stores";
+import { createVimMotionState, handleVimMotion } from "../vim";
 
 type StageName = Parameters<
   ReturnType<typeof getApiClient>["phaseStep"]
@@ -78,7 +82,7 @@ interface WorkflowPanelProps {
   y?: number;
 }
 
-interface WorkflowEvent {
+interface WorkflowEventEntry {
   id: string;
   eventType: string;
   eventData: unknown;
@@ -175,12 +179,15 @@ export function WorkflowPanel({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
-  const [selectedEvents, setSelectedEvents] = useState<WorkflowEvent[]>([]);
+  const [selectedEvents, setSelectedEvents] = useState<WorkflowEventEntry[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<{
     kind: "idle" | "working" | "ok" | "error";
     message: string;
   }>({ kind: "idle", message: "" });
+  const vimStateRef = useRef(createVimMotionState());
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -189,7 +196,7 @@ export function WorkflowPanel({
       return;
     }
 
-    const updateWorkflows = () => {
+    const updateWorkflows = (event?: WorkflowStoreEvent) => {
       // `getActive()` already includes pending; avoid duplication by merging active + history only.
       const all = [...store.getActive(), ...store.getHistory()];
       const unique: Workflow[] = [];
@@ -202,16 +209,38 @@ export function WorkflowPanel({
         unique.push(wf);
       }
       setWorkflows(unique);
+
+      const current = workflows[selectedIndex];
+      if (!event || viewMode !== "detail" || !current) {
+        return;
+      }
+      if (event.workflow.id !== current.id) {
+        return;
+      }
+
+      const eventId = `${event.workflow.id}-${event.type}-${event.timestamp}`;
+      setSelectedEvents((prev) => {
+        if (prev.some((entry) => entry.id === eventId)) {
+          return prev;
+        }
+        const next: WorkflowEventEntry = {
+          eventData: event.workflow,
+          eventType: event.type,
+          id: eventId,
+          timestamp: new Date(event.timestamp).toISOString(),
+        };
+        return [...prev, next].slice(-200);
+      });
     };
 
-    const unsub = store.subscribe(() => {
-      updateWorkflows();
+    const unsub = store.subscribe((_items, event) => {
+      updateWorkflows(event);
     });
 
     updateWorkflows();
 
     return unsub;
-  }, [store]);
+  }, [store, viewMode, workflows, selectedIndex]);
 
   useEffect(() => {
     const wf = workflows[selectedIndex];
@@ -243,9 +272,20 @@ export function WorkflowPanel({
       // Detail view controls
       if (viewMode === "detail") {
         if (event.name === "escape" || event.name === "q") {
+          vimStateRef.current.pendingG = false;
           setViewMode("list");
           return;
         }
+        return;
+      }
+
+      const motion = handleVimMotion(event, vimStateRef.current);
+      if (motion === "top") {
+        setSelectedIndex(0);
+        return;
+      }
+      if (motion === "bottom") {
+        setSelectedIndex(workflows.length - 1);
         return;
       }
 
@@ -549,7 +589,7 @@ export function WorkflowPanel({
             <text content="" />
             <text
               content={dim(
-                "  [↑↓]nav [Enter]details [n]next [r]prepare [e]exec [p]ause [c]ancel"
+                "  [↑↓]nav [gg/G]jump [Enter]details [n]next [r]prepare [e]exec [p]ause [c]ancel"
               )}
             />
           </>
@@ -559,7 +599,7 @@ export function WorkflowPanel({
             <text content="" />
             <text
               content={dim(
-                "  [↑↓]nav [Enter]details [n]next [r]prepare [e]exec [p]ause [c]ancel"
+                "  [↑↓]nav [gg/G]jump [Enter]details [n]next [r]prepare [e]exec [p]ause [c]ancel"
               )}
             />
           </>

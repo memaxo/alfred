@@ -25,18 +25,26 @@ A novice can verify success by launching the TUI and observing these capabilitie
       Evidence: `packages/tui/src/tui/react/panels/agentfs.tsx` exists and is rendered in dashboard (line 297); `packages/tui/src/tui/react/hooks/stores.ts` includes `useAgentFSStore()` hook.
 - [x] (2026-02-03) Milestone 3: Implement Plan Mode Execute Hook (P0)
       Evidence: `packages/tui/src/tui/react/dashboard.tsx:107-121` implements `handleExecutePlan` callback; `packages/tui/src/tui/react/modes/plan.tsx:240` calls `onExecute` on 'e'/'x' keypress.
-- [ ] Milestone 4: Add Model Preference Persistence (P1)
-- [ ] Milestone 5: Surface Tool Results in Chat (P1)
+- [x] (2026-02-04) Milestone 4: Add Model Preference Persistence (P1)
+      Evidence: `packages/tui/src/tui/api/history.ts` persists `chat_prefs.json`; `packages/tui/src/tui/react/modes/chat.tsx:68-81` loads preferences; `packages/tui/test/history.test.ts` covers save/load.
+- [x] (2026-02-04) Milestone 5: Surface Tool Results in Chat (P1)
+      Evidence: `packages/tui/src/tui/react/toolresult.ts` formats results; `packages/tui/src/tui/react/modes/chat.tsx:78-90` appends tool results; `packages/tui/test/toolresult.test.ts` covers formatting.
 - [x] (2026-02-03) Milestone 6: Configurable API Base URL (P1)
       Evidence: `packages/tui/src/tui/api/client.ts:91` reads `process.env.ALFRED_API_BASE_URL`; `packages/tui/src/tui/api/sse.ts:109` uses same env var for streaming.
 - [x] (2026-02-03) Milestone 7: Responsive Layout for Narrow Terminals (P1)
       Evidence: `packages/tui/src/tui/react/dashboard.tsx:217-221` implements layout modes (focus/split/dashboard) based on terminal width; panels adapt to available space.
-- [ ] Milestone 8: Add Vim Motion Navigation (gg/G) (P1)
-- [ ] Milestone 9: Connect Debug Mode to Real Metrics (P2)
-- [ ] Milestone 10: Update Help Mode Content (P2)
-- [ ] Milestone 11: Add Workflow Event Streaming (P2)
-- [ ] Milestone 12: Extend Test Coverage (P2)
-- [ ] Milestone 13: Update Documentation (P3)
+- [x] (2026-02-04) Milestone 8: Add Vim Motion Navigation (gg/G) (P1)
+      Evidence: `packages/tui/src/tui/react/vim.ts` helper; panels `knowledge.tsx`, `workflow.tsx`, `toolcalls.tsx`, `agentfs.tsx` handle gg/G; hints updated in panel footers.
+- [x] (2026-02-04) Milestone 9: Connect Debug Mode to Real Metrics (P2)
+      Evidence: `packages/tui/src/tui/react/modes/debug.tsx` subscribes to `useMetricsStore()`; mock metrics generation removed.
+- [x] (2026-02-04) Milestone 10: Update Help Mode Content (P2)
+      Evidence: `packages/tui/src/tui/react/modes/help.tsx` updated with audited shortcuts.
+- [x] (2026-02-04) Milestone 11: Add Workflow Event Streaming (P2)
+      Evidence: `packages/tui/src/tui/react/panels/workflow.tsx` appends workflow store events in detail view.
+- [x] (2026-02-04) Milestone 12: Extend Test Coverage (P2)
+      Evidence: `packages/tui/test/vim.test.ts`, `packages/tui/test/toolresult.test.ts`, `packages/tui/test/history.test.ts`.
+- [x] (2026-02-04) Milestone 13: Update Documentation (P3)
+      Evidence: `docs/architecture/tui-architecture.md` updated (renderer status, keybindings, env vars, panel list).
 
 ## Surprises & Discoveries
 
@@ -52,9 +60,13 @@ A novice can verify success by launching the TUI and observing these capabilitie
 - (2026-02-03) Discovery: Responsive layout system was already implemented with three modes (focus/split/dashboard) based on terminal width, with panels adapting dynamically.
   Evidence: `packages/tui/src/tui/react/dashboard.tsx:217-245` implements layout calculations and conditional rendering.
 
+- (2026-02-04) Discovery: Workflow detail view lacked a dedicated streaming endpoint; we reused workflow store events (polling-backed) to append real-time updates in detail view.
+  Evidence: `packages/tui/src/tui/react/panels/workflow.tsx` subscription appends events during detail view.
+
 ## Decision Log
 
-_(To be populated as work proceeds)_
+- (2026-02-04) Decision: Centralize gg/G handling in `react/vim.ts` and reuse across list panels to keep navigation consistent.
+- (2026-02-04) Decision: Format tool results via `react/toolresult.ts` to keep chat rendering consistent and testable.
 
 ## Outcomes & Retrospective
 

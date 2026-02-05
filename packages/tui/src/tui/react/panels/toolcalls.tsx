@@ -10,13 +10,14 @@ import type { KeyEvent } from "@opentui/core";
 
 import { SyntaxStyle, parseColor } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ToolCallInfo } from "../../subscriptions/agentfs";
 
 import { colors } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
 import { useAgentFSStore, useSelectionStore } from "../hooks/stores";
+import { createVimMotionState, handleVimMotion } from "../vim";
 
 // Basic syntax style for JSON
 const jsonStyle = SyntaxStyle.fromStyles({
@@ -80,6 +81,7 @@ export function ToolCallsPanel({
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  const vimStateRef = useRef(createVimMotionState());
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -117,6 +119,15 @@ export function ToolCallsPanel({
       if (viewMode === "list") {
         // Selection is now handled by <select> component if we use it,
         // but for mixed layout (header + select) we might want to keep manual or wrap.
+        const motion = handleVimMotion(event, vimStateRef.current);
+        if (motion === "top") {
+          setSelectedIndex(0);
+          return;
+        }
+        if (motion === "bottom") {
+          setSelectedIndex(toolCalls.length - 1);
+          return;
+        }
         if (event.name === "up" || event.name === "k") {
           setSelectedIndex((i) => Math.max(0, i - 1));
           return;
@@ -130,6 +141,7 @@ export function ToolCallsPanel({
           return;
         }
       } else if (event.name === "q" || event.name === "escape") {
+        vimStateRef.current.pendingG = false;
         setViewMode("list");
         return;
       }
@@ -346,7 +358,7 @@ export function ToolCallsPanel({
       <box style={{ bottom: 0, position: "absolute" }}>
         <text
           content={dim(
-            `  ${toolCalls.length} calls | [↑↓]nav [Enter/d]details`
+            `  ${toolCalls.length} calls | [↑↓]nav [gg/G]jump [Enter/d]details`
           )}
         />
       </box>

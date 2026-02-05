@@ -9,11 +9,12 @@
 import type { KeyEvent } from "@opentui/core";
 
 import { useKeyboard } from "@opentui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getApiClient } from "../../api/client";
 import { colors } from "../../theme";
 import { bold, dim, fg } from "../../typography";
+import { createVimMotionState, handleVimMotion } from "../vim";
 
 interface KnowledgeStats {
   nodes: number;
@@ -88,6 +89,7 @@ export function KnowledgePanel({
     null
   );
   const [loading, setLoading] = useState(false);
+  const vimStateRef = useRef(createVimMotionState());
 
   const borderColor = focused ? "cyan" : undefined;
 
@@ -145,20 +147,24 @@ export function KnowledgePanel({
       // Detail view controls
       if (viewMode === "detail") {
         if (event.name === "escape" || event.name === "q") {
+          vimStateRef.current.pendingG = false;
           setViewMode("list");
           return;
         }
+        vimStateRef.current.pendingG = false;
         return;
       }
 
       // Exit search mode
       if (searchFocused && event.name === "escape") {
+        vimStateRef.current.pendingG = false;
         setSearchFocused(false);
         return;
       }
 
       // Search mode input
       if (searchFocused) {
+        vimStateRef.current.pendingG = false;
         if (event.name === "backspace") {
           const newQuery = query.slice(0, -1);
           setQuery(newQuery);
@@ -183,11 +189,21 @@ export function KnowledgePanel({
 
       // List mode controls
       if (event.name === "/") {
+        vimStateRef.current.pendingG = false;
         setSearchFocused(true);
         return;
       }
 
       if (entities.length > 0) {
+        const motion = handleVimMotion(event, vimStateRef.current);
+        if (motion === "top") {
+          setSelectedIndex(0);
+          return;
+        }
+        if (motion === "bottom") {
+          setSelectedIndex(entities.length - 1);
+          return;
+        }
         if (event.name === "up" || event.name === "k") {
           setSelectedIndex((i) => Math.max(0, i - 1));
           return;
@@ -335,7 +351,9 @@ export function KnowledgePanel({
         {!searchFocused && viewMode === "list" && (
           <>
             <text content="" />
-            <text content={dim("  [/]search [↑↓]nav [Enter]details")} />
+            <text
+              content={dim("  [/]search [↑↓]nav [gg/G]jump [Enter]details")}
+            />
           </>
         )}
       </scrollbox>

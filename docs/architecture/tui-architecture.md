@@ -2,7 +2,7 @@
 
 **Owner**: infra  
 **Status**: Migrating to OpenTUI React (Phase 2 complete)  
-**Last Updated**: 2026-01-09
+**Last Updated**: 2026-02-04
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Document the terminal user interface architecture, panel system, and integration
 
 The TUI provides real-time observability and control over ALFRED's cognitive systems, workflows, and metrics through a terminal interface. Built on OpenTUI React for rendering and tRPC for data subscriptions.
 
-**Migration Status**: The TUI is migrating from custom `string[]` renderers to OpenTUI React components. Use `ALFRED_TUI_REACT=1` to enable the React renderer. See [OpenTUI React Patterns](#opentui-react-patterns) section below.
+**Migration Status**: The TUI uses OpenTUI React as the default renderer. Legacy `string[]` panels remain for reference only.
 
 ## Architecture Layers
 
@@ -112,6 +112,8 @@ Each major ALFRED domain has a dedicated panel module:
 | **Metrics**   | `sparklines.ts`, `latency.ts`, `throughput.ts`           | Performance metrics display             |
 | **Voice**     | `pools.ts`, `sessions.ts`, `latency.ts`                  | Voice pipeline status                   |
 | **Knowledge** | `stats.ts`, `search.ts`, `recent.ts`                     | Knowledge graph overview                |
+| **ToolCalls** | `toolcalls.tsx`                                          | Tool call history + results             |
+| **AgentFS**   | `agentfs.tsx`                                            | AgentFS workspace + KV browser          |
 
 ### 5. Subscription Management (`src/tui/subscriptions/`)
 
@@ -148,19 +150,28 @@ Layout engine in `src/tui/layout/engine.ts` implements flexbox-like sizing.
 
 Standard keybindings:
 
-| Key         | Action         | Context          |
-| ----------- | -------------- | ---------------- |
-| `q`         | Quit           | Global           |
-| `ESC`       | Back/Cancel    | Modal, focus     |
-| `Tab`       | Next panel     | Navigation       |
-| `Shift+Tab` | Previous panel | Navigation       |
-| `Enter`     | Confirm        | Input, selection |
-| `?`         | Help           | Global           |
-| `/`         | Search         | Panels           |
-| `:`         | Command mode   | Global           |
-| `j/k`       | Up/Down        | Vim mode         |
+| Key         | Action            | Context          |
+| ----------- | ----------------- | ---------------- |
+| `q`         | Quit              | Global           |
+| `ESC`       | Back/Cancel       | Modal, focus     |
+| `Tab`       | Next panel        | Navigation       |
+| `Shift+Tab` | Previous panel    | Navigation       |
+| `1-8`       | Focus panel       | Navigation       |
+| `Enter`     | Confirm           | Input, selection |
+| `?`         | Help              | Global           |
+| `/`         | Search            | Panels           |
+| `:`         | Command mode      | Global           |
+| `j/k`       | Up/Down           | Vim mode         |
+| `gg` / `G`  | Jump top / bottom | Vim mode         |
 
 Vim motions (`j`, `k`, `gg`, `G`) supported in scrollable panels.
+
+## Environment Variables
+
+- `ALFRED_API_BASE_URL` - Base URL for API calls (default: `http://localhost:3000`)
+- `ALFRED_TUI_HEADLESS` - Run without a TTY for tests/CI
+- `ALFRED_TUI_HEADLESS_MS` - Headless runtime duration
+- `ALFRED_TUI_MOCK` - Force mock data mode
 
 ## API Integration
 
@@ -263,9 +274,8 @@ Mock data allows panel development without backend.
 
 - **Unit tests**: Panel render logic, stores, helpers
 - **Integration tests**: Subscription management, API endpoints
+- **Headless E2E tests**: Smoke coverage via `ALFRED_TUI_HEADLESS` (keep fast)
 - **Manual tests**: Terminal rendering, keyboard navigation
-
-No automated E2E tests for TUI (terminal automation unreliable).
 
 ## Future Enhancements
 
@@ -292,7 +302,7 @@ Chat mode supports both cloud-based providers (via SSE) and local model executio
 - **Cloud Mode**: Connects to `/api/assistant` via Server-Sent Events (SSE). Supports GenUI and complex tool interactions.
 - **Local MLX Mode**: Connects directly to a `vllm-mlx` server running on the host machine. Leverages AI SDK `streamText` for optimized local inference on Apple Silicon.
 
-**Model Selection**: Press `Ctrl+M` in chat mode to open the model picker. Selection is saved across sessions.
+**Model Selection**: Press `Ctrl+M` in chat mode to open the model picker. Selection is persisted in `~/.alfred/tui/chat_prefs.json`.
 
 **MLX Setup**:
 
@@ -312,7 +322,7 @@ Chat mode supports both cloud-based providers (via SSE) and local model executio
 
 The TUI is migrating from custom `BasePanel` classes (render `string[]`) to React components using OpenTUI primitives. This reduces maintenance burden and provides access to OpenTUI's widget library.
 
-**Feature Flag**: Set `ALFRED_TUI_REACT=1` to use React renderer. Old renderer remains default until migration complete.
+**Feature Flag**: React renderer is the default. Legacy renderer is no longer enabled.
 
 ### Component Structure
 
@@ -330,7 +340,8 @@ react/
     ├── metrics.tsx        # Metrics panel component
     ├── voice.tsx          # Voice panel component
     ├── knowledge.tsx      # Knowledge panel component
-    └── toolcalls.tsx      # ToolCalls panel component
+    ├── toolcalls.tsx      # ToolCalls panel component
+    └── agentfs.tsx        # AgentFS panel component
 ```
 
 ### Component Patterns

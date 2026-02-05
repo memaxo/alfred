@@ -9,13 +9,14 @@
 import type { KeyEvent } from "@opentui/core";
 
 import { useKeyboard } from "@opentui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { DirEntry, KVEntry } from "../../subscriptions/agentfs";
 
 import { colors } from "../../theme";
 import { bold, dim, fg, truncate } from "../../typography";
 import { useAgentFSStore, useSelectionStore } from "../hooks/stores";
+import { createVimMotionState, handleVimMotion } from "../vim";
 
 interface AgentFSPanelProps {
   width: number;
@@ -42,6 +43,7 @@ export function AgentFSPanel({
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"files" | "kv">("files");
+  const vimStateRef = useRef(createVimMotionState());
 
   // Subscribe to AgentFS store updates
   useEffect(() => {
@@ -84,6 +86,7 @@ export function AgentFSPanel({
 
       // Tab to switch between files and kv view
       if (event.name === "tab") {
+        vimStateRef.current.pendingG = false;
         setViewMode((mode) => (mode === "files" ? "kv" : "files"));
         setSelectedIndex(0);
         return;
@@ -91,6 +94,15 @@ export function AgentFSPanel({
 
       // Navigation
       if (currentItems.length > 0) {
+        const motion = handleVimMotion(event, vimStateRef.current);
+        if (motion === "top") {
+          setSelectedIndex(0);
+          return;
+        }
+        if (motion === "bottom") {
+          setSelectedIndex(currentItems.length - 1);
+          return;
+        }
         if (event.name === "up" || event.name === "k") {
           setSelectedIndex((i) => Math.max(0, i - 1));
           return;
@@ -255,7 +267,7 @@ export function AgentFSPanel({
         <text content="" />
         <text
           content={dim(
-            `  [Tab]switch [↑↓]nav | ${entries.length} files, ${kvStore.length} KV`
+            `  [Tab]switch [↑↓]nav [gg/G]jump | ${entries.length} files, ${kvStore.length} KV`
           )}
         />
       </scrollbox>

@@ -65,15 +65,12 @@ export function HelpMode({ isOpen, onClose }: HelpModeProps) {
             content="  :         Command palette"
             style={{ fg: "#39BAE6" }}
           />
-          <text
-            content="  Space     Toggle focus layout"
-            style={{ fg: "#39BAE6" }}
-          />
           <text content="  Tab       Next panel" style={{ fg: "#39BAE6" }} />
           <text
             content="  Shift+Tab Previous panel"
             style={{ fg: "#39BAE6" }}
           />
+          <text content="  1-8       Focus panel" style={{ fg: "#39BAE6" }} />
           <text
             content="  q         Quit (dashboard)"
             style={{ fg: "#39BAE6" }}
@@ -91,13 +88,98 @@ export function HelpMode({ isOpen, onClose }: HelpModeProps) {
           <text content="  Ctrl+P    Planner" style={{ fg: "#39BAE6" }} />
           <text content="" />
 
+          <text content=" Panels" style={{ fg: "#8A9199" }} />
+          <text content="" />
+          <text content="  j/k or ↑↓  Navigate" style={{ fg: "#39BAE6" }} />
+          <text
+            content="  gg / G     Jump top/bottom"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  /          Search (Knowledge)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  Enter      Details (Knowledge/Workflow/ToolCalls)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  d          Details (Workflow/ToolCalls)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  r          Prepare AgentFS (Workflow)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  n          Next stage (Workflow)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  e          Exec stage (Workflow)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  p          Pause/Resume (Workflow)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  c/x        Cancel (Workflow)"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  o/l/t      Metrics views"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  Tab        Switch AgentFS files/KV"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text content="" />
+
+          <text content=" Chat Mode" style={{ fg: "#8A9199" }} />
+          <text content="" />
+          <text content="  Ctrl+M     Model picker" style={{ fg: "#39BAE6" }} />
+          <text
+            content="  Ctrl+C     Cancel stream"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text content="" />
+
+          <text content=" Plan Mode" style={{ fg: "#8A9199" }} />
+          <text content="" />
+          <text
+            content="  g          Generate plan"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  l          Load plan by runId"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text
+            content="  j/k or ↑↓  Navigate waves"
+            style={{ fg: "#39BAE6" }}
+          />
+          <text content="  Enter      Toggle wave" style={{ fg: "#39BAE6" }} />
+          <text content="  e/x        Execute plan" style={{ fg: "#39BAE6" }} />
+          <text content="  a          Expand all" style={{ fg: "#39BAE6" }} />
+          <text content="  c          Collapse all" style={{ fg: "#39BAE6" }} />
+          <text content="" />
+
+          <text content=" Debug Mode" style={{ fg: "#8A9199" }} />
+          <text content="" />
+          <text content="  Tab        Next panel" style={{ fg: "#39BAE6" }} />
+          <text content="  r          Refresh" style={{ fg: "#39BAE6" }} />
+          <text content="  c/m/a/l    Jump panel" style={{ fg: "#39BAE6" }} />
+          <text content="" />
+
           <text content=" Command Palette" style={{ fg: "#8A9199" }} />
           <text content="" />
           <text
-            content="  : open    Type to filter commands"
+            content="  : open     Type to filter commands"
             style={{ fg: "#39BAE6" }}
           />
-          <text content="  Enter run Esc to close" style={{ fg: "#39BAE6" }} />
+          <text content="  Enter run  Esc to close" style={{ fg: "#39BAE6" }} />
           <text content="" />
 
           <text content=" Headless / CI" style={{ fg: "#8A9199" }} />
@@ -108,6 +190,10 @@ export function HelpMode({ isOpen, onClose }: HelpModeProps) {
           />
           <text
             content="  ALFRED_TUI_HEADLESS=true env alternative"
+            style={{ fg: "#8A9199" }}
+          />
+          <text
+            content="  ALFRED_API_BASE_URL=https://server (remote API)"
             style={{ fg: "#8A9199" }}
           />
           <text
