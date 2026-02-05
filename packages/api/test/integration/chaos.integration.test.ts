@@ -103,7 +103,7 @@ describe("Service Degradation", () => {
       const caller = await harness.createCaller();
       const events: WorkflowEvent[] = [];
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Simple test task",
@@ -137,7 +137,7 @@ describe("Service Degradation", () => {
 
       // First request should work
       let runId1: string | undefined;
-      const sub1 = await caller.stream({
+      const sub1 = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "First task",
@@ -169,7 +169,7 @@ describe("Service Degradation", () => {
 
       // Second request should also work
       let runId2: string | undefined;
-      const sub2 = await caller.stream({
+      const sub2 = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Second task",
@@ -208,7 +208,7 @@ describe("Service Degradation", () => {
       const caller = await harness.createCaller();
       const events: WorkflowEvent[] = [];
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Task without voice",
@@ -265,7 +265,7 @@ describe("Network Failures", () => {
     let runId: string | undefined;
     let aborted = false;
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Task to be aborted",
@@ -310,7 +310,7 @@ describe("Network Failures", () => {
 
     for (let i = 0; i < 3; i++) {
       const promise = (async () => {
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "low" as const,
           mode: "sequential" as const,
           requirement: `Concurrent task ${i}`,
@@ -378,7 +378,7 @@ describe("Timeout Handling", () => {
     let runId: string | undefined;
 
     // Start a workflow
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Quick task",
@@ -421,7 +421,7 @@ describe("Timeout Handling", () => {
     const events: WorkflowEvent[] = [];
     const startTime = performance.now();
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Complex multi-step task",
@@ -505,7 +505,7 @@ describe("Graceful Degradation", () => {
     const events: WorkflowEvent[] = [];
 
     // System should work even without optional services
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Task with missing optional services",
@@ -537,7 +537,7 @@ describe("Graceful Degradation", () => {
     const caller = await harness.createCaller();
     const events: WorkflowEvent[] = [];
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Task that may have non-critical failures",
@@ -603,7 +603,7 @@ describe("Recovery Scenarios", () => {
 
     // Create some workflows
     for (let i = 0; i < 2; i++) {
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: `Recovery task ${i}`,
@@ -640,7 +640,7 @@ describe("Recovery Scenarios", () => {
     // Run multiple workflows, some may fail
     for (let i = 0; i < 5; i++) {
       try {
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "low" as const,
           mode: "sequential" as const,
           requirement: `Stability test ${i}`,

@@ -19,13 +19,18 @@ A novice can verify success by launching the TUI and observing these capabilitie
 
 ## Progress
 
-- [ ] Milestone 1: Wire ToolCalls Panel to Dashboard (P0)
-- [ ] Milestone 2: Add AgentFS Panel and Store Integration (P0)
-- [ ] Milestone 3: Implement Plan Mode Execute Hook (P0)
+- [x] (2026-02-03) Milestone 1: Wire ToolCalls Panel to Dashboard (P0)
+      Evidence: `packages/tui/src/tui/react/dashboard.tsx:336` renders ToolCallsPanel; `packages/tui/src/tui/react/panels/toolcalls.tsx` implements full panel with AgentFS store integration.
+- [x] (2026-02-03) Milestone 2: Add AgentFS Panel and Store Integration (P0)
+      Evidence: `packages/tui/src/tui/react/panels/agentfs.tsx` exists and is rendered in dashboard (line 297); `packages/tui/src/tui/react/hooks/stores.ts` includes `useAgentFSStore()` hook.
+- [x] (2026-02-03) Milestone 3: Implement Plan Mode Execute Hook (P0)
+      Evidence: `packages/tui/src/tui/react/dashboard.tsx:107-121` implements `handleExecutePlan` callback; `packages/tui/src/tui/react/modes/plan.tsx:240` calls `onExecute` on 'e'/'x' keypress.
 - [ ] Milestone 4: Add Model Preference Persistence (P1)
 - [ ] Milestone 5: Surface Tool Results in Chat (P1)
-- [ ] Milestone 6: Configurable API Base URL (P1)
-- [ ] Milestone 7: Responsive Layout for Narrow Terminals (P1)
+- [x] (2026-02-03) Milestone 6: Configurable API Base URL (P1)
+      Evidence: `packages/tui/src/tui/api/client.ts:91` reads `process.env.ALFRED_API_BASE_URL`; `packages/tui/src/tui/api/sse.ts:109` uses same env var for streaming.
+- [x] (2026-02-03) Milestone 7: Responsive Layout for Narrow Terminals (P1)
+      Evidence: `packages/tui/src/tui/react/dashboard.tsx:217-221` implements layout modes (focus/split/dashboard) based on terminal width; panels adapt to available space.
 - [ ] Milestone 8: Add Vim Motion Navigation (gg/G) (P1)
 - [ ] Milestone 9: Connect Debug Mode to Real Metrics (P2)
 - [ ] Milestone 10: Update Help Mode Content (P2)
@@ -35,7 +40,17 @@ A novice can verify success by launching the TUI and observing these capabilitie
 
 ## Surprises & Discoveries
 
-_(To be populated as work proceeds)_
+- (2026-02-03) Discovery: ToolCallsPanel and AgentFSPanel were already implemented and integrated into the dashboard before this ExecPlan was created. The panels use React hooks (`useAgentFSStore`, `useSelectionStore`) and are fully functional with keyboard navigation.
+  Evidence: `packages/tui/src/tui/react/dashboard.tsx` shows both panels in the layout; `packages/tui/src/tui/react/panels/toolcalls.tsx` and `packages/tui/src/tui/react/panels/agentfs.tsx` are complete implementations.
+
+- (2026-02-03) Discovery: Plan mode execute functionality was already wired up. The dashboard provides `handleExecutePlan` callback that calls `client.executeWorkflow(runId)`, and PlanMode component accepts `onExecute` prop and triggers it on 'e'/'x' keypress.
+  Evidence: `packages/tui/src/tui/react/dashboard.tsx:107-121` and `packages/tui/src/tui/react/modes/plan.tsx:240`.
+
+- (2026-02-03) Discovery: API base URL configuration was already implemented via `ALFRED_API_BASE_URL` environment variable in both client.ts and sse.ts, allowing TUI to connect to remote servers.
+  Evidence: `packages/tui/src/tui/api/client.ts:89-91` and `packages/tui/src/tui/api/sse.ts:109`.
+
+- (2026-02-03) Discovery: Responsive layout system was already implemented with three modes (focus/split/dashboard) based on terminal width, with panels adapting dynamically.
+  Evidence: `packages/tui/src/tui/react/dashboard.tsx:217-245` implements layout calculations and conditional rendering.
 
 ## Decision Log
 

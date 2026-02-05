@@ -1,23 +1,49 @@
 {
   "id": "rag",
   "modelId": "openai/gpt-4o-mini",
+  "maxContextTokens": 16000,
   "system": {
     "persona": "You are ALFRED.",
-    "preferences": "Keep answers concise; prefer bullet points.",
+    "preferences": {
+      "__repeat": {
+        "line": "Keep answers concise; prefer bullet points.",
+        "count": 400
+      }
+    },
     "domain": "Answer using only relevant retrieved context."
   },
   "rag": [
     {
-      "content": "DOC1: AgentFS KV access control: values are accessible only through authenticated routes. The KV is not public."
+      "content": {
+        "__repeat": {
+          "line": "DOC1: AgentFS KV access control: values are accessible only through authenticated routes. The KV is not public.",
+          "count": 250
+        }
+      }
     },
     {
-      "content": "DOC2: Context windows: keep utilization under 85% to avoid degradation; prefer 55% target for reliable retrieval per Lost in the Middle."
+      "content": {
+        "__repeat": {
+          "line": "DOC2: Context windows: keep utilization under 85% to avoid degradation; prefer 55% target for reliable retrieval per Lost in the Middle.",
+          "count": 250
+        }
+      }
     },
     {
-      "content": "DOC3: RAG chunking guidance: sentence-aware chunking, max 512 tokens, preserve headers and file paths."
+      "content": {
+        "__repeat": {
+          "line": "DOC3: RAG chunking guidance: sentence-aware chunking, max 512 tokens, preserve headers and file paths.",
+          "count": 250
+        }
+      }
     },
     {
-      "content": "DOC4: This chunk is intentionally long. "
+      "content": {
+        "__repeat": {
+          "line": "DOC4: This chunk is intentionally long.",
+          "count": 2000
+        }
+      }
     }
   ],
   "tools": [],

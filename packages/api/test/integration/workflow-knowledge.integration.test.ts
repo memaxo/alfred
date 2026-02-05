@@ -182,7 +182,7 @@ describe("Workflow → Knowledge Integration", () => {
       const events: WorkflowEvent[] = [];
       let _contextEvent: WorkflowEvent | undefined;
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         context: {
           enable: true,
@@ -226,7 +226,7 @@ describe("Workflow → Knowledge Integration", () => {
       const events: WorkflowEvent[] = [];
       let _cacheHandoff: WorkflowEvent | undefined;
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Quick query using cached data",

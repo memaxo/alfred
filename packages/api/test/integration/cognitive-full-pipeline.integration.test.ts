@@ -130,6 +130,10 @@ beforeAll(async () => {
   ({ idle, thinking, reflecting, initialAutonomy, updateAutonomy } =
     await import("@alfred/cognitive/state"));
   ({ applyTransition } = await import("@alfred/cognitive/transition"));
+
+  // These integration tests rely on per-test stream IDs for isolation.
+  // Clearing global tables in beforeEach breaks under Bun's test concurrency.
+  await resetCognitiveTables();
 });
 
 afterAll(async () => {
@@ -148,10 +152,6 @@ function unwrapPayload(raw: unknown): unknown {
 }
 
 describe("Cognitive Full Pipeline Integration", () => {
-  beforeEach(async () => {
-    await resetCognitiveTables();
-  });
-
   describe("State Transitions", () => {
     it("transitions idle → capturing → thinking on inputs", async () => {
       const streamId = stream("idle-thinking");
@@ -715,7 +715,7 @@ describe("Bayesian Autonomy Updates", () => {
   it("positive evidence increases autonomy level", () => {
     const ts = now();
     const auto = initialAutonomy(ts);
-    const physiology = { boredom: 0, energy: 1, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0, entropy: 0 };
 
     const evidence = {
       _: "feedback" as const,
@@ -733,7 +733,7 @@ describe("Bayesian Autonomy Updates", () => {
   it("negative evidence decreases autonomy level", () => {
     const ts = now();
     const auto = initialAutonomy(ts);
-    const physiology = { boredom: 0, energy: 1, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0, entropy: 0 };
 
     const evidence = {
       _: "feedback" as const,
@@ -751,7 +751,7 @@ describe("Bayesian Autonomy Updates", () => {
   it("maintains level within [0, 1] after multiple updates", () => {
     const ts = now();
     let auto = initialAutonomy(ts);
-    const physiology = { boredom: 0, energy: 1, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0, entropy: 0 };
 
     // Many positive updates
     for (let i = 0; i < 20; i++) {
@@ -771,7 +771,7 @@ describe("Bayesian Autonomy Updates", () => {
   it("zero reliability evidence is no-op", () => {
     const ts = now();
     const auto = initialAutonomy(ts);
-    const physiology = { boredom: 0, energy: 1, frustration: 0 };
+    const physiology = { boredom: 0, energy: 1, frustration: 0, entropy: 0 };
 
     const evidence = {
       _: "feedback" as const,

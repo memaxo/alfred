@@ -3,6 +3,16 @@ import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { db, getDbDriver } from "../client";
 import { cognitiveEvents, cognitiveSnapshots } from "../schema/cognitive";
 
+let lamportClock = 0;
+
+function nextLamport(): number {
+  // SQLite fallback uses CURRENT_TIMESTAMP (seconds), so we need a stable
+  // monotonic tiebreaker for ordering snapshots/events within the same ms.
+  const now = Date.now();
+  lamportClock = now > lamportClock ? now : lamportClock + 1;
+  return lamportClock;
+}
+
 /**
  * Cognitive Event Repository
  *
@@ -29,7 +39,7 @@ export async function appendEvent(
       payload,
       parentId: options?.parentId ?? null,
       seq: options?.seq ?? null,
-      lamport: Date.now(),
+      lamport: nextLamport(),
     })
     .returning();
   if (!event) {

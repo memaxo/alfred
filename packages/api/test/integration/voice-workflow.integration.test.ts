@@ -158,7 +158,7 @@ describe("Voice → Workflow Integration", () => {
       const caller = await workflowHarness.createCaller();
       const events: WorkflowEvent[] = [];
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: voiceInput,
@@ -237,7 +237,7 @@ describe("Voice → Workflow Integration", () => {
       const events: WorkflowEvent[] = [];
       let workflowResult = "";
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "What time is it?",
@@ -344,7 +344,7 @@ describe("Voice → Workflow Integration", () => {
       const caller = await workflowHarness.createCaller();
       let runId: string | undefined;
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Long running task",
@@ -407,7 +407,7 @@ describe("Voice → Workflow Integration", () => {
       const caller = await workflowHarness.createCaller();
       let runId: string | undefined;
 
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Task that will be cancelled",
@@ -530,7 +530,7 @@ describe("Full Voice-Workflow Round Trip", () => {
     const workflowEvents: WorkflowEvent[] = [];
     let workflowOutput = "";
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: voiceRequest,
@@ -636,7 +636,7 @@ describe("Full Voice-Workflow Round Trip", () => {
     const caller = await workflowHarness.createCaller();
     let runId: string | undefined;
 
-    const subscription = await caller.stream({
+    const subscription = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Task to interrupt",

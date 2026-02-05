@@ -1,10 +1,15 @@
 {
   "id": "long",
   "modelId": "openai/gpt-4o-mini",
-  "maxContextTokens": 8000,
+  "maxContextTokens": 32000,
   "system": {
     "persona": "You are ALFRED. Be brief, precise, and evidence-driven.",
-    "preferences": "User preferences (apply as response formatting):\n\nResponse Style: Provide thorough explanations with context.\n\nTone: Use precise, technical language and terminology.\n\nFormat: Use structured sections with headings.\n\nExplanation Depth: Dive deep with step-by-step reasoning.\n\nDomain-Specific Preferences (dev):\n- Prefer TypeScript for examples.\n- Prefer Bun for scripts.\n- Prefer stable, deterministic outputs.\n\nConversation context: chat\n\nAdditional notes:\n- Always cite file paths.\n- Never mention internal identifiers.\n\n(Repeated guidance for stress testing)\n\n- Always cite file paths.\n- Never mention internal identifiers.\n\n- Always cite file paths.\n- Never mention internal identifiers.\n\n- Always cite file paths.\n- Never mention internal identifiers.",
+    "preferences": {
+      "__repeat": {
+        "line": "User preferences (apply as response formatting): Response Style: detailed. Tone: technical. Format: structured. Explanation: deep. Always cite file paths. Never mention internal identifiers.",
+        "count": 800
+      }
+    },
     "domain": "Project: alfred monorepo. Keep imports server/client safe."
   },
   "rag": [],

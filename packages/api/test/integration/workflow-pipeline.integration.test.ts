@@ -313,7 +313,7 @@ describe("Workflow Event Types", () => {
       mode: "sequential" as const,
     };
 
-    const subscription = await caller.stream(input);
+    const subscription = await caller.streamPipeline(input);
     const observable = toObservable<WorkflowEvent>(subscription);
 
     await new Promise<void>((resolve) => {

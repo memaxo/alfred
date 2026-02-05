@@ -107,7 +107,7 @@ describe("Obligation Handling Integration", () => {
         const caller = await harness.createCaller();
         const events: WorkflowEvent[] = [];
 
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "medium" as const,
           mode: "sequential" as const,
           requirement: "Elevated task requiring biometric",
@@ -189,7 +189,7 @@ describe("Obligation Handling Integration", () => {
         const events: WorkflowEvent[] = [];
         let _runId: string | undefined;
 
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "medium" as const,
           mode: "sequential" as const,
           requirement: "Task blocked by biometric",
@@ -261,7 +261,7 @@ describe("Obligation Handling Integration", () => {
         const caller = await harness.createCaller();
         const events: WorkflowEvent[] = [];
 
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "medium" as const,
           mode: "sequential" as const,
           requirement: "Medium autonomy task",
@@ -329,7 +329,7 @@ describe("Obligation Handling Integration", () => {
         const caller = await harness.createCaller();
         const events: WorkflowEvent[] = [];
 
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "medium" as const,
           mode: "sequential" as const,
           requirement: "Operation requiring admin approval",
@@ -471,7 +471,7 @@ describe("Obligation Handling Integration", () => {
       let runId: string | undefined;
 
       // Start workflow
-      const subscription = await caller.stream({
+      const subscription = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "Task to resume",
@@ -531,7 +531,7 @@ describe("Obligation Handling Integration", () => {
       const caller = await harness.createCaller();
 
       // Start workflow
-      const sub1 = await caller.stream({
+      const sub1 = await caller.streamPipeline({
         auto: "low" as const,
         mode: "sequential" as const,
         requirement: "State preservation test",
@@ -604,7 +604,7 @@ describe("Obligation Handling Integration", () => {
         const caller = await harness.createCaller();
         const events: WorkflowEvent[] = [];
 
-        const subscription = await caller.stream({
+        const subscription = await caller.streamPipeline({
           auto: "medium" as const,
           mode: "sequential" as const,
           requirement: "Concurrent obligations test",
@@ -744,7 +744,7 @@ describe("Error Handling", () => {
     const caller = await harness.createCaller();
 
     // Should handle gracefully
-    const sub = await caller.stream({
+    const sub = await caller.streamPipeline({
       auto: "low" as const,
       mode: "sequential" as const,
       requirement: "Error handling test",

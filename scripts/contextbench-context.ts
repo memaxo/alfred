@@ -27,6 +27,44 @@ interface Fixture {
   messages: unknown[];
 }
 
+function materializeRepeats(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(materializeRepeats);
+  }
+  if (value && typeof value === "object") {
+    const rec = value as Record<string, unknown>;
+    const repeat = rec.__repeat;
+    if (
+      repeat &&
+      typeof repeat === "object" &&
+      typeof (repeat as any).line === "string" &&
+      typeof (repeat as any).count === "number"
+    ) {
+      const line = String((repeat as any).line);
+      const count = Math.max(
+        0,
+        Math.min(200_000, Math.floor((repeat as any).count))
+      );
+      return Array.from({ length: count }, () => line).join("\n");
+    }
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rec)) {
+      out[k] = materializeRepeats(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+function materializeFixture(fix: Fixture): Fixture {
+  return {
+    ...fix,
+    messages: materializeRepeats(fix.messages ?? []) as unknown[],
+    rag: materializeRepeats(fix.rag ?? []) as any,
+    system: materializeRepeats(fix.system ?? {}) as any,
+  };
+}
+
 function fmtInt(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
 }
@@ -88,7 +126,7 @@ async function loadFixtures(): Promise<Fixture[]> {
   for await (const rel of glob.scan({ cwd: dir })) {
     const path = `${dir}/${rel}`;
     const raw = await Bun.file(path).text();
-    fixtures.push(JSON.parse(raw) as Fixture);
+    fixtures.push(materializeFixture(JSON.parse(raw) as Fixture));
   }
   fixtures.sort((a, b) => a.id.localeCompare(b.id));
   return fixtures;

@@ -93,6 +93,7 @@
     "@alfred/learning": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/metrics": "workspace:*",
+    "@alfred/oh-my-opencode-slim": "workspace:*",
     "@alfred/persona": "workspace:*",
     "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",

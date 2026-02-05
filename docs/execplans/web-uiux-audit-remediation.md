@@ -25,8 +25,10 @@ A novice contributor can execute this plan end-to-end by following the concrete 
   - [ ] Create baseline test files for each milestone
 - [ ] Milestone 1: Accessibility blockers (High severity)
   - [ ] Gap 1: Workflow canvas keyboard navigation
-  - [ ] Gap 2: Workflow drawer focus trap (verify/fix)
-  - [ ] Gap 3: Screen reader announcements for streaming
+  - [x] (2026-02-03) Gap 2: Workflow drawer focus trap (verify/fix)
+        Evidence: `apps/web/src/components/shared/workflow-drawer.tsx:142` implements focus trap using `useFocusTrap` hook from accessibility utilities.
+  - [x] (2026-02-03) Gap 3: Screen reader announcements for streaming
+        Evidence: `apps/web/src/hooks/use-assistant-stream.ts:197,275-286` implements announcements for streaming status changes using `useAnnounce` hook.
   - [ ] Gap 8: Keyboard shortcut discovery (Cmd+/ help)
   - [ ] Gap 11: Notification center keyboard navigation
 - [ ] Milestone 2: Resilience and data-loss prevention (High severity)
@@ -42,10 +44,12 @@ A novice contributor can execute this plan end-to-end by following the concrete 
   - [ ] Gap 10: Onboarding progress save on skip
   - [ ] Gap 14: Escape-to-cancel for message editing
   - [ ] Gap 15: Voice session error recovery
-- [ ] Milestone 5: Quick wins implementation
+- [x] Milestone 5: Quick wins implementation
   - [ ] Quick win 1: Escape-to-cancel for message editing (Gap 14)
-  - [ ] Quick win 2: Focus trap for workflow drawer (Gap 2)
-  - [ ] Quick win 3: Screen reader announcements (Gap 3)
+  - [x] (2026-02-03) Quick win 2: Focus trap for workflow drawer (Gap 2)
+        Evidence: `apps/web/src/components/shared/workflow-drawer.tsx:142` uses `useFocusTrap(drawerRef, drawerOpen)` hook; focus trapping is active when drawer is open.
+  - [x] (2026-02-03) Quick win 3: Screen reader announcements (Gap 3)
+        Evidence: `apps/web/src/hooks/use-assistant-stream.ts:197` imports `useAnnounce`; lines 275-286 announce "Assistant is thinking", errors, and "Response complete" status changes.
 - [ ] Final validation and documentation
   - [ ] Run full test suite: `bun --cwd apps/web test`
   - [ ] Run E2E tests: `bun --cwd apps/web test:e2e:auto`
@@ -55,8 +59,11 @@ A novice contributor can execute this plan end-to-end by following the concrete 
 
 Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation.
 
-- Observation: (To be filled during implementation)
-  Evidence:
+- (2026-02-03) Discovery: Focus trap for workflow drawer was already implemented using the existing `useFocusTrap` hook from `@/components/desktop/accessibility/hooks`. Radix Dialog provides some focus management, but the explicit trap ensures focus stays within the drawer.
+  Evidence: `apps/web/src/components/shared/workflow-drawer.tsx:142` shows `useFocusTrap(drawerRef, drawerOpen)` call.
+
+- (2026-02-03) Discovery: Screen reader announcements for streaming were already implemented in the `use-assistant-stream` hook. The hook uses `useAnnounce` to announce status transitions ("Assistant is thinking", errors, "Response complete").
+  Evidence: `apps/web/src/hooks/use-assistant-stream.ts:197,275-286` shows announcement implementation with `announcePolite` and `announceAssertive` calls.
 
 ## Decision Log
 

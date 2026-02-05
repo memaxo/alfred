@@ -20,24 +20,21 @@ process.env.BETTER_AUTH_URL = "http://localhost:3000";
 // Helper to ensure test Ed25519 keys are available
 async function ensureSigningKeys() {
   if (
-    process.env.ALFRED_ED25519_PRIVATE &&
+    process.env.AGENT_ED25519_PRIVATE &&
     process.env.AGENT_ED25519_PUBLIC_PEM
   ) {
     return;
   }
-  const { privateKey, publicKey } = await crypto.subtle.generateKey(
-    "EdDSA",
-    true,
-    ["sign", "verify"]
-  );
-  process.env.AGENT_ED25519_PRIVATE = await crypto.subtle.exportKey(
-    "pkcs8",
-    privateKey
-  );
-  process.env.AGENT_ED25519_PUBLIC_PEM = await crypto.subtle.exportKey(
-    "spki",
-    publicKey
-  );
+  const { generateKeyPairSync } = await import("node:crypto");
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  process.env.AGENT_ED25519_PRIVATE = privateKey.export({
+    type: "pkcs8",
+    format: "pem",
+  }) as unknown as string;
+  process.env.AGENT_ED25519_PUBLIC_PEM = publicKey.export({
+    type: "spki",
+    format: "pem",
+  }) as unknown as string;
 }
 
 import { beforeAll, describe, expect, it } from "bun:test";

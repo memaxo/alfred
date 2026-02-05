@@ -983,10 +983,9 @@ async function persistMessages({
   source,
 }: PersistPayload): Promise<number> {
   const truncationEnabled = process.env.CONTEXT_TOOL_TRUNCATION_ENABLED !== "0";
-  const estimator =
-    truncationEnabled && modelId
-      ? createTokenEstimator({ model: modelId })
-      : null;
+  const estimator = truncationEnabled
+    ? createTokenEstimator({ model: modelId ?? "openai/gpt-4o-mini" })
+    : null;
 
   let agentfs: Awaited<ReturnType<typeof createRunAgentFS>> | null | undefined;
 
@@ -1096,3 +1095,7 @@ async function persistMessages({
 
   return persisted;
 }
+
+export const __test = {
+  persistMessages,
+};
