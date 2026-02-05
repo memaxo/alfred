@@ -27,7 +27,7 @@ export function PRList({
   repo,
   className,
 }: PRListProps) {
-  const state = filter === "agent" ? "all" : filter === "open" ? "open" : "all";
+  const state = filter === "agent" ? "all" : (filter === "open" ? "open" : "all");
   const { data, isLoading, error } = trpc.github.pullRequestsList.useQuery(
     { state, limit: 30, owner, repo },
     { refetchInterval: 30_000 }
@@ -77,15 +77,15 @@ function PRItem({
   const StatusIcon =
     pr.status === "merged"
       ? Check
-      : pr.status === "closed"
+      : (pr.status === "closed"
         ? X
-        : GitPullRequest;
+        : GitPullRequest);
   const statusColor =
     pr.status === "merged"
       ? "text-purple-400"
-      : pr.status === "closed"
+      : (pr.status === "closed"
         ? "text-red-400"
-        : "text-green-400";
+        : "text-green-400");
 
   return (
     <button

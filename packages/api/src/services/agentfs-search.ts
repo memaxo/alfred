@@ -284,10 +284,7 @@ export async function searchFiles(
       } finally {
         db.close();
       }
-    } catch {
-      // Skip runs with database errors
-      continue;
-    }
+    } catch {}
   }
 
   return results;
@@ -340,6 +337,19 @@ export async function searchKv(
         }[];
 
         for (const entry of entries) {
+          if (entry.key.startsWith("executor:")) {
+            results.push({
+              runId: run.runId,
+              key: entry.key,
+              value: "[redacted]",
+              updatedAt: new Date(entry.updated_at * 1000),
+            });
+            if (results.length >= limit) {
+              break;
+            }
+            continue;
+          }
+
           let parsedValue: unknown;
           try {
             parsedValue = JSON.parse(entry.value);
@@ -361,10 +371,7 @@ export async function searchKv(
       } finally {
         db.close();
       }
-    } catch {
-      // Skip runs with database errors
-      continue;
-    }
+    } catch {}
   }
 
   return results;
@@ -454,10 +461,7 @@ export async function searchToolCalls(
       } finally {
         db.close();
       }
-    } catch {
-      // Skip runs with database errors
-      continue;
-    }
+    } catch {}
   }
 
   return results;

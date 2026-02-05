@@ -17,11 +17,11 @@ function extractAutonomyLevel(state: unknown): number | undefined {
     return;
   }
   const rec = state as Record<string, unknown>;
-  const autonomy = rec.autonomy;
+  const { autonomy } = rec;
   if (!autonomy || typeof autonomy !== "object") {
     return;
   }
-  const level = (autonomy as { level?: unknown }).level;
+  const { level } = autonomy as { level?: unknown };
   if (typeof level === "number" && Number.isFinite(level)) {
     return clamp01(level);
   }

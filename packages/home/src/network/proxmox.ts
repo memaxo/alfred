@@ -190,9 +190,9 @@ export class proxmox {
         throw this.makeError(
           resp.status === 401 || resp.status === 403
             ? "auth"
-            : resp.status === 404
+            : (resp.status === 404
               ? "notfound"
-              : "server",
+              : "server"),
           resp.status,
           resp.statusText,
           path

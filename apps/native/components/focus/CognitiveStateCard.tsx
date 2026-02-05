@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  interpolate,
 } from "react-native-reanimated";
 
 import { BiolumText, CaptionText } from "@/components/foundation/BiolumText";
@@ -88,14 +88,22 @@ export function CognitiveStateCard({ physiology }: CognitiveStateCardProps) {
   const theme = useVoidTheme();
 
   const getEnergyColor = (value: number) => {
-    if (value > 0.7) return "#00FF88";
-    if (value > 0.4) return "#FFB800";
+    if (value > 0.7) {
+      return "#00FF88";
+    }
+    if (value > 0.4) {
+      return "#FFB800";
+    }
     return "#FF4444";
   };
 
   const getStressColor = (value: number) => {
-    if (value < 0.3) return "#00FF88";
-    if (value < 0.6) return "#FFB800";
+    if (value < 0.3) {
+      return "#00FF88";
+    }
+    if (value < 0.6) {
+      return "#FFB800";
+    }
     return "#FF4444";
   };
 

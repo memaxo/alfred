@@ -19,7 +19,7 @@ import type {
 } from "./definition.js";
 
 import { getHooksRuntime } from "../../../../assistant/src/tool/memory/hook";
-import { withPolicyApproval, type AITool } from "../approval.js";
+import { type AITool, withPolicyApproval } from "../approval.js";
 import {
   learnMistakeInputSchema,
   learnMistakeOutputSchema,
@@ -230,9 +230,9 @@ export const toolLearnMistake = {
       const baseConfidence =
         input.severity === "high"
           ? 0.9
-          : input.severity === "medium"
+          : (input.severity === "medium"
             ? 0.7
-            : 0.5;
+            : 0.5);
 
       const hookEvent: LearnHeuristicProposedEvent = {
         type: "learn:heuristic:proposed",

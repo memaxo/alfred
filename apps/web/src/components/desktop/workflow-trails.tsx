@@ -15,7 +15,7 @@
  * @see docs/execplans/desktop-evolution-prd.md Part III - Creative Ideas
  */
 
-import { type StageName, STAGE_ORDER } from "@alfred/pipeline";
+import { STAGE_ORDER, type StageName } from "@alfred/pipeline";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -248,7 +248,7 @@ function TrailPathComponent({
         d={pathD}
         fill="none"
         initial="initial"
-        stroke={isFailed ? "#EF4444" : isCompleted ? "#10B981" : "#A855F7"}
+        stroke={isFailed ? "#EF4444" : (isCompleted ? "#10B981" : "#A855F7")}
         strokeLinecap="round"
         strokeWidth={3}
         transition={transition}
@@ -344,9 +344,9 @@ export function WorkflowTrails({ className }: WorkflowTrailsProps) {
       const status: WorkflowTrail["status"] =
         step.status === "failed"
           ? "failed"
-          : step.status === "completed"
+          : (step.status === "completed"
             ? "completed"
-            : "active";
+            : "active");
 
       if (existingTrail) {
         // Keep existing timing but update completion/failure status

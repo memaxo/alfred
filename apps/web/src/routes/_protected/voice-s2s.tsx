@@ -99,9 +99,9 @@ function VoiceS2SRouteView() {
     stream.status === "connecting";
   const streamingButtonLabel = stream.isActive
     ? "Stop streaming"
-    : stream.status === "processing"
+    : (stream.status === "processing"
       ? "Finishing…"
-      : "Start streaming";
+      : "Start streaming");
   const vadPercent =
     typeof stream.vadConfidence === "number"
       ? Math.min(1, Math.max(0, stream.vadConfidence)) * 100
@@ -115,9 +115,9 @@ function VoiceS2SRouteView() {
         : "Standby";
   const handsFreeHelper = stream.autoStopReason
     ? `Auto-stop: ${stream.autoStopReason}`
-    : stream.status === "recording"
+    : (stream.status === "recording"
       ? "Listening (auto-stop armed)"
-      : "Press start to go hands-free.";
+      : "Press start to go hands-free.");
 
   const handleToggle = useCallback(async () => {
     if (isRecording) {
@@ -417,9 +417,9 @@ function VoiceS2SRouteView() {
         <p className="mt-1 text-base text-foreground">
           {stream.sessionId
             ? `Streaming ID: ${stream.sessionId}`
-            : session
+            : (session
               ? `Session ID: ${session.id}`
-              : "Session pending"}
+              : "Session pending")}
         </p>
         {session ? (
           <p className="mt-1">

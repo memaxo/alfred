@@ -1,3 +1,4 @@
+import { createRunAgentFS } from "@alfred/agent/agentfs";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import { auth } from "@alfred/auth";
 import * as conversationRepo from "@alfred/db/repo/conversation";
@@ -6,10 +7,23 @@ import {
   calculateBudget,
   getOrCreateTracker,
 } from "@alfred/history";
+import { ContextBudgetManager } from "@alfred/history/budget-manager";
+import {
+  contextBudgetAllocation,
+  contextBudgetUtilization,
+  toolResultTruncatedTotal,
+} from "@alfred/history/metrics";
+import {
+  shouldTruncateToolResult,
+  summarizeToolPayload,
+  truncateToolPart,
+} from "@alfred/history/tool-truncation";
 import { logger } from "@alfred/logger";
+import { createTokenEstimator } from "@alfred/metrics/token";
 import { classifyAiSdkError } from "@alfred/type/aierror";
 import { routerMessageSchema, uiMessageSchema } from "@alfred/type/stream.zod";
 import { consumeStream, generateId, streamText, type UIMessage } from "ai";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { triggerPreferenceRefresh } from "./preference/refresh";
@@ -319,6 +333,8 @@ export async function handleStreamRequest(
         userId,
         messages,
         existingMessageIds: persistedMessageIds,
+        modelId: undefined,
+        source: errorPrefix,
       });
       scheduleRefresh(`${errorPrefix}_history_seed`, persisted);
     }
@@ -347,30 +363,6 @@ export async function handleStreamRequest(
     const { prepareStep } = defaults;
     let mergedTools = tools;
 
-    if (userId) {
-      try {
-        const prompt = await buildPreferenceSystemPrompt(userId, {
-          conversationType: errorPrefix === "assistant" ? "assistant" : "chat",
-          toolNames: tools ? Object.keys(tools) : undefined,
-        });
-        preferencePrompt = prompt || undefined;
-        if (preferencePrompt) {
-          preferencePromptInjectionsTotal.inc({ source: errorPrefix });
-        }
-      } catch (error) {
-        preferencePromptFailuresTotal.inc({ source: errorPrefix });
-        logger.warn("api_stream_preference_prompt_failed", {
-          prefix: errorPrefix,
-          userId: userId ?? undefined,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    const combinedSystem = [preferencePrompt, contextSystem]
-      .filter(Boolean)
-      .join("\n\n");
-
     try {
       const { loadMcpTools } = await import("@alfred/agent/mcp");
       const mcp = await loadMcpTools(userId, request.signal);
@@ -393,6 +385,87 @@ export async function handleStreamRequest(
     // Calculate dynamic budget based on model
     const calculatedBudget = calculateBudget({ modelId });
 
+    // Phase 1: derive per-part budgets (preferences need this before render).
+    const preBudget = new ContextBudgetManager({
+      modelId,
+      coreToolNames: Object.keys(tools),
+      historyRatio: calculatedBudget.historyRatio,
+      maxContextTokens: calculatedBudget.effectiveContextTokens,
+    });
+    const preAlloc = preBudget.snapshot().allocated;
+
+    const personaPart = preBudget.registerSystemPart(
+      "persona",
+      contextSystem ?? ""
+    );
+
+    if (userId) {
+      try {
+        const prompt = await buildPreferenceSystemPrompt(userId, {
+          conversationType: errorPrefix === "assistant" ? "assistant" : "chat",
+          maxTokens: preAlloc.preferences,
+          modelId,
+          toolNames: tools ? Object.keys(tools) : undefined,
+        });
+        preferencePrompt = prompt || undefined;
+        if (preferencePrompt) {
+          preferencePromptInjectionsTotal.inc({ source: errorPrefix });
+        }
+      } catch (error) {
+        preferencePromptFailuresTotal.inc({ source: errorPrefix });
+        logger.warn("api_stream_preference_prompt_failed", {
+          prefix: errorPrefix,
+          userId: userId ?? undefined,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const preferencesPart = preBudget.registerSystemPart(
+      "preferences",
+      preferencePrompt ?? ""
+    );
+
+    const combinedSystemPre = [preferencesPart.text, personaPart.text]
+      .filter(Boolean)
+      .join("\n\n");
+    const systemTokens = preBudget.estimate(combinedSystemPre);
+
+    // Phase 2: final budgets/utilization (history + tools derive from systemTokens).
+    const budget = new ContextBudgetManager({
+      modelId,
+      coreToolNames: Object.keys(tools),
+      historyRatio: calculatedBudget.historyRatio,
+      maxContextTokens: calculatedBudget.effectiveContextTokens,
+      systemTokens,
+    });
+
+    const personaFinal = budget.registerSystemPart("persona", personaPart.text);
+    const preferencesFinal = budget.registerSystemPart(
+      "preferences",
+      preferencesPart.text
+    );
+    const combinedSystem = [preferencesFinal.text, personaFinal.text]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const enforced = budget.enforceTools(mergedTools);
+    mergedTools = enforced.tools;
+    if (enforced.droppedToolNames.length > 0) {
+      logger.info("api_stream_tools_dropped", {
+        dropped: enforced.droppedToolNames,
+        modelId,
+        prefix: errorPrefix,
+      });
+    }
+
+    const calculatedBudgetFinal = calculateBudget({
+      modelId,
+      historyRatio: calculatedBudget.historyRatio,
+      maxContextTokens: calculatedBudget.effectiveContextTokens,
+      systemTokens: budget.estimate(combinedSystem),
+    });
+
     // Create tracker for the chat session
     const chatId =
       conversationId ?? `stream-${userId ?? "anonymous"}-${Date.now()}`;
@@ -412,14 +485,29 @@ export async function handleStreamRequest(
       tools: mergedTools,
       source: errorPrefix,
       budget: {
-        maxContextTokens: calculatedBudget.effectiveContextTokens,
-        historyRatio: calculatedBudget.historyRatio,
-        minSystemReserveTokens: calculatedBudget.systemReserveTokens,
-        minHeadroomTokens: calculatedBudget.headroomTokens,
-        reservedToolingTokens: calculatedBudget.toolingReserveTokens,
+        maxContextTokens: calculatedBudgetFinal.effectiveContextTokens,
+        historyRatio: calculatedBudgetFinal.historyRatio,
+        minSystemReserveTokens: calculatedBudgetFinal.systemReserveTokens,
+        minHeadroomTokens: calculatedBudgetFinal.headroomTokens,
+        reservedToolingTokens: calculatedBudgetFinal.toolingReserveTokens,
       },
     });
     stopHistoryTimer();
+
+    budget._setHistoryUsed(historyContext.keptTokens);
+    const snap = budget.snapshot();
+    for (const [source, tokens] of Object.entries(snap.allocated)) {
+      contextBudgetAllocation.observe(
+        { model: modelId, source },
+        tokens as number
+      );
+    }
+    for (const [source, ratio] of Object.entries(snap.utilization)) {
+      contextBudgetUtilization.observe(
+        { model: modelId, source },
+        ratio as number
+      );
+    }
 
     const preparedUiMessages = historyContext.uiMessages;
     const { modelMessages } = historyContext;
@@ -546,9 +634,9 @@ export async function handleStreamRequest(
         const stepNumber =
           typeof args?.stepNumber === "number"
             ? args.stepNumber
-            : typeof args?.step === "number"
+            : (typeof args?.step === "number"
               ? args.step
-              : 0;
+              : 0);
 
         try {
           if (!signalsMetrics) {
@@ -808,6 +896,8 @@ export async function handleStreamRequest(
           userId,
           messages: streamedMessages,
           existingMessageIds: persistedMessageIds,
+          modelId,
+          source: errorPrefix,
         });
         scheduleRefresh(`${errorPrefix}_stream_complete`, persisted);
       },
@@ -880,6 +970,8 @@ interface PersistPayload {
   conversationId: string;
   messages: UIMessage[];
   existingMessageIds: Set<string>;
+  modelId?: string;
+  source: string;
 }
 
 async function persistMessages({
@@ -887,14 +979,106 @@ async function persistMessages({
   conversationId,
   messages,
   existingMessageIds,
+  modelId,
+  source,
 }: PersistPayload): Promise<number> {
+  const truncationEnabled = process.env.CONTEXT_TOOL_TRUNCATION_ENABLED !== "0";
+  const estimator =
+    truncationEnabled && modelId
+      ? createTokenEstimator({ model: modelId })
+      : null;
+
+  let agentfs: Awaited<ReturnType<typeof createRunAgentFS>> | null | undefined;
+
+  const getAgentfs = async () => {
+    if (agentfs !== undefined) {
+      return agentfs;
+    }
+    agentfs = null;
+    try {
+      agentfs = await createRunAgentFS(conversationId, "api-stream");
+    } catch {
+      agentfs = null;
+    }
+    return agentfs;
+  };
+
+  const sha256 = (value: unknown): string => {
+    try {
+      const raw = JSON.stringify(value) ?? "";
+      return createHash("sha256").update(raw).digest("hex");
+    } catch {
+      return createHash("sha256").update(String(value)).digest("hex");
+    }
+  };
+
   let persisted = 0;
   for (const message of messages) {
     if (!message.id || existingMessageIds.has(message.id)) {
       continue;
     }
+
+    let toPersist = message;
+    if (truncationEnabled && estimator && Array.isArray(message.parts)) {
+      let changed = false;
+      const nextParts: UIMessage["parts"] = [];
+
+      for (const part of message.parts) {
+        if (!shouldTruncateToolResult(estimator, part, 4000)) {
+          nextParts.push(part);
+          continue;
+        }
+        changed = true;
+
+        const toolName =
+          typeof (part as any)?.toolName === "string"
+            ? String((part as any).toolName)
+            : "unknown";
+        const toolCallId =
+          typeof (part as any)?.toolCallId === "string"
+            ? String((part as any).toolCallId)
+            : "unknown";
+        const payload =
+          (part as any).output ??
+          (part as any).result ??
+          (part as any).input ??
+          null;
+        const key = `toolresult:${toolCallId}:${sha256(payload)}`;
+
+        let stored: "agentfs" | "none" = "none";
+        let ref: any = null;
+        try {
+          const a = await getAgentfs();
+          if (a) {
+            await a.kv.set(key, {
+              createdAt: new Date().toISOString(),
+              payload,
+              toolCallId,
+              toolName,
+            });
+            stored = "agentfs";
+            ref = { kind: "agentfs_kv", runId: conversationId, key };
+          }
+        } catch {
+          // best-effort
+        }
+
+        toolResultTruncatedTotal.inc({ source, stored, toolName });
+        nextParts.push(
+          truncateToolPart(part, {
+            ref,
+            summaryText: summarizeToolPayload(payload),
+          })
+        );
+      }
+
+      if (changed) {
+        toPersist = { ...message, parts: nextParts };
+      }
+    }
+
     try {
-      await conversationRepo.createMessage(userId, conversationId, message);
+      await conversationRepo.createMessage(userId, conversationId, toPersist);
       persisted += 1;
       existingMessageIds.add(message.id);
     } catch (error) {
@@ -905,5 +1089,10 @@ async function persistMessages({
       });
     }
   }
+
+  try {
+    await agentfs?.close?.();
+  } catch {}
+
   return persisted;
 }

@@ -23,9 +23,12 @@ User-visible proof:
 
 ## Progress
 
-- [ ] (2026-02-03) Establish a deterministic “contextbench” harness that measures per-source tokens and total prompt tokens on a fixed fixture set (baseline before changes + after changes).
-- [ ] Implement `ContextBudgetManager` as a single source of truth for allocations + utilization tracking; emit allocation/utilization metrics.
-- [ ] Replace fragmented budget wiring in `packages/api/src/stream-handler.ts` with `ContextBudgetManager` (system parts + tools + history).
+- [x] (2026-02-05) Establish a deterministic “contextbench” harness and committed fixtures.
+      Evidence: added `scripts/contextbench-context.ts` and fixtures under `packages/history/test/fixtures/contextbench/*.json`; running `bun run scripts/contextbench-context.ts` prints per-fixture + aggregate prompt token totals (baseline vs new modes).
+      Bench snapshot (pre-implementation flags are no-ops, so baseline==new): aggregate avgBaseline=435 avgNew=435 (0.0%).
+- [x] (2026-02-05) Implement `ContextBudgetManager` + budget metrics and wire it into streaming + non-stream generation.
+      Evidence: new `packages/history/src/budget-manager.ts`; new metrics in `packages/history/src/metrics.ts`; streaming integration in `packages/api/src/stream-handler.ts`; generate integration in `packages/api/src/ai/messages.ts`; assistant RAG/system building integration in `packages/api/src/ai/assistant-context.ts` + `packages/api/src/routers/assistant.ts`.
+      Tests: `bun test packages/history/test/budget-manager.test.ts packages/api/test/ai.messages.test.ts packages/api/test/assistant.context.test.ts` (7 pass).
 - [ ] Add message compression layer (extractive + rolling summary) integrated before tier pruning; gated by `CONTEXT_COMPRESSION_ENABLED`.
 - [ ] Integrate RAG budgeting into `packages/api/src/ai/assistant-context.ts` with relevance-aware selection under a passed budget; add `rag_budget_exceeded_total` metric.
 - [ ] Implement tool result truncation (> 4k tokens) with summary + AgentFS reference; apply at persistence time and at context-build time; add `tool_result_truncated_total` metric.
@@ -35,13 +38,25 @@ User-visible proof:
 
 ## Surprises & Discoveries
 
-- (none yet)
+- Observation: The initial harness intentionally shows 0% reduction because compression/truncation/budget-manager flags are not implemented yet; this is a useful “pre-change baseline” sanity check.
+  Evidence: `bun run scripts/contextbench-context.ts` reports baseline==new for all fixtures.
+
+- Observation: AI SDK Tool objects carry Zod schemas, but we do not have a canonical Zod->JSONSchema converter in-repo; the budget manager uses a deterministic, shallow “schema signature” for relative tool cost estimation.
+  Evidence: `packages/history/src/budget-manager.ts` (`toolSchemaSignature()` + `estimateToolTokens()`).
 
 ## Decision Log
 
 - Decision: Keep the existing “utilization target” semantics in `@alfred/history` budgets (default `historyRatio = 0.55` is a conservative total-context utilization target), but make the budget manager explicitly track and enforce per-source caps so one source (RAG/tool results/preferences) cannot silently eat the whole budget.
   Rationale: This preserves today’s intentional safety margin while addressing the real failure mode: uncoordinated sources and oversized payloads.
   Date/Author: 2026-02-03 / GPT-5.2
+
+- Decision: `scripts/contextbench-context.ts` starts with a fixture-defined, best-effort tool-schema token estimate (JSON serialization of fixture tool definitions) so we can benchmark deterministically without importing the full agent tool catalog.
+  Rationale: The acceptance criterion is prompt-token reduction on fixed inputs; using fixture-defined tool schema shapes keeps the harness stable and cheap. Production enforcement will use real AI SDK Tool objects.
+  Date/Author: 2026-02-05 / GPT-5.2
+
+- Decision: Use a two-phase budget pass when a system part must be rendered/selected before final `systemTokens` is known (preferences and assistant-context).
+  Rationale: Preferences and RAG selection require an allocation up front; we then recompute the budget manager with the measured `systemTokens` so history/tools allocations are derived deterministically from the actual system prompt.
+  Date/Author: 2026-02-05 / GPT-5.2
 
 - Decision: Tool-result truncation will be applied in two places: (1) before persisting messages to the DB (so we stop storing massive tool outputs in `conversation_messages`), and (2) during context preparation (for backward compatibility with existing stored messages and to handle mid-stream tool results).
   Rationale: Persistence-time truncation prevents unbounded storage growth and ensures future turns are naturally token-efficient; context-time truncation protects immediate model calls and handles legacy data.
@@ -61,7 +76,9 @@ User-visible proof:
 
 ## Outcomes & Retrospective
 
-- (not started)
+- (2026-02-05) Milestone 0 complete: deterministic token benchmark harness + fixtures are committed and runnable. Next milestones will wire real enforcement so “baseline vs new” diverges and the aggregate reduction target becomes provable.
+
+- (2026-02-05) Milestone 1 complete: a single `ContextBudgetManager` now coordinates per-source allocations and emits allocation/utilization metrics from both the SSE stream path and the assistant generate path. Preference prompt bounding is implemented as token-budgeted dropping (response.\* first) rather than naive string slicing.
 
 ## Context and Orientation
 

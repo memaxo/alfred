@@ -83,6 +83,10 @@ export {
   historyContextTierDropsTotal,
   historyContextTokensTotal,
 } from "@alfred/history";
+export {
+  contextBudgetAllocation,
+  contextBudgetUtilization,
+} from "@alfred/history/metrics";
 export * from "@alfred/knowledge/metrics";
 // Re-export shared metrics
 export {

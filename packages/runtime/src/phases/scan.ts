@@ -57,9 +57,9 @@ function normalizeWriterChunk(chunk: unknown): WorkflowEvent | null {
   const kind =
     typeof maybe._ === "string"
       ? maybe._
-      : typeof maybe.type === "string"
+      : (typeof maybe.type === "string"
         ? maybe.type
-        : null;
+        : null);
   if (!kind) {
     return null;
   }

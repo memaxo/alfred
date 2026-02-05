@@ -114,9 +114,9 @@ function computeWavesFromEvents(
         status:
           runStatus === "running"
             ? "running"
-            : runStatus === "completed"
+            : (runStatus === "completed"
               ? "completed"
-              : "pending",
+              : "pending"),
         agents: [],
       },
     ];

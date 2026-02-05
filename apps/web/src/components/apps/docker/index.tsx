@@ -267,7 +267,7 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
               <EmptyDetail label="Select a container" />
             )}
           </>
-        ) : mode === "networks" ? (
+        ) : (mode === "networks" ? (
           <>
             <NetworkList
               className="w-72 flex-shrink-0 border-white/5 border-r"
@@ -303,7 +303,7 @@ export function DockerApp({ windowId: _windowId, className }: DockerAppProps) {
               }
             />
           </>
-        )}
+        ))}
       </div>
 
       <ContainerCreateDialog

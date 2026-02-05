@@ -316,9 +316,9 @@ export function DebugMode({ isOpen, onClose }: DebugModeProps) {
                         fg:
                           log.level === "error"
                             ? "#E06C75"
-                            : log.level === "warn"
+                            : (log.level === "warn"
                               ? "#E5C07B"
-                              : "#8A9199",
+                              : "#8A9199"),
                       }}
                     />
                   ))

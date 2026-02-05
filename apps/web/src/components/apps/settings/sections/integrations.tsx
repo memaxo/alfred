@@ -105,9 +105,9 @@ export function IntegrationsSection() {
                         ? "Installed"
                         : "Not installed"}
                       {typeof integration.details.running === "boolean"
-                        ? integration.details.running
+                        ? (integration.details.running
                           ? " · running"
-                          : " · not running"
+                          : " · not running")
                         : null}
                       {integration.details.tailnet
                         ? ` · ${integration.details.tailnet}`

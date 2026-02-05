@@ -88,7 +88,7 @@ export function RetrievalDebugger() {
             <Loader2 className="h-6 w-6 animate-spin text-biolum" />
             <span className="ml-2 text-biolum-dim">Searching...</span>
           </div>
-        ) : results ? (
+        ) : (results ? (
           <div className="space-y-3 p-4">
             <div className="text-biolum-dim text-sm">
               {results.length} results • Top-k: {topK} • Semantic search
@@ -137,7 +137,7 @@ export function RetrievalDebugger() {
           <div className="flex h-full items-center justify-center text-biolum-dim">
             Enter a query to debug retrieval
           </div>
-        )}
+        ))}
       </ScrollArea>
     </div>
   );

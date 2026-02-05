@@ -403,6 +403,103 @@ describe("agentfs router", () => {
     expect(res.kv.diffs[0]?.key).toBe("k");
   });
 
+  it("redacts executor:* keys in compareRuns kv diffs", async () => {
+    const leftPrepare = vi.fn((sql: string) => {
+      if (sql.includes("WITH RECURSIVE tree")) {
+        return {
+          all: vi.fn(async () => []),
+        };
+      }
+      if (sql.includes("SELECT key, value FROM kv_store")) {
+        return {
+          all: vi.fn(async () => [
+            { key: "executor:opencode:config", value: '{"kind":"opencode"}' },
+          ]),
+        };
+      }
+      return { all: vi.fn(async () => []), get: vi.fn(async () => null) };
+    });
+
+    const rightPrepare = vi.fn((sql: string) => {
+      if (sql.includes("WITH RECURSIVE tree")) {
+        return {
+          all: vi.fn(async () => []),
+        };
+      }
+      if (sql.includes("SELECT key, value FROM kv_store")) {
+        return {
+          all: vi.fn(async () => [
+            {
+              key: "executor:opencode:config",
+              value: '{"kind":"opencode","x":"y"}',
+            },
+          ]),
+        };
+      }
+      return { all: vi.fn(async () => []), get: vi.fn(async () => null) };
+    });
+
+    openMock
+      .mockResolvedValueOnce({
+        close: closeMock,
+        getDatabase: () => ({ prepare: leftPrepare }),
+      })
+      .mockResolvedValueOnce({
+        close: closeMock,
+        getDatabase: () => ({ prepare: rightPrepare }),
+      });
+
+    const res = await caller.agentfs.compareRuns({
+      left: { runId: "run-1", dbPath: ".agentfs/run-1/agent.db" },
+      limit: 500,
+      right: { runId: "run-2", dbPath: ".agentfs/run-2/agent.db" },
+    });
+
+    expect(res.kv.diffs[0]).toMatchObject({
+      key: "executor:opencode:config",
+      type: "modified",
+      left: '"[redacted]"',
+      right: '"[redacted]"',
+    });
+  });
+
+  it("redacts executor:* keys in searchKv results", async () => {
+    const runId = "searchkv-run";
+    const runDir = path.resolve(process.cwd(), ".agentfs", runId);
+    const dbPath = path.join(runDir, "agentfs.db");
+
+    await mkdir(runDir, { recursive: true });
+    try {
+      const { Database } = await import("bun:sqlite");
+      const db = new Database(dbPath);
+      try {
+        db.exec(
+          "CREATE TABLE kv_store (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)"
+        );
+        db.exec(
+          'INSERT INTO kv_store (key, value, updated_at) VALUES (\'executor:opencode:secrets\', \'{"http":{"password":"secret"}}\', 1)'
+        );
+        db.exec(
+          "INSERT INTO kv_store (key, value, updated_at) VALUES ('k', '\"v\"', 1)"
+        );
+      } finally {
+        db.close();
+      }
+
+      const res = await caller.agentfs.searchKv({
+        keyPattern: "executor:*",
+        runIds: [runId],
+      });
+
+      expect(res[0]).toMatchObject({
+        key: "executor:opencode:secrets",
+        value: "[redacted]",
+      });
+    } finally {
+      await rm(runDir, { recursive: true, force: true });
+    }
+  });
+
   it("clones a run database", async () => {
     const srcRunId = "clone-src";
     const dstRunId = "clone-dst";
@@ -715,6 +812,25 @@ describe("agentfs router", () => {
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
     });
 
+    it("requires write:agentfs scope for configSet", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const readOnly = await createTestCaller({ scopes: ["read:agentfs"] });
+      await expect(
+        readOnly.agentfs.executorConfigSet({
+          dbPath: ".agentfs/run-1/agent.db",
+          config: {
+            http: {
+              baseUrl: "http://127.0.0.1:4096",
+            },
+            kind: "opencode",
+            transport: "http",
+            v: 1,
+          },
+          runId: "run-1",
+        })
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+
     it("sets and gets redacted config (no secrets returned)", async () => {
       openMock.mockResolvedValue(makeAgentfs());
       const kv = new Map<string, unknown>();
@@ -773,7 +889,28 @@ describe("agentfs router", () => {
       ).toMatchObject({ passwordSet: true });
     });
 
-    it("rejects unsafe baseUrl", async () => {
+    it.each([
+      {
+        baseUrl: "http://example.com",
+        message: "executor_http_baseurl_unsafe",
+      },
+      {
+        baseUrl: "file:///etc/passwd",
+        message: "executor_http_baseurl_protocol_invalid",
+      },
+      {
+        baseUrl: "http://user:pass@127.0.0.1:4096",
+        message: "executor_http_baseurl_userinfo_forbidden",
+      },
+      {
+        baseUrl: "http://169.254.1.1:4096",
+        message: "executor_http_baseurl_unsafe",
+      },
+      {
+        baseUrl: "http://0.0.0.0:4096",
+        message: "executor_http_baseurl_unsafe",
+      },
+    ])("rejects unsafe baseUrl: $baseUrl", async ({ baseUrl, message }) => {
       openMock.mockResolvedValue(makeAgentfs());
       const kv = new Map<string, unknown>();
       kvGetMock.mockImplementation(async (key: string) => kv.get(key));
@@ -786,7 +923,7 @@ describe("agentfs router", () => {
           dbPath: ".agentfs/run-1/agent.db",
           config: {
             http: {
-              baseUrl: "http://example.com",
+              baseUrl,
             },
             kind: "opencode",
             transport: "http",
@@ -794,7 +931,275 @@ describe("agentfs router", () => {
           },
           runId: "run-1",
         })
-      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      ).rejects.toMatchObject({ code: "BAD_REQUEST", message });
+    });
+
+    it("sets and gets config for codex + droid", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      const codex = await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          kind: "codex",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+      expect(codex.exists).toBe(true);
+      expect(codex.config).toMatchObject({ kind: "codex", v: 1 });
+
+      const droid = await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          kind: "droid",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+      expect(droid.exists).toBe(true);
+      expect(droid.config).toMatchObject({ kind: "droid", v: 1 });
+
+      const codexGet = await caller.agentfs.executorConfigGet({
+        dbPath: ".agentfs/run-1/agent.db",
+        kind: "codex",
+        runId: "run-1",
+      });
+      expect(codexGet.exists).toBe(true);
+      expect(codexGet.valid).toBe(true);
+      expect(codexGet.config).toMatchObject({ kind: "codex", v: 1 });
+
+      const droidGet = await caller.agentfs.executorConfigGet({
+        dbPath: ".agentfs/run-1/agent.db",
+        kind: "droid",
+        runId: "run-1",
+      });
+      expect(droidGet.exists).toBe(true);
+      expect(droidGet.valid).toBe(true);
+      expect(droidGet.config).toMatchObject({ kind: "droid", v: 1 });
+    });
+
+    it("reuses stored password when omitted", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          http: {
+            baseUrl: "http://127.0.0.1:4096",
+            password: "secret",
+            username: "alfred",
+          },
+          kind: "opencode",
+          transport: "http",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+
+      await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          http: {
+            baseUrl: "http://127.0.0.1:4096",
+            username: "alfred",
+          },
+          kind: "opencode",
+          transport: "http",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+
+      expect(kv.get("executor:opencode:secrets")).toMatchObject({
+        http: { password: "secret" },
+        kind: "opencode",
+        v: 1,
+      });
+
+      const getRes = await caller.agentfs.executorConfigGet({
+        dbPath: ".agentfs/run-1/agent.db",
+        kind: "opencode",
+        runId: "run-1",
+      });
+      expect(getRes.exists).toBe(true);
+      expect(getRes.valid).toBe(true);
+      expect(getRes.config).toMatchObject({
+        kind: "opencode",
+        transport: "http",
+        v: 1,
+      });
+      expect(
+        (
+          getRes.config as {
+            http?: { password?: unknown; passwordSet?: unknown };
+          }
+        ).http
+      ).toMatchObject({ passwordSet: true });
+    });
+
+    it("does not store secrets when password is absent", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      const setRes = await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          http: {
+            baseUrl: "http://127.0.0.1:4096",
+          },
+          kind: "opencode",
+          transport: "http",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+
+      expect(setRes.exists).toBe(true);
+      expect(setRes.config).toMatchObject({
+        kind: "opencode",
+        transport: "http",
+        v: 1,
+      });
+      expect(kv.has("executor:opencode:secrets")).toBe(false);
+      expect(
+        (
+          setRes.config as {
+            http?: { passwordSet?: unknown };
+          }
+        ).http
+      ).toMatchObject({ passwordSet: false });
+    });
+
+    it("reports corrupt stored config across get/status/health", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+      kv.set("executor:opencode:config", {
+        kind: "opencode",
+        transport: "http",
+        v: 1,
+      });
+
+      const getRes = await caller.agentfs.executorConfigGet({
+        dbPath: ".agentfs/run-1/agent.db",
+        kind: "opencode",
+        runId: "run-1",
+      });
+      expect(getRes.exists).toBe(true);
+      expect(getRes.valid).toBe(false);
+      expect(getRes.config).toBeNull();
+
+      const status = await caller.agentfs.executorStatus({
+        dbPath: ".agentfs/run-1/agent.db",
+        kind: "opencode",
+        runId: "run-1",
+      });
+      expect(status.config.exists).toBe(true);
+      expect(status.config.valid).toBe(false);
+      expect(status.config.issues).toEqual(
+        expect.arrayContaining(["opencode_http_baseurl_required"])
+      );
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      try {
+        const health = await caller.agentfs.executorHealth({
+          dbPath: ".agentfs/run-1/agent.db",
+          kind: "opencode",
+          runId: "run-1",
+        });
+        expect(health.ok).toBe(false);
+        expect(health.details).toBe("executor_config_invalid");
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it("health-checks http auth config without leaking secrets", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+
+      await caller.agentfs.executorConfigSet({
+        dbPath: ".agentfs/run-1/agent.db",
+        config: {
+          http: {
+            baseUrl: "http://127.0.0.1:4096",
+            password: "secret",
+          },
+          kind: "opencode",
+          transport: "http",
+          v: 1,
+        },
+        runId: "run-1",
+      });
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      try {
+        const health = await caller.agentfs.executorHealth({
+          dbPath: ".agentfs/run-1/agent.db",
+          kind: "opencode",
+          runId: "run-1",
+        });
+        expect(health.ok).toBe(false);
+        expect(health.details).toBe("opencode_http_username_required");
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it("reports missing secrets when passwordSet but secret is absent", async () => {
+      openMock.mockResolvedValue(makeAgentfs());
+      const kv = new Map<string, unknown>();
+      kvGetMock.mockImplementation(async (key: string) => kv.get(key));
+      kvSetMock.mockImplementation(async (key: string, value: unknown) => {
+        kv.set(key, value);
+      });
+      kv.set("executor:opencode:config", {
+        http: {
+          baseUrl: "http://127.0.0.1:4096",
+          passwordSet: true,
+          username: "alfred",
+        },
+        kind: "opencode",
+        transport: "http",
+        v: 1,
+      });
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      try {
+        const health = await caller.agentfs.executorHealth({
+          dbPath: ".agentfs/run-1/agent.db",
+          kind: "opencode",
+          runId: "run-1",
+        });
+        expect(health.ok).toBe(false);
+        expect(health.details).toBe("opencode_http_password_missing");
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        fetchSpy.mockRestore();
+      }
     });
 
     it("redacts executor:* keys in kvList + snapshot", async () => {

@@ -48,34 +48,49 @@ async function run(argv: string[]): Promise<never> {
   process.exit(code);
 }
 
-const scope = normalizeScope(process.env.ALFRED_TEST_SCOPE);
-const extraArgs = process.argv.slice(2);
+async function main(): Promise<void> {
+  const scope = normalizeScope(process.env.ALFRED_TEST_SCOPE);
+  const extraArgs = process.argv.slice(2);
 
-// If the repo isn't providing a scope (local dev), preserve existing behavior:
-// `bun run test` should run the full Jest suite.
-if (!scope) {
-  await run(["jest", ...extraArgs]);
-}
-
-switch (scope) {
-  case "unit": {
-    await run([
-      "jest",
-      "--testPathPatterns=test-jest/(components|hooks|lib)",
-      ...extraArgs,
-    ]);
-  }
-  case "integration": {
-    await run(["jest", "--testPathPatterns=test-jest/integration", ...extraArgs]);
-  }
-  case "all": {
+  // If the repo isn't providing a scope (local dev), preserve existing behavior:
+  // `bun run test` should run the full Jest suite.
+  if (!scope) {
     await run(["jest", ...extraArgs]);
   }
-  case "e2e":
-  case "perf":
-  case "slow": {
-    // Native perf/e2e suites (if added) should be explicitly wired here.
-    process.exit(0);
+
+  switch (scope) {
+    case "unit": {
+      await run([
+        "jest",
+        "--testPathPatterns=test-jest/(components|hooks|lib)",
+        ...extraArgs,
+      ]);
+    }
+    case "integration": {
+      await run([
+        "jest",
+        "--testPathPatterns=test-jest/integration",
+        ...extraArgs,
+      ]);
+    }
+    case "all": {
+      await run(["jest", ...extraArgs]);
+    }
+    case "e2e":
+    case "perf":
+    case "slow": {
+      // Native perf/e2e suites (if added) should be explicitly wired here.
+      process.exit(0);
+    }
   }
 }
 
+void main().catch((error: unknown) => {
+  try {
+    const msg = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${msg}\n`);
+  } catch {
+    // ignore
+  }
+  process.exit(1);
+});

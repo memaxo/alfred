@@ -29,3 +29,34 @@ export const historySummarizationsTotal = new client.Counter({
   labelNames: ["source", "reason"] as const,
   registers: [metricsRegistry],
 });
+
+export const contextBudgetAllocation = new client.Histogram({
+  name: "context_budget_allocation",
+  help: "Allocated tokens per context source grouped by source and model.",
+  labelNames: ["source", "model"] as const,
+  buckets: [0, 100, 250, 500, 1000, 2000, 4000, 8000, 16_000, 32_000, 64_000],
+  registers: [metricsRegistry],
+});
+
+export const contextBudgetUtilization = new client.Histogram({
+  name: "context_budget_utilization",
+  help: "Utilization ratio (used/allocated) per context source grouped by source and model.",
+  labelNames: ["source", "model"] as const,
+  buckets: [0, 0.1, 0.25, 0.5, 0.75, 0.85, 0.92, 1, 1.1, 1.25],
+  registers: [metricsRegistry],
+});
+
+export const toolResultTruncatedTotal = new client.Counter({
+  name: "tool_result_truncated_total",
+  help: "Count of tool-result truncations grouped by source, toolName, and storage outcome.",
+  labelNames: ["source", "toolName", "stored"] as const,
+  registers: [metricsRegistry],
+});
+
+export const contextCompressionRatio = new client.Histogram({
+  name: "context_compression_ratio",
+  help: "Ratio of compressed tokens to original tokens for history compression.",
+  labelNames: ["source", "method"] as const,
+  buckets: [0, 0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
+  registers: [metricsRegistry],
+});

@@ -5,6 +5,7 @@ import type {
 } from "@alfred/type/preference";
 
 import { logger } from "@alfred/metrics";
+import { createTokenEstimator } from "@alfred/metrics/token";
 
 import { detectDomain } from "./domain";
 import { loadPreferencesWithDefaults } from "./loader";
@@ -15,6 +16,8 @@ export interface DomainContext {
   domain?: DomainName | null;
   toolNames?: string[];
   conversationType?: "workflow" | "chat" | "assistant";
+  modelId?: string;
+  maxTokens?: number;
 }
 
 const RESPONSE_VERBOSITY_KEY = "response.verbosity";
@@ -54,7 +57,8 @@ export async function buildPreferenceSystemPrompt(
       return "";
     }
 
-    return renderPrompt(filtered, domain, context);
+    const raw = renderPrompt(filtered, domain, context);
+    return boundPrompt(raw, filtered, domain, context);
   } catch (error) {
     logger.warn("preference_prompt_build_failed", {
       userId,
@@ -62,6 +66,114 @@ export async function buildPreferenceSystemPrompt(
     });
     return "";
   }
+}
+
+function boundPrompt(
+  prompt: string,
+  preferences: Map<PreferenceKey, PreferenceDetail>,
+  domain: DomainName | null,
+  context?: DomainContext
+): string {
+  const maxTokens = context?.maxTokens;
+  const modelId = context?.modelId;
+  if (typeof maxTokens !== "number" || maxTokens <= 0) {
+    return prompt;
+  }
+  if (typeof modelId !== "string" || modelId.trim().length === 0) {
+    // Token budgets must be model-aware; without a modelId, don't apply.
+    return prompt;
+  }
+
+  const estimator = createTokenEstimator({ model: modelId });
+  if (estimator.estimate(prompt) <= maxTokens) {
+    return prompt;
+  }
+
+  // Priority order:
+  // 1) response.* (always keep first)
+  // 2) domain.* lines until budget
+  // 3) omit conversation context and other extras
+  const lines: string[] = [];
+  lines.push("User preferences (apply as response formatting):");
+
+  const verbosity = preferences.get(RESPONSE_VERBOSITY_KEY)?.value;
+  const tone = preferences.get(RESPONSE_TONE_KEY)?.value;
+  const format = preferences.get(RESPONSE_FORMAT_KEY)?.value;
+  const explanation = preferences.get(RESPONSE_EXPLANATION_KEY)?.value;
+
+  if (verbosity) {
+    lines.push(`Response verbosity: ${String(verbosity)}`);
+  }
+  if (tone) {
+    lines.push(`Tone: ${String(tone)}`);
+  }
+  if (format) {
+    lines.push(`Format: ${String(format)}`);
+  }
+  if (explanation) {
+    lines.push(`Explanation depth: ${String(explanation)}`);
+  }
+
+  const base = lines.join("\n");
+  if (estimator.estimate(base) > maxTokens) {
+    return truncateToTokens(estimator, base, maxTokens);
+  }
+
+  let out = base;
+  if (domain) {
+    const domainEntries = [...preferences.entries()]
+      .filter(([key]) => key.startsWith(`domain.${domain}.`))
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    for (const [key, detail] of domainEntries) {
+      const instruction = formatDomainPreference(key, detail.value);
+      if (!instruction) {
+        continue;
+      }
+      const candidate = `${out}\n- ${instruction}`;
+      if (estimator.estimate(candidate) > maxTokens) {
+        break;
+      }
+      out = candidate;
+    }
+  }
+
+  return out;
+}
+
+function truncateToTokens(
+  estimator: ReturnType<typeof createTokenEstimator>,
+  text: string,
+  maxTokens: number
+): string {
+  if (maxTokens <= 0) {
+    return "";
+  }
+  if (estimator.estimate(text) <= maxTokens) {
+    return text;
+  }
+
+  const suffix = "\n[truncated]";
+  const suffixTokens = estimator.estimate(suffix);
+  const target = Math.max(1, maxTokens - suffixTokens);
+
+  let lo = 0;
+  let hi = text.length;
+  let best = 0;
+
+  for (let i = 0; i < 18; i += 1) {
+    const mid = (lo + hi) >> 1;
+    const candidate = text.slice(0, mid);
+    const t = estimator.estimate(candidate);
+    if (t <= target) {
+      best = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  return `${text.slice(0, best)}${suffix}`;
 }
 
 function shouldApplyPreferences(userId: string): boolean {

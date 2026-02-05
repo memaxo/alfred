@@ -70,7 +70,7 @@ export function ProjectWindow({ window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : projects.length === 0 ? (
+        ) : (projects.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No projects yet.
           </Text>
@@ -106,7 +106,7 @@ export function ProjectWindow({ window }: WindowComponentProps) {
               );
             })}
           </View>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

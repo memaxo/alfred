@@ -1,0 +1,46 @@
+{
+  "id": "rag",
+  "modelId": "openai/gpt-4o-mini",
+  "system": {
+    "persona": "You are ALFRED.",
+    "preferences": "Keep answers concise; prefer bullet points.",
+    "domain": "Answer using only relevant retrieved context."
+  },
+  "rag": [
+    {
+      "content": "DOC1: AgentFS KV access control: values are accessible only through authenticated routes. The KV is not public."
+    },
+    {
+      "content": "DOC2: Context windows: keep utilization under 85% to avoid degradation; prefer 55% target for reliable retrieval per Lost in the Middle."
+    },
+    {
+      "content": "DOC3: RAG chunking guidance: sentence-aware chunking, max 512 tokens, preserve headers and file paths."
+    },
+    {
+      "content": "DOC4: This chunk is intentionally long. "
+    }
+  ],
+  "tools": [],
+  "messages": [
+    {
+      "id": "r-001",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "How should we budget RAG injection to avoid crowding out history?"
+        }
+      ]
+    },
+    {
+      "id": "r-002",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "We should explicitly cap the injected block (including wrapper tags) and select chunks by relevance until budget is reached."
+        }
+      ]
+    }
+  ]
+}

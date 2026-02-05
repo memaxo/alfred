@@ -116,7 +116,7 @@ export function MicSelector({
       <DropdownMenuContent align="center" className="w-72" side="top">
         {loading ? (
           <DropdownMenuItem disabled>Loading devices...</DropdownMenuItem>
-        ) : error ? (
+        ) : (error ? (
           <DropdownMenuItem disabled>Error: {error}</DropdownMenuItem>
         ) : (
           devices.map((device) => (
@@ -132,7 +132,7 @@ export function MicSelector({
               )}
             </DropdownMenuItem>
           ))
-        )}
+        ))}
         {devices.length > 0 && (
           <>
             <DropdownMenuSeparator />

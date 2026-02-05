@@ -6,10 +6,10 @@ import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-type EventSummary = {
+interface EventSummary {
   kind?: unknown;
   reason?: unknown;
-};
+}
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));

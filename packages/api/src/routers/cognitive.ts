@@ -312,12 +312,12 @@ export const cognitiveRouter = router({
           input.streamId,
           input.limit
         );
-        const records = newestFirst.slice().reverse();
+        const records = [...newestFirst].toReversed();
 
         const events = records
           .map((record) => {
             const envelope = unwrapEventEnvelope(record.payload);
-            const data = envelope.data;
+            const { data } = envelope;
             if (!isRecord(data) || typeof data._ !== "string") {
               return null;
             }

@@ -1,10 +1,12 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { TitleText, CaptionText } from "@/components/foundation/BiolumText";
+import { CaptionText, TitleText } from "@/components/foundation/BiolumText";
 import { HUDSurface } from "@/components/foundation/HUDSurface";
 
-import { StepCard, WorkflowStep } from "./StepCard";
+import type { WorkflowStep } from "./StepCard";
+
+import { StepCard } from "./StepCard";
 
 interface ExecutionTimelineProps {
   steps: WorkflowStep[];

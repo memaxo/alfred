@@ -542,9 +542,9 @@ async function performExaContents(
   const textOpts =
     typeof exaOpts?.text === "undefined"
       ? { maxCharacters }
-      : typeof exaOpts.text === "boolean"
+      : (typeof exaOpts.text === "boolean"
         ? exaOpts.text
-        : { maxCharacters: exaOpts.text.maxCharacters ?? maxCharacters };
+        : { maxCharacters: exaOpts.text.maxCharacters ?? maxCharacters });
 
   // Use SDK for content fetching
   const { contents, cost } = await exaGetContents([url], {

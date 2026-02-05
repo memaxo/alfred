@@ -130,9 +130,9 @@ function TodoItem({ task, onToggle, onDelete }: TodoItemProps) {
                     backgroundColor:
                       priorityBand === "high"
                         ? theme.colors.semantic.error
-                        : priorityBand === "medium"
+                        : (priorityBand === "medium"
                           ? theme.colors.semantic.warning
-                          : theme.colors.biolum.faint,
+                          : theme.colors.biolum.faint),
                   },
                 ]}
               />

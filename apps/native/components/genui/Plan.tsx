@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { StyleSheet, View, Pressable } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
-  withTiming,
   useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
 
-import { useVoidTheme, useReducedMotion } from "../../hooks/use-void-theme";
+import { useReducedMotion, useVoidTheme } from "../../hooks/use-void-theme";
 import { BiolumText, CaptionText } from "../foundation/BiolumText";
 import { HUDSurface } from "../foundation/HUDSurface";
 import { Progress } from "./Progress";
@@ -167,9 +167,9 @@ function PhaseItem({ phase, index, isLast, onPress, theme }: PhaseItemProps) {
           color={
             phase.status === "active"
               ? "full"
-              : phase.status === "completed"
+              : (phase.status === "completed"
                 ? "standard"
-                : "dim"
+                : "dim")
           }
         >
           {phase.title}

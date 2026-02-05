@@ -36,7 +36,7 @@ describe("base64ToPcm16", () => {
 
   it("handles negative values (signed 16-bit)", () => {
     // -1 as signed 16-bit little-endian: FF FF
-    const base64 = Buffer.from([0xff, 0xff]).toString("base64");
+    const base64 = Buffer.from([0xFF, 0xFF]).toString("base64");
     const result = base64ToPcm16(base64);
 
     expect(result[0]).toBe(-1);

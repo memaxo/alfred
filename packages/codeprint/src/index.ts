@@ -1,5 +1,5 @@
 import { logger } from "@alfred/logger";
-import { rerank, isRerankAvailable } from "@alfred/rerank";
+import { isRerankAvailable, rerank } from "@alfred/rerank";
 import { parseSync } from "oxc-parser";
 
 import type {
@@ -10,18 +10,18 @@ import type {
 } from "./types.js";
 
 import { BM25Index } from "./bm25.js";
-import { discoverFiles, type DiscoveryMethod } from "./discover.js";
+import { type DiscoveryMethod, discoverFiles } from "./discover.js";
 import { cosineSimilarity, embedText } from "./liteembed.js";
 import {
+  bm25VocabularyGauge,
   indexBuildDuration,
-  queryDuration,
-  queriesTotal,
-  parseErrorsTotal,
-  rerankFallbacksTotal,
   indexSizeGauge,
   keywordCandidatesHistogram,
+  parseErrorsTotal,
+  queriesTotal,
+  queryDuration,
+  rerankFallbacksTotal,
   rerankScoreShift,
-  bm25VocabularyGauge,
 } from "./metrics.js";
 import { getPool, isPoolAvailable, shutdownPool } from "./pool.js";
 import { getRankerWeights, scoreRanker } from "./ranker.js";
@@ -202,9 +202,9 @@ export async function findRelevantFiles(
   const liteFusionEnabled = liteFusionRaw.length > 0 && liteFusionRaw !== "0";
   const liteFusionMode =
     liteFusionRaw === "1"
-      ? isRerankAvailable()
+      ? (isRerankAvailable()
         ? "rerank"
-        : "hash"
+        : "hash")
       : liteFusionRaw;
 
   if (liteFusionEnabled && candidates.length > 0) {

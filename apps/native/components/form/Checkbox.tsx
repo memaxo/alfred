@@ -1,15 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { StyleSheet, Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
-  withSpring,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
-import { useVoidTheme, useReducedMotion } from "../../hooks/use-void-theme";
+import { useReducedMotion, useVoidTheme } from "../../hooks/use-void-theme";
 import { BiolumText } from "../foundation/BiolumText";
 
 export interface CheckboxProps {
@@ -56,9 +56,9 @@ export function Checkbox({
 
   const borderColor = disabled
     ? theme.colors.biolum.whisper
-    : checked || indeterminate
+    : (checked || indeterminate
       ? theme.colors.biolum.standard
-      : theme.colors.biolum.faint;
+      : theme.colors.biolum.faint);
 
   const backgroundColor =
     checked || indeterminate ? theme.colors.glass.active : "transparent";

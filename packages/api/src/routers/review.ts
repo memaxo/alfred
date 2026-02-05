@@ -1137,9 +1137,9 @@ export const reviewRouter = router({
           userId,
           input.period === "all"
             ? "month"
-            : input.period === "day"
+            : (input.period === "day"
               ? "day"
-              : input.period
+              : input.period)
         ),
         reviewRepo.getRiskCounts(userId),
       ]);

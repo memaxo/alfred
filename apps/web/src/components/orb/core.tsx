@@ -130,9 +130,9 @@ export function OrbCore({ size = "md", className, onClick }: OrbCoreProps) {
       {/* Canvas for custom rendering */}
       <canvas
         className="absolute inset-0 h-full w-full"
-        height={size === "lg" ? 80 : size === "md" ? 48 : 32}
+        height={size === "lg" ? 80 : (size === "md" ? 48 : 32)}
         ref={canvasRef}
-        width={size === "lg" ? 80 : size === "md" ? 48 : 32}
+        width={size === "lg" ? 80 : (size === "md" ? 48 : 32)}
       />
 
       {/* Fallback gradient */}

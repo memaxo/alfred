@@ -101,9 +101,9 @@ function HistoryRow({ item }: { item: HistoryItem }) {
   const StatusIcon =
     item.status === "success"
       ? CheckCircle
-      : item.status === "failure"
+      : (item.status === "failure"
         ? XCircle
-        : Clock;
+        : Clock);
   const statusColors = {
     success: "text-green-400",
     failure: "text-red-400",

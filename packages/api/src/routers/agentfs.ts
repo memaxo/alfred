@@ -7,13 +7,13 @@ import {
   type AgentFSChange,
   type AgentFSStreamCursor,
   type AgentFSStreamEvent,
-  READ_SCOPES,
-  WRITE_SCOPES,
   executorConfigPublicSchema,
   executorConfigWriteSchema,
   executorHealthSchema,
   executorKindSchema,
   executorStatusSchema,
+  READ_SCOPES,
+  WRITE_SCOPES,
 } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -59,8 +59,8 @@ import {
   readAgentfsFileClass,
   readAgentfsPrefix,
   readAgentfsRange,
-  redactExecutorKvEntry,
   recordAgentfsOp,
+  redactExecutorKvEntry,
   sanitizeCheckpointId,
   sanitizeRunId,
   toDirEntry,
@@ -1276,7 +1276,7 @@ export const agentfsRouter = router({
           projectId: input.projectId,
         });
 
-        const {kind} = input.config;
+        const { kind } = input.config;
         const keyConfig = `executor:${kind}:config`;
         const keySecrets = `executor:${kind}:secrets`;
 

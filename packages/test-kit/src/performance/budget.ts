@@ -104,8 +104,7 @@ export async function withBudget<T>(
   const durationMs = performance.now() - start;
   const withinBudget = durationMs <= budgetMs;
 
-  if (!withinBudget) {
-  }
+  if (!withinBudget) {}
 
   return {
     result,

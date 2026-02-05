@@ -247,7 +247,7 @@ export default function NotesListScreen() {
           <View style={styles.loadingContainer}>
             <ListSkeleton count={5} />
           </View>
-        ) : sortedNotes && sortedNotes.length > 0 ? (
+        ) : (sortedNotes && sortedNotes.length > 0 ? (
           <FlashList
             contentContainerStyle={styles.listContent}
             data={sortedNotes}
@@ -300,7 +300,7 @@ export default function NotesListScreen() {
               />
             )}
           </View>
-        )}
+        ))}
       </View>
     </VoidContainer>
   );

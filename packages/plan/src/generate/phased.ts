@@ -262,9 +262,9 @@ export async function generatePlan(
   const strategy =
     options?.preferParallel === true
       ? "parallel"
-      : options?.preferParallel === false
+      : (options?.preferParallel === false
         ? "sequential"
-        : raw.resources?.strategy || "sequential";
+        : raw.resources?.strategy || "sequential");
 
   return {
     id,

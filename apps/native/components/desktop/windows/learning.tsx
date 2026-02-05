@@ -71,7 +71,7 @@ export function LearningWindow(_props: WindowComponentProps) {
           <Text className="mt-2 text-destructive text-xs">
             {accuracyQuery.error.message}
           </Text>
-        ) : metrics.length === 0 ? (
+        ) : (metrics.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No metrics.
           </Text>
@@ -94,7 +94,7 @@ export function LearningWindow(_props: WindowComponentProps) {
               </View>
             ))}
           </View>
-        )}
+        ))}
       </View>
 
       <View className="mb-4 rounded-lg border border-border bg-card p-4">
@@ -103,7 +103,7 @@ export function LearningWindow(_props: WindowComponentProps) {
           <Text className="mt-2 text-destructive text-xs">
             {insightsQuery.error.message}
           </Text>
-        ) : insights.length === 0 ? (
+        ) : (insights.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No insights yet.
           </Text>
@@ -126,7 +126,7 @@ export function LearningWindow(_props: WindowComponentProps) {
               </View>
             ))}
           </View>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">
@@ -135,7 +135,7 @@ export function LearningWindow(_props: WindowComponentProps) {
           <Text className="mt-2 text-destructive text-xs">
             {feedbackQuery.error.message}
           </Text>
-        ) : feedback.length === 0 ? (
+        ) : (feedback.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No feedback yet.
           </Text>
@@ -158,7 +158,7 @@ export function LearningWindow(_props: WindowComponentProps) {
               </View>
             ))}
           </View>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

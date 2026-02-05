@@ -171,7 +171,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
             <div className="flex items-center justify-center py-6 text-biolum-faint text-sm">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
             </div>
-          ) : filteredTodos.length === 0 ? (
+          ) : (filteredTodos.length === 0 ? (
             <p className="py-4 text-center text-biolum-faint text-sm">
               {filter === "completed"
                 ? "No completed tasks yet"
@@ -216,7 +216,7 @@ export function TodoWindow({ id, data, selected }: NodeProps) {
                 </li>
               ))}
             </ul>
-          )}
+          ))}
         </ScrollArea>
       </div>
     </WindowFrame>

@@ -1,21 +1,21 @@
-import type { ViewStyle, TextStyle } from "react-native";
+import type { TextStyle, ViewStyle } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import {
-  View,
-  StyleSheet,
-  Pressable,
+  ActivityIndicator,
   Animated,
   Easing,
-  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import {
   BiolumText,
-  TitleText,
   BodyText,
   CaptionText,
+  TitleText,
 } from "@/components/foundation/BiolumText";
 import { FluidButton } from "@/components/foundation/FluidButton";
 import { HUDSurface } from "@/components/foundation/HUDSurface";
@@ -94,10 +94,10 @@ export function StepCard({ step, isActive, isLast, index }: StepCardProps) {
       if (duration < 1000) {
         return `${duration}ms`;
       }
-      if (duration < 60000) {
+      if (duration < 60_000) {
         return `${Math.round(duration / 1000)}s`;
       }
-      return `${Math.round(duration / 60000)}m ${Math.round((duration % 60000) / 1000)}s`;
+      return `${Math.round(duration / 60_000)}m ${Math.round((duration % 60_000) / 1000)}s`;
     }
     return "—";
   }, [step]);

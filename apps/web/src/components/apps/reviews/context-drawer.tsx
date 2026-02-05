@@ -50,7 +50,7 @@ export function ReviewContextDrawer({
 
         {isLoading ? (
           <DrawerSkeleton />
-        ) : review ? (
+        ) : (review ? (
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="space-y-6 p-6">
               {/* Header */}
@@ -184,7 +184,7 @@ export function ReviewContextDrawer({
               </div>
             </div>
           </ScrollArea>
-        ) : null}
+        ) : null)}
       </SheetContent>
     </Sheet>
   );

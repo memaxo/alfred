@@ -1,16 +1,16 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
+  Easing,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withTiming,
   withSequence,
-  interpolate,
-  Easing,
+  withTiming,
 } from "react-native-reanimated";
 
-import { useVoidTheme, useReducedMotion } from "@/hooks/use-void-theme";
+import { useReducedMotion, useVoidTheme } from "@/hooks/use-void-theme";
 
 interface BiolumOrbProps {
   size?: number;
@@ -98,7 +98,9 @@ export function BiolumOrb({
   });
 
   const pulseRingStyle = useAnimatedStyle(() => {
-    if (!active) return { opacity: 0, transform: [{ scale: 1 }] };
+    if (!active) {
+      return { opacity: 0, transform: [{ scale: 1 }] };
+    }
 
     const scale = interpolate(activePulse.value, [0, 1], [1, 1.3]);
     const opacity = interpolate(activePulse.value, [0, 1], [0.5, 0]);

@@ -153,10 +153,10 @@ function buildActMessages(
 
   const physiology = cognitive?.physiology;
   if (isRecord(physiology)) {
-    const energy = physiology.energy;
-    const boredom = physiology.boredom;
-    const frustration = physiology.frustration;
-    const entropy = physiology.entropy;
+    const { energy } = physiology;
+    const { boredom } = physiology;
+    const { frustration } = physiology;
+    const { entropy } = physiology;
 
     if (
       isNum(energy) &&

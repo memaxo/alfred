@@ -118,9 +118,9 @@ function TreeItem({
   };
 
   const Icon = isFolder
-    ? isExpanded
+    ? (isExpanded
       ? FolderOpen
-      : Folder
+      : Folder)
     : getFileIcon(node.name);
 
   return (

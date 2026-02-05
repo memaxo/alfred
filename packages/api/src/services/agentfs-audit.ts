@@ -112,16 +112,16 @@ export async function queryAuditLog(
   const resource =
     query.runId && !query.resource
       ? query.runId
-      : !query.runId && query.resource
+      : (!query.runId && query.resource
         ? query.resource
-        : undefined;
+        : undefined);
 
   const decision =
     query.successOnly === true
       ? "allow"
-      : query.successOnly === false
+      : (query.successOnly === false
         ? "deny"
-        : undefined;
+        : undefined);
 
   const { rows, totalCount } = await policyRepo.queryAuditLogs({
     userId: query.userId,
@@ -147,9 +147,9 @@ export async function queryAuditLog(
     const timestamp =
       timestampRaw instanceof Date
         ? timestampRaw
-        : typeof timestampRaw === "string" || typeof timestampRaw === "number"
+        : (typeof timestampRaw === "string" || typeof timestampRaw === "number"
           ? new Date(timestampRaw)
-          : new Date(0);
+          : new Date(0));
     const details = parseJsonField(row.context);
     const resourceIds = parseResource(row.resource);
     const detailsRec =

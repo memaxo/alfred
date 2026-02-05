@@ -111,7 +111,7 @@ export function SimilarityExplorer() {
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-5 w-5 animate-spin text-biolum" />
             </div>
-          ) : pairs.length === 0 ? (
+          ) : (pairs.length === 0 ? (
             <div className="p-4 text-center text-biolum-dim text-sm">
               No relationships found. Try a different search.
             </div>
@@ -156,7 +156,7 @@ export function SimilarityExplorer() {
                 </button>
               ))}
             </div>
-          )}
+          ))}
         </ScrollArea>
       </div>
 

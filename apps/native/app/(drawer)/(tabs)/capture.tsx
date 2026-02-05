@@ -41,7 +41,7 @@ export default function CaptureScreen() {
   // Fetch inbox items (untriaged captures)
   const inboxQuery = trpc.inbox.list.useQuery(
     { status: "new", limit: 50 },
-    { refetchInterval: 30000 }
+    { refetchInterval: 30_000 }
   );
 
   // Create capture mutation
@@ -75,7 +75,9 @@ export default function CaptureScreen() {
 
   // Voice capture handlers
   const handleStartRecording = useCallback(async () => {
-    if (createMutation.isPending || recording) return;
+    if (createMutation.isPending || recording) {
+      return;
+    }
 
     if (!captureRef.current) {
       captureRef.current = new ExpoCapture();
@@ -90,12 +92,16 @@ export default function CaptureScreen() {
   }, [createMutation.isPending, recording]);
 
   const handleStopRecording = useCallback(async () => {
-    if (!captureRef.current || !recording) return;
+    if (!captureRef.current || !recording) {
+      return;
+    }
 
     try {
       const clip = await captureRef.current.stop();
       setRecording(false);
-      if (!clip?.audioBase64) return;
+      if (!clip?.audioBase64) {
+        return;
+      }
 
       createMutation.mutate({
         payload: {
@@ -167,7 +173,9 @@ export default function CaptureScreen() {
   // Triage modal handlers
   const handleTriageConvert = useCallback(
     (type: "note" | "reminder", options?: TriageOptions) => {
-      if (!selectedCapture) return;
+      if (!selectedCapture) {
+        return;
+      }
 
       triageMutation.mutate({
         captureId: selectedCapture.id,
@@ -192,7 +200,9 @@ export default function CaptureScreen() {
 
   // Transform inbox items to Capture format
   const captures: Capture[] = useMemo(() => {
-    if (!inboxQuery.data) return [];
+    if (!inboxQuery.data) {
+      return [];
+    }
 
     return inboxQuery.data.map((item) => ({
       id: item.capture.id,

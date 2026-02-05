@@ -17,8 +17,14 @@ import {
   historyContextSelectionDurationSeconds,
   historyContextTierDropsTotal,
   historyContextTokensTotal,
+  toolResultTruncatedTotal,
 } from "./metrics";
 import { getModelContextInfo } from "./model";
+import {
+  shouldTruncateToolResult,
+  summarizeToolPayload,
+  truncateToolPart,
+} from "./tool-truncation";
 
 /**
  * Research-backed budget constants (January 2025)
@@ -81,255 +87,337 @@ export async function buildHistoryContext(
   options: BuildHistoryContextOptions
 ): Promise<BuildHistoryContextResult> {
   const sourceLabel = options.source ?? "history";
-  return withBudget(`build_history_context_${sourceLabel}`, 10, async () => {
-    const start = performance.now();
-    await Promise.resolve();
-    const messages = (
-      Array.isArray(options.messages) ? options.messages : []
-    ).filter((m): m is UIMessage => !!m);
 
-    if (messages.length === 0) {
-      return emptyResult(options);
-    }
+  await Promise.resolve();
+  let messages = (
+    Array.isArray(options.messages) ? options.messages : []
+  ).filter((m): m is UIMessage => !!m);
 
-    const estimator = createTokenEstimator({ model: options.modelId });
-    const modelContext = getModelContextInfo(options.modelId);
+  if (messages.length === 0) {
+    return emptyResult(options);
+  }
 
-    const budget = resolveBudget(
-      options,
-      modelContext,
-      options.system ? estimator.estimate(options.system) : 0
-    );
+  const estimator = createTokenEstimator({ model: options.modelId });
+  const modelContext = getModelContextInfo(options.modelId);
+  const budget = resolveBudget(
+    options,
+    modelContext,
+    options.system ? estimator.estimate(options.system) : 0
+  );
 
-    const tokensByIndex = messages.map((message, index) =>
-      estimateMessageTokens(estimator, message, index)
-    );
-    const totalTokens = tokensByIndex.reduce((sum, value) => sum + value, 0);
-
-    const forceKeep = normalizeForceKeep(options.forceKeepIds);
-    const toolChains = findToolChains(messages);
-    const latestToolChain = toolChains.at(-1) ?? null;
-
-    const anchorIndices = new Set<number>();
-    const idToIndex = new Map<string, number>();
-
-    for (let index = 0; index < messages.length; index += 1) {
-      const message = messages[index];
-      if (!message) {
+  // Tool truncation happens before compression/selection so both token
+  // estimation and returned UI messages are bounded.
+  const truncationEnabled = process.env.CONTEXT_TOOL_TRUNCATION_ENABLED !== "0";
+  if (truncationEnabled) {
+    let changed = false;
+    const next: UIMessage[] = [];
+    for (const message of messages) {
+      if (!Array.isArray(message.parts) || message.parts.length === 0) {
+        next.push(message);
         continue;
       }
-      const key = resolveMessageKey(message, index);
-      idToIndex.set(key, index);
-    }
-
-    const lastUserIndex = findLastIndexByRole(messages, "user");
-    if (lastUserIndex !== -1) {
-      anchorIndices.add(lastUserIndex);
-      const prevAssistant = lastUserIndex - 1;
-      if (prevAssistant >= 0 && messages[prevAssistant]?.role === "assistant") {
-        anchorIndices.add(prevAssistant);
+      let msgChanged = false;
+      const parts: UIMessage["parts"] = [];
+      for (const part of message.parts) {
+        if (!shouldTruncateToolResult(estimator, part, 4000)) {
+          parts.push(part);
+          continue;
+        }
+        msgChanged = true;
+        const toolName =
+          typeof (part as any)?.toolName === "string"
+            ? String((part as any).toolName)
+            : "unknown";
+        const payload =
+          (part as any).output ??
+          (part as any).result ??
+          (part as any).input ??
+          null;
+        toolResultTruncatedTotal.inc({
+          source: sourceLabel,
+          stored: "none",
+          toolName,
+        });
+        parts.push(
+          truncateToolPart(part, {
+            ref: null,
+            summaryText: summarizeToolPayload(payload),
+          })
+        );
       }
-      const previousUser = findLastIndexByRole(
-        messages,
-        "user",
-        lastUserIndex - 1
+      if (msgChanged) {
+        changed = true;
+        next.push({ ...message, parts });
+      } else {
+        next.push(message);
+      }
+    }
+    if (changed) {
+      messages = next;
+    }
+  }
+
+  const compressionEnabled = process.env.CONTEXT_COMPRESSION_ENABLED === "1";
+  if (compressionEnabled) {
+    const { compressHistoryMessages } = await import("./compression");
+    const compressed = await withBudget(
+      `build_history_context_compression_${sourceLabel}`,
+      100,
+      async () =>
+        compressHistoryMessages({
+          budgetTokens: budget.historyBudgetTokens,
+          messages,
+          modelId: options.modelId,
+          source: sourceLabel,
+          thresholdRatio: 0.92,
+        })
+    );
+    if (compressed.changed) {
+      ({ messages } = compressed);
+    }
+  }
+
+  const selectionStart = performance.now();
+
+  const result = await withBudget(
+    `build_history_context_selection_${sourceLabel}`,
+    10,
+    async () => {
+      const tokensByIndex = messages.map((message, index) =>
+        estimateMessageTokens(estimator, message, index)
       );
-      if (previousUser !== -1) {
-        const lastUserTokens = tokensByIndex[lastUserIndex] ?? 0;
-        if (lastUserTokens < 64 || lastUserIndex - previousUser <= 2) {
-          anchorIndices.add(previousUser);
+      const totalTokens = tokensByIndex.reduce((sum, value) => sum + value, 0);
+
+      const forceKeep = normalizeForceKeep(options.forceKeepIds);
+      const toolChains = findToolChains(messages);
+      const latestToolChain = toolChains.at(-1) ?? null;
+
+      const anchorIndices = new Set<number>();
+      const idToIndex = new Map<string, number>();
+
+      for (let index = 0; index < messages.length; index += 1) {
+        const message = messages[index];
+        if (!message) {
+          continue;
+        }
+        const key = resolveMessageKey(message, index);
+        idToIndex.set(key, index);
+      }
+
+      const lastUserIndex = findLastIndexByRole(messages, "user");
+      if (lastUserIndex !== -1) {
+        anchorIndices.add(lastUserIndex);
+        const prevAssistant = lastUserIndex - 1;
+        if (
+          prevAssistant >= 0 &&
+          messages[prevAssistant]?.role === "assistant"
+        ) {
+          anchorIndices.add(prevAssistant);
+        }
+        const previousUser = findLastIndexByRole(
+          messages,
+          "user",
+          lastUserIndex - 1
+        );
+        if (previousUser !== -1) {
+          const lastUserTokens = tokensByIndex[lastUserIndex] ?? 0;
+          if (lastUserTokens < 64 || lastUserIndex - previousUser <= 2) {
+            anchorIndices.add(previousUser);
+          }
         }
       }
-    }
 
-    if (latestToolChain) {
-      for (
-        let index = latestToolChain.start;
-        index <= latestToolChain.end;
-        index += 1
-      ) {
-        anchorIndices.add(index);
-      }
-    }
-
-    if (forceKeep.size > 0) {
-      for (const key of forceKeep) {
-        const index = idToIndex.get(key);
-        if (typeof index === "number") {
+      if (latestToolChain) {
+        for (
+          let index = latestToolChain.start;
+          index <= latestToolChain.end;
+          index += 1
+        ) {
           anchorIndices.add(index);
         }
       }
-    }
 
-    const toolGroupMap = mapToolGroups(messages, toolChains);
-
-    const messageInfos: MessageInfo[] = messages.map((message, index) => {
-      const id = resolveMessageKey(message, index);
-      const tokens = tokensByIndex[index] ?? 0;
-      const isAnchor = anchorIndices.has(index);
-      const hasToolPart = messageHasToolPart(message);
-      const tier: HistoryTier = isAnchor
-        ? "anchor"
-        : message.role === "user"
-          ? "high"
-          : hasToolPart
-            ? "medium"
-            : message.role === "assistant"
-              ? "medium"
-              : "low";
-      const recencyWeight = (index + 1) / messages.length;
-      const agePenalty = (messages.length - index - 1) / messages.length;
-      const roleWeight = ROLE_WEIGHTS[message.role ?? "assistant"] ?? 1;
-      let score = roleWeight * 2 + recencyWeight * 3 - agePenalty;
-      if (hasToolPart) {
-        score += 0.5;
-      }
-      if (
-        latestToolChain &&
-        index >= latestToolChain.start - 1 &&
-        index <= latestToolChain.end + 1
-      ) {
-        score += 1;
-      }
-      if (isAnchor) {
-        score += 20;
-      }
-      const groupId = toolGroupMap.get(index) ?? `msg-${index}`;
-      return {
-        groupId,
-        id,
-        index,
-        isAnchor,
-        message,
-        score,
-        tier,
-        tokens,
-      };
-    });
-
-    const groups = buildGroups(messageInfos);
-
-    const selectedIndices = new Set<number>();
-    let keptTokens = 0;
-
-    const anchorGroups = groups.filter((group) => group.isAnchor);
-    for (const group of anchorGroups) {
-      for (const index of group.indices) {
-        selectedIndices.add(index);
-      }
-      keptTokens += group.tokens;
-    }
-
-    const { historyBudgetTokens } = budget;
-
-    const candidateGroups = groups
-      .filter((group) => !group.isAnchor)
-      .toSorted((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
+      if (forceKeep.size > 0) {
+        for (const key of forceKeep) {
+          const index = idToIndex.get(key);
+          if (typeof index === "number") {
+            anchorIndices.add(index);
+          }
         }
-        return b.latestIndex - a.latestIndex;
+      }
+
+      const toolGroupMap = mapToolGroups(messages, toolChains);
+
+      const messageInfos: MessageInfo[] = messages.map((message, index) => {
+        const id = resolveMessageKey(message, index);
+        const tokens = tokensByIndex[index] ?? 0;
+        const isAnchor = anchorIndices.has(index);
+        const hasToolPart = messageHasToolPart(message);
+        const tier: HistoryTier = isAnchor
+          ? "anchor"
+          : message.role === "user"
+            ? "high"
+            : hasToolPart
+              ? "medium"
+              : message.role === "assistant"
+                ? "medium"
+                : "low";
+        const recencyWeight = (index + 1) / messages.length;
+        const agePenalty = (messages.length - index - 1) / messages.length;
+        const roleWeight = ROLE_WEIGHTS[message.role ?? "assistant"] ?? 1;
+        let score = roleWeight * 2 + recencyWeight * 3 - agePenalty;
+        if (hasToolPart) {
+          score += 0.5;
+        }
+        if (
+          latestToolChain &&
+          index >= latestToolChain.start - 1 &&
+          index <= latestToolChain.end + 1
+        ) {
+          score += 1;
+        }
+        if (isAnchor) {
+          score += 20;
+        }
+        const groupId = toolGroupMap.get(index) ?? `msg-${index}`;
+        return {
+          groupId,
+          id,
+          index,
+          isAnchor,
+          message,
+          score,
+          tier,
+          tokens,
+        };
       });
 
-    for (const group of candidateGroups) {
-      if (group.indices.every((index) => selectedIndices.has(index))) {
-        continue;
+      const groups = buildGroups(messageInfos);
+
+      const selectedIndices = new Set<number>();
+      let keptTokens = 0;
+
+      const anchorGroups = groups.filter((group) => group.isAnchor);
+      for (const group of anchorGroups) {
+        for (const index of group.indices) {
+          selectedIndices.add(index);
+        }
+        keptTokens += group.tokens;
       }
 
-      const remaining = historyBudgetTokens - keptTokens;
-      const overdraft = getAllowedOverdraft(group.tier, historyBudgetTokens);
-      if (group.tokens > remaining) {
-        if (remaining <= 0 && overdraft <= 0) {
+      const { historyBudgetTokens } = budget;
+
+      const candidateGroups = groups
+        .filter((group) => !group.isAnchor)
+        .toSorted((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score;
+          }
+          return b.latestIndex - a.latestIndex;
+        });
+
+      for (const group of candidateGroups) {
+        if (group.indices.every((index) => selectedIndices.has(index))) {
           continue;
         }
-        if (group.tokens - remaining > overdraft) {
-          continue;
+
+        const remaining = historyBudgetTokens - keptTokens;
+        const overdraft = getAllowedOverdraft(group.tier, historyBudgetTokens);
+        if (group.tokens > remaining) {
+          if (remaining <= 0 && overdraft <= 0) {
+            continue;
+          }
+          if (group.tokens - remaining > overdraft) {
+            continue;
+          }
         }
+
+        for (const index of group.indices) {
+          selectedIndices.add(index);
+        }
+        keptTokens += group.tokens;
       }
 
-      for (const index of group.indices) {
-        selectedIndices.add(index);
-      }
-      keptTokens += group.tokens;
-    }
-
-    const keptIndices = [...selectedIndices].toSorted((a, b) => a - b);
-    const keptMessages = keptIndices
-      .map((index) => messages[index])
-      .filter((m): m is UIMessage => !!m);
-    const droppedMessages = messages.filter(
-      (_, index) => !selectedIndices.has(index)
-    );
-
-    const droppedTokens = Math.max(totalTokens - keptTokens, 0);
-
-    const tiers = new Map<string, HistoryTier>();
-    const tierByMessage = new WeakMap<UIMessage, HistoryTier>();
-    for (const info of messageInfos) {
-      tiers.set(info.id, info.tier);
-      tierByMessage.set(info.message, info.tier);
-    }
-
-    const selection: HistorySelection = {
-      budget: {
-        modelId: options.modelId,
-        maxContextTokens: budget.maxContextTokens,
-        historyBudgetTokens,
-        systemTokens: budget.systemTokens,
-        headroomTokens: budget.headroomTokens,
-      },
-      dropped: droppedMessages,
-      droppedTokens,
-      kept: keptMessages,
-      keptTokens,
-      tierByMessage,
-      tiers,
-    };
-
-    const uiMessages = keptMessages;
-    const modelMessagesRaw =
-      uiMessages.length === 0
-        ? []
-        : options.tools
-          ? convertToModelMessages(uiMessages, { tools: options.tools })
-          : convertToModelMessages(uiMessages);
-
-    const modelMessages =
-      modelMessagesRaw.length === 0
-        ? []
-        : pruneMessages({
-            emptyMessages: "remove",
-            messages: modelMessagesRaw,
-          });
-
-    const result = {
-      droppedMessages: droppedMessages.length,
-      droppedTokens,
-      keptTokens,
-      modelMessages,
-      selection,
-      uiMessages,
-    } satisfies BuildHistoryContextResult;
-
-    historyContextSelectionDurationSeconds.observe(
-      { source: sourceLabel },
-      (performance.now() - start) / 1000
-    );
-
-    historyContextTokensTotal.inc(
-      { action: "selection", model: options.modelId, source: sourceLabel },
-      keptTokens
-    );
-
-    if (droppedMessages.length > 0) {
-      historyContextTierDropsTotal.inc(
-        { source: sourceLabel, tier: "unknown" },
-        droppedMessages.length
+      const keptIndices = [...selectedIndices].toSorted((a, b) => a - b);
+      const keptMessages = keptIndices
+        .map((index) => messages[index])
+        .filter((m): m is UIMessage => !!m);
+      const droppedMessages = messages.filter(
+        (_, index) => !selectedIndices.has(index)
       );
-    }
 
-    return result;
-  });
+      const droppedTokens = Math.max(totalTokens - keptTokens, 0);
+
+      const tiers = new Map<string, HistoryTier>();
+      const tierByMessage = new WeakMap<UIMessage, HistoryTier>();
+      for (const info of messageInfos) {
+        tiers.set(info.id, info.tier);
+        tierByMessage.set(info.message, info.tier);
+      }
+
+      const selection: HistorySelection = {
+        budget: {
+          modelId: options.modelId,
+          maxContextTokens: budget.maxContextTokens,
+          historyBudgetTokens,
+          systemTokens: budget.systemTokens,
+          headroomTokens: budget.headroomTokens,
+        },
+        dropped: droppedMessages,
+        droppedTokens,
+        kept: keptMessages,
+        keptTokens,
+        tierByMessage,
+        tiers,
+      };
+
+      const uiMessages = keptMessages;
+      const modelMessagesRaw =
+        uiMessages.length === 0
+          ? []
+          : (options.tools
+            ? convertToModelMessages(uiMessages, { tools: options.tools })
+            : convertToModelMessages(uiMessages));
+
+      const modelMessages =
+        modelMessagesRaw.length === 0
+          ? []
+          : pruneMessages({
+              emptyMessages: "remove",
+              messages: modelMessagesRaw,
+            });
+
+      const out = {
+        droppedMessages: droppedMessages.length,
+        droppedTokens,
+        keptTokens,
+        modelMessages,
+        selection,
+        uiMessages,
+      } satisfies BuildHistoryContextResult;
+
+      historyContextTokensTotal.inc(
+        { action: "selection", model: options.modelId, source: sourceLabel },
+        keptTokens
+      );
+
+      if (droppedMessages.length > 0) {
+        for (const msg of droppedMessages) {
+          const tier = tierByMessage.get(msg) ?? "low";
+          historyContextTierDropsTotal.inc({ source: sourceLabel, tier });
+        }
+      }
+
+      return out;
+    }
+  );
+
+  historyContextSelectionDurationSeconds.observe(
+    { source: sourceLabel },
+    (performance.now() - selectionStart) / 1000
+  );
+
+  return result;
 }
 
 function emptyResult(

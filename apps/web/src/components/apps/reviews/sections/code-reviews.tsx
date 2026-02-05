@@ -351,9 +351,9 @@ function QualityBadge({ score }: { score: number | null }) {
   const colorClass =
     normalized >= 8
       ? "bg-green-500/20 text-green-400"
-      : normalized >= 5
+      : (normalized >= 5
         ? "bg-yellow-500/20 text-yellow-400"
-        : "bg-red-500/20 text-red-400";
+        : "bg-red-500/20 text-red-400");
 
   return (
     <Badge className={cn("text-[10px]", colorClass)}>
@@ -667,9 +667,9 @@ function SummaryView({ qualityScore, summary }: SummaryViewProps) {
                 "flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold",
                 qualityScore >= 8
                   ? "bg-green-500/20 text-green-400"
-                  : qualityScore >= 5
+                  : (qualityScore >= 5
                     ? "bg-yellow-500/20 text-yellow-400"
-                    : "bg-red-500/20 text-red-400"
+                    : "bg-red-500/20 text-red-400")
               )}
             >
               {qualityScore.toFixed(1)}
@@ -679,9 +679,9 @@ function SummaryView({ qualityScore, summary }: SummaryViewProps) {
               <p>
                 {qualityScore >= 8
                   ? "Excellent quality"
-                  : qualityScore >= 5
+                  : (qualityScore >= 5
                     ? "Good with minor issues"
-                    : "Needs improvement"}
+                    : "Needs improvement")}
               </p>
             </div>
           </div>

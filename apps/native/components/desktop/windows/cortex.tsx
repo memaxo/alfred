@@ -75,7 +75,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : stateQuery.error ? (
+        ) : (stateQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {stateQuery.error.message}
           </Text>
@@ -83,7 +83,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <Text className="mt-3 font-mono text-[10px] text-muted-foreground">
             {stateText}
           </Text>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">
@@ -92,7 +92,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : physQuery.error ? (
+        ) : (physQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {physQuery.error.message}
           </Text>
@@ -100,7 +100,7 @@ export function CortexWindow(_props: WindowComponentProps) {
           <Text className="mt-3 font-mono text-[10px] text-muted-foreground">
             {physText}
           </Text>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

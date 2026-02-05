@@ -42,9 +42,7 @@ function readPkgInfo(pkgsDir: string): PkgInfo[] {
       }
       const short = name.slice("@alfred/".length);
       out.push({ dirName, name, short });
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   return out;
 }
@@ -125,9 +123,9 @@ function formatTable(results: CheckResult[]): string {
       const status =
         r.matches > 0
           ? "wired"
-          : r.allowedDisconnected
+          : (r.allowedDisconnected
             ? "standalone"
-            : "disconnected";
+            : "disconnected");
       return `${status.padEnd(12)}  ${String(r.matches).padStart(6)}  ${r.pkg.name}`;
     });
 

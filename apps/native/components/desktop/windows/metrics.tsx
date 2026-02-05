@@ -64,7 +64,7 @@ export function MetricsWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : snapshotQuery.error ? (
+        ) : (snapshotQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {snapshotQuery.error.message}
           </Text>
@@ -72,7 +72,7 @@ export function MetricsWindow(_props: WindowComponentProps) {
           <Text className="mt-3 font-mono text-[10px] text-muted-foreground">
             {snapshotText.slice(0, 4000)}
           </Text>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">
@@ -128,11 +128,11 @@ export function MetricsWindow(_props: WindowComponentProps) {
           <Text className="mt-2 text-destructive text-xs">
             {costQuery.error.message}
           </Text>
-        ) : costQuery.data ? (
+        ) : (costQuery.data ? (
           <Text className="mt-2 font-mono text-[10px] text-muted-foreground">
             {JSON.stringify(costQuery.data, null, 2)}
           </Text>
-        ) : null}
+        ) : null)}
       </View>
     </ScrollView>
   );

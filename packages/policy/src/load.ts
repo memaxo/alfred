@@ -116,7 +116,7 @@ function stableSerialize(value: unknown): string {
     return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
   }
   const entries = Object.entries(value as Record<string, unknown>).sort(
-    ([a], [b]) => (a > b ? 1 : a < b ? -1 : 0)
+    ([a], [b]) => (a > b ? 1 : (a < b ? -1 : 0))
   );
   return `{${entries
     .map(([key, val]) => `${JSON.stringify(key)}:${stableSerialize(val)}`)

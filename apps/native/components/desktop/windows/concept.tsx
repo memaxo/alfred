@@ -62,7 +62,7 @@ export function ConceptWindow({ window }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : entities.length === 0 ? (
+        ) : (entities.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No results.
           </Text>
@@ -82,7 +82,7 @@ export function ConceptWindow({ window }: WindowComponentProps) {
               </View>
             ))}
           </View>
-        )}
+        ))}
       </View>
 
       <View className="rounded-lg border border-border bg-card p-4">

@@ -221,9 +221,9 @@ export async function executeMergePlan(
           error:
             error instanceof Error
               ? error.message
-              : typeof error === "string"
+              : (typeof error === "string"
                 ? error
-                : String(error),
+                : String(error)),
         };
       }
     }

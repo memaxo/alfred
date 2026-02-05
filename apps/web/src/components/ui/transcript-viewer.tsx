@@ -250,9 +250,9 @@ function TranscriptViewerWords({
         const status: TranscriptViewerWordStatus =
           currentWordId && word.id === currentWordId
             ? "current"
-            : word.end <= currentTime
+            : (word.end <= currentTime
               ? "spoken"
-              : "unspoken";
+              : "unspoken");
         entries.push({ kind: "word", word, status });
       }
     }

@@ -223,7 +223,7 @@ export default function BookmarksListScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={theme.colors.accent.cyan} size="large" />
           </View>
-        ) : filteredBookmarks && filteredBookmarks.length > 0 ? (
+        ) : (filteredBookmarks && filteredBookmarks.length > 0 ? (
           <FlashList
             contentContainerStyle={styles.listContent}
             data={filteredBookmarks}
@@ -267,7 +267,7 @@ export default function BookmarksListScreen() {
                 : "No bookmarks yet. Add your first bookmark above!"}
             </BodyText>
           </View>
-        )}
+        ))}
       </View>
     </VoidContainer>
   );

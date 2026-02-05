@@ -265,9 +265,9 @@ export function getOntologyKnowledgeWithMetadata(): {
   for (const anchor of ALL_ANCHORS) {
     const sourceType: KnowledgeSourceType = anchor.label.startsWith("Concept:")
       ? "official"
-      : anchor.label.startsWith("Pattern:")
+      : (anchor.label.startsWith("Pattern:")
         ? "inferred"
-        : "established";
+        : "established");
     const confidence = getSeedConfidence(sourceType);
     const k = fact(anchor.label, confidence, "ontology");
     list.push({ hash: knowledgeHash(k), data: k, sourceType, confidence });

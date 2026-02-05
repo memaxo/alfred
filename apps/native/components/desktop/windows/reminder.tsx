@@ -144,7 +144,7 @@ export function ReminderWindow({ window, onClose }: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : reminderId && !reminder ? (
+        ) : (reminderId && !reminder ? (
           <Text className="text-muted-foreground text-xs">
             Reminder not found.
           </Text>
@@ -217,7 +217,7 @@ export function ReminderWindow({ window, onClose }: WindowComponentProps) {
               </TouchableOpacity>
             </View>
           </>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

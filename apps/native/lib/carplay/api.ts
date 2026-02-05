@@ -264,7 +264,7 @@ function mapRunToWorkflowState(run: {
     requirement: run.requirement ?? inputData?.requirement ?? "",
     status: run.status as WorkflowStatus,
     progress:
-      run.status === "completed" ? 100 : run.status === "running" ? 50 : 0,
+      run.status === "completed" ? 100 : (run.status === "running" ? 50 : 0),
     completedTasks: 0, // Would need to fetch from snapshot
     totalTasks: 0,
     startedAt: parseTimestamp(run.created),

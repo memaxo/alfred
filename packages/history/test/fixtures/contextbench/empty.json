@@ -1,0 +1,12 @@
+{
+  "id": "empty",
+  "modelId": "openai/gpt-4o-mini",
+  "system": {
+    "persona": "You are ALFRED.",
+    "preferences": "",
+    "domain": ""
+  },
+  "rag": [],
+  "tools": [],
+  "messages": []
+}

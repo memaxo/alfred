@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { StyleSheet, View, Pressable } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
-  withSpring,
   useSharedValue,
+  withSpring,
 } from "react-native-reanimated";
 
-import { useVoidTheme, useReducedMotion } from "../../hooks/use-void-theme";
+import { useReducedMotion, useVoidTheme } from "../../hooks/use-void-theme";
 import { BiolumText, CaptionText } from "../foundation/BiolumText";
 
 export interface ChoiceOption {
@@ -127,12 +127,12 @@ function ChoiceItem({
   }));
 
   const IconComponent = multiple
-    ? selected
+    ? (selected
       ? "checkbox"
-      : "square-outline"
-    : selected
+      : "square-outline")
+    : (selected
       ? "radio-button-on"
-      : "radio-button-off";
+      : "radio-button-off");
 
   return (
     <Pressable onPress={handlePress} disabled={disabled}>
@@ -166,7 +166,7 @@ function ChoiceItem({
           <BiolumText
             variant="body"
             size="medium"
-            color={disabled ? "faint" : selected ? "full" : "standard"}
+            color={disabled ? "faint" : (selected ? "full" : "standard")}
           >
             {option.label}
           </BiolumText>

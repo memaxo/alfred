@@ -102,7 +102,9 @@ export function QuickActionsOverlay({
     onClose();
   });
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <GestureDetector gesture={tapGesture}>

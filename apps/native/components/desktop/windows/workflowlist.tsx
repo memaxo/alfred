@@ -50,7 +50,7 @@ export function WorkflowlistWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : runs.length === 0 ? (
+        ) : (runs.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             No workflow runs yet.
           </Text>
@@ -117,7 +117,7 @@ export function WorkflowlistWindow(_props: WindowComponentProps) {
               );
             })}
           </View>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

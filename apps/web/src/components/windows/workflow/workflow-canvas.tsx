@@ -28,7 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
-import { List, LayoutGrid } from "lucide-react";
+import { LayoutGrid, List } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -278,20 +278,24 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
   // Keyboard navigation for list view
   const handleListKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (!showListView) return;
+      if (!showListView) {
+        return;
+      }
 
       switch (e.key) {
-        case "ArrowDown":
+        case "ArrowDown": {
           e.preventDefault();
           setFocusedPhaseIndex((prev) =>
             prev < plan.phases.length - 1 ? prev + 1 : prev
           );
           break;
-        case "ArrowUp":
+        }
+        case "ArrowUp": {
           e.preventDefault();
           setFocusedPhaseIndex((prev) => (prev > 0 ? prev - 1 : prev));
           break;
-        case "Enter":
+        }
+        case "Enter": {
           e.preventDefault();
           if (focusedPhaseIndex >= 0) {
             const phase = plan.phases[focusedPhaseIndex];
@@ -301,11 +305,13 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
             }
           }
           break;
-        case "Escape":
+        }
+        case "Escape": {
           e.preventDefault();
           setShowListView(false);
           setFocusedPhaseIndex(-1);
           break;
+        }
       }
     },
     [showListView, plan.phases, focusedPhaseIndex]

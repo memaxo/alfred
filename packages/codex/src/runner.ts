@@ -202,9 +202,9 @@ export async function* runStreamed(
     const stderrPromise =
       proc.stderr && onStderr
         ? drainText(proc.stderr, onStderr)
-        : proc.stderr
+        : (proc.stderr
           ? drainText(proc.stderr, async () => {})
-          : Promise.resolve();
+          : Promise.resolve());
 
     if (!proc.stdout) {
       throw new Error("codex_missing_stdout");

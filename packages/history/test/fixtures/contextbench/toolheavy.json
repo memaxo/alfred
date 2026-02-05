@@ -1,0 +1,94 @@
+{
+  "id": "toolheavy",
+  "modelId": "openai/gpt-4o-mini",
+  "system": {
+    "persona": "You are ALFRED.",
+    "preferences": "Never output internal refs. Summarize large tool results.",
+    "domain": ""
+  },
+  "rag": [],
+  "tools": [
+    {
+      "name": "core_git",
+      "kind": "core",
+      "description": "Runs git commands",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "workdir": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mcp__bigschema",
+      "kind": "mcp",
+      "description": "[mcp:demo] Example MCP tool with a huge schema",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "a": { "type": "string" },
+              "b": { "type": "string" },
+              "c": { "type": "string" },
+              "d": { "type": "string" },
+              "e": { "type": "string" },
+              "f": { "type": "string" },
+              "g": { "type": "string" },
+              "h": { "type": "string" },
+              "i": { "type": "string" },
+              "j": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "messages": [
+    {
+      "id": "t-001",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Show me the last 200 lines of the server log."
+        }
+      ]
+    },
+    {
+      "id": "t-002",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call-1",
+          "toolName": "core_git",
+          "input": { "command": "git status" }
+        }
+      ]
+    },
+    {
+      "id": "t-003",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "tool-result",
+          "toolCallId": "call-1",
+          "toolName": "core_git",
+          "output": {
+            "exitCode": 0,
+            "stdout": "LOG_START\nLINE 0001: example log entry\nLINE 0002: example log entry\nLINE 0003: example log entry\nLINE 0004: example log entry\nLINE 0005: example log entry\nLINE 0006: example log entry\nLINE 0007: example log entry\nLINE 0008: example log entry\nLINE 0009: example log entry\nLINE 0010: example log entry\nLINE 0011: example log entry\nLINE 0012: example log entry\nLINE 0013: example log entry\nLINE 0014: example log entry\nLINE 0015: example log entry\nLINE 0016: example log entry\nLINE 0017: example log entry\nLINE 0018: example log entry\nLINE 0019: example log entry\nLINE 0020: example log entry\nLINE 0021: example log entry\nLINE 0022: example log entry\nLINE 0023: example log entry\nLINE 0024: example log entry\nLINE 0025: example log entry\nLINE 0026: example log entry\nLINE 0027: example log entry\nLINE 0028: example log entry\nLINE 0029: example log entry\nLINE 0030: example log entry\nLINE 0031: example log entry\nLINE 0032: example log entry\nLINE 0033: example log entry\nLINE 0034: example log entry\nLINE 0035: example log entry\nLINE 0036: example log entry\nLINE 0037: example log entry\nLINE 0038: example log entry\nLINE 0039: example log entry\nLINE 0040: example log entry\nLINE 0041: example log entry\nLINE 0042: example log entry\nLINE 0043: example log entry\nLINE 0044: example log entry\nLINE 0045: example log entry\nLINE 0046: example log entry\nLINE 0047: example log entry\nLINE 0048: example log entry\nLINE 0049: example log entry\nLINE 0050: example log entry\nLINE 0051: example log entry\nLINE 0052: example log entry\nLINE 0053: example log entry\nLINE 0054: example log entry\nLINE 0055: example log entry\nLINE 0056: example log entry\nLINE 0057: example log entry\nLINE 0058: example log entry\nLINE 0059: example log entry\nLINE 0060: example log entry\nLINE 0061: example log entry\nLINE 0062: example log entry\nLINE 0063: example log entry\nLINE 0064: example log entry\nLINE 0065: example log entry\nLINE 0066: example log entry\nLINE 0067: example log entry\nLINE 0068: example log entry\nLINE 0069: example log entry\nLINE 0070: example log entry\nLINE 0071: example log entry\nLINE 0072: example log entry\nLINE 0073: example log entry\nLINE 0074: example log entry\nLINE 0075: example log entry\nLINE 0076: example log entry\nLINE 0077: example log entry\nLINE 0078: example log entry\nLINE 0079: example log entry\nLINE 0080: example log entry\nLINE 0081: example log entry\nLINE 0082: example log entry\nLINE 0083: example log entry\nLINE 0084: example log entry\nLINE 0085: example log entry\nLINE 0086: example log entry\nLINE 0087: example log entry\nLINE 0088: example log entry\nLINE 0089: example log entry\nLINE 0090: example log entry\nLINE 0091: example log entry\nLINE 0092: example log entry\nLINE 0093: example log entry\nLINE 0094: example log entry\nLINE 0095: example log entry\nLINE 0096: example log entry\nLINE 0097: example log entry\nLINE 0098: example log entry\nLINE 0099: example log entry\nLINE 0100: example log entry\nLOG_END",
+            "stderr": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "t-004",
+      "role": "assistant",
+      "parts": [{ "type": "text", "text": "Here's the log excerpt." }]
+    }
+  ]
+}

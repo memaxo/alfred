@@ -238,9 +238,9 @@ function PRCard({ isSelected, onClick, pr }: PRCardProps) {
   const StatusIcon =
     pr.status === "merged"
       ? GitMerge
-      : pr.status === "closed"
+      : (pr.status === "closed"
         ? XCircle
-        : GitPullRequest;
+        : GitPullRequest);
 
   const statusColor =
     pr.status === "merged"
@@ -452,13 +452,13 @@ function PRDetailPanel({
                   <div className="flex h-32 items-center justify-center">
                     <RefreshCw className="h-6 w-6 animate-spin text-biolum-dim" />
                   </div>
-                ) : diffQuery.data?.diff ? (
+                ) : (diffQuery.data?.diff ? (
                   <DiffViewer diff={diffQuery.data.diff} />
                 ) : (
                   <div className="flex h-32 items-center justify-center text-biolum-dim">
                     No diff available
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>
@@ -473,9 +473,9 @@ function PRDetailPanel({
               <Button className="gap-1" variant="outline">
                 {mergeMethod === "squash"
                   ? "Squash"
-                  : mergeMethod === "rebase"
+                  : (mergeMethod === "rebase"
                     ? "Rebase"
-                    : "Merge"}
+                    : "Merge")}
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>

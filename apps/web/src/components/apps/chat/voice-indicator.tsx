@@ -47,12 +47,12 @@ export function VoiceIndicator({
             ))}
           </div>
         </>
-      ) : status === "streaming" ? (
+      ) : (status === "streaming" ? (
         <>
           <Volume2 className="h-3 w-3 animate-pulse text-biolum" />
           <span className="text-biolum text-xs">Speaking</span>
         </>
-      ) : null}
+      ) : null)}
     </div>
   );
 }

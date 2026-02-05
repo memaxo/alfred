@@ -262,7 +262,7 @@ export function WorkingSetApp({
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               Loading working set...
             </div>
-          ) : items.length === 0 ? (
+          ) : (items.length === 0 ? (
             <div className="py-8 text-center text-biolum-dim text-sm italic">
               No pinned items
             </div>
@@ -311,7 +311,7 @@ export function WorkingSetApp({
                 </div>
               );
             })
-          )}
+          ))}
         </div>
       </ScrollArea>
     </div>

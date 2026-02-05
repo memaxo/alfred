@@ -377,12 +377,12 @@ export function ChatContainer({
                 perf
                 placeholder={
                   currentAgent === "assistant"
-                    ? focused.label
+                    ? (focused.label
                       ? `Ask about ${focused.label}...`
-                      : "Ask Alfred how to help…"
-                    : focused.label
+                      : "Ask Alfred how to help…")
+                    : (focused.label
                       ? `Ask the orchestrator about ${focused.label}...`
-                      : "Ask the orchestrator to plan or coordinate…"
+                      : "Ask the orchestrator to plan or coordinate…")
                 }
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}

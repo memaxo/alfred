@@ -181,17 +181,29 @@ export const assistantRouter = router({
             })
           : await getModelForRole("chat", { userId });
 
+        const { ContextBudgetManager } =
+          await import("@alfred/history/budget-manager");
+        const budgetManager = new ContextBudgetManager({
+          modelId: selection.modelKey,
+          coreToolNames: defaults.tools
+            ? Object.keys(defaults.tools)
+            : undefined,
+        });
+
         const honorific = await getHonorificPreference(userId);
         const baseInstructions = [
           buildPersonaPrompt({ modality: "text", honorific }),
           "Offer direct, actionable responses and prefer concrete steps over small talk.",
           "Only explain tool calls when the user needs the reasoning.",
         ].join("\n\n");
-        const { systemInstruction } = await buildAssistantContext({
-          messages: input.messages,
-          memory: input.memory,
-          baseInstructions,
-        });
+        const { systemInstruction, budgetManager: finalBudget } =
+          await buildAssistantContext({
+            messages: input.messages,
+            memory: input.memory,
+            baseInstructions,
+            modelId: selection.modelKey,
+            budgetManager,
+          });
 
         const modelMessages = await prepareModelMessagesForGenerate({
           rawMessages: input.messages,
@@ -199,6 +211,7 @@ export const assistantRouter = router({
           source: "assistant",
           model: selection.modelKey,
           system: systemInstruction, // Injected Persona + RAG
+          budgetManager: finalBudget,
         });
         const stopWhen =
           typeof input.maxSteps === "number"

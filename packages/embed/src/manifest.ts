@@ -101,14 +101,14 @@ export const manifest: CliManifest = {
       return Promise.resolve({
         status: allHealthy
           ? "healthy"
-          : health.length === 0
+          : (health.length === 0
             ? "degraded"
-            : "unhealthy",
+            : "unhealthy"),
         message: allHealthy
           ? `Embedding pool healthy (${health.length} workers)`
-          : health.length === 0
+          : (health.length === 0
             ? "Embedding pool not initialized"
-            : "Some embedding workers unhealthy",
+            : "Some embedding workers unhealthy"),
         latencyMs: latency,
       });
     } catch (error) {

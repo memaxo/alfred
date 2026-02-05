@@ -136,9 +136,9 @@ export function SemanticSearch({
                         "font-mono text-xs",
                         result.score > 0.9
                           ? "text-green-400"
-                          : result.score > 0.85
+                          : (result.score > 0.85
                             ? "text-yellow-400"
-                            : "text-biolum-dim"
+                            : "text-biolum-dim")
                       )}
                     >
                       {(result.score * 100).toFixed(0)}%

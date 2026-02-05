@@ -13,13 +13,13 @@ import { HUDSurface } from "@/components/foundation/HUDSurface";
 import { useVoidTheme } from "@/hooks/use-void-theme";
 
 interface CommitmentsListProps {
-  commitments: Array<{
+  commitments: {
     id: string;
     title: string;
     progress: number;
     dueTime?: Date;
     completed: boolean;
-  }>;
+  }[];
   onComplete: (id: string) => void;
 }
 

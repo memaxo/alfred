@@ -337,9 +337,9 @@ function coerceReceipt(value: unknown): SearchReceipt | null {
   const createdDate =
     createdRaw instanceof Date
       ? createdRaw
-      : typeof createdRaw === "string"
+      : (typeof createdRaw === "string"
         ? new Date(createdRaw)
-        : new Date();
+        : new Date());
   if (Number.isNaN(createdDate.getTime())) {
     return null;
   }

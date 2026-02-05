@@ -1,13 +1,17 @@
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel, ModelMessage, Tool } from "ai";
 
-import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
+import { buildHistoryContext, calculateBudget } from "@alfred/history";
+import { ContextBudgetManager } from "@alfred/history/budget-manager";
 import { logger } from "@alfred/logger";
 import { withBudget } from "@alfred/metrics/performance";
+import { createTokenEstimator } from "@alfred/metrics/token";
 import { TRPCError } from "@trpc/server";
 import { validateUIMessages } from "ai";
 
 import {
+  contextBudgetAllocation,
+  contextBudgetUtilization,
   historyContextTierDropsTotal,
   historyContextTokensTotal,
   runtimeHistorySelectionDurationSeconds,
@@ -20,6 +24,7 @@ interface PrepareMessagesArgs {
   source: "assistant" | "orchestrator";
   model?: string | LanguageModel;
   system?: string;
+  budgetManager?: ContextBudgetManager;
 }
 
 export function prepareModelMessagesForGenerate({
@@ -28,6 +33,7 @@ export function prepareModelMessagesForGenerate({
   source,
   model,
   system,
+  budgetManager,
 }: PrepareMessagesArgs): Promise<ModelMessage[]> {
   if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
     throw new TRPCError({
@@ -43,6 +49,22 @@ export function prepareModelMessagesForGenerate({
         tools: tools as Parameters<typeof validateUIMessages>[0]["tools"],
       })) as UIMessage[];
       const modelId = resolveModelId(source, model);
+
+      const estimator = createTokenEstimator({ model: modelId });
+      const systemTokens =
+        typeof system === "string" ? estimator.estimate(system) : 0;
+      const budget =
+        budgetManager ??
+        new ContextBudgetManager({
+          modelId,
+          systemTokens,
+          coreToolNames: tools ? Object.keys(tools) : undefined,
+        });
+      const enforcedTools = tools
+        ? budget.enforceTools(tools).tools
+        : undefined;
+      const calculated = calculateBudget({ modelId, systemTokens });
+
       const stopHistoryTimer =
         runtimeHistorySelectionDurationSeconds.startTimer();
       const historyContext = await buildHistoryContext({
@@ -50,9 +72,31 @@ export function prepareModelMessagesForGenerate({
         modelId,
         system,
         source,
-        budget: getHistoryBudgetDefaults(),
+        tools: enforcedTools,
+        budget: {
+          maxContextTokens: calculated.effectiveContextTokens,
+          historyRatio: calculated.historyRatio,
+          minSystemReserveTokens: calculated.systemReserveTokens,
+          minHeadroomTokens: calculated.headroomTokens,
+          reservedToolingTokens: calculated.toolingReserveTokens,
+        },
       });
       stopHistoryTimer();
+
+      budget._setHistoryUsed(historyContext.keptTokens);
+      const snap = budget.snapshot();
+      for (const [src, tokens] of Object.entries(snap.allocated)) {
+        contextBudgetAllocation.observe(
+          { model: modelId, source: src },
+          tokens as number
+        );
+      }
+      for (const [src, ratio] of Object.entries(snap.utilization)) {
+        contextBudgetUtilization.observe(
+          { model: modelId, source: src },
+          ratio as number
+        );
+      }
 
       historyContextTokensTotal.inc(
         { source, model: modelId, action: "kept" },

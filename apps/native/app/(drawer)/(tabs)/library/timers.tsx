@@ -227,7 +227,7 @@ export default function TimersListScreen() {
               size="large"
             />
           </View>
-        ) : timersQuery.data && timersQuery.data.length > 0 ? (
+        ) : (timersQuery.data && timersQuery.data.length > 0 ? (
           <FlashList
             contentContainerStyle={styles.listContent}
             data={timersQuery.data}
@@ -254,7 +254,7 @@ export default function TimersListScreen() {
               No active timers. Create one above!
             </BodyText>
           </View>
-        )}
+        ))}
       </View>
     </VoidContainer>
   );
@@ -297,7 +297,9 @@ function TimerItem({
 
   // Calculate progress (0 to 1)
   const getProgress = () => {
-    if (!item.end || !item.start) return 0;
+    if (!item.end || !item.start) {
+      return 0;
+    }
     const now = Date.now();
     const start = new Date(item.start).getTime();
     const end = new Date(item.end).getTime();

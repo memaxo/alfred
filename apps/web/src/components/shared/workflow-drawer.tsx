@@ -297,7 +297,7 @@ function WorkflowDrawerBody({
             <Loader2 className="h-4 w-4 animate-spin" />
             <p className="text-sm">Loading workflow…</p>
           </div>
-        ) : runQuery.isError || !runQuery.data ? (
+        ) : (runQuery.isError || !runQuery.data ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-biolum">
             <p className="font-semibold">Unable to load workflow run.</p>
             <p className="text-biolum-dim text-sm">
@@ -352,7 +352,7 @@ function WorkflowDrawerBody({
             reasoningLoading={reasoningQuery.isLoading}
             workflow={runQuery.data}
           />
-        )}
+        ))}
       </div>
       <CognitiveFeedbackDialog
         draft={feedbackDraft}

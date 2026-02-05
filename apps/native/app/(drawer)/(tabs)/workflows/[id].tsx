@@ -61,10 +61,14 @@ function parseWorkflowEvents(events: unknown[]): WorkflowStep[] {
   const steps: WorkflowStep[] = [];
   const stepMap = new Map<string, WorkflowStep>();
 
-  if (!Array.isArray(events)) return steps;
+  if (!Array.isArray(events)) {
+    return steps;
+  }
 
   for (const event of events) {
-    if (!event || typeof event !== "object") continue;
+    if (!event || typeof event !== "object") {
+      continue;
+    }
 
     const e = event as Record<string, unknown>;
     const eventType = String(e.eventType ?? "");
@@ -72,7 +76,9 @@ function parseWorkflowEvents(events: unknown[]): WorkflowStep[] {
     const timestamp = e.timestamp ? new Date(String(e.timestamp)) : new Date();
     const eventData = e.eventData as Record<string, unknown> | undefined;
 
-    if (!stepId) continue;
+    if (!stepId) {
+      continue;
+    }
 
     if (eventType === "stage-enter" || eventType === "step-start") {
       const step: WorkflowStep = {
@@ -116,17 +122,25 @@ export default function WorkflowDetailScreen() {
 
   // Parse events into steps
   const steps = useMemo(() => {
-    if (!eventsQuery.data) return [];
+    if (!eventsQuery.data) {
+      return [];
+    }
     return parseWorkflowEvents(eventsQuery.data);
   }, [eventsQuery.data]);
 
   // Find current step index
   const currentStepIndex = useMemo(() => {
-    if (steps.length === 0) return -1;
+    if (steps.length === 0) {
+      return -1;
+    }
     const runningIndex = steps.findIndex((s) => s.status === "running");
-    if (runningIndex >= 0) return runningIndex;
+    if (runningIndex !== -1) {
+      return runningIndex;
+    }
     const pendingIndex = steps.findIndex((s) => s.status === "pending");
-    if (pendingIndex >= 0) return pendingIndex;
+    if (pendingIndex !== -1) {
+      return pendingIndex;
+    }
     return steps.length - 1;
   }, [steps]);
 

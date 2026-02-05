@@ -1,0 +1,611 @@
+{
+  "id": "long",
+  "modelId": "openai/gpt-4o-mini",
+  "maxContextTokens": 8000,
+  "system": {
+    "persona": "You are ALFRED. Be brief, precise, and evidence-driven.",
+    "preferences": "User preferences (apply as response formatting):\n\nResponse Style: Provide thorough explanations with context.\n\nTone: Use precise, technical language and terminology.\n\nFormat: Use structured sections with headings.\n\nExplanation Depth: Dive deep with step-by-step reasoning.\n\nDomain-Specific Preferences (dev):\n- Prefer TypeScript for examples.\n- Prefer Bun for scripts.\n- Prefer stable, deterministic outputs.\n\nConversation context: chat\n\nAdditional notes:\n- Always cite file paths.\n- Never mention internal identifiers.\n\n(Repeated guidance for stress testing)\n\n- Always cite file paths.\n- Never mention internal identifiers.\n\n- Always cite file paths.\n- Never mention internal identifiers.\n\n- Always cite file paths.\n- Never mention internal identifiers.",
+    "domain": "Project: alfred monorepo. Keep imports server/client safe."
+  },
+  "rag": [],
+  "tools": [],
+  "messages": [
+    {
+      "id": "m-001",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "We need to refactor the pipeline observer interface so it does not accumulate callbacks. I also want tests and metrics."
+        }
+      ]
+    },
+    {
+      "id": "m-002",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Understood. I'll propose an observer/event approach, add a minimal API surface, and validate with unit tests and Prometheus counters."
+        }
+      ]
+    },
+    {
+      "id": "m-003",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Here are notes from production: we saw memory growth, and some requests had 90k prompt tokens. Stack traces mention history-context serialization."
+        }
+      ]
+    },
+    {
+      "id": "m-004",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Likely causes: oversized tool payloads and unbounded system injections (preferences + RAG) crowd out history. We'll add token-aware caps and compression."
+        }
+      ]
+    },
+    {
+      "id": "m-005",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Can you also ensure the last user message is never dropped, even if it's huge?"
+        }
+      ]
+    },
+    {
+      "id": "m-006",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Yes. We'll implement emergency truncation (head/tail/highlights) for a single oversized anchor message."
+        }
+      ]
+    },
+    {
+      "id": "m-007",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Now imagine 40 more turns of back-and-forth discussing constraints, budgets, and edge cases. Keep the concrete details."
+        }
+      ]
+    },
+    {
+      "id": "m-008",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "We'll keep anchors and the latest tool chain, compress older content deterministically, and enforce per-source budgets."
+        }
+      ]
+    },
+    {
+      "id": "m-009",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "REPEAT: This fixture intentionally contains many similar messages to trigger compression once budgets are tight."
+        }
+      ]
+    },
+    {
+      "id": "m-010",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Acknowledged. We'll test compression thresholding at 92% of history budget usage."
+        }
+      ]
+    },
+    {
+      "id": "m-011",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "More discussion about budgets, metrics, and verifying `/api/metrics` output."
+        }
+      ]
+    },
+    {
+      "id": "m-012",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "We'll add histograms for allocation and utilization plus counters for truncation events."
+        }
+      ]
+    },
+    {
+      "id": "m-013",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 13: more constraints about budgets and token ceilings."
+        }
+      ]
+    },
+    {
+      "id": "m-014",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 14: confirm selection remains under 10ms and compression under 100ms."
+        }
+      ]
+    },
+    {
+      "id": "m-015",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 15: include evidence in the ExecPlan after each milestone."
+        }
+      ]
+    },
+    {
+      "id": "m-016",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 16: noted. We'll record tests, fixture bench numbers, and decisions."
+        }
+      ]
+    },
+    {
+      "id": "m-017",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 17: tool results can be extremely large; truncate >4k tokens."
+        }
+      ]
+    },
+    {
+      "id": "m-018",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 18: we'll store full payload in AgentFS KV and keep only summary in prompt."
+        }
+      ]
+    },
+    {
+      "id": "m-019",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 19: RAG should be relevance-ordered and budgeted (wrapper included)."
+        }
+      ]
+    },
+    {
+      "id": "m-020",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 20: we'll drop low relevance chunks and truncate a single oversized chunk."
+        }
+      ]
+    },
+    {
+      "id": "m-021",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 21: enforce tool schema budget, dropping MCP tools first."
+        }
+      ]
+    },
+    {
+      "id": "m-022",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 22: keep the core tool catalog, and drop biggest optional schemas next."
+        }
+      ]
+    },
+    {
+      "id": "m-023",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 23: we also need mid-stream enforcement when tool results arrive."
+        }
+      ]
+    },
+    {
+      "id": "m-024",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 24: drop oldest non-essential model messages if near safety ceiling."
+        }
+      ]
+    },
+    {
+      "id": "m-025",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 25: implement extractive compression for older history (deterministic)."
+        }
+      ]
+    },
+    {
+      "id": "m-026",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 26: score sentences for code, errors, file paths, and numbers."
+        }
+      ]
+    },
+    {
+      "id": "m-027",
+      "role": "user",
+      "parts": [
+        { "type": "text", "text": "Turn 27: keep last 10 messages unchanged." }
+      ]
+    },
+    {
+      "id": "m-028",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 28: rolling summary collapses very old messages; cached; time-bounded."
+        }
+      ]
+    },
+    {
+      "id": "m-029",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 29: emergency truncation for a single huge anchor message."
+        }
+      ]
+    },
+    {
+      "id": "m-030",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 30: head/tail/highlights; never drop last user message."
+        }
+      ]
+    },
+    {
+      "id": "m-031",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 31: keep observability; expose metrics in /api/metrics."
+        }
+      ]
+    },
+    {
+      "id": "m-032",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 32: add context_budget_* and context_compression_ratio histograms."
+        }
+      ]
+    },
+    {
+      "id": "m-033",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 33: ensure offline summarize fallback passes tests."
+        }
+      ]
+    },
+    {
+      "id": "m-034",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 34: use ALFRED_SUMMARIZE_OFFLINE=1 and keep deterministic behavior."
+        }
+      ]
+    },
+    {
+      "id": "m-035",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 35: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-036",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 36: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-037",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 37: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-038",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 38: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-039",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 39: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-040",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 40: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-041",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 41: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-042",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 42: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-043",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 43: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-044",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 44: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-045",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 45: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-046",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 46: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-047",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 47: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-048",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 48: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-049",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 49: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-050",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 50: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-051",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 51: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-052",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 52: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-053",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 53: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-054",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 54: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-055",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 55: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-056",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 56: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-057",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 57: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-058",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 58: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-059",
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 59: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    },
+    {
+      "id": "m-060",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Turn 60: more discussion to lengthen the conversation for compression."
+        }
+      ]
+    }
+  ]
+}

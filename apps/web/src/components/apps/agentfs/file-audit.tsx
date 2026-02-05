@@ -407,15 +407,15 @@ function FileChangeRow({
   const Icon =
     file.changeType === "created"
       ? Plus
-      : file.changeType === "deleted"
+      : (file.changeType === "deleted"
         ? Minus
-        : Edit;
+        : Edit);
   const iconColor =
     file.changeType === "created"
       ? "text-green-400"
-      : file.changeType === "deleted"
+      : (file.changeType === "deleted"
         ? "text-red-400"
-        : "text-yellow-400";
+        : "text-yellow-400");
 
   return (
     <button

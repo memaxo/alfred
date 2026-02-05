@@ -18,9 +18,9 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
   const stack =
     showDebug && error?.stack
       ? error.stack
-      : showDebug
+      : (showDebug
         ? (g.__ALFRED_LAST_ERROR__?.stack ?? null)
-        : null;
+        : null);
 
   return (
     <Card className="w-full">

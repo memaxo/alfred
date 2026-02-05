@@ -1,6 +1,6 @@
 import type {
-  AgentFSKVEntry,
   AgentFSInterface,
+  AgentFSKVEntry,
 } from "@alfred/agent/agentfs/types";
 import type { AgentFSChange, AgentFSStreamCursor } from "@alfred/type";
 
@@ -351,7 +351,6 @@ export async function readAgentfsRange(
     }
     if (data instanceof Uint8Array) {
       bufs.push(Buffer.from(data));
-      continue;
     }
   }
 
@@ -365,7 +364,11 @@ export async function readAgentfsRange(
 
 export function nextCursor(
   prev: AgentFSStreamCursor,
-  updates: { toolCallId?: number; toolCallSince?: number; kvUpdatedAt?: number }
+  updates: {
+    toolCallId?: number;
+    toolCallSince?: number;
+    kvUpdatedAt?: number;
+  }
 ): AgentFSStreamCursor {
   return {
     kvUpdatedAt:
@@ -620,7 +623,7 @@ function ipv4ToU32(hostname: string): number {
 }
 
 function inCidr(u32: number, base: string, bits: number): boolean {
-  const mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+  const mask = bits === 0 ? 0 : (0xFF_FF_FF_FF << (32 - bits)) >>> 0;
   const baseU32 = ipv4ToU32(base);
   return (u32 & mask) === (baseU32 & mask);
 }

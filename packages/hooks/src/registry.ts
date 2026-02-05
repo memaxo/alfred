@@ -16,8 +16,8 @@ import {
 
 import type {
   HookBudgetExceededEvent,
-  HookExecutedEvent,
   HookErrorEvent,
+  HookExecutedEvent,
 } from "./events";
 
 import { resolveBudgetMs, resolveFailMode } from "./budgets";
@@ -136,15 +136,15 @@ export function createHookRegistry(
                 kind:
                   "command" in entry.config
                     ? "command"
-                    : entry.config.type === "prompt"
+                    : (entry.config.type === "prompt"
                       ? "prompt"
-                      : "handler",
+                      : "handler"),
                 ref:
                   "command" in entry.config
                     ? entry.config.command
-                    : entry.config.type === "prompt"
+                    : (entry.config.type === "prompt"
                       ? entry.config.model
-                      : undefined,
+                      : undefined),
               }
             : { kind: "handler" },
         } satisfies HookExecutedEvent);

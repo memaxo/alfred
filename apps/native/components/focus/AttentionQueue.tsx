@@ -7,13 +7,13 @@ import { HUDSurface } from "@/components/foundation/HUDSurface";
 import { useVoidTheme } from "@/hooks/use-void-theme";
 
 interface AttentionQueueProps {
-  items: Array<{
+  items: {
     id: string;
     type: "reminder" | "escalation" | "review" | "workflow";
     title: string;
     urgency: "high" | "medium" | "low";
     createdAt: Date;
-  }>;
+  }[];
   onDismiss: (id: string) => void;
   onAction: (id: string) => void;
 }
@@ -26,16 +26,21 @@ interface AttentionItemProps {
 
 function getTypeIcon(type: AttentionQueueProps["items"][number]["type"]) {
   switch (type) {
-    case "reminder":
+    case "reminder": {
       return "time-outline";
-    case "escalation":
+    }
+    case "escalation": {
       return "warning-outline";
-    case "review":
+    }
+    case "review": {
       return "eye-outline";
-    case "workflow":
+    }
+    case "workflow": {
       return "git-branch-outline";
-    default:
+    }
+    default: {
       return "notifications-outline";
+    }
   }
 }
 
@@ -43,14 +48,18 @@ function getUrgencyColor(
   urgency: AttentionQueueProps["items"][number]["urgency"]
 ) {
   switch (urgency) {
-    case "high":
+    case "high": {
       return "#FF4444";
-    case "medium":
+    }
+    case "medium": {
       return "#FFB800";
-    case "low":
+    }
+    case "low": {
       return "rgba(255, 255, 255, 0.4)";
-    default:
+    }
+    default: {
       return "rgba(255, 255, 255, 0.4)";
+    }
   }
 }
 

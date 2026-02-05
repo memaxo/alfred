@@ -51,6 +51,8 @@ mock.module("@alfred/history", () => ({
 
 const metricMocks = {
   ...metricsStub,
+  contextBudgetAllocation: { observe: vi.fn() },
+  contextBudgetUtilization: { observe: vi.fn() },
   historyContextTokensTotal: { inc: vi.fn() },
   historyContextTierDropsTotal: { inc: vi.fn() },
   historyContextSelectionDurationSeconds: {
@@ -65,9 +67,8 @@ const { prepareModelMessagesForGenerate } = await import("../src/ai/messages");
 beforeEach(() => {
   validateUIMessagesMock
     .mockClear()
-    .mockImplementation(
-      async ({ messages }: { messages: UIMessage[] }) => messages
-    );
+    // aiStub types are intentionally loose; keep the mock permissive.
+    .mockImplementation(async ({ messages }: any) => messages);
   buildHistoryContextMock
     .mockClear()
     .mockImplementation(async ({ messages }) => ({
@@ -144,7 +145,8 @@ describe("prepareModelMessagesForGenerate", () => {
 
     const result = await prepareModelMessagesForGenerate({
       rawMessages,
-      tools: { helper: { description: "noop" } },
+      // Tool type is validated inside AI SDK; tests only need a stub shape.
+      tools: { helper: { description: "noop" } } as unknown as any,
       source: "assistant",
       model: "openai:unit-test-model",
       system: "System prompt",
@@ -159,7 +161,7 @@ describe("prepareModelMessagesForGenerate", () => {
         source: "assistant",
       })
     );
-    expect(result).toEqual(rawMessages.slice(-3));
+    expect(result as any).toEqual(rawMessages.slice(-3));
     expect(metricMocks.historyContextTokensTotal.inc).toHaveBeenNthCalledWith(
       1,
       { source: "assistant", model: "openai/unit-test-model", action: "kept" },

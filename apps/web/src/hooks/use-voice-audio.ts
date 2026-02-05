@@ -93,7 +93,7 @@ export function useVoiceAudio() {
               const idx = Math.floor(i * ratio);
               const val = buffer[idx];
               const s = Math.max(-1, Math.min(1, val));
-              int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+              int16[i] = s < 0 ? s * 0x80_00 : s * 0x7F_FF;
             }
 
             await client.sendAudioChunk({

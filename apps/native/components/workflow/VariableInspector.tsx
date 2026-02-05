@@ -1,19 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
+  Clipboard,
+  Platform,
   Pressable,
   ScrollView,
-  Clipboard,
+  StyleSheet,
   ToastAndroid,
-  Platform,
+  View,
 } from "react-native";
 
 import {
-  TitleText,
-  CaptionText,
   BodyText,
+  CaptionText,
+  TitleText,
 } from "@/components/foundation/BiolumText";
 import { HUDSurface } from "@/components/foundation/HUDSurface";
 
@@ -22,11 +22,21 @@ interface VariableInspectorProps {
 }
 
 function formatValue(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  if (typeof value === "boolean") return String(value);
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return String(value);
+  }
+  if (typeof value === "boolean") {
+    return String(value);
+  }
   if (typeof value === "object") {
     try {
       return JSON.stringify(value, null, 2);
@@ -38,29 +48,43 @@ function formatValue(value: unknown): string {
 }
 
 function getValueType(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
-  if (Array.isArray(value)) return `array[${value.length}]`;
-  if (typeof value === "object") return "object";
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (Array.isArray(value)) {
+    return `array[${value.length}]`;
+  }
+  if (typeof value === "object") {
+    return "object";
+  }
   return typeof value;
 }
 
 function getTypeColor(type: string): string {
   switch (type) {
-    case "string":
+    case "string": {
       return "#00FF88";
-    case "number":
+    }
+    case "number": {
       return "#00D9FF";
-    case "boolean":
+    }
+    case "boolean": {
       return "#FFB800";
+    }
     case "object":
-    case "array":
+    case "array": {
       return "#FF6B9D";
+    }
     case "null":
-    case "undefined":
+    case "undefined": {
       return "#8B8B8B";
-    default:
+    }
+    default: {
       return "#5A6B7D";
+    }
   }
 }
 

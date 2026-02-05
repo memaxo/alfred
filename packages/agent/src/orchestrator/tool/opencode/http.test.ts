@@ -76,11 +76,11 @@ function httpResponse(args: {
   const body =
     args.body === undefined
       ? ""
-      : typeof args.body === "string"
+      : (typeof args.body === "string"
         ? args.body
-        : JSON.stringify(args.body);
+        : JSON.stringify(args.body));
   const statusText =
-    args.status === 200 ? "OK" : args.status === 204 ? "No Content" : "";
+    args.status === 200 ? "OK" : (args.status === 204 ? "No Content" : "");
   const headers =
     args.status === 204
       ? `HTTP/1.1 204 ${statusText}\r\n\r\n`

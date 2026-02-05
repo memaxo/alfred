@@ -61,9 +61,9 @@ function processItemCompleted(
       const status: "running" | "completed" | "failed" =
         item.status === "in_progress"
           ? "running"
-          : item.status === "failed"
+          : (item.status === "failed"
             ? "failed"
-            : "completed";
+            : "completed");
 
       alfredEvents.push({
         type: "command",

@@ -48,7 +48,7 @@ export function RagWindow(_props: WindowComponentProps) {
           <View className="py-4">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : embedQuery.error ? (
+        ) : (embedQuery.error ? (
           <Text className="mt-2 text-destructive text-xs">
             {embedQuery.error.message}
           </Text>
@@ -56,7 +56,7 @@ export function RagWindow(_props: WindowComponentProps) {
           <Text className="mt-2 font-mono text-[10px] text-muted-foreground">
             {JSON.stringify(embedQuery.data, null, 2)}
           </Text>
-        )}
+        ))}
       </View>
 
       <View className="mb-4 rounded-lg border border-border bg-card p-4">
@@ -102,7 +102,7 @@ export function RagWindow(_props: WindowComponentProps) {
           <View className="py-6">
             <ActivityIndicator color="#00D9FF" />
           </View>
-        ) : chunks.length === 0 ? (
+        ) : (chunks.length === 0 ? (
           <Text className="mt-2 text-muted-foreground text-xs">
             {q.trim().length === 0 ? "Enter a query above." : "No results."}
           </Text>
@@ -128,7 +128,7 @@ export function RagWindow(_props: WindowComponentProps) {
               </View>
             ))}
           </View>
-        )}
+        ))}
       </View>
     </ScrollView>
   );

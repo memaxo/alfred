@@ -204,22 +204,44 @@ export function compareAgentfsRuns(args: {
   let kvRemoved = 0;
   let kvModified = 0;
 
+  const redactKvValue = (key: string, value: string | null): string | null =>
+    value === null
+      ? null
+      : (key.startsWith("executor:")
+        ? '"[redacted]"'
+        : value);
+
   for (const k of [...allKeys].sort()) {
     const l = leftKvMap.get(k) ?? null;
     const r = rightKvMap.get(k) ?? null;
     if (!l && r) {
       kvAdded++;
-      kvDiffs.push({ key: k, left: null, right: r, type: "added" });
+      kvDiffs.push({
+        key: k,
+        left: null,
+        right: redactKvValue(k, r),
+        type: "added",
+      });
       continue;
     }
     if (l && !r) {
       kvRemoved++;
-      kvDiffs.push({ key: k, left: l, right: null, type: "removed" });
+      kvDiffs.push({
+        key: k,
+        left: redactKvValue(k, l),
+        right: null,
+        type: "removed",
+      });
       continue;
     }
     if (l && r && l !== r) {
       kvModified++;
-      kvDiffs.push({ key: k, left: l, right: r, type: "modified" });
+      kvDiffs.push({
+        key: k,
+        left: redactKvValue(k, l),
+        right: redactKvValue(k, r),
+        type: "modified",
+      });
     }
   }
 

@@ -345,7 +345,7 @@ export default function RemindersListScreen() {
           <View style={styles.loadingContainer}>
             <ListSkeleton count={5} />
           </View>
-        ) : sortedReminders && sortedReminders.length > 0 ? (
+        ) : (sortedReminders && sortedReminders.length > 0 ? (
           <FlashList
             contentContainerStyle={styles.listContent}
             data={sortedReminders}
@@ -398,7 +398,7 @@ export default function RemindersListScreen() {
               />
             )}
           </View>
-        )}
+        ))}
       </View>
     </VoidContainer>
   );
@@ -439,14 +439,20 @@ function ReminderItem({ item, onDelete, onFire }: ReminderItemProps) {
   };
 
   const getDueDateColor = (due: string | Date) => {
-    if (!due) return theme.colors.biolum.dim;
+    if (!due) {
+      return theme.colors.biolum.dim;
+    }
     const date = typeof due === "string" ? new Date(due) : due;
     const now = new Date();
     const diff = date.getTime() - now.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days < 0) return theme.colors.semantic.error;
-    if (days === 0) return theme.colors.semantic.warning;
+    if (days < 0) {
+      return theme.colors.semantic.error;
+    }
+    if (days === 0) {
+      return theme.colors.semantic.warning;
+    }
     return theme.colors.semantic.success;
   };
 

@@ -107,10 +107,10 @@ async function probeOnce(timeoutMs: number): Promise<TailscaleProbe> {
       installed: false,
       error:
         error instanceof Error
-          ? error.message.toLowerCase().includes("no such file") ||
+          ? (error.message.toLowerCase().includes("no such file") ||
             error.message.toLowerCase().includes("not found")
             ? "tailscale_not_found"
-            : `tailscale_spawn_failed:${error.message}`
+            : `tailscale_spawn_failed:${error.message}`)
           : "tailscale_spawn_failed",
     };
   }

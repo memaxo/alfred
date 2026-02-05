@@ -869,7 +869,10 @@ export function useVoiceSessionNative(
           logger.info("voice_webrtc_dc_open", { sessionId: created.sessionId });
           try {
             (channel as RnDataChannel).send(
-              JSON.stringify({ _: "start", sttChunkSize: config?.sttChunkSize })
+              JSON.stringify({
+                _: "start",
+                sttChunkSize: config?.sttChunkSize,
+              })
             );
           } catch {
             // ignore
@@ -1167,9 +1170,9 @@ export function useVoiceSessionNative(
         const errorText =
           error instanceof Error
             ? [error.message, error.stack].filter(Boolean).join("\n")
-            : typeof error === "string"
+            : (typeof error === "string"
               ? error
-              : "voice_webrtc_failed";
+              : "voice_webrtc_failed");
         setStreamState((prev) => ({
           ...prev,
           error: errorText,

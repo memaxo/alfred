@@ -156,7 +156,9 @@ export default function FocusScreen() {
 
   // Map attention items to component format
   const attentionItems = useMemo(() => {
-    if (!attention.data) return [];
+    if (!attention.data) {
+      return [];
+    }
     return attention.data.map((item) => ({
       id: item.id,
       type: (item.kind === "escalation"
@@ -169,16 +171,18 @@ export default function FocusScreen() {
       title: item.title ?? item.kind,
       urgency: (item.urgency === "critical"
         ? "high"
-        : item.urgency === "normal"
+        : (item.urgency === "normal"
           ? "medium"
-          : "low") as "high" | "medium" | "low",
+          : "low")) as "high" | "medium" | "low",
       createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
     }));
   }, [attention.data]);
 
   // Map commitments to component format
   const commitmentItems = useMemo(() => {
-    if (!commitments.data) return [];
+    if (!commitments.data) {
+      return [];
+    }
     return commitments.data.map((item) => ({
       id: item.id,
       title: item.title,

@@ -113,9 +113,9 @@ export function RagContext({
                             "font-mono text-xs",
                             chunk.score > 0.9
                               ? "text-green-400"
-                              : chunk.score > 0.8
+                              : (chunk.score > 0.8
                                 ? "text-yellow-400"
-                                : "text-biolum-dim"
+                                : "text-biolum-dim")
                           )}
                         >
                           {(chunk.score * 100).toFixed(0)}%

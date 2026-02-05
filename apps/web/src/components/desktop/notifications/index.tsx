@@ -87,20 +87,24 @@ export function NotificationCenter({
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (flatNotifications.length === 0) return;
+      if (flatNotifications.length === 0) {
+        return;
+      }
 
       switch (e.key) {
-        case "ArrowDown":
+        case "ArrowDown": {
           e.preventDefault();
           setFocusedIndex((prev) =>
             prev < flatNotifications.length - 1 ? prev + 1 : prev
           );
           break;
-        case "ArrowUp":
+        }
+        case "ArrowUp": {
           e.preventDefault();
           setFocusedIndex((prev) => (prev > 0 ? prev - 1 : prev));
           break;
-        case "Enter":
+        }
+        case "Enter": {
           e.preventDefault();
           if (focusedIndex >= 0) {
             const notification = flatNotifications[focusedIndex];
@@ -109,9 +113,10 @@ export function NotificationCenter({
             }
           }
           break;
+        }
         case "Delete":
         case "d":
-        case "D":
+        case "D": {
           e.preventDefault();
           if (focusedIndex >= 0) {
             const notification = flatNotifications[focusedIndex];
@@ -124,9 +129,11 @@ export function NotificationCenter({
             }
           }
           break;
-        case "Escape":
+        }
+        case "Escape": {
           // Let parent handle close
           break;
+        }
       }
     },
     [flatNotifications, focusedIndex, onDismiss, onMarkRead]

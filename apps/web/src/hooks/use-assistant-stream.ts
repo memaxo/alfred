@@ -166,9 +166,9 @@ export function deriveActions(
           error:
             state === "output-denied"
               ? "Denied"
-              : typeof part.errorText === "string"
+              : (typeof part.errorText === "string"
                 ? part.errorText
-                : existing?.error,
+                : existing?.error),
         });
       }
     }
