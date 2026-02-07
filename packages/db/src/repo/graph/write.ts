@@ -17,7 +17,8 @@ export async function createNode(
   hash: string,
   kind: string,
   label: string,
-  properties?: unknown
+  properties?: unknown,
+  projectId?: string
 ): Promise<NodeRow> {
   const safeLabel = sanitizeContextText(label);
   const safeProps =
@@ -25,16 +26,21 @@ export async function createNode(
       ? null
       : sanitizeGraphValue(properties);
 
+  const values: Record<string, unknown> = {
+    resource,
+    hash,
+    kind,
+    label: safeLabel,
+    properties: safeProps,
+    sanitized: true,
+  };
+  if (projectId) {
+    values.projectId = projectId;
+  }
+
   const [row] = await db
     .insert(memoryNodes)
-    .values({
-      resource,
-      hash,
-      kind,
-      label: safeLabel,
-      properties: safeProps,
-      sanitized: true,
-    })
+    .values(values as typeof memoryNodes.$inferInsert)
     .returning();
 
   if (!row) {
@@ -76,6 +82,38 @@ export async function updateNode(
     .returning();
 
   return row ?? null;
+}
+
+/**
+ * Batch-update embeddings for multiple nodes in a single SQL statement.
+ * Significantly faster than sequential updateNode() calls for backfill.
+ */
+export async function updateNodeEmbeddingBatch(
+  updates: { id: string; embedding: number[] }[]
+): Promise<number> {
+  if (updates.length === 0) {
+    return 0;
+  }
+
+  // Build parallel arrays for unnest-based batch update
+  const ids = updates.map((u) => u.id);
+  const embeddings = updates.map((u) => JSON.stringify(u.embedding));
+
+  const result = await db.execute(sql`
+    UPDATE memory_nodes AS m
+    SET
+      embedding = t.emb::vector,
+      sanitized = true,
+      updated_at = NOW()
+    FROM (
+      SELECT
+        unnest(${ids}::uuid[]) AS id,
+        unnest(${embeddings}::text[]) AS emb
+    ) AS t
+    WHERE m.id = t.id
+  `);
+
+  return Number(result.rowCount ?? 0);
 }
 
 export async function deleteNode(nodeId: string): Promise<number> {

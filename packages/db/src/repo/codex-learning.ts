@@ -35,19 +35,28 @@ export interface HeuristicResult {
 export async function findSimilarCodexExecutions(
   resource: string,
   requirement: string,
-  limit = 5
+  limit = 5,
+  projectId?: string
 ): Promise<SimilarTaskResult[]> {
+  const conditions = [
+    inArray(memoryNodes.kind, ["codex_execution", "task_learning"]),
+    eq(memoryNodes.resource, resource),
+    eq(memoryNodes.sanitized, true),
+  ];
+
   const executions = await db
     .select()
     .from(memoryNodes)
-    .where(
-      and(
-        eq(memoryNodes.kind, "codex_execution"),
-        eq(memoryNodes.resource, resource),
-        eq(memoryNodes.sanitized, true)
-      )
+    .where(and(...conditions))
+    .orderBy(
+      // Boost project-scoped nodes when projectId is available
+      ...(projectId
+        ? [
+            sql`CASE WHEN ${memoryNodes.projectId} = ${projectId} THEN 0 ELSE 1 END`,
+            desc(memoryNodes.created),
+          ]
+        : [desc(memoryNodes.created)])
     )
-    .orderBy(desc(memoryNodes.created))
     .limit(limit * 3);
 
   const results: SimilarTaskResult[] = [];
@@ -64,11 +73,12 @@ export async function findSimilarCodexExecutions(
     const auto = typeof props.auto === "string" ? props.auto : null;
     const result = typeof props.result === "string" ? props.result : null;
 
-    // NOTE: This is intentionally cheap. Semantic similarity is handled elsewhere.
+    // Keyword similarity — both sides lowercased for case-insensitive matching.
+    // Allow short terms (>= 2 chars) to catch "API", "DB", "CI", "ID", etc.
     const keywords = requirement
       .toLowerCase()
       .split(/\s+/)
-      .filter((word) => word.length > 3);
+      .filter((word) => word.length > 1);
     const labelLower = sanitizeContextText(node.label).toLowerCase();
     const matchCount = keywords.filter((keyword) =>
       labelLower.includes(keyword)
@@ -486,7 +496,8 @@ export async function recordCodexExecution(
 export async function findSimilarByEmbedding(
   resource: string,
   embedding: number[],
-  limit = 5
+  limit = 5,
+  projectId?: string
 ): Promise<SimilarTaskResult[]> {
   const safeLimit = Math.max(1, Math.min(limit, 10));
   if (!embedding || embedding.length === 0) {
@@ -523,13 +534,21 @@ export async function findSimilarByEmbedding(
       .from(memoryNodes)
       .where(
         and(
-          eq(memoryNodes.kind, "codex_execution"),
+          inArray(memoryNodes.kind, ["codex_execution", "task_learning"]),
           eq(memoryNodes.resource, resource),
           eq(memoryNodes.sanitized, true),
           isNotNull(memoryNodes.embedding)
         )
       )
-      .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
+      .orderBy(
+        // Boost project-scoped nodes when projectId is available
+        ...(projectId
+          ? [
+              sql`CASE WHEN ${memoryNodes.projectId} = ${projectId} THEN 0 ELSE 1 END`,
+              sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`,
+            ]
+          : [sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`])
+      )
       .limit(safeLimit);
 
     return results
@@ -567,14 +586,16 @@ export async function findSimilarWithFallback(
   resource: string,
   requirement: string,
   embedding: number[] | null,
-  limit = 5
+  limit = 5,
+  projectId?: string
 ): Promise<SimilarTaskResult[]> {
   // Try embedding-based search if we have an embedding
   if (embedding && embedding.length > 0) {
     const embeddingResults = await findSimilarByEmbedding(
       resource,
       embedding,
-      limit
+      limit,
+      projectId
     );
 
     if (embeddingResults.length > 0) {
@@ -587,7 +608,12 @@ export async function findSimilarWithFallback(
 
   // Fallback to keyword-based search
   try {
-    return await findSimilarCodexExecutions(resource, requirement, limit);
+    return await findSimilarCodexExecutions(
+      resource,
+      requirement,
+      limit,
+      projectId
+    );
   } catch (error) {
     logger.warn("keyword_similarity_search_failed", {
       error: error instanceof Error ? error.message : String(error),
