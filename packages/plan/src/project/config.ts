@@ -22,10 +22,10 @@ export async function detectConfig(workspace: string): Promise<ProjectConfig> {
 
   // Detect Monorepo
   const turboPath = path.join(workspace, "turbo.json");
-  const pnpmWorkspacePath = path.join(workspace, "pnpm-workspace.yaml");
+  const bunWorkspacePath = path.join(workspace, "bun-workspace.yaml");
   config.isMonorepo =
     (await Bun.file(turboPath).exists()) ||
-    (await Bun.file(pnpmWorkspacePath).exists());
+    (await Bun.file(bunWorkspacePath).exists());
 
   // Detect Framework from package.json
   const pkgPath = path.join(workspace, "package.json");
@@ -87,8 +87,8 @@ export async function detectPackageManager(
   ) {
     return "bun";
   }
-  if (await Bun.file(path.join(workspace, "pnpm-lock.yaml")).exists()) {
-    return "pnpm";
+  if (await Bun.file(path.join(workspace, "bun-lock.yaml")).exists()) {
+    return "bun";
   }
   if (await Bun.file(path.join(workspace, "yarn.lock")).exists()) {
     return "yarn";

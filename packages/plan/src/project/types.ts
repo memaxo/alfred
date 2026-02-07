@@ -11,7 +11,7 @@ export type ProjectFramework =
   | "fastify"
   | "unknown";
 
-export type PackageManager = "bun" | "npm" | "yarn" | "pnpm";
+export type PackageManager = "bun" | "npm" | "yarn" | "bun";
 
 export interface ProjectConfig {
   framework?: ProjectFramework;

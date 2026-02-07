@@ -24,18 +24,12 @@ export async function detectProject(root: string): Promise<ProjectConfig> {
     const files = await fs.readdir(root);
 
     if (files.includes("package.json")) {
-      // Check for bun/yarn/npm/pnpm
+      // Check for bun/yarn/npm/bun
       const hasBun = files.includes("bun.lockb") || files.includes("bun.lock");
       const hasYarn = files.includes("yarn.lock");
-      const hasPnpm = files.includes("pnpm-lock.yaml");
+      const hasbun = files.includes("bun-lock.yaml");
 
-      const runner = hasBun
-        ? "bun"
-        : hasYarn
-          ? "yarn"
-          : hasPnpm
-            ? "pnpm"
-            : "npm";
+      const runner = hasBun ? "bun" : hasYarn ? "yarn" : hasbun ? "bun" : "npm";
       const runPrefix = runner === "npm" ? "npm run" : runner;
 
       return {
