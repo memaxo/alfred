@@ -282,12 +282,12 @@ Components:
 
 ### Knowledge
 
-| Tool        | Location          | Purpose                    |
-| ----------- | ----------------- | -------------------------- |
-| `knowledge` | `tool/knowledge/` | Knowledge graph operations |
-| `rag`       | `tool/rag/`       | RAG document management    |
-| `learning`  | `tool/learning/`  | Learning system operations |
-| `reflect`   | `tool/reflect.ts` | Self-reflection            |
+| Tool        | Location                                                                          | Purpose                    |
+| ----------- | --------------------------------------------------------------------------------- | -------------------------- |
+| `knowledge` | `tool/knowledge/`                                                                 | Knowledge graph operations |
+| `rag`       | `tool/rag/`                                                                       | RAG document management    |
+| `learning`  | `tool/learning/`                                                                  | Learning system operations |
+| `reflect`   | _(deleted — LLM-driven reflection is in `@alfred/pipeline/observers/reflect.ts`)_ | Self-reflection            |
 
 ## Assistant Tools
 

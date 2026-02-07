@@ -272,22 +272,12 @@ export async function mutateExecPlanFile(
 }
 ```
 
-### Agent Tool (`packages/agent/src/orchestrator/tool/reflect.ts`)
+### Reflection Observer (`packages/pipeline/src/observers/reflect.ts`)
 
-```typescript
-async function appendRule(filePath: string, rules: string[]) {
-  let content = "";
-  const file = Bun.file(filePath);
-  if (await file.exists()) {
-    content = await file.text();
-  } else {
-    content = "# Learned Rules\n\n";
-  }
+The reflection observer uses LLM-driven synthesis to extract learnings from execution logs.
+It does not write files — all learnings are persisted to Postgres `memory_nodes` via an
+injected callback. The old `toolReflect` (which wrote `.ruler/99-learned.md`) has been deleted.
 
-  // ... mutate content ...
-
-  await Bun.write(filePath, content);
-}
 ```
 
 ## References
@@ -295,3 +285,4 @@ async function appendRule(filePath: string, rules: string[]) {
 - [Bun File I/O Documentation](https://bun.com/docs/runtime/file-io)
 - [Bun Runtime Standards](../.ruler/22-bun-runtime.md)
 - [ALFRED File I/O Audit](../audit-bun-file-io.md)
+```

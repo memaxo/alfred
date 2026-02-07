@@ -2,6 +2,8 @@
 
 Owner: agent / db
 
+> For the unified view of all learning mechanisms, see [Learning System Overview](learning-system.md).
+
 ## Purpose
 
 Codify how ALFRED converts failures into durable heuristics (“dreaming”) and how those heuristics influence future Codex executions.

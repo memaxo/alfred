@@ -2,6 +2,8 @@
 
 Owner: runtime
 
+> For the unified view of all learning mechanisms, see [Learning System Overview](learning-system.md).
+
 ## Purpose
 
 Enable executor runs to become progressively smarter by capturing failure contexts, propagating learnings, and enriching subsequent tasks with historical insights.
