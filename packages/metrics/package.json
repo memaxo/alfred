@@ -46,6 +46,10 @@
     "./token": {
       "types": "./dist/token.d.ts",
       "default": "./src/token.ts"
+    },
+    "./enrichment": {
+      "types": "./dist/enrichment.d.ts",
+      "default": "./src/enrichment.ts"
     }
   },
   "scripts": {

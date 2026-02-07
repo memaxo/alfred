@@ -161,3 +161,28 @@ export const liveErrorsQueriedTotal = new client.Counter({
   name: "enrichment_live_errors_queried_total",
   registers: [metricsRegistry],
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reflection Metrics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const reflectionLearningsPersistedTotal = new client.Counter({
+  help: "Total learnings persisted by the reflection observer",
+  labelNames: ["path", "outcome"] as const,
+  name: "reflection_learnings_persisted_total",
+  registers: [metricsRegistry],
+});
+
+export const reflectionLearningsBackfilledTotal = new client.Counter({
+  help: "Total task_learning nodes that received embedding backfill",
+  name: "reflection_learnings_backfilled_total",
+  registers: [metricsRegistry],
+});
+
+export const reflectionPersistDurationSeconds = new client.Histogram({
+  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  help: "Duration of reflection persistence operations",
+  labelNames: ["path"] as const,
+  name: "reflection_persist_duration_seconds",
+  registers: [metricsRegistry],
+});
