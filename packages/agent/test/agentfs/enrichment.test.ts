@@ -36,7 +36,6 @@ import {
   getRetryPatternSummary,
   getRetryResolutions,
   getStructuredHandoff,
-  getTaskLearnings,
   hasSuccessfulRetry,
   listAllRetryResolutions,
   listFailureContexts,
@@ -44,10 +43,8 @@ import {
   persistFailureContext,
   persistRetryResolution,
   persistStructuredHandoff,
-  persistTaskLearning,
   type Decision,
   type RetryResolutionInput,
-  type TaskLearning,
 } from "../../src/agentfs/enrichment";
 import { AGENTFS_KV_KEYS } from "../../src/agentfs/keys";
 
@@ -431,44 +428,8 @@ describe("AgentFS Enrichment", () => {
     });
   });
 
-  describe("Task Learnings", () => {
-    it("should persist and retrieve task learnings", async () => {
-      const learning: TaskLearning = {
-        learning: "Always check return values",
-        source: "error",
-        ts: Date.now(),
-      };
-
-      await persistTaskLearning(mockAgent, "task-1", learning);
-      const learnings = await getTaskLearnings(mockAgent, "task-1");
-
-      expect(learnings).toHaveLength(1);
-      expect(learnings[0].learning).toBe("Always check return values");
-      expect(learnings[0].source).toBe("error");
-    });
-
-    it("should accumulate multiple learnings", async () => {
-      await persistTaskLearning(mockAgent, "task-1", {
-        learning: "Learning 1",
-        source: "error",
-        ts: 1000,
-      });
-      await persistTaskLearning(mockAgent, "task-1", {
-        learning: "Learning 2",
-        source: "success",
-        ts: 2000,
-      });
-      await persistTaskLearning(mockAgent, "task-1", {
-        learning: "Learning 3",
-        source: "reflect",
-        ts: 3000,
-      });
-
-      const learnings = await getTaskLearnings(mockAgent, "task-1");
-
-      expect(learnings).toHaveLength(3);
-    });
-  });
+  // Task Learnings tests removed — persistTaskLearning/getTaskLearnings deleted.
+  // Orchestrator ephemeral learnings now use Postgres memory_nodes via ReflectionObserver.
 
   describe("buildFailureContext", () => {
     it("should build failure context from agent stats", async () => {
@@ -862,7 +823,6 @@ describe("AgentFS Enrichment", () => {
         "retry:task-1:2"
       );
       expect(AGENTFS_KV_KEYS.decisions("task-1")).toBe("decisions:task-1");
-      expect(AGENTFS_KV_KEYS.taskLearnings("task-1")).toBe("learnings:task-1");
       expect(AGENTFS_KV_KEYS.liveError(12_345)).toBe("live-error:12345");
     });
   });

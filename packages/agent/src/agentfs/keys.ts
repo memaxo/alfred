@@ -19,9 +19,6 @@ export const AGENTFS_KV_KEYS = {
   /** Structured handoff from previous wave */
   handoff: (waveId: string) => `handoff:${waveId}`,
 
-  /** Task learnings from reflect tool */
-  taskLearnings: (taskId: string) => `learnings:${taskId}`,
-
   /** Decisions made during task execution */
   decisions: (taskId: string) => `decisions:${taskId}`,
 

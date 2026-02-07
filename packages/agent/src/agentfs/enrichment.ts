@@ -209,40 +209,14 @@ export async function getDecisions(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Task Learnings
+// Task Learnings — REMOVED
 // ─────────────────────────────────────────────────────────────────────────────
-
-export interface TaskLearning {
-  learning: string;
-  source: "reflect" | "error" | "success";
-  ts: number;
-}
-
-export async function persistTaskLearning(
-  agent: AgentFSInterface,
-  taskId: string,
-  learning: TaskLearning
-): Promise<void> {
-  if (!isEnrichmentEnabled()) {
-    return;
-  }
-  const existing = await getTaskLearnings(agent, taskId);
-  existing.push(learning);
-  await agent.kv.set(AGENTFS_KV_KEYS.taskLearnings(taskId), existing);
-}
-
-export async function getTaskLearnings(
-  agent: AgentFSInterface,
-  taskId: string
-): Promise<TaskLearning[]> {
-  if (!isEnrichmentEnabled()) {
-    return [];
-  }
-  const learnings = await agent.kv.get<TaskLearning[]>(
-    AGENTFS_KV_KEYS.taskLearnings(taskId)
-  );
-  return learnings ?? [];
-}
+// persistTaskLearning() and getTaskLearnings() were deleted.
+// Orchestrator ephemeral learnings now persist to Postgres memory_nodes
+// (kind = "task_learning") via ReflectionObserver + PersistLearningFn callback.
+// See packages/pipeline/src/observers/reflect.ts and
+// packages/api/src/routers/workflow/phase/execute.ts.
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FailureContext Builder
