@@ -1074,6 +1074,16 @@ Capability parity requires that every backend capability is reachable by both hu
 - **Capability registry:** `packages/agent/src/capability.ts` — Capability definitions with uiOnly markers
 - **Parity tests:** `packages/agent/test/capability-parity.test.ts` — Enforcement of tool coverage
 
+<!-- Source: .ruler/65-reflection.md -->
+
+# Reflection
+
+- Use reflection after completing a task and never block execution on it.
+- Store most learnings in ephemeral enrichment memory (Postgres `memory_nodes`) and reserve durable writes (`.ruler/99-learned.md`) for failures or friction.
+- Write learnings as imperative sentences between 10 and 200 characters with no secret-like content.
+- Ephemeral learnings are gated behind `ALFRED_ENRICHMENT=1`; durable learnings always write to the candidate bucket.
+- The learning worker backfills embeddings for `task_learning` nodes so they become searchable via vector similarity.
+
 <!-- Source: .ruler/bts.md -->
 
 # ALFRED Monorepo Overview
