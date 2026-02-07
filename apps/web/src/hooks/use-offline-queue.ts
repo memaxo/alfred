@@ -14,13 +14,14 @@ const MAX_QUEUE_SIZE = 10;
 
 interface QueuedMessage {
   id: string;
-  text: string;
+  content: string;
   timestamp: number;
   retryCount: number;
+  conversationId?: string;
 }
 
 interface UseOfflineQueueReturn {
-  queueMessage: (text: string) => boolean;
+  queueMessage: (content: string, conversationId?: string | null) => boolean;
   pendingMessages: QueuedMessage[];
   retryAll: () => QueuedMessage[];
   clearQueue: () => void;
@@ -73,7 +74,7 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
   }, []);
 
   const queueMessage = useCallback(
-    (text: string): boolean => {
+    (content: string, conversationId?: string | null): boolean => {
       if (isOnline) {
         return false; // Don't queue if online
       }
@@ -85,9 +86,10 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
 
       const newMessage: QueuedMessage = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        text,
+        content,
         timestamp: Date.now(),
         retryCount: 0,
+        conversationId: conversationId ?? undefined,
       };
 
       const updatedQueue = [...queue, newMessage];
@@ -102,18 +104,21 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
   const retryAll = useCallback((): QueuedMessage[] => {
     const queue = loadQueue();
     const failed: QueuedMessage[] = [];
+    const retryable: QueuedMessage[] = [];
 
     for (const message of queue) {
-      if (message.retryCount >= 3) {
-        failed.push(message);
+      const nextRetryCount = message.retryCount + 1;
+      if (nextRetryCount >= 3) {
+        failed.push({ ...message, retryCount: nextRetryCount });
+      } else {
+        retryable.push({ ...message, retryCount: nextRetryCount });
       }
     }
 
-    // Clear successfully retried messages
     saveQueue(failed);
     setPendingMessages(failed);
 
-    return queue.filter((m) => !failed.some((f) => f.id === m.id));
+    return retryable;
   }, []);
 
   const clearQueue = useCallback(() => {

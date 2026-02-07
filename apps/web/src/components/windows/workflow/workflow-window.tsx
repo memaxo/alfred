@@ -106,6 +106,11 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     : { type: "workflow" as const, viewMode: "full" as const };
 
   const status = windowData.status ?? "Idle";
+  const normalizedStatus = status.toLowerCase();
+  const isActiveStatus =
+    normalizedStatus === "running" ||
+    normalizedStatus === "suspended" ||
+    normalizedStatus === "connecting";
   const runId = windowData.runId ?? windowData.resourceRef?.id;
   const plan = windowData.plan as StructuredPlan | undefined;
   const activeView = windowData.activeView ?? "list";
@@ -241,6 +246,10 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     },
   });
 
+  const runQuery = trpc.workflow.get.useQuery(runId ? { runId } : skipToken, {
+    enabled: Boolean(runId) && isActiveStatus,
+  });
+
   const planning = useWorkflowPlan({
     requirement: planRequirement,
     onPlanReady: (out) => {
@@ -289,6 +298,15 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   });
 
   const showExecutionPanel = Boolean(runId) || planStatus !== "idle";
+
+  useEffect(() => {
+    if (!runId || !isActiveStatus) {
+      return;
+    }
+    if (runStatus === "idle") {
+      run({ runId });
+    }
+  }, [isActiveStatus, run, runId, runStatus]);
 
   const genuiSchemas = useMemo(() => {
     if (!runId) {
@@ -386,19 +404,30 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     },
   });
 
+  const persistedPlan = persistedPlanQuery.data;
+
   useEffect(() => {
-    const { data } = persistedPlanQuery;
-    if (!data || plan) {
+    if (!persistedPlan || plan) {
       return;
     }
     updateWindowData(id, {
-      runId: data.runId,
-      planId: data.planId,
-      plan: data.structuredPlan as StructuredPlan,
-      status: data.snapshot.status,
-      activeView: data.snapshot.status === "suspended" ? "canvas" : "list",
+      runId: persistedPlan.runId,
+      planId: persistedPlan.planId,
+      plan: persistedPlan.structuredPlan as StructuredPlan,
+      status: persistedPlan.snapshot.status,
+      activeView:
+        persistedPlan.snapshot.status === "suspended" ? "canvas" : "list",
     });
-  }, [persistedPlanQuery.data, plan, updateWindowData, id]);
+  }, [id, persistedPlan, plan, updateWindowData]);
+
+  useEffect(() => {
+    if (!runQuery.data) {
+      return;
+    }
+    if (runQuery.data.status && runQuery.data.status !== status) {
+      updateWindowData(id, { status: runQuery.data.status });
+    }
+  }, [id, runQuery.data, status, updateWindowData]);
 
   const handleGenerate = () => {
     void startForm.handleSubmit();

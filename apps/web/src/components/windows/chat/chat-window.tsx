@@ -6,6 +6,7 @@ type AssistantUIMessage = UIMessage;
 import { MessageSquare, Mic } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { Virtuoso } from "react-virtuoso";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import {
@@ -27,6 +28,7 @@ import {
 } from "@/components/windows/shared";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useMessageEdit } from "@/hooks/use-message-edit";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 import { useDesktopStore } from "@/store/desktop";
 
 const chatWindowDataSchema = z.object({
@@ -63,6 +65,7 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     toggleVoice,
     status,
     error,
+    conversationId,
   } = useChatLogic({ initialAgent: "assistant" });
 
   const {
@@ -73,6 +76,24 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     cancelEditing,
     saveEdit,
   } = useMessageEdit({ handleEdit });
+
+  const { queueMessage, pendingMessages, retryAll } = useOfflineQueue();
+
+  const handleSendWithQueue = useCallback(
+    (text: string) => {
+      if (!navigator.onLine) {
+        const queued = queueMessage(text, conversationId ?? undefined);
+        if (queued) {
+          toast.info("Message queued - will send when online");
+        } else {
+          toast.error("Unable to queue message");
+        }
+        return;
+      }
+      sendToChat(text);
+    },
+    [conversationId, queueMessage, sendToChat]
+  );
 
   const renderMessageActions = useCallback(
     (message: AssistantUIMessage) => {
@@ -92,7 +113,7 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
         />
       );
     },
-    [status, startEditing, messages, handleRegenerate, isEditing]
+    [status, startEditing, messages, handleRegenerate]
   );
 
   useEffect(() => {
@@ -101,14 +122,35 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     }
   }, [error, id, updateWindowData, windowData.error]);
 
+  useEffect(() => {
+    const handleOnline = () => {
+      if (pendingMessages.length > 0) {
+        const messagesToRetry = retryAll();
+        for (const message of messagesToRetry) {
+          sendToChat(message.content);
+        }
+        if (messagesToRetry.length > 0) {
+          toast.success(`Sent ${messagesToRetry.length} queued messages`);
+        }
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [pendingMessages, retryAll, sendToChat]);
+
   const handleSubmit = useCallback(
     (input: { text: string }) => {
+      if (!navigator.onLine) {
+        handleSendWithQueue(input.text);
+        return;
+      }
       if (input.text.startsWith("/workflow ")) {
         spawnWindow("workflow");
       }
-      sendToChat(input.text);
+      handleSendWithQueue(input.text);
     },
-    [sendToChat, spawnWindow]
+    [handleSendWithQueue, spawnWindow]
   );
 
   if (import.meta.env.VITE_TEST_MODE === "true") {

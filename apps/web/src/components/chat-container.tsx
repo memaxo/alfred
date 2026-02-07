@@ -109,7 +109,7 @@ export function ChatContainer({
   const handleSendWithQueue = useCallback(
     (text: string) => {
       if (!navigator.onLine) {
-        const queued = queueMessage(text);
+        const queued = queueMessage(text, conversationId ?? undefined);
         if (queued) {
           toast.info("Message queued - will send when online");
         } else {
@@ -119,7 +119,7 @@ export function ChatContainer({
       }
       handleSend(text);
     },
-    [queueMessage, handleSend]
+    [conversationId, queueMessage, handleSend]
   );
 
   // Retry queued messages when coming back online
@@ -128,7 +128,7 @@ export function ChatContainer({
       if (pendingMessages.length > 0) {
         const messagesToRetry = retryAll();
         for (const message of messagesToRetry) {
-          handleSend(message.text);
+          handleSend(message.content);
         }
         if (messagesToRetry.length > 0) {
           toast.success(`Sent ${messagesToRetry.length} queued messages`);
@@ -225,7 +225,6 @@ export function ChatContainer({
       handleFeedbackIntent,
       messages,
       handleRegenerate,
-      isEditing,
     ]
   );
 
@@ -317,6 +316,7 @@ export function ChatContainer({
       saveEdit,
       partRenderer,
       renderMessageActions,
+      setEditText,
     ]
   );
 
@@ -411,7 +411,7 @@ export function ChatContainer({
               <Button
                 onClick={() => {
                   for (const message of pendingMessages) {
-                    handleSend(message.text);
+                    handleSend(message.content);
                     removeFromQueue(message.id);
                   }
                 }}

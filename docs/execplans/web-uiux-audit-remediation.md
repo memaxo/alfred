@@ -32,8 +32,10 @@ A novice contributor can execute this plan end-to-end by following the concrete 
   - [ ] Gap 8: Keyboard shortcut discovery (Cmd+/ help)
   - [ ] Gap 11: Notification center keyboard navigation
 - [ ] Milestone 2: Resilience and data-loss prevention (High severity)
-  - [ ] Gap 4: Offline chat message queue and retry
-  - [ ] Gap 5: Workflow execution progress persistence
+  - [x] (2026-02-04) Gap 4: Offline chat message queue and retry
+        Evidence: `apps/web/src/hooks/use-offline-queue.ts`, `apps/web/src/components/chat-container.tsx`, `apps/web/src/components/windows/chat/chat-window.tsx`, `apps/web/src/components/chat/__tests__/offline-queue.test.tsx`.
+  - [x] (2026-02-04) Gap 5: Workflow execution progress persistence
+        Evidence: `apps/web/src/components/windows/workflow/workflow-window.tsx` resumes active runs and rehydrates status via `trpc.workflow.get`.
   - [ ] Gap 9: Workflow error recovery guidance
   - [ ] Gap 12: Health degradation prominent UI
 - [ ] Milestone 3: Performance and motion optimization (Medium severity)
@@ -79,11 +81,11 @@ Record every decision made while working on the plan.
 
 - Decision: Offline message queue storage mechanism
   Rationale: To avoid storage budget issues (50KB limit for desktop state), we will use localStorage for the offline queue with a max size of 10 messages. Messages will be queued with timestamp and retry count, and auto-retry when connectivity returns.
-  Date/Author: (To be filled during Milestone 2)
+  Date/Author: 2026-02-04 (assistant)
 
 - Decision: Workflow execution persistence strategy
   Rationale: Rather than persisting steps/events to window state (which could exceed storage budget), we will rehydrate by re-subscribing to workflow events when reopening a window with an active runId. The window will store only the runId and current status, not the full event stream.
-  Date/Author: (To be filled during Milestone 2)
+  Date/Author: 2026-02-04 (assistant)
 
 - Decision: Orb animation pause mechanism
   Rationale: We will use IntersectionObserver to detect when the orb is not visible (scrolled out, tab switched, or overlay hidden) and pause the useFrame loop. We will also respect prefers-reduced-motion by disabling the shader animation entirely when the preference is set.
