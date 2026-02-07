@@ -14,7 +14,7 @@ If you are unfamiliar with the concepts of Prompt Engineering and HTTP Streaming
 
 To follow this quickstart, you'll need:
 
-- Node.js 18+ and pnpm installed on your local development machine.
+- Node.js 18+ and bun installed on your local development machine.
 - An OpenAI API key.
 
 If you haven't obtained your OpenAI API key, you can do so by signing up on the OpenAI website.
@@ -23,7 +23,7 @@ If you haven't obtained your OpenAI API key, you can do so by signing up on the 
 
 Start by creating a new Nuxt application. This command will create a new directory named `my-ai-app` and set up a basic Nuxt application inside it.
 
-    pnpm create nuxt my-ai-app
+    bun create nuxt my-ai-app
 
 Navigate to the newly created directory:
 
@@ -35,7 +35,7 @@ Install `ai` and `@ai-sdk/openai`, the AI SDK's OpenAI provider.
 
 The AI SDK is designed to be a unified interface to interact with any large language model. This means that you can change model and providers with just one line of code! Learn more about available providers and building custom providers in the providers section.
 
-pnpm
+bun
 
 npm
 
@@ -43,7 +43,7 @@ yarn
 
 bun
 
-    pnpm add ai @ai-sdk/openai @ai-sdk/vue zod
+    bun add ai @ai-sdk/openai @ai-sdk/vue zod
 
 ### Configure OpenAI API key
 
@@ -199,7 +199,7 @@ The LLM's response is accessed through the message `parts` array. Each message c
 
 With that, you have built everything you need for your chatbot! To start your application, use the command:
 
-    pnpm run dev
+    bun run dev
 
 Head to your browser and open http://localhost:3000. You should see an input field. Test it out by entering a message and see the AI chatbot respond in real-time! The AI SDK makes it fast and easy to build AI chat interfaces with Nuxt.
 

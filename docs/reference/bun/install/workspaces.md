@@ -158,7 +158,7 @@ When many packages need the same dependency versions, catalogs let you definetho
 
 - 28x faster than `npm install`
 - 12x faster than `yarn install` (v1)
-- 8x faster than `pnpm install`
+- 8x faster than `bun install`
 
 [![](https://user-images.githubusercontent.com/709451/212829600-77df9544-7c9f-4d8d-a984-b2cd0fd2aa52.png)](https://user-images.githubusercontent.com/709451/212829600-77df9544-7c9f-4d8d-a984-b2cd0fd2aa52.png)
 

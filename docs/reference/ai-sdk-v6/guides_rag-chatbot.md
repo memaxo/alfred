@@ -106,7 +106,7 @@ To get started, clone the starter repository with the following command:
 
 First things first, run the following command to install the project’s dependencies:
 
-    pnpm install
+    bun install
 
 ### Create Database
 
@@ -149,7 +149,7 @@ Open the new `.env` file. You should see an item called `DATABASE_URL`. Copy in 
 
 With that set up, you can now run your first database migration. Run the following command:
 
-    pnpm db:migrate
+    bun db:migrate
 
 This will first add the `pgvector` extension to your database. Then it will create a new table for your `resources` schema that is defined in `lib/db/schema/resources.ts`. This schema has four columns: `id`, `content`, `createdAt`, and `updatedAt`.
 
@@ -238,7 +238,7 @@ To perform similarity search, you also need to include an index (HNSW or IVFFlat
 
 To push this change to the database, run the following command:
 
-    pnpm db:push
+    bun db:push
 
 ### Add Embedding Logic
 
@@ -272,7 +272,7 @@ This function will take an input string and split it by periods, filtering out a
 
 You will use the AI SDK to create embeddings. This will require two more dependencies, which you can install by running the following command:
 
-    pnpm add ai @ai-sdk/react @ai-sdk/openai
+    bun add ai @ai-sdk/react @ai-sdk/openai
 
 This will install the AI SDK, AI SDK's React hooks, and AI SDK's OpenAI provider.
 
@@ -567,7 +567,7 @@ The `useChat` hook enables the streaming of chat messages from your AI provider 
 
 Run the following command to start the Next.js dev server:
 
-    pnpm run dev
+    bun run dev
 
 Head to http://localhost:3000. You should see an empty screen with an input bar floating at the bottom. Try to send a message. The message shows up in the UI for a fraction of a second and then disappears. This is because you haven’t set up the corresponding API route to call the model! By default, `useChat` will send a POST request to the `/api/chat` endpoint with the `messages` as the request body.
 
@@ -771,7 +771,7 @@ In simple terms, on each generation, the model will decide whether it should cal
 
 Head back to the browser and tell the model your favorite food. You should see an empty response in the UI. Did anything happen? Let’s see. Run the following command in a new terminal window.
 
-    pnpm db:studio
+    bun db:studio
 
 This will start Drizzle Studio where we can view the rows in our database. You should see a new row in both the `embeddings` and `resources` table with your favorite food!
 

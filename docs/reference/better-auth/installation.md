@@ -33,7 +33,7 @@ Let's start by adding Better Auth to your project:
 
 npm
 
-pnpm
+bun
 
 yarn
 

@@ -143,7 +143,7 @@ jobs:
       - name: Install bun
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies # (assuming your project has dependencies)
-        run: bun install # You can use npm/yarn/pnpm instead if you prefer
+        run: bun install # You can use npm/yarn/bun instead if you prefer
       - name: Run tests
         run: bun test
 

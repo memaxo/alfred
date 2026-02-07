@@ -41,7 +41,7 @@ You'll need to connect to your database to migrate the users and accounts. You c
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -500,7 +500,7 @@ Once you've verified that everything is working correctly with Better Auth, you 
 Remove Clerk
 
 ```
-pnpm remove @clerk/nextjs @clerk/themes @clerk/types
+bun remove @clerk/nextjs @clerk/themes @clerk/types
 ```
 
 ## [Additional Resources](https://www.better-auth.com/docs/guides/clerk-migration-guide#additional-resources)

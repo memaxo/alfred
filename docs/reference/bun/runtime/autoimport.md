@@ -113,9 +113,9 @@ This auto-installation approach is useful for a few reasons:
 
 ## [FAQ](https://bun.com/docs/runtime/autoimport#faq)
 
-How is this different from what pnpm does?
+How is this different from what bun does?
 
-With pnpm, you have to run `pnpm install`, which creates a `node_modules` folder of symlinks for the runtime to resolve. By contrast, Bun resolves dependencies on the fly when you run a file; there's no need to run any `install` command ahead of time. Bun also doesn't create a `node_modules` folder.
+With bun, you have to run `bun install`, which creates a `node_modules` folder of symlinks for the runtime to resolve. By contrast, Bun resolves dependencies on the fly when you run a file; there's no need to run any `install` command ahead of time. Bun also doesn't create a `node_modules` folder.
 
 How is this different from Yarn Plug'N'Play does?
 

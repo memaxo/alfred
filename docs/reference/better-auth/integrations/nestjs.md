@@ -39,7 +39,7 @@ Install the NestJS integration library:
 
 npm
 
-pnpm
+bun
 
 yarn
 

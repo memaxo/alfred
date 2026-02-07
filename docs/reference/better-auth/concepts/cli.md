@@ -76,7 +76,7 @@ npx @better-auth/cli@latest init
 - `--framework` \- The framework your codebase is using. Currently, the only supported framework is `Next.js`.
 - `--plugins` \- The plugins you want to use. You can specify multiple plugins by separating them with a comma.
 - `--database` \- The database you want to use. Currently, the only supported database is `SQLite`.
-- `--package-manager` \- The package manager you want to use. Currently, the only supported package managers are `npm`, `pnpm`, `yarn`, `bun` (defaults to the manager you used to initialize the CLI).
+- `--package-manager` \- The package manager you want to use. Currently, the only supported package managers are `npm`, `bun`, `yarn`, `bun` (defaults to the manager you used to initialize the CLI).
 
 ## [Info](https://www.better-auth.com/docs/concepts/cli#info)
 

@@ -1975,12 +1975,12 @@ This is an overview of My Project. It's an example app used to highlight AGENTS.
 
 ## Core Commands
 
-• Type-check and lint: `pnpm check`
-• Auto-fix style: `pnpm check:fix`
-• Run full test suite: `pnpm test --run --no-color`
-• Run a single test file: `pnpm test --run <path>.test.ts`
-• Start dev servers (frontend + backend): `pnpm dev`
-• Build for production: `pnpm build` then `pnpm preview`
+• Type-check and lint: `bun check`
+• Auto-fix style: `bun check:fix`
+• Run full test suite: `bun test --run --no-color`
+• Run a single test file: `bun test --run <path>.test.ts`
+• Start dev servers (frontend + backend): `bun dev`
+• Build for production: `bun build` then `bun preview`
 
 All other scripts wrap these six tasks.
 
@@ -2006,7 +2006,7 @@ Coding style
 ## Git Workflow Essentials
 
 1. Branch from `main` with a descriptive name: `feature/<slug>` or `bugfix/<slug>`.
-2. Run `pnpm check` locally **before** committing.
+2. Run `bun check` locally **before** committing.
 3. Force pushes **allowed only** on your feature branch using
    `git push --force-with-lease`. Never force-push `main`.
 4. Keep commits atomic; prefer checkpoints (`feat: …`, `test: …`).
@@ -2015,8 +2015,8 @@ Coding style
 
 A pull request is reviewable when it includes:
 
-- All tests green (`pnpm test`)
-- Lint & type check pass (`pnpm check`)
+- All tests green (`bun test`)
+- Lint & type check pass (`bun check`)
 - Diff confined to agreed paths (see section 2)
 - **Proof artifact**
   • Bug fix → failing test added first, now passes

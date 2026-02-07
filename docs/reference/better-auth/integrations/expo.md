@@ -54,7 +54,7 @@ Install both the Better Auth package and Expo plugin into your server applicatio
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -70,7 +70,7 @@ You also need to install both the Better Auth package and Expo plugin into your 
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -84,7 +84,7 @@ If you plan on using our social integrations (Google, Apple etc.) then there are
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -120,7 +120,7 @@ Make sure you install the `expo-secure-store` package into your Expo app. This i
 
 npm
 
-pnpm
+bun
 
 yarn
 

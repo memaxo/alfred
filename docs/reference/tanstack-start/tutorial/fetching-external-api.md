@@ -12,7 +12,7 @@ What You'll Learn
 Prerequisites
 
 - Basic knowledge of React and TypeScript
-- Node.js (v18+) and pnpm installed on your machine
+- Node.js (v18+) and bun installed on your machine
 - A TMDB API key (free at themoviedb.org)
 
 Nice to know Setting up a TanStack Start Project
@@ -31,11 +31,11 @@ Optionally, you can pass in a \--add-on flag to get options such as Shadcn, Cler
 
 Once setup is complete, install dependencies and start the development server:
 
-pnpm i
-pnpm dev
+bun i
+bun dev
 
-pnpm i
-pnpm dev
+bun i
+bun dev
 
 Understanding the Project Structure
 

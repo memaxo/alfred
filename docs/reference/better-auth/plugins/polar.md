@@ -45,7 +45,7 @@ repo](https://github.com/polarsource/polar-adapters).
 ## [Installation](https://www.better-auth.com/docs/plugins/polar#installation)
 
 ```
-pnpm add better-auth @polar-sh/better-auth @polar-sh/sdk
+bun add better-auth @polar-sh/better-auth @polar-sh/sdk
 ```
 
 ## [Preparation](https://www.better-auth.com/docs/plugins/polar#preparation)

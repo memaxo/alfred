@@ -20,7 +20,7 @@ Upgrading to AI SDK 3.1 does not require using the newly released AI SDK Core AP
 
 To update to AI SDK version 3.1, run the following command using your preferred package manager:
 
-    pnpm add ai@3.1
+    bun add ai@3.1
 
 ## Next Steps
 

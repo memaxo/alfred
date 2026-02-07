@@ -35,7 +35,7 @@ If you haven't already, install better-auth.
 
 npm
 
-pnpm
+bun
 
 yarn
 

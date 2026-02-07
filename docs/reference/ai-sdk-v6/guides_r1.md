@@ -165,7 +165,7 @@ Let's explore building a chatbot with Next.js, the AI SDK, and DeepSeek R1:
 
 In a new Next.js application, first install the AI SDK and the DeepSeek provider:
 
-    pnpm install ai @ai-sdk/deepseek @ai-sdk/react
+    bun install ai @ai-sdk/deepseek @ai-sdk/react
 
 Then, create a route handler for the chat endpoint:
 

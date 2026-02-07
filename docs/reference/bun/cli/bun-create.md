@@ -309,7 +309,7 @@ ELSE IF local template
    - IF Create React App is detected, add the entry point in /src/index.{js,jsx,ts,tsx} to `public/index.html`
    - IF Relay is detected, add `bun-macro-relay` so that Relay works
 
-5. Auto-detect the npm client, preferring `pnpm`, `yarn` (v1), and lastly `npm`
+5. Auto-detect the npm client, preferring `bun`, `yarn` (v1), and lastly `npm`
 
 6. Run any tasks defined in `"bun-create": { "preinstall" }` with the npm client
 

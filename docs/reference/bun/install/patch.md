@@ -134,7 +134,7 @@ bun patch --commit react --patches-dir=mypatches
 
 ```
 
-# `patch-commit` is available for compatibility with pnpm
+# `patch-commit` is available for compatibility with bun
 ```
 
 ```

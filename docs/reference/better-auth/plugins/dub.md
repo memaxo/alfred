@@ -39,7 +39,7 @@ First, install the plugin:
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -55,7 +55,7 @@ Next, install the Dub SDK on your server:
 
 npm
 
-pnpm
+bun
 
 yarn
 

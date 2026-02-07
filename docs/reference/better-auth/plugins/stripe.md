@@ -49,7 +49,7 @@ First, install the plugin:
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -67,7 +67,7 @@ Next, install the Stripe SDK on your server:
 
 npm
 
-pnpm
+bun
 
 yarn
 

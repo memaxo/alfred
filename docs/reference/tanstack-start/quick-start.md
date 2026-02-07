@@ -2,9 +2,9 @@ Impatient?
 
 The fastest way to get a Start project up and running is with the cli. Just run
 
-pnpm create @tanstack/start@latest
+bun create @tanstack/start@latest
 
-pnpm create @tanstack/start@latest
+bun create @tanstack/start@latest
 
 or
 

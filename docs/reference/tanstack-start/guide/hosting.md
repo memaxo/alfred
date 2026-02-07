@@ -20,9 +20,9 @@ When deploying to Cloudflare Workers, you'll need to complete a few extra steps 
 
 1.  Install @cloudflare/vite-plugin and wrangler
 
-pnpm add -D @cloudflare/vite-plugin wrangler
+bun add -D @cloudflare/vite-plugin wrangler
 
-pnpm add -D @cloudflare/vite-plugin wrangler
+bun add -D @cloudflare/vite-plugin wrangler
 
 2.  Add the Cloudflare plugin to your vite.config.ts file
 
@@ -106,19 +106,19 @@ npx wrangler login
 
 npx wrangler login
 
-or if using pnpm:
+or if using bun:
 
-pnpm dlx wrangler login
+bun dlx wrangler login
 
-pnpm dlx wrangler login
+bun dlx wrangler login
 
 To check current user use wrangler whoami.
 
 6.  Deploy
 
-pnpm run deploy
+bun run deploy
 
-pnpm run deploy
+bun run deploy
 
 Deploy your application to Cloudflare Workers using their one-click deployment process, and you're ready to go!
 
@@ -132,7 +132,7 @@ npm install --save-dev @netlify/vite-plugin-tanstack-start
 
 # or...
 
-pnpm add --save-dev @netlify/vite-plugin-tanstack-start
+bun add --save-dev @netlify/vite-plugin-tanstack-start
 
 # or yarn, bun, etc.
 
@@ -140,7 +140,7 @@ npm install --save-dev @netlify/vite-plugin-tanstack-start
 
 # or...
 
-pnpm add --save-dev @netlify/vite-plugin-tanstack-start
+bun add --save-dev @netlify/vite-plugin-tanstack-start
 
 # or yarn, bun, etc.
 

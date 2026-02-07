@@ -182,8 +182,8 @@ ERR_BLOCKED_BY_RESPONSE
 3. Run the following commands
 
 ```
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
 4. Open the browser and navigate to `http://localhost:3000`

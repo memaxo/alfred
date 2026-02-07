@@ -53,7 +53,7 @@ For this guide, we will be using the Prisma adapter. You can install prisma clie
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -67,7 +67,7 @@ npm install @prisma/client
 
 npm
 
-pnpm
+bun
 
 yarn
 
@@ -180,7 +180,7 @@ Start by installing the cors package:
 
 npm
 
-pnpm
+bun
 
 yarn
 

@@ -91,7 +91,7 @@ package.json
 
 Run:
 
-    pnpm install
+    bun install
 
 Import v4 types for proper type safety:
 
@@ -1014,9 +1014,9 @@ Create a new `messages_v5` table with the same structure as your existing table,
 
 Run your migration to create the new table:
 
-    pnpm drizzle-kit generate
+    bun drizzle-kit generate
 
-    pnpm drizzle-kit migrate
+    bun drizzle-kit migrate
 
 ### Step 2: Implement Dual-Write for New Messages
 

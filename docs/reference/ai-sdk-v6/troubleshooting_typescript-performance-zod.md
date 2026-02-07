@@ -23,7 +23,7 @@ The AI SDK 5 has specific compatibility requirements with Zod versions. When imp
 
 The primary solution is to upgrade to Zod version 4.1.8 or later, which includes a fix for this module resolution issue:
 
-    pnpm add zod@^4.1.8
+    bun add zod@^4.1.8
 
 This version resolves the underlying problem where different module resolution settings were causing TypeScript to load the same Zod declarations twice, leading to expensive structural comparisons.
 

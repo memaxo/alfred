@@ -40,19 +40,19 @@ are ready to create a browser extension to connect to it.
 Initialize a new Plasmo project with TailwindCSS and a src directory.
 
 ```
-pnpm create plasmo --with-tailwindcss --with-src
+bun create plasmo --with-tailwindcss --with-src
 ```
 
 Then, install the Better Auth package.
 
 ```
-pnpm add better-auth
+bun add better-auth
 ```
 
 To start the Plasmo development server, run the following command.
 
 ```
-pnpm dev
+bun dev
 ```
 
 ## [Configure tsconfig](https://www.better-auth.com/docs/guides/browser-extension-guide#configure-tsconfig)
@@ -153,7 +153,7 @@ export default IndexPopup;
 To get a production build, run the following command.
 
 ```
-pnpm build
+bun build
 ```
 
 Head over to [chrome://extensions](chrome://extensions/) and enable developer mode.

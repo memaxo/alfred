@@ -49,7 +49,7 @@ First, create your pricing plans in Autumn's [dashboard](https://app.useautumn.c
 
 npm
 
-pnpm
+bun
 
 yarn
 

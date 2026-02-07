@@ -17,7 +17,7 @@ What You'll Learn
 Prerequisites
 
 - Basic knowledge of React and TypeScript.
-- Node.js and pnpm installed on your machine
+- Node.js and bun installed on your machine
 
 Nice to know Setting up a TanStack Start Project
 
@@ -35,23 +35,23 @@ Optionally, you can pass in a \--add-on flag to get options such as Shadcn, Cler
 
 Once setup is complete, install dependencies and start the development server:
 
-pnpm i
-pnpm dev
+bun i
+bun dev
 
-pnpm i
-pnpm dev
+bun i
+bun dev
 
 For this project, we'll need a few additional packages:
 
 # Install uuid for generating unique IDs
 
-pnpm add uuid
-pnpm add -D @types/uuid
+bun add uuid
+bun add -D @types/uuid
 
 # Install uuid for generating unique IDs
 
-pnpm add uuid
-pnpm add -D @types/uuid
+bun add uuid
+bun add -D @types/uuid
 
 Understanding the project structure
 

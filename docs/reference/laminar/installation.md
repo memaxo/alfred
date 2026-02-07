@@ -42,7 +42,7 @@ npm add @lmnr-ai/lmnr
 
 ```
 
-Show other installation options: yarn, pnpm
+Show other installation options: yarn, bun
 
 yarn
 
@@ -53,12 +53,12 @@ yarn add @lmnr-ai/lmnr
 
 ```
 
-pnpm
+bun
 
 Copy
 
 ```
-pnpm add @lmnr-ai/lmnr
+bun add @lmnr-ai/lmnr
 
 ```
 

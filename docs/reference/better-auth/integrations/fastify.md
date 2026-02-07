@@ -43,7 +43,7 @@ Verify the following requirements before integration:
 
 npm
 
-pnpm
+bun
 
 yarn
 

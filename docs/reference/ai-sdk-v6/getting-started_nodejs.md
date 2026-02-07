@@ -14,20 +14,20 @@ If you are unfamiliar with the concepts of Prompt Engineering and HTTP Streaming
 
 To follow this quickstart, you'll need:
 
-- Node.js 18+ and pnpm installed on your local development machine.
+- Node.js 18+ and bun installed on your local development machine.
 - An OpenAI API key.
 
 If you haven't obtained your OpenAI API key, you can do so by signing up on the OpenAI website.
 
 ## Setup Your Application
 
-Start by creating a new directory using the `mkdir` command. Change into your new directory and then run the `pnpm init` command. This will create a `package.json` in your new directory.
+Start by creating a new directory using the `mkdir` command. Change into your new directory and then run the `bun init` command. This will create a `package.json` in your new directory.
 
     mkdir my-ai-app
 
     cd my-ai-app
 
-    pnpm init
+    bun init
 
 ### Install Dependencies
 
@@ -35,9 +35,9 @@ Install `ai` and `@ai-sdk/openai`, the AI SDK's OpenAI provider, along with othe
 
 The AI SDK is designed to be a unified interface to interact with any large language model. This means that you can change model and providers with just one line of code! Learn more about available providers and building custom providers in the providers section.
 
-    pnpm add ai@beta @ai-sdk/openai@beta zod dotenv
+    bun add ai@beta @ai-sdk/openai@beta zod dotenv
 
-    pnpm add -D @types/node tsx typescript
+    bun add -D @types/node tsx typescript
 
 The `ai` and `@ai-sdk/openai` packages contain the AI SDK and the AI SDK OpenAI provider, respectively. You will use `zod` to define type-safe schemas that you will pass to the large language model (LLM). You will use `dotenv` to access environment variables (your OpenAI key) within your application. There are also three development dependencies, installed with the `-D` flag, that are necessary to run your Typescript code.
 
@@ -159,7 +159,7 @@ Let's take a look at what is happening in this code:
 
 With that, you have built everything you need for your chatbot! To start your application, use the command:
 
-    pnpm tsx index.ts
+    bun tsx index.ts
 
 You should see a prompt in your terminal. Test it out by entering a message and see the AI chatbot respond in real-time! The AI SDK makes it fast and easy to build AI chat interfaces with Node.js.
 

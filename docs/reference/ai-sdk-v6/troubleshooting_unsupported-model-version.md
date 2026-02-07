@@ -24,7 +24,7 @@ AI SDK 5 requires all provider packages to implement specification version "v2".
 
 Update all your `@ai-sdk/*` provider packages to compatible version `2.0.0` or later. These versions implement the v2 specification required by AI SDK 5.
 
-    pnpm install ai@latest @ai-sdk/openai@latest @ai-sdk/anthropic@latest
+    bun install ai@latest @ai-sdk/openai@latest @ai-sdk/anthropic@latest
 
 For AI SDK 5 compatibility, you need:
 

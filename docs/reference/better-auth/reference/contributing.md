@@ -59,10 +59,10 @@ cd better-auth
 
 ### [3\. Install dependencies](https://www.better-auth.com/docs/reference/contributing#3-install-dependencies)
 
-Make sure you have [pnpm](https://pnpm.io/installation) installed!
+Make sure you have [bun](https://bun.io/installation) installed!
 
 ```
-pnpm install
+bun install
 ```
 
 ### [4\. Prepare ENV files](https://www.better-auth.com/docs/reference/contributing#4-prepare-env-files)
@@ -95,13 +95,13 @@ git checkout -b feature/your-feature-name
 Start the development server:
 
 ```
-pnpm dev
+bun dev
 ```
 
 To start the docs server:
 
 ```
-pnpm -F docs dev
+bun -F docs dev
 ```
 
 ### [3\. Make Your Changes](https://www.better-auth.com/docs/reference/contributing#3-make-your-changes)

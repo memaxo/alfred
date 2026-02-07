@@ -16,7 +16,7 @@ We'll build this agent using OpenAI's GPT-4o, but the same code works seamlessly
 
 To follow this quickstart, you'll need:
 
-- Node.js 18+ and pnpm installed on your local development machine.
+- Node.js 18+ and bun installed on your local development machine.
 - An OpenAI API key.
 
 If you haven't obtained your OpenAI API key, you can do so by signing up on the OpenAI website.
@@ -27,7 +27,7 @@ Start by creating a new Next.js application. This command will create a new dire
 
 Be sure to select yes when prompted to use the App Router. If you are looking for the Next.js Pages Router quickstart guide, you can find it here.
 
-    pnpm create next-app@latest multi-modal-agent
+    bun create next-app@latest multi-modal-agent
 
 Navigate to the newly created directory:
 
@@ -39,7 +39,7 @@ Install `ai` and `@ai-sdk/openai`, the AI SDK package and the AI SDK's OpenAI pr
 
 The AI SDK is designed to be a unified interface to interact with any large language model. This means that you can change model and providers with just one line of code! Learn more about available providers and building custom providers in the providers section.
 
-pnpm
+bun
 
 npm
 
@@ -47,7 +47,7 @@ yarn
 
 bun
 
-    pnpm add ai @ai-sdk/react @ai-sdk/openai
+    bun add ai @ai-sdk/react @ai-sdk/openai
 
 ### Configure OpenAI API key
 
@@ -462,7 +462,7 @@ In this code, you:
 
 With that, you have built everything you need for your multi-modal agent! To start your application, use the command:
 
-    pnpm run dev
+    bun run dev
 
 Head to your browser and open http://localhost:3000. You should see an input field and a button to upload files.
 

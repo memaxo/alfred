@@ -29,7 +29,7 @@ Package manager
 
 [`bun install`](https://bun.com/docs/cli/install) [`bun add`](https://bun.com/docs/cli/add) [`bun remove`](https://bun.com/docs/cli/remove) [`bun update`](https://bun.com/docs/cli/update) [`bun publish`](https://bun.com/docs/cli/publish) [`bun outdated`](https://bun.com/docs/cli/outdated) [`bun link`](https://bun.com/docs/cli/link) [`bun pm`](https://bun.com/docs/cli/pm) [`bun why`](https://bun.com/docs/cli/why) [Global cache](https://bun.com/docs/install/cache) [Isolated installs](https://bun.com/docs/install/isolated)
 
-[What are isolated installs?](https://bun.com/docs/install/isolated#what-are-isolated-installs) [Key benefits](https://bun.com/docs/install/isolated#key-benefits) [Using isolated installs](https://bun.com/docs/install/isolated#using-isolated-installs) [Command line](https://bun.com/docs/install/isolated#command-line) [Configuration file](https://bun.com/docs/install/isolated#configuration-file) [Default behavior](https://bun.com/docs/install/isolated#default-behavior) [How isolated installs work](https://bun.com/docs/install/isolated#how-isolated-installs-work) [Directory structure](https://bun.com/docs/install/isolated#directory-structure) [Resolution algorithm](https://bun.com/docs/install/isolated#resolution-algorithm) [Workspace handling](https://bun.com/docs/install/isolated#workspace-handling) [Comparison with hoisted installs](https://bun.com/docs/install/isolated#comparison-with-hoisted-installs) [Advanced features](https://bun.com/docs/install/isolated#advanced-features) [Peer dependency handling](https://bun.com/docs/install/isolated#peer-dependency-handling) [Backend strategies](https://bun.com/docs/install/isolated#backend-strategies) [Debugging isolated installs](https://bun.com/docs/install/isolated#debugging-isolated-installs) [Troubleshooting](https://bun.com/docs/install/isolated#troubleshooting) [Compatibility issues](https://bun.com/docs/install/isolated#compatibility-issues) [Performance considerations](https://bun.com/docs/install/isolated#performance-considerations) [Migration guide](https://bun.com/docs/install/isolated#migration-guide) [From npm/Yarn](https://bun.com/docs/install/isolated#from-npm-yarn) [From pnpm](https://bun.com/docs/install/isolated#from-pnpm) [When to use isolated installs](https://bun.com/docs/install/isolated#when-to-use-isolated-installs) [Related documentation](https://bun.com/docs/install/isolated#related-documentation)
+[What are isolated installs?](https://bun.com/docs/install/isolated#what-are-isolated-installs) [Key benefits](https://bun.com/docs/install/isolated#key-benefits) [Using isolated installs](https://bun.com/docs/install/isolated#using-isolated-installs) [Command line](https://bun.com/docs/install/isolated#command-line) [Configuration file](https://bun.com/docs/install/isolated#configuration-file) [Default behavior](https://bun.com/docs/install/isolated#default-behavior) [How isolated installs work](https://bun.com/docs/install/isolated#how-isolated-installs-work) [Directory structure](https://bun.com/docs/install/isolated#directory-structure) [Resolution algorithm](https://bun.com/docs/install/isolated#resolution-algorithm) [Workspace handling](https://bun.com/docs/install/isolated#workspace-handling) [Comparison with hoisted installs](https://bun.com/docs/install/isolated#comparison-with-hoisted-installs) [Advanced features](https://bun.com/docs/install/isolated#advanced-features) [Peer dependency handling](https://bun.com/docs/install/isolated#peer-dependency-handling) [Backend strategies](https://bun.com/docs/install/isolated#backend-strategies) [Debugging isolated installs](https://bun.com/docs/install/isolated#debugging-isolated-installs) [Troubleshooting](https://bun.com/docs/install/isolated#troubleshooting) [Compatibility issues](https://bun.com/docs/install/isolated#compatibility-issues) [Performance considerations](https://bun.com/docs/install/isolated#performance-considerations) [Migration guide](https://bun.com/docs/install/isolated#migration-guide) [From npm/Yarn](https://bun.com/docs/install/isolated#from-npm-yarn) [From bun](https://bun.com/docs/install/isolated#from-bun) [When to use isolated installs](https://bun.com/docs/install/isolated#when-to-use-isolated-installs) [Related documentation](https://bun.com/docs/install/isolated#related-documentation)
 
 [Workspaces](https://bun.com/docs/install/workspaces) [Catalogs](https://bun.com/docs/install/catalogs) [Lifecycle scripts](https://bun.com/docs/install/lifecycle) [Filter](https://bun.com/docs/cli/filter) [Lockfile](https://bun.com/docs/install/lockfile) [Scopes and registries](https://bun.com/docs/install/registries) [Overrides and resolutions](https://bun.com/docs/install/overrides) [Patch dependencies](https://bun.com/docs/install/patch) [Audit dependencies](https://bun.com/docs/install/audit) [.npmrc support](https://bun.com/docs/install/npmrc) [Security Scanner API](https://bun.com/docs/install/security-scanner-api)
 
@@ -53,7 +53,7 @@ Project
 
 [Roadmap](https://bun.com/docs/project/roadmap) [Benchmarking](https://bun.com/docs/project/benchmarking) [Contributing](https://bun.com/docs/project/contributing) [Building Windows](https://bun.com/docs/project/building-windows) [Bindgen](https://bun.com/docs/project/bindgen) [License](https://bun.com/docs/project/licensing)
 
-Bun provides an alternative package installation strategy called **isolated installs** that creates strict dependency isolation similar to pnpm's approach. This mode prevents phantom dependencies and ensures reproducible, deterministic builds.
+Bun provides an alternative package installation strategy called **isolated installs** that creates strict dependency isolation similar to bun's approach. This mode prevents phantom dependencies and ensures reproducible, deterministic builds.
 
 ## [What are isolated installs?](https://bun.com/docs/install/isolated#what-are-isolated-installs)
 
@@ -141,7 +141,7 @@ In monorepos, workspace dependencies are handled specially:
 
 ## [Comparison with hoisted installs](https://bun.com/docs/install/isolated#comparison-with-hoisted-installs)
 
-| Aspect                    | Hoisted (npm/Yarn)                         | Isolated (pnpm-like)                    |
+| Aspect                    | Hoisted (npm/Yarn)                         | Isolated (bun-like)                     |
 | ------------------------- | ------------------------------------------ | --------------------------------------- |
 | **Dependency access**     | Packages can access any hoisted dependency | Packages only see declared dependencies |
 | **Phantom dependencies**  | ❌ Possible                                | ✅ Prevented                            |
@@ -234,16 +234,16 @@ rm -rf node_modules package-lock.json yarn.lock
 bun install --linker isolated
 ```
 
-### [From pnpm](https://bun.com/docs/install/isolated#from-pnpm)
+### [From bun](https://bun.com/docs/install/isolated#from-bun)
 
-Isolated installs are conceptually similar to pnpm, so migration should be straightforward:
-
-```
-# Remove pnpm files
-```
+Isolated installs are conceptually similar to bun, so migration should be straightforward:
 
 ```
-rm -rf node_modules pnpm-lock.yaml
+# Remove bun files
+```
+
+```
+rm -rf node_modules bun-lock.yaml
 ```
 
 ```
@@ -255,7 +255,7 @@ rm -rf node_modules pnpm-lock.yaml
 bun install --linker isolated
 ```
 
-The main difference is that Bun uses symlinks in `node_modules` while pnpm uses a global store with symlinks.
+The main difference is that Bun uses symlinks in `node_modules` while bun uses a global store with symlinks.
 
 ## [When to use isolated installs](https://bun.com/docs/install/isolated#when-to-use-isolated-installs)
 

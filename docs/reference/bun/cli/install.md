@@ -53,7 +53,7 @@ Project
 
 [Roadmap](https://bun.com/docs/project/roadmap) [Benchmarking](https://bun.com/docs/project/benchmarking) [Contributing](https://bun.com/docs/project/contributing) [Building Windows](https://bun.com/docs/project/building-windows) [Bindgen](https://bun.com/docs/project/bindgen) [License](https://bun.com/docs/project/licensing)
 
-The `bun` CLI contains a Node.js-compatible package manager designed to be a dramatically faster replacement for `npm`, `yarn`, and `pnpm`. It's a standalone tool that will work in pre-existing Node.js projects; if your project has a `package.json`, `bun install` can help you speed up your workflow.
+The `bun` CLI contains a Node.js-compatible package manager designed to be a dramatically faster replacement for `npm`, `yarn`, and `bun`. It's a standalone tool that will work in pre-existing Node.js projects; if your project has a `package.json`, `bun install` can help you speed up your workflow.
 
 **⚡️ 25x faster** — Switch from `npm install` to `bun install` in any Node.js project to make your installations up to 25x faster.
 
@@ -295,7 +295,7 @@ bun install --linker hoisted
 
 ### [Isolated installs](https://bun.com/docs/cli/install#isolated-installs)
 
-A pnpm-like approach that creates strict dependency isolation to prevent phantom dependencies:
+A bun-like approach that creates strict dependency isolation to prevent phantom dependencies:
 
 ```
 bun install --linker isolated

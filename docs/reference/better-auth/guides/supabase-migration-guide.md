@@ -41,7 +41,7 @@ You'll need to connect to your database to migrate the users and accounts. Copy 
 
 npm
 
-pnpm
+bun
 
 yarn
 

@@ -18,7 +18,7 @@ This guide will help you upgrade to AI SDK 3.2:
 
 To update to AI SDK version 3.2, run the following command using your preferred package manager:
 
-    pnpm add ai@latest
+    bun add ai@latest
 
 ## Removed Functionality
 

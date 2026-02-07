@@ -34,7 +34,7 @@ The AI SDK supports both raw JSON schemas (using the `jsonSchema` function) and 
 
 Zod is a popular TypeScript schema validation library. You can install it with:
 
-pnpm
+bun
 
 npm
 
@@ -42,7 +42,7 @@ yarn
 
 bun
 
-    pnpm add zod
+    bun add zod
 
 You can then specify a Zod schema, for example:
 

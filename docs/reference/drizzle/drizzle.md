@@ -11556,7 +11556,7 @@ export default function App() {
 
 #### Step 10 - Prebuild and run expo app
 
-<CodeTabs items={['npm', 'yarn', 'pnpm', 'bun']}>
+<CodeTabs items={['npm', 'yarn', 'bun', 'bun']}>
 
 ```bash copy
 npx expo run:ios
@@ -11567,7 +11567,7 @@ yarn expo run:ios
 ```
 
 ```bash copy
-pnpm expo run:ios
+bun expo run:ios
 ```
 
 ```bash copy
@@ -12808,7 +12808,7 @@ export default function App() {
 
 #### Step 10 - Prebuild and run expo app
 
-<CodeTabs items={['npm', 'yarn', 'pnpm', 'bun']}>
+<CodeTabs items={['npm', 'yarn', 'bun', 'bun']}>
 
 ```bash copy
 npx expo run:ios
@@ -12819,7 +12819,7 @@ yarn expo run:ios
 ```
 
 ```bash copy
-pnpm expo run:ios
+bun expo run:ios
 ```
 
 ```bash copy
