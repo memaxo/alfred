@@ -37,8 +37,7 @@ export class LearnStage implements PipelineStage<ReviewOutput, LearnOutput> {
 
       startLearningWorker({
         enabled: true,
-        intervalMs: 60_000, // Check every minute
-        batchSize: 10,
+        maintenanceIntervalMs: 60_000,
       });
 
       logger.info("learn_stage_complete", {

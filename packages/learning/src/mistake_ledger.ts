@@ -25,6 +25,32 @@ export interface AgentFSMistakeEntry {
   timestamp: string;
 }
 
+/**
+ * Persistence adapter for durable mistake storage.
+ * Default: in-memory only. Inject a Postgres-backed adapter from
+ * the API layer (`packages/api`) to enable durable persistence.
+ */
+export interface MistakePersistenceAdapter {
+  persist(entry: MistakeEntry): Promise<void>;
+  load(options?: {
+    limit?: number;
+    category?: string;
+  }): Promise<MistakeEntry[]>;
+}
+
+let persistenceAdapter: MistakePersistenceAdapter | null = null;
+
+/**
+ * Inject a persistence adapter for durable storage.
+ * Call from the API layer during initialization. When set, all new
+ * mistakes are written to both the in-memory ledger and the adapter.
+ */
+export function setPersistenceAdapter(
+  adapter: MistakePersistenceAdapter | null
+): void {
+  persistenceAdapter = adapter;
+}
+
 const ledger: MistakeEntry[] = [];
 
 const confidence = (value: number) =>
@@ -32,6 +58,12 @@ const confidence = (value: number) =>
 
 export function recordMistake(entry: MistakeEntry): void {
   ledger.push({ ...entry });
+  // Fire-and-forget to Postgres if adapter is wired
+  if (persistenceAdapter) {
+    void persistenceAdapter.persist(entry).catch(() => {
+      // Best effort — in-memory ledger is the source of truth
+    });
+  }
 }
 
 /**
