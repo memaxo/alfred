@@ -83,7 +83,7 @@ export function initApiServices(): void {
     });
   });
 
-  // Initialize learning worker (if enabled via env)
+  // Initialize learning worker (maintenance only: decay, pruning, backfill)
   if (process.env.ENABLE_LEARNING_WORKER === "1") {
     void (async () => {
       const { startLearningWorker, stopLearningWorker } =
@@ -91,7 +91,7 @@ export function initApiServices(): void {
       stopLearningWorkerFn = stopLearningWorker;
       startLearningWorker();
       logger.info("learning_worker_init", {
-        message: "Learning worker started",
+        message: "Learning worker started (maintenance only)",
       });
     })().catch((error) => {
       if (isViteModuleRunnerClosed(error)) {

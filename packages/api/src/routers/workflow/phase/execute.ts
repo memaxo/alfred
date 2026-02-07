@@ -1,3 +1,8 @@
+import type {
+  GatherExecutionContextFn,
+  PersistLearningFn,
+} from "@alfred/pipeline/observers";
+
 import { executePhaseInputSchema } from "@alfred/pipeline/schemas";
 import { TRPCError } from "@trpc/server";
 import * as path from "node:path";
@@ -49,6 +54,7 @@ export const workflowPhaseExecuteProcedure = authedProcedure
           CostCleanupObserver,
           MetricsObserver,
           LinearSyncObserver,
+          ReflectionObserver,
         },
         { PostgresCheckpointStorage },
         { phaseExecuteRequestsTotal, phaseExecuteDurationSeconds },
@@ -74,9 +80,12 @@ export const workflowPhaseExecuteProcedure = authedProcedure
         });
       }
 
-      // Best-effort: mark run as running when executing.
+      // Best-effort: mark run as running and resolve projectId for scoping.
+      let projectId: string | undefined;
       try {
         const { workflowRepo } = await import("@alfred/db");
+        const run = await workflowRepo.getRun(input.runId);
+        projectId = run?.projectId ?? undefined;
         await workflowRepo.updateRun(input.runId, {
           errorMessage: null,
           resumedAt: new Date(),
@@ -104,6 +113,97 @@ export const workflowPhaseExecuteProcedure = authedProcedure
       runner.addObserver(new MetricsObserver());
       runner.addObserver(new CostCleanupObserver());
       runner.addObserver(new CheckpointObserver(storage));
+
+      // LLM-driven learning extraction. Gated behind ALFRED_ENRICHMENT.
+      // Injects two callbacks so @alfred/pipeline never imports @alfred/db.
+      let gatherContext: GatherExecutionContextFn | undefined;
+      let persistLearning: PersistLearningFn | undefined;
+      const workspace = input.workspace ?? process.cwd();
+      if (process.env.ALFRED_ENRICHMENT === "1") {
+        try {
+          const { graphRepo, workflowRepo } = await import("@alfred/db");
+          const createHash = await import("node:crypto").then(
+            (m) => m.createHash
+          );
+
+          gatherContext = async (runId) => {
+            const [run, errorEvents, toolResultEvents, agentCompleteEvents] =
+              await Promise.all([
+                workflowRepo.getRun(runId),
+                workflowRepo.listEventsByType(runId, "error"),
+                workflowRepo.listEventsByType(runId, "tool-result"),
+                workflowRepo.listEventsByType(runId, "agent-complete"),
+              ]);
+
+            const compilation =
+              ((run?.stateData as Record<string, unknown> | null)
+                ?.compilation as Record<string, unknown> | null) ?? null;
+
+            const errors = errorEvents.slice(0, 10).map((e) => {
+              const data = e.eventData as Record<string, unknown> | null;
+              return String(data?.message ?? data?.error ?? "unknown error");
+            });
+
+            const toolFailures = toolResultEvents
+              .filter((e) => {
+                const data = e.eventData as Record<string, unknown> | null;
+                return data?.isError === true;
+              })
+              .slice(0, 10)
+              .map((e) => {
+                const data = e.eventData as Record<string, unknown> | null;
+                return String(data?.toolName ?? "unknown tool");
+              });
+
+            const agentOutcomes = agentCompleteEvents.slice(0, 10).map((e) => {
+              const data = e.eventData as Record<string, unknown> | null;
+              return `${String(data?.agentId ?? "agent")}: ${String(data?.status ?? "unknown")}`;
+            });
+
+            return {
+              compilation,
+              eventSummary: { errors, toolFailures, agentOutcomes },
+            };
+          };
+
+          persistLearning = async (learning) => {
+            const hash = createHash("sha256")
+              .update(`${learning.runId}:${learning.content}`)
+              .digest("hex")
+              .slice(0, 32);
+            await graphRepo.createNode(
+              workspace,
+              hash,
+              "task_learning",
+              learning.content,
+              {
+                runId: learning.runId,
+                taskId: learning.taskId,
+                category: learning.category,
+                confidence: learning.confidence,
+                outcome: learning.outcome,
+                source: learning.source,
+                ts: Date.now(),
+              },
+              learning.projectId
+            );
+          };
+        } catch {
+          // DB unavailable — enrichment degrades silently
+          gatherContext = undefined;
+          persistLearning = undefined;
+        }
+      }
+
+      runner.addObserver(
+        new ReflectionObserver({
+          runId: input.runId,
+          workspace,
+          projectId,
+          gatherContext,
+          persistLearning,
+        })
+      );
       runner.addObserver(
         new CompilationObserver({
           requirement: snapshot.requirement,
