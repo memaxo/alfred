@@ -5,21 +5,57 @@
  * OH_MY_OPENCODE_SLIM_ENABLED is set.
  */
 
-import type { FileSink } from "bun";
-
 import { logger } from "@alfred/logger";
-import {
-  capturePane,
-  isOhMyOpencodeSlimEnabled,
-  isTmuxAvailable,
-  listSessions,
-  spawnInTmux,
-  stopTmuxSession,
-  type TmuxSpawnOptions,
-} from "@alfred/oh-my-opencode-slim";
-import { spawn } from "bun";
+import { spawn, type FileSink } from "bun";
 
 import type { OpenCodeToolInput } from "./definition.js";
+
+interface TmuxSpawnOptions {
+  runId: string;
+  cmd: string;
+  args?: string[];
+  containerName?: string;
+  cwd?: string;
+  env: Record<string, string>;
+  mode: "acp" | "http";
+  port: number;
+}
+
+interface TmuxSession {
+  attached: boolean;
+  createdAt: number;
+  name: string;
+  runId: string;
+}
+
+interface TmuxModule {
+  capturePane: (paneId: string, opts?: { lines?: number }) => Promise<string>;
+  isOhMyOpencodeSlimEnabled: () => boolean;
+  isTmuxAvailable: () => Promise<boolean>;
+  listSessions: () => Promise<TmuxSession[]>;
+  spawnInTmux: (
+    options: TmuxSpawnOptions
+  ) => Promise<{ paneId: string; sessionName: string }>;
+  stopTmuxSession: (runId: string) => Promise<boolean>;
+}
+
+let tmuxModulePromise: Promise<TmuxModule | null> | null = null;
+
+function loadTmuxModule(): Promise<TmuxModule | null> {
+  if (!tmuxModulePromise) {
+    tmuxModulePromise = (async () => {
+      try {
+        return (await import("@alfred/oh-my-opencode-slim")) as TmuxModule;
+      } catch (error) {
+        logger.warn("opencode_tmux_module_missing", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    })();
+  }
+  return tmuxModulePromise;
+}
 
 /** Result of spawning opencode (either direct or via tmux) */
 export interface SpawnResult {
@@ -52,10 +88,14 @@ export interface ProcessHandle {
 
 /** Check if tmux integration should be used */
 export async function shouldUseTmux(): Promise<boolean> {
-  if (!isOhMyOpencodeSlimEnabled()) {
+  const tmux = await loadTmuxModule();
+  if (!tmux) {
     return false;
   }
-  return isTmuxAvailable();
+  if (!tmux.isOhMyOpencodeSlimEnabled()) {
+    return false;
+  }
+  return tmux.isTmuxAvailable();
 }
 
 /** Build spawn options from tool input */
@@ -107,10 +147,7 @@ function buildEnvMap(input: OpenCodeToolInput): Record<string, string> {
 }
 
 /** Spawn opencode directly (legacy behavior) */
-async function spawnDirect(
-  argv: string[],
-  cwd: string | undefined
-): Promise<ProcessHandle> {
+function spawnDirect(argv: string[], cwd: string | undefined): ProcessHandle {
   const proc = spawn(argv, {
     cwd,
     env: process.env,
@@ -121,12 +158,13 @@ async function spawnDirect(
 
   return {
     exited: proc.exited,
-    kill: async () => {
+    kill: () => {
       try {
         proc.kill();
       } catch {
         // ignore
       }
+      return Promise.resolve();
     },
     stderr: proc.stderr ?? undefined,
     stdin: proc.stdin ?? undefined,
@@ -139,8 +177,12 @@ async function spawnViaTmux(
   input: OpenCodeToolInput,
   runId: string
 ): Promise<SpawnResult> {
+  const tmux = await loadTmuxModule();
+  if (!tmux) {
+    throw new Error("opencode_tmux_missing");
+  }
   const options = buildTmuxSpawnOptions(input, runId);
-  const result = await spawnInTmux(options);
+  const result = await tmux.spawnInTmux(options);
 
   logger.debug("opencode_tmux_spawned", {
     runId,
@@ -150,10 +192,12 @@ async function spawnViaTmux(
 
   return {
     handle: {
-      captureOutput: (lines?: number) => capturePane(result.paneId, { lines }),
-      exited: new Promise(() => {}), // Tmux sessions don't exit in the same way
+      captureOutput: (lines?: number) =>
+        tmux.capturePane(result.paneId, { lines }),
+      // Tmux sessions don't exit in the same way.
+      exited: Promise.race<number>([]),
       kill: async () => {
-        await stopTmuxSession(runId);
+        await tmux.stopTmuxSession(runId);
       },
     },
     tmuxInfo: {
@@ -239,7 +283,7 @@ export async function spawnOpencode(
 
   // Direct spawn (legacy behavior)
   const argv = buildOpencodeArgv(input);
-  const handle = await spawnDirect(argv, options.cwd);
+  const handle = spawnDirect(argv, options.cwd);
 
   return {
     handle,
@@ -256,31 +300,26 @@ export async function listOpencodeSessions(): Promise<
     attached: boolean;
   }[]
 > {
-  if (!isOhMyOpencodeSlimEnabled()) {
+  const tmux = await loadTmuxModule();
+  if (!tmux || !tmux.isOhMyOpencodeSlimEnabled()) {
     return [];
   }
 
-  const sessions = await listSessions();
-  return sessions.map(
-    (s: {
-      attached: boolean;
-      createdAt: number;
-      name: string;
-      runId: string;
-    }) => ({
-      attached: s.attached,
-      createdAt: s.createdAt,
-      name: s.name,
-      runId: s.runId,
-    })
-  );
+  const sessions = await tmux.listSessions();
+  return sessions.map((s) => ({
+    attached: s.attached,
+    createdAt: s.createdAt,
+    name: s.name,
+    runId: s.runId,
+  }));
 }
 
 /** Stop an opencode session (tmux or tracked direct) */
 export async function stopOpencodeSession(runId: string): Promise<boolean> {
-  if (!isOhMyOpencodeSlimEnabled()) {
+  const tmux = await loadTmuxModule();
+  if (!tmux || !tmux.isOhMyOpencodeSlimEnabled()) {
     return false;
   }
 
-  return stopTmuxSession(runId);
+  return tmux.stopTmuxSession(runId);
 }

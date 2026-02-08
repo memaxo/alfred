@@ -83,7 +83,6 @@ export function ChatContainer({
   });
   const {
     editingMessageId,
-    isEditing,
     editText,
     setEditText,
     startEditing,
