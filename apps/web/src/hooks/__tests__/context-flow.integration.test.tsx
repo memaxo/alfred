@@ -73,14 +73,11 @@ describe("Desktop Context Flow Integration", () => {
     // Reset store
     useDesktopStore.setState({
       windows: [],
-      edges: [],
       focusedWindowId: null,
       contextCache: {},
       feedbackByWindow: {},
       ragDocCache: {},
       ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
-      activeEdges: new Set(),
-      highlightedEdgeIds: new Set(),
       viewport: { x: 0, y: 0, zoom: 1 },
       isSpaceMode: false,
       dockPins: ["chat", "note"],
@@ -90,7 +87,6 @@ describe("Desktop Context Flow Integration", () => {
   afterEach(() => {
     useDesktopStore.setState({
       windows: [],
-      edges: [],
       focusedWindowId: null,
       contextCache: {},
     });
@@ -176,40 +172,29 @@ describe("Desktop Context Flow Integration", () => {
     });
   });
 
-  describe("chat window → connected context", () => {
-    it("resolves to connected window when chat is focused", async () => {
+  describe("chat window → focused context", () => {
+    it("uses the focused chat window when chat is focused", async () => {
       const wrapper = createWrapper();
 
-      // Add chat and knowledge windows with edge
+      // Add and focus a chat window
       act(() => {
-        useDesktopStore
-          .getState()
-          .addWindow(createTestWindow("chat-1", "chat", { label: "Chat" }));
         useDesktopStore.getState().addWindow(
-          createTestWindow("knowledge-1", "knowledge", {
-            label: "Topic",
-            summary: "Connected topic content",
+          createTestWindow("chat-1", "chat", {
+            label: "Chat",
+            messages: [{ parts: [{ type: "text", text: "Hello" }] }],
           })
         );
-        useDesktopStore.getState().setEdges([
-          {
-            id: "edge-1",
-            source: "chat-1",
-            target: "knowledge-1",
-            type: "default",
-          },
-        ]);
         useDesktopStore.getState().focusWindow("chat-1");
       });
 
       const { result } = renderHook(() => useFocusedContext(), { wrapper });
 
-      // Should resolve to the connected knowledge window
       await waitFor(() => {
-        expect(result.current.label).toBe("Topic");
+        expect(result.current.label).toBe("Chat");
       });
 
-      expect(result.current.content).toContain("Connected topic content");
+      expect(result.current.content).toContain("Recent Messages");
+      expect(result.current.content).toContain("Hello");
     });
   });
 

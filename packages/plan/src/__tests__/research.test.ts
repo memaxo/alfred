@@ -127,6 +127,15 @@ mock.module("@alfred/agent/orchestrator/tool/web", () => ({
   },
 }));
 
+// Mock internal research to avoid dynamic imports of @alfred/codeprint and decompose-semantic
+mock.module("../research/internal.js", () => ({
+  gatherInternalResearch: async () => ({
+    conventions: [],
+    existingCode: ["packages/plan/src/research/internal.ts"],
+    patterns: [],
+  }),
+}));
+
 // Import AFTER mocks
 const { gatherExternalResearch, gatherFullResearch } =
   await import("../research/external.js");

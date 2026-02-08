@@ -252,6 +252,13 @@ function shouldSkipPath(p: string): boolean {
   if (s.includes(`${path.sep}test-results${path.sep}`)) {
     return true;
   }
+  if (
+    s.includes(
+      `${path.sep}apps${path.sep}native${path.sep}test-jest${path.sep}`
+    )
+  ) {
+    return true;
+  }
   return false;
 }
 

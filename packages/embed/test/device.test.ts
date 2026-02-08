@@ -2,11 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("embed_server device selection", () => {
   it("honors EMBED_DEVICE without importing torch", async () => {
-    const scriptPath = join(process.cwd(), "scripts", "embed_server.py");
+    const scriptPath = join(__dirname, "..", "scripts", "embed_server.py");
     const code = `
 import sys
 import json

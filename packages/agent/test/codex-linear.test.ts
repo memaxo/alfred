@@ -152,7 +152,9 @@ describe("codex-linear", () => {
     });
 
     it("enforces per-minute rate limit and emits summary", async () => {
-      setCodexLinearTimingConfig({ batchWindowMs: 5, windowMs: 200 });
+      // windowMs must be well above loop duration (~180ms) to avoid
+      // timing variance resetting the window mid-loop.
+      setCodexLinearTimingConfig({ batchWindowMs: 5, windowMs: 500 });
       const warnSpy = vi.spyOn(logger, "warn");
       const context = {
         linearSessionId: "session-1",
@@ -175,7 +177,7 @@ describe("codex-linear", () => {
         expect.objectContaining({ reason: "window" })
       );
 
-      await sleep(250);
+      await sleep(550);
       await flushCodexLinearBatches();
 
       expect(emitLinearActivityMock).toHaveBeenCalledTimes(11);

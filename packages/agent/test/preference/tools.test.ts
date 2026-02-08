@@ -17,11 +17,9 @@ const originalRedisUrl = process.env.REDIS_URL;
 
 const mockGetPreferences = mock();
 const mockSetPreference = mock();
-mock.module("@alfred/db", () => ({
-  userRepo: {
-    getPreferences: mockGetPreferences,
-    setPreference: mockSetPreference,
-  },
+mock.module("@alfred/db/repo/user", () => ({
+  getPreferences: mockGetPreferences,
+  setPreference: mockSetPreference,
 }));
 
 const mockInvalidatePreferenceCache = mock();
@@ -150,10 +148,9 @@ describe("Preference Tools", () => {
       expect(result.preferences[0]?.key).toBe("domain.git.tool_preference");
     });
 
-    it("rejects invalid key via schema", () => {
+    it("rejects missing userId via schema", () => {
       const parsed = toolPreferenceGet.inputSchema.safeParse({
-        key: "not-a-real-key",
-        userId: "u1",
+        key: "response.verbosity",
       });
       expect(parsed.success).toBe(false);
     });
@@ -242,11 +239,10 @@ describe("Preference Tools", () => {
       );
     });
 
-    it("rejects invalid values via schema", () => {
+    it("rejects missing userId via schema", () => {
       const parsed = toolPreferenceSet.inputSchema.safeParse({
         key: "response.verbosity",
-        userId: "u1",
-        value: null,
+        value: "concise",
       });
       expect(parsed.success).toBe(false);
     });

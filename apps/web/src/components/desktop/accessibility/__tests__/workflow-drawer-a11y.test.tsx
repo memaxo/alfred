@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, mock, vi } from "bun:test";
+import "@/test/dom";
+import { render } from "@testing-library/react";
+import { beforeAll, describe, expect, it, mock, vi } from "bun:test";
 
 const useFocusTrapMock = vi.fn();
 
@@ -11,11 +12,24 @@ mock.module("@/components/ui/dialog", () => ({
   Dialog: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
-  DialogContent: ({ children, ...props }: { children: React.ReactNode }) => (
-    <div data-testid="drawer-dialog" role="dialog" {...props}>
-      {children}
-    </div>
-  ),
+  DialogContent: ({
+    children,
+    showCloseButton: _showCloseButton,
+    variant: _variant,
+    ...props
+  }: {
+    children: React.ReactNode;
+    showCloseButton?: boolean;
+    variant?: string;
+    "data-testid"?: string;
+  }) => {
+    const { ["data-testid"]: testId, ...rest } = props;
+    return (
+      <div data-testid={testId ?? "drawer-dialog"} role="dialog" {...rest}>
+        {children}
+      </div>
+    );
+  },
 }));
 
 mock.module("@/components/workflow-detail-modal", () => ({
@@ -66,14 +80,21 @@ mock.module("@/utils/trpc", () => ({
   },
 }));
 
-import { MindscapeWorkflowDrawer } from "../workflow-drawer";
+let MindscapeWorkflowDrawer: typeof import("@/components/shared/workflow-drawer").MindscapeWorkflowDrawer;
 
 describe("MindscapeWorkflowDrawer a11y", () => {
-  it("renders dialog content and enables focus trap", () => {
-    render(<MindscapeWorkflowDrawer onClose={vi.fn()} open runId="run-1" />);
+  beforeAll(async () => {
+    ({ MindscapeWorkflowDrawer } =
+      await import("@/components/shared/workflow-drawer"));
+  });
 
-    expect(screen.getByTestId("drawer-dialog")).toBeTruthy();
-    expect(screen.getByTestId("workflow-detail")).toBeTruthy();
+  it("renders dialog content and enables focus trap", () => {
+    const { getByTestId } = render(
+      <MindscapeWorkflowDrawer onClose={vi.fn()} open runId="run-1" />
+    );
+
+    expect(getByTestId("mindscape-workflow-drawer")).toBeTruthy();
+    expect(getByTestId("workflow-detail")).toBeTruthy();
     expect(useFocusTrapMock).toHaveBeenCalledWith(expect.any(Object), true);
   });
 });

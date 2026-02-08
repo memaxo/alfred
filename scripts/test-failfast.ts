@@ -189,7 +189,14 @@ function formatDuration(ms: number): string {
   return `${Math.floor(ms / 60_000)}m${Math.floor((ms % 60_000) / 1000)}s`;
 }
 
-async function runTest(file: string, quiet: boolean): Promise<number> {
+const PER_TEST_TIMEOUT_MS = Number(
+  process.env.ALFRED_TEST_FILE_TIMEOUT_MS ?? 120_000
+);
+
+async function runTest(
+  file: string,
+  quiet: boolean
+): Promise<{ code: number; output: string }> {
   const proc = Bun.spawn(["bun", "test", file], {
     stdin: "ignore",
     stdout: quiet ? "pipe" : "inherit",
@@ -197,28 +204,62 @@ async function runTest(file: string, quiet: boolean): Promise<number> {
     env: process.env,
   });
 
-  if (quiet && proc.stderr) {
-    const reader = proc.stderr.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done } = await reader.read();
-      if (done) {
-        break;
+  let output = "";
+
+  if (quiet) {
+    // Drain piped streams to prevent backpressure hangs.
+    // Capture output so we don't need to re-run on failure.
+    const drainStream = async (stream: ReadableStream<Uint8Array> | null) => {
+      if (!stream) {
+        return "";
       }
-      decoder.decode();
-    }
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          buf += decoder.decode(value, { stream: true });
+        }
+      } catch {
+        // ignore read errors on closed streams
+      } finally {
+        reader.releaseLock();
+      }
+      return buf;
+    };
+
+    const [stdout, stderr] = await Promise.all([
+      drainStream(proc.stdout),
+      drainStream(proc.stderr),
+    ]);
+    output = stdout + (stderr ? `\n${stderr}` : "");
   }
 
-  const code = await proc.exited;
-  return code;
+  // Race the exit against a timeout
+  const code = await Promise.race([
+    proc.exited,
+    new Promise<number>((resolve) =>
+      setTimeout(() => {
+        try {
+          proc.kill();
+        } catch {}
+        resolve(124); // 124 = timeout (like GNU timeout)
+      }, PER_TEST_TIMEOUT_MS)
+    ),
+  ]);
+
+  return { code, output };
 }
 
 async function main(): Promise<void> {
   const scope = parseScope(process.env.ALFRED_TEST_SCOPE);
   const cwd = process.cwd();
   const all = await discoverTests(cwd);
-  const picked =
-    scope === "unit" ? all : all.filter((p) => kindOfFile(p) === scope);
+  const picked = all.filter((p) => kindOfFile(p) === scope);
 
   if (picked.length === 0) {
     writeOut("No tests found\n");
@@ -242,6 +283,7 @@ async function main(): Promise<void> {
   const startAll = Date.now();
   let passed = 0;
   let failed = null as string | null;
+  let failedOutput = "";
 
   for (let i = 0; i < picked.length; i++) {
     const file = picked[i];
@@ -252,15 +294,16 @@ async function main(): Promise<void> {
     writeOut(`[${current}/${total}] ${rel}... `);
 
     const start = Date.now();
-    const code = await runTest(file, true);
+    const result = await runTest(file, true);
     const dur = Date.now() - start;
 
-    if (code === 0) {
+    if (result.code === 0) {
       passed += 1;
       writeOut(`✓ ${formatDuration(dur)}\n`);
     } else {
       failed = file;
-      writeOut("✗\n\n");
+      failedOutput = result.output;
+      writeOut(`✗ (exit ${result.code})\n\n`);
       break;
     }
   }
@@ -269,20 +312,21 @@ async function main(): Promise<void> {
 
   if (failed) {
     const rel = formatRelative(failed, cwd);
+
     writeOut(`FAILURE: ${rel}\n`);
     writeOut(`${"-".repeat(80)}\n`);
     writeOut("Full output:\n\n");
+    writeOut(failedOutput || "(no output captured)");
 
-    const code = await runTest(failed, false);
     const totalDur = Date.now() - startAll;
 
-    writeOut(`${"-".repeat(80)}\n`);
+    writeOut(`\n${"-".repeat(80)}\n`);
     writeOut("\nTest runner output:\n");
     writeOut(`Passed: ${passed}/${picked.length - 1}\n`);
     writeOut(`Failed: ${rel}\n`);
     writeOut(`Total: ${formatDuration(totalDur)}\n`);
 
-    process.exit(code);
+    process.exit(1);
   }
 
   const totalDur = Date.now() - startAll;

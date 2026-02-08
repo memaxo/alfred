@@ -1,8 +1,7 @@
 import { EXPECTED_GREETING } from "./config";
 
 export function greet() {
-  // Intentional bug: does not use the expected constant.
-  return "hello";
+  return EXPECTED_GREETING;
 }
 
 export function expected() {

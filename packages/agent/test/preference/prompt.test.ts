@@ -42,7 +42,11 @@ describe("buildPreferenceSystemPrompt", () => {
     expect(prompt).toContain("Response Style: Be brief");
     expect(prompt).toContain("Tone: Use precise, technical language");
     expect(prompt).toContain("Domain-Specific Preferences (proxmox)");
-    expect(loadPreferencesSpy).toHaveBeenCalledWith("user-1", "proxmox");
+    expect(loadPreferencesSpy).toHaveBeenCalledWith(
+      "user-1",
+      undefined,
+      "proxmox"
+    );
   });
 
   it("respects feature flag and returns empty string", async () => {

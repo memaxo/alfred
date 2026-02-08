@@ -36,6 +36,9 @@ globalThis.Node = window.Node;
 globalThis.MouseEvent = window.MouseEvent;
 globalThis.DocumentFragment = window.DocumentFragment;
 globalThis.MutationObserver = window.MutationObserver;
+if (typeof globalThis.HTMLFormElement === "undefined") {
+  globalThis.HTMLFormElement = window.HTMLFormElement;
+}
 
 if (typeof globalThis.KeyboardEvent === "undefined") {
   globalThis.KeyboardEvent = window.KeyboardEvent;

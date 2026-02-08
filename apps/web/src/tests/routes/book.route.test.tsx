@@ -1,4 +1,6 @@
+import "../../test/dom";
 import "../../test/reset-mocks";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "bun:test";
 
 import { Route as BookRoute } from "@/routes/_protected/book";
@@ -69,14 +71,14 @@ describe("BookRoute", () => {
         trpcClient: createTestTrpcClient(handlers),
       });
 
+      const user = userEvent.setup();
       const urlInput = view.getByLabelText(/url/i) as HTMLInputElement;
-      fireEvent.input(urlInput, { target: { value: "example.com" } });
-      await waitFor(() => {
-        expect(urlInput.value).toBe("example.com");
-      });
+      await user.type(urlInput, "example.com");
+      expect(urlInput.value).toBe("example.com");
 
-      const submitButton = view.getByRole("button", { name: /add bookmark/i });
-      fireEvent.click(submitButton);
+      const form = view.container.querySelector("form");
+      expect(form).not.toBeNull();
+      fireEvent.submit(form as HTMLFormElement);
 
       await waitFor(() => {
         expect(createInput).not.toBeNull();
@@ -105,20 +107,17 @@ describe("BookRoute", () => {
         trpcClient: createTestTrpcClient(handlers),
       });
 
+      const user = userEvent.setup();
       const urlInput = view.getByLabelText(/url/i) as HTMLInputElement;
       const tagsInput = view.getByLabelText(/tags/i) as HTMLInputElement;
-      fireEvent.input(urlInput, {
-        target: { value: "https://example.com" },
-      });
-      fireEvent.input(tagsInput, {
-        target: { value: " ai, research,  , ai " },
-      });
-      await waitFor(() => {
-        expect(urlInput.value).toBe("https://example.com");
-        expect(tagsInput.value).toBe(" ai, research,  , ai ");
-      });
+      await user.type(urlInput, "https://example.com");
+      await user.type(tagsInput, " ai, research,  , ai ");
+      expect(urlInput.value).toBe("https://example.com");
+      expect(tagsInput.value).toBe(" ai, research,  , ai ");
 
-      fireEvent.click(view.getByRole("button", { name: /add bookmark/i }));
+      const form = view.container.querySelector("form");
+      expect(form).not.toBeNull();
+      fireEvent.submit(form as HTMLFormElement);
 
       await waitFor(() => {
         expect(createInput?.tags).toEqual(["ai", "research"]);

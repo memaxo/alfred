@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, mock, vi } from "bun:test";
+import "@/test/dom";
+import { render } from "@testing-library/react";
+import { beforeAll, describe, expect, it, mock, vi } from "bun:test";
 
 const originalTestMode = import.meta.env.VITE_TEST_MODE;
 
@@ -75,17 +76,23 @@ mock.module("@/store/desktop", () => ({
     selector({ updateWindowData: vi.fn() }),
 }));
 
-import { ChatWindow } from "../chat-window";
+let ChatWindow: typeof import("../chat-window").ChatWindow;
 
 describe("ChatWindow virtualization", () => {
+  beforeAll(async () => {
+    ({ ChatWindow } = await import("../chat-window"));
+  });
+
   it("renders messages via Virtuoso", () => {
     (import.meta.env as any).VITE_TEST_MODE = "false";
 
-    render(<ChatWindow data={{ type: "chat" }} id="chat-1" selected={false} />);
+    const { getByTestId, getByText } = render(
+      <ChatWindow data={{ type: "chat" }} id="chat-1" selected={false} />
+    );
 
-    expect(screen.getByTestId("virtuoso")).toBeTruthy();
-    expect(screen.getByText("Hello")).toBeTruthy();
-    expect(screen.getByText("Hi")).toBeTruthy();
+    expect(getByTestId("virtuoso")).toBeTruthy();
+    expect(getByText("Hello")).toBeTruthy();
+    expect(getByText("Hi")).toBeTruthy();
 
     (import.meta.env as any).VITE_TEST_MODE = originalTestMode;
   });

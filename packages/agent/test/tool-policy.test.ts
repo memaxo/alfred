@@ -74,7 +74,7 @@ describe("Tool Policy & Security", () => {
     });
 
     it("allows subdirectory of CWD", () => {
-      const sub = path.join(cwd, "src");
+      const sub = path.join(cwd, "packages");
       const handle = assertCodexAllowedDirectory(sub);
       expect(handle.path).toBe(fs.realpathSync(sub));
       handle.close();

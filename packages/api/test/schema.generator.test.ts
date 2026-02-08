@@ -1,5 +1,24 @@
 import { uiComponentSchema } from "@alfred/type/genui.zod";
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+
+// Mock the model selector to avoid real API calls during tests.
+// Default to not supporting GenUI; individual tests can override via mockSupportsGenUI.
+let mockSupportsGenUIValue = false;
+mock.module("@alfred/agent/selector", () => ({
+  getModelForRole: async () => ({
+    modelKey: "cerebras:llama3.1-8b",
+    model: {},
+  }),
+  supportsGenUI: () => mockSupportsGenUIValue,
+}));
 
 type EnvSnapshot = Record<string, string | undefined>;
 
@@ -48,6 +67,7 @@ describe("SchemaGenerator", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockSupportsGenUIValue = false;
     setEnv("NODE_ENV", "test");
     setEnv("AI_GATEWAY_API_KEY", undefined);
     setEnv("OPENAI_API_KEY", undefined);
@@ -208,6 +228,7 @@ describe("SchemaGenerator", () => {
   });
 
   it("generateSchema: uses LLM path when enabled and returns validated schema", async () => {
+    mockSupportsGenUIValue = true;
     setEnv("AI_MODEL_REF_CLASSIFY", "openai:gpt-4o-mini");
 
     const { DefaultAIAdapter } = await import("../src/adapters/ai-generation");

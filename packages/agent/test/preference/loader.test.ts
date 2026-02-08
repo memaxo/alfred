@@ -133,7 +133,11 @@ describe("loadPreferencesWithDefaults", () => {
   it("applies domain defaults without mutating the base cache", async () => {
     getPreferencesMock.mockResolvedValueOnce([]);
 
-    const merged = await loadPreferencesWithDefaults("user-2", "proxmox");
+    const merged = await loadPreferencesWithDefaults(
+      "user-2",
+      undefined,
+      "proxmox"
+    );
     expect(merged.get("domain.proxmox.config_format")?.value).toBe("yaml");
 
     const baseline = await loadPreferences("user-2");

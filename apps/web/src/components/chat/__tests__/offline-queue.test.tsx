@@ -1,3 +1,4 @@
+import "@/test/dom";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "bun:test";
 

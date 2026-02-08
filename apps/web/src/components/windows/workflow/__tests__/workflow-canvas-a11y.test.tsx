@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, mock, vi } from "bun:test";
+import "@/test/dom";
+import { fireEvent, render } from "@testing-library/react";
+import { beforeAll, describe, expect, it, mock, vi } from "bun:test";
 
 mock.module("@xyflow/react", () => ({
   ReactFlow: ({ children }: { children: React.ReactNode }) => (
@@ -20,7 +21,7 @@ mock.module("@xyflow/react", () => ({
   useNodesState: (initial: unknown) => [initial, vi.fn(), vi.fn()],
 }));
 
-import { WorkflowCanvas } from "../workflow-canvas";
+let WorkflowCanvas: typeof import("../workflow-canvas").WorkflowCanvas;
 
 const basePlan = {
   id: "plan-1",
@@ -32,6 +33,7 @@ const basePlan = {
       description: "First phase",
       agentType: "codex",
       estimatedDurationMs: 120_000,
+      dependsOn: [],
       tasks: [],
     },
     {
@@ -40,6 +42,7 @@ const basePlan = {
       description: "Second phase",
       agentType: "review",
       estimatedDurationMs: 90_000,
+      dependsOn: [],
       tasks: [],
     },
   ],
@@ -48,15 +51,21 @@ const basePlan = {
 };
 
 describe("WorkflowCanvas list view a11y", () => {
+  beforeAll(async () => {
+    ({ WorkflowCanvas } = await import("../workflow-canvas"));
+  });
+
   it("opens list view and supports keyboard navigation", () => {
-    render(<WorkflowCanvas plan={basePlan} />);
+    const { getAllByRole, getByRole, queryByRole } = render(
+      <WorkflowCanvas plan={basePlan} />
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /list view/i }));
+    fireEvent.click(getByRole("button", { name: /list view/i }));
 
-    const dialog = screen.getByRole("dialog", { name: /phases list view/i });
+    const dialog = getByRole("dialog", { name: /phases list view/i });
     expect(dialog).toBeTruthy();
 
-    const options = screen.getAllByRole("option");
+    const options = getAllByRole("option");
     expect(options).toHaveLength(2);
     expect(options[0]?.getAttribute("aria-selected")).toBe("true");
 
@@ -64,8 +73,6 @@ describe("WorkflowCanvas list view a11y", () => {
     expect(options[1]?.getAttribute("aria-selected")).toBe("true");
 
     fireEvent.keyDown(dialog, { key: "Escape" });
-    expect(
-      screen.queryByRole("dialog", { name: /phases list view/i })
-    ).toBeNull();
+    expect(queryByRole("dialog", { name: /phases list view/i })).toBeNull();
   });
 });

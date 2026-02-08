@@ -1,6 +1,18 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it, mock } from "bun:test";
 
-import { generateShareLink } from "../../lib/linking";
+mock.module("expo-linking", () => ({
+  createURL: () => "alfred://",
+  parse: (url: string) => ({ path: url.replace("alfred://", "") }),
+}));
+
+let generateShareLink: (
+  type: "note" | "reminder" | "workflow",
+  id: string
+) => string;
+
+beforeAll(async () => {
+  ({ generateShareLink } = await import("../../lib/linking"));
+});
 
 describe("linking utilities", () => {
   describe("generateShareLink", () => {

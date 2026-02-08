@@ -153,3 +153,4 @@ Thumbs.db
 # Design assets (large video files)
 design-reference/intro-videos/
 .agent/xcodebuild/
+.agent/tools/

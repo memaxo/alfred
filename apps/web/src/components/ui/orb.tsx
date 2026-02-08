@@ -166,11 +166,12 @@ function Scene({
 
   useEffect(() => {
     const apply = () => {
-      if (!circleRef.current) {
+      const uniforms = circleRef.current?.material?.uniforms;
+      if (!uniforms) {
         return;
       }
       const isDark = document.documentElement.classList.contains("dark");
-      const { uInverted } = circleRef.current.material.uniforms;
+      const { uInverted } = uniforms;
       if (uInverted) {
         uInverted.value = isDark ? 1 : 0;
       }

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import {
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -39,6 +40,10 @@ mock.module("sonner", () => ({
   },
 }));
 
+mock.module("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
+}));
+
 mock.module("@/store/desktop", () => ({
   useDesktopStore: (selector: (s: { updateWindowData: unknown }) => unknown) =>
     selector({
@@ -71,6 +76,18 @@ mock.module("@/hooks/use-workflow-subscription", () => ({
 mock.module("@/utils/trpc", () => ({
   trpc: {
     workflow: {
+      get: {
+        useQuery: () => ({ data: null, isSuccess: false, isError: false }),
+      },
+      events: {
+        useQuery: () => ({ data: [] }),
+      },
+      listRuns: {
+        useQuery: () => ({ data: [], refetch: vi.fn() }),
+      },
+      cancel: {
+        useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+      },
       phase: {
         approveAndExecute: {
           useMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -100,7 +117,7 @@ mock.module("../workflow-canvas", () => ({
   WorkflowCanvas: () => <div data-testid="workflow-canvas" />,
 }));
 
-import { WorkflowWindow } from "../workflow-window";
+let WorkflowWindow: typeof import("../workflow-window").WorkflowWindow;
 
 async function tick() {
   await Promise.resolve();
@@ -116,6 +133,10 @@ function createWrapper() {
 }
 
 describe("WorkflowWindow (start form)", () => {
+  beforeAll(async () => {
+    ({ WorkflowWindow } = await import("../workflow-window"));
+  });
+
   beforeEach(() => {
     mockLOD = "full";
     updateWindowDataMock.mockReset();

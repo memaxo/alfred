@@ -1,5 +1,6 @@
+import "@/test/dom";
 import { render } from "@testing-library/react";
-import { describe, expect, it, mock, vi } from "bun:test";
+import { beforeAll, describe, expect, it, mock, vi } from "bun:test";
 
 const useReducedMotionMock = vi.fn(() => true);
 let frameCallback: ((state: unknown, delta: number) => void) | null = null;
@@ -23,9 +24,13 @@ mock.module("@react-three/fiber", () => ({
   },
 }));
 
-import { Orb } from "../orb";
+let Orb: typeof import("../orb").Orb;
 
 describe("Orb reduced motion behavior", () => {
+  beforeAll(async () => {
+    ({ Orb } = await import("../orb"));
+  });
+
   it("registers a frame callback that short-circuits under reduced motion", () => {
     render(<Orb />);
 

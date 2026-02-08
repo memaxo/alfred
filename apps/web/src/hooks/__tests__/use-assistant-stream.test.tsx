@@ -4,14 +4,14 @@
  * Tests for useAssistantStream screen reader announcements.
  */
 
+import "@/test/dom";
 import { renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "bun:test";
-import React from "react";
+import { beforeAll, describe, expect, it, mock, vi } from "bun:test";
 
-import { useAssistantStream } from "./use-assistant-stream";
+let useAssistantStream: typeof import("../use-assistant-stream").useAssistantStream;
 
 // Mock the accessibility hooks
-vi.mock("@/components/desktop/accessibility/hooks", () => ({
+mock.module("@/components/desktop/accessibility/hooks", () => ({
   useAnnounce: () => ({
     announcePolite: vi.fn(),
     announceAssertive: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("@/components/desktop/accessibility/hooks", () => ({
 }));
 
 // Mock the AI SDK
-vi.mock("@ai-sdk/react", () => ({
+mock.module("@ai-sdk/react", () => ({
   useChat: vi.fn(() => ({
     messages: [],
     status: "ready",
@@ -33,6 +33,10 @@ vi.mock("@ai-sdk/react", () => ({
 }));
 
 describe("useAssistantStream", () => {
+  beforeAll(async () => {
+    ({ useAssistantStream } = await import("../use-assistant-stream"));
+  });
+
   it("should initialize without errors", () => {
     const { result } = renderHook(() => useAssistantStream());
 

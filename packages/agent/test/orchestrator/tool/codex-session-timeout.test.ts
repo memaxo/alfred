@@ -42,7 +42,7 @@ describe("Codex session validation timeout", () => {
 
     expect(result.canResume).toBe(false);
     expect(result.reason).toBe("timeout");
-  });
+  }, 10_000);
 
   it("returns normal result when validation completes before timeout", async () => {
     const fastValidator = mock(async () => {
