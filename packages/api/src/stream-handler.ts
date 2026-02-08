@@ -50,6 +50,7 @@ const requestSchema = z
     // We normalize to UIMessage below.
     messages: z.array(z.unknown()).min(1),
     conversationId: z.string().min(1).optional(),
+    maxCostUsd: z.number().optional(),
   })
   .passthrough();
 
@@ -166,13 +167,12 @@ function isTextPartLike(part: unknown): part is { type: "text"; text: string } {
 }
 
 type StreamArgs = Parameters<typeof streamText>[0];
-type MessageLike = UIMessage | ModelMessage;
 type PrepareStep = NonNullable<StreamArgs["prepareStep"]>;
 type PrepareStepArgs = Parameters<PrepareStep>[0];
 type PrepareStepResult = Awaited<ReturnType<PrepareStep>>;
 type StreamTools = NonNullable<StreamArgs["tools"]>;
 type StreamTool = StreamTools[string];
-type ToolWithExecute = {
+type ToolWithExecute = StreamTool & {
   execute: (input: unknown, ctx: unknown) => Promise<unknown> | unknown;
 } & Record<string, unknown>;
 interface ToolPartInfo {
@@ -198,12 +198,12 @@ function getToolCallIdFromContext(ctx: unknown): string | undefined {
   return typeof id === "string" ? id : undefined;
 }
 
-function getMessagesFromUnknown(value: unknown): MessageLike[] | undefined {
+function getMessagesFromUnknown(value: unknown): ModelMessage[] | undefined {
   if (!value || typeof value !== "object") {
     return;
   }
   const messages = (value as { messages?: unknown }).messages;
-  return Array.isArray(messages) ? (messages as MessageLike[]) : undefined;
+  return Array.isArray(messages) ? (messages as ModelMessage[]) : undefined;
 }
 
 function extractToolPartInfo(part: UIMessage["parts"][number]): ToolPartInfo {
@@ -690,18 +690,15 @@ export async function handleStreamRequest(
       const basePrepareStep = prepareStep;
       prepareStepForStream = async (args: PrepareStepArgs) => {
         const base = (await basePrepareStep?.(args)) ?? {};
-        const baseResult =
-          typeof base === "object" && base !== null ? base : {};
+        const baseResult = (
+          typeof base === "object" && base !== null ? base : {}
+        ) as PrepareStepResult;
         const nextMessages =
           getMessagesFromUnknown(baseResult) ??
           getMessagesFromUnknown(args) ??
           [];
         const stepNumber =
-          typeof args?.stepNumber === "number"
-            ? args.stepNumber
-            : typeof args?.step === "number"
-              ? args.step
-              : 0;
+          typeof args?.stepNumber === "number" ? args.stepNumber : 0;
 
         try {
           if (!signalsMetrics) {
@@ -796,16 +793,11 @@ export async function handleStreamRequest(
 
           const intervention = judged.interventions[0];
           if (intervention?.message) {
-            const injected = {
+            const injected: ModelMessage = {
               role: "system",
-              content: [
-                {
-                  type: "text",
-                  text: `<signals_intervention step="${stepNumber}">\n${intervention.message}\n</signals_intervention>`,
-                },
-              ],
+              content: `<signals_intervention step="${stepNumber}">\n${intervention.message}\n</signals_intervention>`,
             };
-            return { ...base, messages: [...nextMessages, injected] };
+            return { ...baseResult, messages: [...nextMessages, injected] };
           }
         } catch (error) {
           logger.warn("signals_prepare_step_failed", {
@@ -815,7 +807,7 @@ export async function handleStreamRequest(
           });
         }
 
-        return { ...base, messages: nextMessages };
+        return { ...baseResult, messages: nextMessages };
       };
     }
 
