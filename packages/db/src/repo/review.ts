@@ -889,7 +889,7 @@ export async function getCycleTimeStats(
   const trendMap = new Map<string, number[]>();
   for (const review of reviews) {
     if (review.createdAt && review.reviewedAt) {
-      const date = new Date(review.reviewedAt).toISOString().split("T")[0];
+      const date = new Date(review.reviewedAt).toISOString().slice(0, 10);
       const cycleTime =
         new Date(review.reviewedAt).getTime() -
         new Date(review.createdAt).getTime();
