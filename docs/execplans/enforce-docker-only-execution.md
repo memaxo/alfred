@@ -18,7 +18,7 @@ To verify: run `rg 'process\.cwd\(\)' packages/agent/src/orchestrator/tool/` and
 - [x] Milestone 2: Route direct API callers through Docker
 - [x] Milestone 3: Remove host spawn paths from Codex executor
 - [x] Milestone 4: Remove host spawn paths from OpenCode executor
-- [ ] Milestone 5: Remove host spawn path from Droid executor
+- [x] Milestone 5: Remove host spawn path from Droid executor
 - [ ] Milestone 6: Delete `persistArtifact` and all call sites
 - [ ] Milestone 7: Remove `process.cwd()` fallbacks from all executor code
 - [ ] Milestone 8: Fix tests

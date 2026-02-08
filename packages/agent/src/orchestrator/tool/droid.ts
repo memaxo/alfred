@@ -3,20 +3,12 @@ import { logger } from "@alfred/logger";
 import path from "node:path";
 import { z } from "zod";
 
-import type { DirectoryHandle } from "../../security/filesystem.js";
-
 import { persistArtifact } from "../../artifact/persist.js";
-import {
-  DirectoryAccessError,
-  openDirectorySecure,
-} from "../../security/filesystem.js";
-import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import {
   appendOutput,
   appendReasoningTrace,
   createOutputAccumulator,
   createTimeout,
-  DEFAULT_ALLOW_PREFIXES,
   DEFAULT_TIMEOUT_SEC,
   getAccumulatedOutput,
   isWithinBase,
@@ -33,6 +25,19 @@ import {
 
 // Regex for splitting lines - declared at module level for performance
 const LINE_SPLIT_REGEX = /\r?\n/;
+const DEFAULT_CONTAINER_CW = "/workspace";
+
+function normalizeContainerCw(raw: string | undefined): string {
+  const v = raw?.trim() || DEFAULT_CONTAINER_CW;
+  const normalized = v.startsWith("/") ? v : `/${v}`;
+  if (
+    !normalized.startsWith("/workspace") ||
+    (normalized !== "/workspace" && !normalized.startsWith("/workspace/"))
+  ) {
+    throw new Error("droid_container_cwd_invalid");
+  }
+  return normalized;
+}
 
 export const droidInputSchema = z.object({
   prompt: z.string().min(1),
@@ -161,26 +166,6 @@ function pickEnv(custom: Record<string, string> | undefined) {
   return safeEnv;
 }
 
-/**
- * Acquire a secure directory handle for the working directory.
- * Uses file descriptor pinning to prevent TOCTOU attacks via symlink swaps.
- */
-function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
-  try {
-    return openDirectorySecure(candidate ?? process.cwd(), {
-      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
-    });
-  } catch (error) {
-    if (
-      error instanceof DirectoryAccessError &&
-      error.code === "not_directory"
-    ) {
-      throw new Error("droid_invalid_cwd_not_directory", { cause: error });
-    }
-    throw new Error("droid_invalid_cwd", { cause: error });
-  }
-}
-
 async function enforcePolicy(input: DroidToolInput) {
   const { claims } = await requireToolScopesAndPolicy(
     input.authz,
@@ -289,18 +274,26 @@ export const toolDroid = {
   execute: async ({ input, writer }: DroidExecuteArgs) => {
     await enforcePolicy(input);
 
-    // Acquire secure directory handle to prevent TOCTOU symlink attacks
-    const cwdHandle = acquireWorkingDirectoryHandle(input.cw);
+    const containerCw = normalizeContainerCw(input.containerCw);
     const flags = buildFlags(input);
     const command =
       input.command?.trim() || process.env.DROID_BIN?.trim() || "droid";
-    const executable = resolveExecutable(command, "droid");
+    const dockerBin = resolveExecutable("docker", "droid");
+    const env = pickEnv(input.env);
+    const envKeys = Object.keys(env).filter((key) => key !== "PATH");
+    const dockerArgs = [
+      "exec",
+      "-i",
+      "--workdir",
+      containerCw,
+      ...envKeys.flatMap((k) => ["-e", k]),
+      input.containerName,
+      command,
+      ...flags,
+    ];
 
-    const proc = spawnWithSecureCwd({
-      cwdHandle,
-      cmd: executable,
-      args: flags,
-      env: pickEnv(input.env),
+    const proc = Bun.spawn([dockerBin, ...dockerArgs], {
+      env,
       stdout: "pipe",
       stderr: "pipe",
       stdin: "ignore",
@@ -324,12 +317,10 @@ export const toolDroid = {
     try {
       exitCode = await proc.exited;
     } catch (error) {
-      cwdHandle.close();
       timeoutCtx.clear();
       stopDurationTimer();
       throw error;
     } finally {
-      cwdHandle.close();
       timeoutCtx.clear();
       stopDurationTimer();
     }
@@ -352,7 +343,7 @@ export const toolDroid = {
 
     const resultText = getAccumulatedOutput(accumulator);
     void persistArtifact({
-      repoRoot: cwdHandle.path,
+      repoRoot: input.cw?.trim().length ? input.cw : ".",
       category: "droid",
       tool: "droid",
       format: "txt",
@@ -374,10 +365,9 @@ export const toolDroid = {
 export type ToolDroid = typeof toolDroid;
 
 export const __internals = {
-  DEFAULT_ALLOW_PREFIXES,
   appendReasoningTrace,
   assertAllowedDirectory: (candidate: string) =>
-    acquireWorkingDirectoryHandle(candidate).path,
+    normalizeContainerCw(candidate),
   extractDroidReasoning,
   isWithinBase,
   pickEnv,
