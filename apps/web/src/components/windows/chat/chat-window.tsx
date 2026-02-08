@@ -7,6 +7,7 @@ import {
   useEffect,
   type ChangeEvent,
   type KeyboardEvent,
+  type ReactElement,
 } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
@@ -58,7 +59,7 @@ interface ChatWindowMessageItemProps {
   onEditTextChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   onEditTextKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   onSave: () => void;
-  renderActions: (message: AssistantUIMessage) => JSX.Element;
+  renderActions: (message: AssistantUIMessage) => ReactElement;
 }
 
 function ChatWindowMessageItem({

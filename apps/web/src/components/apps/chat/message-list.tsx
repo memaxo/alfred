@@ -6,7 +6,7 @@
 
 import type { UIMessage } from "@alfred/type/stream";
 
-import { useCallback } from "react";
+import { useCallback, type ReactElement } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { renderPart } from "@/components/chat-render";
@@ -33,7 +33,7 @@ interface MessageItemProps {
   status: MessageListProps["status"];
   onCancel: () => void;
   onSave: (messageId: string, newText: string) => void;
-  renderActions: (message: AssistantUIMessage, isLast: boolean) => JSX.Element;
+  renderActions: (message: AssistantUIMessage, isLast: boolean) => ReactElement;
   resolveText: (message: AssistantUIMessage) => string;
 }
 
