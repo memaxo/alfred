@@ -7,6 +7,7 @@ import type {
   SearchReceiptItem,
 } from "@alfred/type";
 
+import { randomUUID } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -589,6 +590,60 @@ function fallbackEnabled() {
   return process.env.ORCH_EXECUTOR_FALLBACK === "1";
 }
 
+interface ContextContainer {
+  containerName: string;
+  containerCw: string;
+  cleanup?: () => Promise<void>;
+}
+
+function resolveContainerCw(args: {
+  workspaceRoot: string;
+  workingDirectory: string;
+  baseCw: string;
+}): string {
+  const rel = path.relative(args.workspaceRoot, args.workingDirectory);
+  const relPosix = rel.split(path.sep).join(path.posix.sep);
+  if (relPosix && !relPosix.startsWith("..") && relPosix !== ".") {
+    return path.posix.join(args.baseCw, relPosix);
+  }
+  return args.baseCw;
+}
+
+async function ensureContextContainer(args: {
+  cw: string;
+  authz?: string;
+  containerName?: string;
+  containerCw?: string;
+}): Promise<ContextContainer> {
+  if (args.containerName && args.containerCw) {
+    return {
+      containerName: args.containerName,
+      containerCw: args.containerCw,
+    };
+  }
+  const { AgentFSWorkspace } = await import("../../environment/agentfs.js");
+  const workspaceRoot = path.resolve(process.cwd());
+  const resolvedCw = path.resolve(args.cw);
+  const rel = path.relative(workspaceRoot, resolvedCw);
+  const repoRoot =
+    rel && !rel.startsWith("..") && rel !== "." ? workspaceRoot : resolvedCw;
+  const runId = `context-${randomUUID()}`;
+  const workspace = new AgentFSWorkspace("context", runId, repoRoot, {
+    authz: args.authz,
+  });
+  await workspace.initialize();
+  const containerCw = resolveContainerCw({
+    workspaceRoot: repoRoot,
+    workingDirectory: resolvedCw,
+    baseCw: workspace.containerCw,
+  });
+  return {
+    containerName: workspace.containerName,
+    containerCw,
+    cleanup: () => workspace.cleanup(),
+  };
+}
+
 export async function gatherCodeContext({
   requirement,
   cw,
@@ -600,6 +655,8 @@ export async function gatherCodeContext({
   executor,
   profile,
   userId,
+  containerName,
+  containerCw,
 }: {
   requirement: string;
   cw: string;
@@ -611,6 +668,8 @@ export async function gatherCodeContext({
   executor?: ExecutorName;
   profile?: string;
   userId?: string;
+  containerName?: string;
+  containerCw?: string;
 }): Promise<SearchReceipt> {
   const resolvedCw = path.resolve(cw);
   const extSet = normalizeExts(exts);
@@ -704,68 +763,98 @@ export async function gatherCodeContext({
     }
   }
 
-  if (!disableLlm && preferredExecutor === "codex") {
-    try {
-      const result = await toolCodex.execute({
-        input: {
-          action: "exec",
-          prompt,
-          out: "json",
-          auto: "read",
-          cw: resolvedCw,
-          authz,
-          profile,
-          userId,
-        },
-        writer,
-      });
-      items = parseDroidOutput(result.result);
-    } catch (error) {
-      await writer?.write?.({
-        type: "notice",
-        message: "codex_context_error",
-        error: error instanceof Error ? error.message : String(error),
-      });
+  let contextContainer: ContextContainer | null = null;
+  const getContextContainer = async () => {
+    if (contextContainer) {
+      return contextContainer;
+    }
+    contextContainer = await ensureContextContainer({
+      cw: resolvedCw,
+      authz,
+      containerName,
+      containerCw,
+    });
+    return contextContainer;
+  };
 
-      if (allowFallback) {
+  try {
+    if (!disableLlm && preferredExecutor === "codex") {
+      try {
+        const ctxContainer = await getContextContainer();
+        const result = await toolCodex.execute({
+          input: {
+            action: "exec",
+            prompt,
+            out: "json",
+            auto: "read",
+            cw: resolvedCw,
+            authz,
+            profile,
+            containerName: ctxContainer.containerName,
+            containerCw: ctxContainer.containerCw,
+            userId,
+          },
+          writer,
+        });
+        items = parseDroidOutput(result.result);
+      } catch (error) {
         await writer?.write?.({
           type: "notice",
-          message: "codex_fallback_droid",
+          message: "codex_context_error",
+          error: error instanceof Error ? error.message : String(error),
         });
-        try {
-          const fallbackResult = await toolDroid.execute({
-            input: {
-              prompt,
-              out: "json",
-              auto: "read",
-              cw: resolvedCw,
-              authz,
-            },
-            writer,
+
+        if (allowFallback) {
+          await writer?.write?.({
+            type: "notice",
+            message: "codex_fallback_droid",
           });
-          items = parseDroidOutput(fallbackResult.result);
-        } catch {
-          items = [];
+          try {
+            const ctxContainer = await getContextContainer();
+            const fallbackResult = await toolDroid.execute({
+              input: {
+                prompt,
+                out: "json",
+                auto: "read",
+                cw: resolvedCw,
+                authz,
+                containerName: ctxContainer.containerName,
+                containerCw: ctxContainer.containerCw,
+              },
+              writer,
+            });
+            items = parseDroidOutput(fallbackResult.result);
+          } catch {
+            items = [];
+          }
         }
       }
     }
-  }
 
-  if (!disableLlm && items.length === 0 && preferredExecutor !== "codex") {
-    try {
-      const result = await toolDroid.execute({
-        input: {
-          prompt,
-          out: "json",
-          auto: "read",
-          cw: resolvedCw,
-          authz,
-        },
-        writer,
-      });
-      items = parseDroidOutput(result.result);
-    } catch {
-      items = [];
+    if (!disableLlm && items.length === 0 && preferredExecutor !== "codex") {
+      try {
+        const ctxContainer = await getContextContainer();
+        const result = await toolDroid.execute({
+          input: {
+            prompt,
+            out: "json",
+            auto: "read",
+            cw: resolvedCw,
+            authz,
+            containerName: ctxContainer.containerName,
+            containerCw: ctxContainer.containerCw,
+          },
+          writer,
+        });
+        items = parseDroidOutput(result.result);
+      } catch {
+        items = [];
+      }
+    }
+  } finally {
+    const cleanup = (contextContainer as ContextContainer | null)?.cleanup;
+    if (cleanup) {
+      await cleanup();
     }
   }
 

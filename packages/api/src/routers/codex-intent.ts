@@ -1,3 +1,4 @@
+import type { AgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 
 import {
@@ -5,6 +6,8 @@ import {
   type TokenClaims,
 } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { z } from "zod";
 
 import { authedProcedure, router } from "../trpc";
@@ -31,6 +34,56 @@ const codexIntentInputSchema = z.object({
   intent: z.string().min(1).max(500),
   sessionId: z.string().min(1).max(255).optional(),
 });
+
+function resolveContainerCw(args: {
+  workspaceRoot: string;
+  workingDirectory: string;
+  baseCw: string;
+}): string {
+  const rel = path.relative(args.workspaceRoot, args.workingDirectory);
+  const relPosix = rel.split(path.sep).join(path.posix.sep);
+  if (relPosix && !relPosix.startsWith("..") && relPosix !== ".") {
+    return path.posix.join(args.baseCw, relPosix);
+  }
+  return args.baseCw;
+}
+
+async function createCodexWorkspace(args: {
+  cw?: string;
+  authz?: string;
+}): Promise<{
+  workspace: AgentFSWorkspace;
+  containerName: string;
+  containerCw: string;
+  agentfsDbPath: string;
+}> {
+  const { AgentFSWorkspace } =
+    await import("@alfred/agent/environment/agentfs");
+  const workspaceRoot = path.resolve(process.cwd());
+  const resolvedCw =
+    typeof args.cw === "string" && args.cw.length > 0
+      ? path.resolve(workspaceRoot, args.cw)
+      : workspaceRoot;
+  const rel = path.relative(workspaceRoot, resolvedCw);
+  const repoRoot =
+    rel && !rel.startsWith("..") && rel !== "." ? workspaceRoot : resolvedCw;
+  const runId = randomUUID();
+  const workspace = new AgentFSWorkspace("codex-intent", runId, repoRoot, {
+    authz: args.authz,
+  });
+  await workspace.initialize();
+  const containerCw = resolveContainerCw({
+    workspaceRoot: repoRoot,
+    workingDirectory: resolvedCw,
+    baseCw: workspace.containerCw,
+  });
+  return {
+    workspace,
+    containerName: workspace.containerName,
+    containerCw,
+    agentfsDbPath: workspace.dbPath,
+  };
+}
 
 /**
  * Map high-level intents to structured Codex prompts
@@ -130,45 +183,56 @@ const codexIntentProcedures = {
       const prompt = intentToPrompt(input.intent);
 
       try {
+        const codexWorkspace = await createCodexWorkspace({
+          cw: input.cw,
+          authz: input.authz,
+        });
         const { toolCodex } =
           await import("@alfred/agent/orchestrator/tool/codex/index");
         const chunks: string[] = [];
         const events: AlfredCodexEvent[] = [];
 
-        const result = await toolCodex.execute({
-          input: {
-            action: "exec" as const,
-            authz: input.authz,
-            auto: input.auto,
-            context: input.context,
-            cw: input.cw,
-            out: "text",
-            prompt,
-            sessionId: input.sessionId,
-            userId,
-          },
-          writer: {
-            write: (chunk: unknown) => {
-              const event = chunk as {
-                type?: string;
-                text?: string;
-                event?: AlfredCodexEvent;
-              };
-              if (event.type === "stdout" && typeof event.text === "string") {
-                chunks.push(event.text);
-              } else if (event.type === "codex_event" && event.event) {
-                events.push(event.event);
-              }
+        try {
+          const result = await toolCodex.execute({
+            input: {
+              action: "exec" as const,
+              authz: input.authz,
+              auto: input.auto,
+              context: input.context,
+              cw: input.cw,
+              out: "text",
+              prompt,
+              sessionId: input.sessionId,
+              agentfsDbPath: codexWorkspace.agentfsDbPath,
+              containerName: codexWorkspace.containerName,
+              containerCw: codexWorkspace.containerCw,
+              userId,
             },
-          },
-        });
+            writer: {
+              write: (chunk: unknown) => {
+                const event = chunk as {
+                  type?: string;
+                  text?: string;
+                  event?: AlfredCodexEvent;
+                };
+                if (event.type === "stdout" && typeof event.text === "string") {
+                  chunks.push(event.text);
+                } else if (event.type === "codex_event" && event.event) {
+                  events.push(event.event);
+                }
+              },
+            },
+          });
 
-        return {
-          artifacts: result.artifacts ?? [],
-          eventCount: events.length,
-          intent: input.intent,
-          result: result.result,
-        };
+          return {
+            artifacts: result.artifacts ?? [],
+            eventCount: events.length,
+            intent: input.intent,
+            result: result.result,
+          };
+        } finally {
+          await codexWorkspace.workspace.cleanup();
+        }
       } catch (error) {
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_intent_run_failed");

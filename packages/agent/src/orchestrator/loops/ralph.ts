@@ -661,6 +661,8 @@ export const toolRalph = {
               model: toolInputRest.model,
               authz: toolInputRest.authz,
               timeoutSec: toolInputRest.timeoutSec,
+              containerName: toolInputRest.containerName,
+              containerCw: toolInputRest.containerCw,
             }
           : {
               execProfile: toolInputRest.execProfile,

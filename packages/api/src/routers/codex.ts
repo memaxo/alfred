@@ -1,3 +1,4 @@
+import type { AgentFSWorkspace } from "@alfred/agent/environment/agentfs";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 
 import {
@@ -11,6 +12,7 @@ import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { z } from "zod";
 
 import { authedProcedure, router } from "../trpc";
@@ -207,6 +209,56 @@ function parseWriterChunk(chunk: unknown): WriterChunk | null {
   return null;
 }
 
+function resolveContainerCw(args: {
+  workspaceRoot: string;
+  workingDirectory: string;
+  baseCw: string;
+}): string {
+  const rel = path.relative(args.workspaceRoot, args.workingDirectory);
+  const relPosix = rel.split(path.sep).join(path.posix.sep);
+  if (relPosix && !relPosix.startsWith("..") && relPosix !== ".") {
+    return path.posix.join(args.baseCw, relPosix);
+  }
+  return args.baseCw;
+}
+
+async function createCodexWorkspace(args: {
+  cw?: string;
+  authz?: string;
+}): Promise<{
+  workspace: AgentFSWorkspace;
+  containerName: string;
+  containerCw: string;
+  agentfsDbPath: string;
+}> {
+  const { AgentFSWorkspace } =
+    await import("@alfred/agent/environment/agentfs");
+  const workspaceRoot = path.resolve(process.cwd());
+  const resolvedCw =
+    typeof args.cw === "string" && args.cw.length > 0
+      ? path.resolve(workspaceRoot, args.cw)
+      : workspaceRoot;
+  const rel = path.relative(workspaceRoot, resolvedCw);
+  const repoRoot =
+    rel && !rel.startsWith("..") && rel !== "." ? workspaceRoot : resolvedCw;
+  const runId = randomUUID();
+  const workspace = new AgentFSWorkspace("codex", runId, repoRoot, {
+    authz: args.authz,
+  });
+  await workspace.initialize();
+  const containerCw = resolveContainerCw({
+    workspaceRoot: repoRoot,
+    workingDirectory: resolvedCw,
+    baseCw: workspace.containerCw,
+  });
+  return {
+    workspace,
+    containerName: workspace.containerName,
+    containerCw,
+    agentfsDbPath: workspace.dbPath,
+  };
+}
+
 function createCodexStreamObservable({
   input,
   timeoutSec,
@@ -221,6 +273,10 @@ function createCodexStreamObservable({
     const effectiveTimeoutSec = timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
 
     void (async () => {
+      const codexWorkspace = await createCodexWorkspace({
+        cw: input.cw,
+        authz: input.authz,
+      });
       try {
         const { toolCodex } =
           await import("@alfred/agent/orchestrator/tool/codex/index");
@@ -239,6 +295,9 @@ function createCodexStreamObservable({
             sessionId: input.sessionId,
             outputSchema: input.outputSchema,
             context: input.context,
+            agentfsDbPath: codexWorkspace.agentfsDbPath,
+            containerName: codexWorkspace.containerName,
+            containerCw: codexWorkspace.containerCw,
             userId,
           },
           signal: abortController.signal,
@@ -313,6 +372,8 @@ function createCodexStreamObservable({
             message: formatCodexErrorMessage(sanitized, correlationId),
           })
         );
+      } finally {
+        await codexWorkspace.workspace.cleanup();
       }
     })();
 
@@ -402,43 +463,54 @@ const codexProcedures = {
       const events: AlfredCodexEvent[] = [];
 
       try {
+        const codexWorkspace = await createCodexWorkspace({
+          cw: input.cw,
+          authz: input.authz,
+        });
         const { toolCodex } =
           await import("@alfred/agent/orchestrator/tool/codex/index");
-        await toolCodex.execute({
-          input: {
-            action: "exec" as const,
-            authz: input.authz,
-            auto: input.auto,
-            context: input.context,
-            cw: input.cw,
-            env: input.env,
-            model: input.model,
-            out: "text",
-            outputSchema: input.outputSchema,
-            profile: input.profile,
-            prompt: input.prompt,
-            sessionId: input.sessionId,
-            timeoutSec,
-            userId,
-          },
-          writer: {
-            write: (chunk: unknown) => {
-              const parsed = parseWriterChunk(chunk);
-              if (!parsed) {
-                return;
-              }
-
-              if (parsed.type === "stdout") {
-                chunks.push(parsed.text);
-                return;
-              }
-
-              if (parsed.type === "codex_event") {
-                events.push(parsed.event as AlfredCodexEvent);
-              }
+        try {
+          await toolCodex.execute({
+            input: {
+              action: "exec" as const,
+              authz: input.authz,
+              auto: input.auto,
+              context: input.context,
+              cw: input.cw,
+              env: input.env,
+              model: input.model,
+              out: "text",
+              outputSchema: input.outputSchema,
+              profile: input.profile,
+              prompt: input.prompt,
+              sessionId: input.sessionId,
+              timeoutSec,
+              agentfsDbPath: codexWorkspace.agentfsDbPath,
+              containerName: codexWorkspace.containerName,
+              containerCw: codexWorkspace.containerCw,
+              userId,
             },
-          },
-        });
+            writer: {
+              write: (chunk: unknown) => {
+                const parsed = parseWriterChunk(chunk);
+                if (!parsed) {
+                  return;
+                }
+
+                if (parsed.type === "stdout") {
+                  chunks.push(parsed.text);
+                  return;
+                }
+
+                if (parsed.type === "codex_event") {
+                  events.push(parsed.event as AlfredCodexEvent);
+                }
+              },
+            },
+          });
+        } finally {
+          await codexWorkspace.workspace.cleanup();
+        }
       } catch (error) {
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_run_failed");
@@ -798,28 +870,36 @@ const codexProcedures = {
       }
 
       try {
+        const codexWorkspace = await createCodexWorkspace({});
         const { toolCodex } =
           await import("@alfred/agent/orchestrator/tool/codex/index");
 
         // Use codex in "read" mode to generate a suggestion
-        const result = await toolCodex.execute({
-          input: {
-            action: "exec",
-            auto: "read",
-            out: "text",
-            prompt: `Suggest a completion for the code in ${input.path} at line ${input.line}, column ${input.column}.
+        try {
+          const result = await toolCodex.execute({
+            input: {
+              action: "exec",
+              auto: "read",
+              out: "text",
+              prompt: `Suggest a completion for the code in ${input.path} at line ${input.line}, column ${input.column}.
             
 Code context:
 \`\`\`${input.language ?? ""}
 ${input.content}
 \`\`\``,
-            userId,
-          },
-        });
+              agentfsDbPath: codexWorkspace.agentfsDbPath,
+              containerName: codexWorkspace.containerName,
+              containerCw: codexWorkspace.containerCw,
+              userId,
+            },
+          });
 
-        return {
-          suggestion: result.result,
-        };
+          return {
+            suggestion: result.result,
+          };
+        } finally {
+          await codexWorkspace.workspace.cleanup();
+        }
       } catch (error) {
         const { sanitized, correlationId, trpcCode, cause } =
           buildCodexErrorResponse(error, "codex_suggest_failed");

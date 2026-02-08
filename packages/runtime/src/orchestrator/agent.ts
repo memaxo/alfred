@@ -231,8 +231,8 @@ export async function runAgent({
   // Create AgentFS workspace for agent execution
   let workspaceEnv: Workspace | undefined;
   let agentfsDbPath: string | undefined;
-  let containerName: string | undefined;
-  let containerCw: string | undefined;
+  let containerName = "";
+  let containerCw = "";
 
   const agentfsDbPathOverride = (() => {
     if (!agentfsDbDir) {
@@ -338,29 +338,19 @@ export async function runAgent({
     if (isAgentFSWorkspace(workspaceEnv)) {
       agentfsDbPath = workspaceEnv.dbPath;
 
-      const baseCw =
-        typeof (workspaceEnv as unknown as { containerCw?: unknown })
-          .containerCw === "string"
-          ? (workspaceEnv as unknown as { containerCw: string }).containerCw
-          : undefined;
-      const baseId =
-        typeof (workspaceEnv as unknown as { containerName?: unknown })
-          .containerName === "string"
-          ? (workspaceEnv as unknown as { containerName: string }).containerName
-          : undefined;
+      const baseCw = workspaceEnv.containerCw;
+      const baseId = workspaceEnv.containerName;
 
-      if (baseCw && baseId) {
-        // Codex runs inside the AgentFSWorkspace Docker container.
-        // docker exec accepts either container name or container id.
-        containerName = baseId;
+      // Codex runs inside the AgentFSWorkspace Docker container.
+      // docker exec accepts either container name or container id.
+      containerName = baseId;
 
-        const rel = path.relative(workspaceEnv.root, spec.workingDirectory);
-        const relPosix = rel.split(path.sep).join(path.posix.sep);
-        containerCw =
-          relPosix && !relPosix.startsWith("..") && relPosix !== "."
-            ? path.posix.join(baseCw, relPosix)
-            : baseCw;
-      }
+      const rel = path.relative(workspaceEnv.root, spec.workingDirectory);
+      const relPosix = rel.split(path.sep).join(path.posix.sep);
+      containerCw =
+        relPosix && !relPosix.startsWith("..") && relPosix !== "."
+          ? path.posix.join(baseCw, relPosix)
+          : baseCw;
     }
   } catch (error) {
     logger.warn("workspace_creation_failed", {
@@ -458,6 +448,8 @@ export async function runAgent({
         agentfsDbPath,
         authz,
         auto: spec.auto === "read" ? "low" : spec.auto,
+        containerCw,
+        containerName,
         context: spec.context,
         execPlanPath: spec.execPlanPath,
         model: spec.model,
@@ -805,6 +797,8 @@ export async function runAgent({
                   HOME: droidHomeOnHost,
                 }
               : undefined,
+            containerName,
+            containerCw,
           },
           signal: agentSignal,
           writer,

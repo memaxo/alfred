@@ -174,6 +174,17 @@ export async function* runMergePhase(
     mergePlan.branches.length > 0 &&
     (await isGitWorkspace(workspace))
   ) {
+    const { containerName, containerBaseCw } = await resolveAgentfsContainer({
+      runId,
+      workspace,
+      userId,
+    });
+    const containerCw = resolveAgentfsContainerCw({
+      workspaceRoot: workspace,
+      workingDirectory: workspace,
+      containerBaseCw,
+    });
+
     yield {
       type: "notice",
       message: "merge_execution_started",
@@ -206,6 +217,8 @@ export async function* runMergePhase(
         runId,
         userId,
         auto: input.auto,
+        containerName,
+        containerCw,
       }
     ).catch((error) => {
       logger.error("merge_execution_error", { error: String(error) });

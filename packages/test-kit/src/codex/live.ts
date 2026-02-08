@@ -22,6 +22,8 @@ export interface CodexLiveWorkspace {
   root: string;
   workspace: Workspace;
   agentfsDbPath?: string;
+  containerName: string;
+  containerCw: string;
 }
 
 export type CodexLiveChunk = unknown;
@@ -60,7 +62,11 @@ export async function createCodexLiveWorkspace(options: {
   );
   await ws.initialize();
 
-  const agentfsDbPath = isAgentFSWorkspace(ws) ? ws.dbPath : undefined;
+  if (!isAgentFSWorkspace(ws)) {
+    throw new Error("agentfs_workspace_required");
+  }
+
+  const agentfsDbPath = ws.dbPath;
 
   return {
     id,
@@ -69,6 +75,8 @@ export async function createCodexLiveWorkspace(options: {
     root: ws.root,
     workspace: ws,
     agentfsDbPath,
+    containerName: ws.containerName,
+    containerCw: ws.containerCw,
   };
 }
 
@@ -106,6 +114,8 @@ export async function runCodexLiveInWorkspace(options: {
       cw: options.workspace.root,
       sessionId: options.sessionId,
       agentfsDbPath: options.workspace.agentfsDbPath,
+      containerName: options.workspace.containerName,
+      containerCw: options.workspace.containerCw,
       model: options.model,
       profile: options.profile,
       authz: options.authz,

@@ -1,4 +1,5 @@
 import { logger } from "@alfred/logger";
+import path from "node:path";
 
 import type { DirectoryHandle } from "../security/filesystem.js";
 
@@ -49,6 +50,8 @@ export const conflictArbiter = {
     runId: string,
     targetBranch: string,
     sourceBranch: string,
+    containerName: string,
+    containerCw: string,
     authz?: string,
     userId?: string,
     auto?: ArbiterAuto
@@ -71,6 +74,12 @@ export const conflictArbiter = {
       targetBranch
     );
     const worktreePath = worktreeHandle.path;
+    const rel = path.relative(repoRoot, worktreePath);
+    const relPosix = rel.split(path.sep).join(path.posix.sep);
+    const worktreeContainerCw =
+      relPosix && !relPosix.startsWith("..") && relPosix !== "."
+        ? path.posix.join(containerCw, relPosix)
+        : containerCw;
     const cwdHandle = openDirectorySecure(worktreePath, {
       allowedPrefixes: [repoRoot],
     });
@@ -148,6 +157,8 @@ If you cannot resolve a conflict safely, create a file 'ESCALATION.md' explainin
           sessionId: `session-${arbiterId}`,
           authz,
           out: "text",
+          containerName,
+          containerCw: worktreeContainerCw,
           userId,
         },
         writer,

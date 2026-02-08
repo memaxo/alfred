@@ -100,12 +100,14 @@ export async function executeMergePlan(
   plan: MergePlan,
   workspace: string,
   git: GitTool,
-  writer?: ToolWriter,
-  options?: {
+  writer: ToolWriter | undefined,
+  options: {
     authz?: string;
     runId?: string;
     userId?: string;
     auto?: "read" | "low" | "medium" | "high";
+    containerName: string;
+    containerCw: string;
     arbiter?: ConflictArbiterLike;
   }
 ): Promise<MergeResult> {
@@ -135,12 +137,12 @@ export async function executeMergePlan(
           resolvedCw,
           targetBranch,
           branch,
-          { runId: options?.runId }
+          { runId: options.runId }
         );
         if (!preview.success) {
-          const runId = options?.runId;
+          const {runId} = options;
           const shouldArbitrate =
-            (options?.auto === "medium" || options?.auto === "high") &&
+            (options.auto === "medium" || options.auto === "high") &&
             typeof runId === "string" &&
             runId.length > 0;
 
@@ -160,6 +162,8 @@ export async function executeMergePlan(
             runId,
             targetBranch,
             branch,
+            options.containerName,
+            options.containerCw,
             options.authz,
             options.userId,
             options.auto === "high" ? "high" : "medium"
@@ -181,7 +185,7 @@ export async function executeMergePlan(
               action: "merge",
               ref: resolution.resolvedBranch,
               cw: resolvedCw,
-              authz: options?.authz,
+              authz: options.authz,
               // Allow fast-forward to the arbiter's merge commit.
               noFF: false,
             },
@@ -207,7 +211,7 @@ export async function executeMergePlan(
             action: "merge",
             ref: branch,
             cw: resolvedCw,
-            authz: options?.authz,
+            authz: options.authz,
           },
           writer,
         });

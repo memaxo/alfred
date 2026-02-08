@@ -15,6 +15,8 @@ export interface TDDContext {
   execPlanPath: string;
   requirement: string;
   auto: "low" | "medium" | "high";
+  containerName: string;
+  containerCw: string;
   model?: string;
   authz?: string;
   signal?: AbortSignal;
@@ -37,6 +39,8 @@ export async function runTDDLoop(
     execPlanPath,
     requirement,
     auto,
+    containerName,
+    containerCw,
     model,
     authz,
     signal,
@@ -74,6 +78,8 @@ export async function runTDDLoop(
         cw: resolvedWorkingDirectory,
         sessionId: `${sessionId}:tdd`, // Separate session
         agentfsDbPath,
+        containerName,
+        containerCw,
         model,
         authz,
         context: context.context,
