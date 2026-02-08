@@ -26,18 +26,44 @@ export interface ReviewEscalationSummary {
   summary?: string;
 }
 
+type WorkflowRepo = Pick<typeof workflowRepo, "getRun" | "updateRun">;
+
 export class ReviewGateManager {
   private readonly gate = new ReviewGate();
   private escalation: ReviewEscalationSummary | null = null;
   private escalationMetricRecorded = false;
 
+  constructor(private readonly repo: WorkflowRepo = workflowRepo) {}
+
   async restoreFromRun(runId: string): Promise<void> {
     try {
-      const workflowRun = await workflowRepo.getRun(runId);
+      const workflowRun = await this.repo.getRun(runId);
       if (workflowRun?.stateData && typeof workflowRun.stateData === "object") {
         const stateData = workflowRun.stateData as Record<string, unknown>;
         if (stateData.reviewGate && typeof stateData.reviewGate === "object") {
-          this.gate.restore(stateData.reviewGate as ReviewGateState);
+          const reviewGate = stateData.reviewGate as ReviewGateState;
+          this.gate.restore(reviewGate);
+          if (
+            this.gate.summary().length === 0 &&
+            Array.isArray(reviewGate.checks) &&
+            reviewGate.checks.length > 0
+          ) {
+            this.gate.applyPlan({
+              checks: reviewGate.checks.map((check) => ({
+                id: check.id,
+                type: check.type,
+              })),
+            });
+            for (const check of reviewGate.checks) {
+              this.gate.recordCheck({
+                id: check.id,
+                type: check.type,
+                status: check.status,
+                attempt: check.attempts,
+                evidence: check.evidence,
+              });
+            }
+          }
         }
         if (stateData.reviewEscalation) {
           this.escalation =
@@ -136,12 +162,12 @@ export class ReviewGateManager {
 
   async persistState(runId: string): Promise<void> {
     try {
-      const workflowRun = await workflowRepo.getRun(runId);
+      const workflowRun = await this.repo.getRun(runId);
       const existingStateData =
         workflowRun?.stateData && typeof workflowRun.stateData === "object"
           ? (workflowRun.stateData as Record<string, unknown>)
           : {};
-      await workflowRepo.updateRun(runId, {
+      await this.repo.updateRun(runId, {
         stateData: {
           ...existingStateData,
           ...this.serialize(),

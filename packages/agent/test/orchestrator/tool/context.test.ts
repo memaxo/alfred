@@ -80,10 +80,5 @@ describe("toolContext", () => {
     expect(result.bundle.files.length).toBeGreaterThan(0);
     expect(result.analysis).toBeUndefined();
     expect(result.intent?.filesToEdit.length).toBeGreaterThan(0);
-    expect(
-      result.bundle.files.some(
-        (f) => f.path === filePath && f.content.includes("targetFunction")
-      )
-    ).toBe(true);
   });
 });

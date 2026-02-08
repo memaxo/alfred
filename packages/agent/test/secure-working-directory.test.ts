@@ -14,6 +14,7 @@ import {
   vi,
 } from "bun:test";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -21,6 +22,7 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -154,23 +156,18 @@ describe("secure working directory handles", () => {
     }
   });
 
-  it("prevents droid commands from escaping via swapped symlink", async () => {
-    const { base, workspace, outside } =
-      createWorkspaceFixture("droid-secure-");
-    process.env.DROID_BIN = process.execPath;
+  it("spawns droid via docker exec inside the container", async () => {
+    const dockerBinDir = mkdtempSync(path.join(os.tmpdir(), "droid-docker-"));
+    const dockerBin = path.join(dockerBinDir, "docker");
+    mkdirSync(dockerBinDir, { recursive: true });
+    const dockerScript = "#!/usr/bin/env sh\nexit 0\n";
+    writeFileSync(dockerBin, dockerScript, "utf8");
+    chmodSync(dockerBin, 0o755);
 
-    const originalOpen = filesystem.openDirectorySecure;
-    let swapped = false;
-    const spy = vi
-      .spyOn(filesystem, "openDirectorySecure")
-      .mockImplementation((candidate, options) => {
-        const handle = originalOpen(candidate, options);
-        if (!swapped && path.resolve(candidate) === path.resolve(workspace)) {
-          replaceWithSymlink(workspace, outside);
-          swapped = true;
-        }
-        return handle;
-      });
+    const prevPath = process.env.PATH;
+    process.env.PATH = [dockerBinDir, prevPath ?? ""]
+      .filter(Boolean)
+      .join(path.delimiter);
 
     const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => ({
       stdout: null,
@@ -187,21 +184,24 @@ describe("secure working directory handles", () => {
           prompt: "pwd",
           out: "text",
           auto: "read",
-          cw: workspace,
+          cw: "/tmp",
           timeoutSec: 120,
           authz: "token",
+          containerName: "alfred-agentfs-test",
+          containerCw: "/workspace",
         },
       });
 
-      const spawnArgs = spawnSpy.mock.calls[0]?.[0];
-      const spawnOptions = spawnSpy.mock.calls[0]?.[1];
-      expect(spawnArgs?.[0]).toBe(process.execPath);
-      expect(spawnOptions?.cwd).toBeUndefined();
-      expect(spawnOptions?.env?.ALFRED_CWD_FD).toMatch(/^[0-9]+$/);
+      const spawnArgs = spawnSpy.mock.calls[0]?.[0] as string[] | undefined;
+      expect(spawnArgs?.[0]).toContain("docker");
+      expect(spawnArgs).toContain("exec");
+      expect(spawnArgs).toContain("--workdir");
+      expect(spawnArgs).toContain("/workspace");
+      expect(spawnArgs).toContain("alfred-agentfs-test");
     } finally {
-      spy.mockRestore();
       spawnSpy.mockRestore();
-      cleanupPaths(workspace, `${workspace}-real`, outside, base);
+      process.env.PATH = prevPath;
+      cleanupPaths(dockerBinDir);
     }
   });
 

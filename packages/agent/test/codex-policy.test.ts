@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, vi } from "bun:test";
 
 const requireToolScopesAndPolicyMock = vi.fn();
 
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: requireToolScopesAndPolicyMock,
-}));
+const authTokenModule = await import("@alfred/auth/token");
+const requireToolScopesAndPolicySpy = vi
+  .spyOn(authTokenModule, "requireToolScopesAndPolicy")
+  .mockImplementation((...args) => requireToolScopesAndPolicyMock(...args));
 
 // Dynamic import after mock setup
 const { enforcePolicy } = await import("../src/orchestrator/tool/codex/policy");
@@ -15,6 +16,10 @@ describe("enforcePolicy", () => {
     elevated: false,
     mfa: undefined,
   };
+  const baseInput = {
+    containerCw: "/workspace",
+    containerName: "alfred-agentfs-test",
+  };
 
   beforeEach(() => {
     requireToolScopesAndPolicyMock.mockClear();
@@ -24,6 +29,7 @@ describe("enforcePolicy", () => {
   describe("basic validation", () => {
     it("calls requireToolScopesAndPolicy with correct parameters", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -53,6 +59,7 @@ describe("enforcePolicy", () => {
 
     it("sets userId from claims.sub", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -66,6 +73,7 @@ describe("enforcePolicy", () => {
 
     it("throws when input.userId mismatches claims.sub", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -82,6 +90,7 @@ describe("enforcePolicy", () => {
   describe("timeout validation", () => {
     it("throws when timeout exceeds MAX_TIMEOUT_SEC", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -96,6 +105,7 @@ describe("enforcePolicy", () => {
 
     it("allows timeout within limits", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -110,6 +120,7 @@ describe("enforcePolicy", () => {
   describe("elevation requirements", () => {
     it("throws biometric_required for medium auto without elevation", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "medium" as const,
@@ -121,6 +132,7 @@ describe("enforcePolicy", () => {
 
     it("throws biometric_required for high auto without elevation", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "high" as const,
@@ -140,6 +152,7 @@ describe("enforcePolicy", () => {
       });
 
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "medium" as const,
@@ -159,6 +172,7 @@ describe("enforcePolicy", () => {
       });
 
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "high" as const,
@@ -170,6 +184,7 @@ describe("enforcePolicy", () => {
 
     it("allows read auto without elevation", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -181,6 +196,7 @@ describe("enforcePolicy", () => {
 
     it("allows low auto without elevation", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "low" as const,
@@ -194,6 +210,7 @@ describe("enforcePolicy", () => {
   describe("elevated timeout threshold", () => {
     it("throws when timeout exceeds threshold without elevation", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -216,6 +233,7 @@ describe("enforcePolicy", () => {
       });
 
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -230,6 +248,7 @@ describe("enforcePolicy", () => {
   describe("context propagation", () => {
     it("includes memory_confidence in policy context", async () => {
       const input = {
+        ...baseInput,
         action: "exec" as const,
         prompt: "test",
         auto: "read" as const,
@@ -253,4 +272,8 @@ describe("enforcePolicy", () => {
       );
     });
   });
+});
+
+afterAll(() => {
+  requireToolScopesAndPolicySpy.mockRestore();
 });

@@ -20,6 +20,7 @@ import {
   createRepoTestDir,
   isDockerAvailable,
   isImageAvailable,
+  runCmd,
 } from "./utils/infra";
 
 const IMAGE = "alfred-agentfs:codex";
@@ -27,6 +28,8 @@ const AUTHZ = "test-authz";
 
 const dockerOk = isDockerAvailable();
 const imageOk = dockerOk && isImageAvailable(IMAGE);
+const dockerReady =
+  imageOk && runCmd(["docker", "run", "--rm", IMAGE, "true"]).exitCode === 0;
 
 let prevEnrichmentEnv: string | undefined;
 
@@ -61,7 +64,7 @@ describe("AgentFS enrichment (docker + sdk)", () => {
     }
   });
 
-  it.skipIf(!(dockerOk && imageOk))(
+  it.skipIf(!dockerReady)(
     "finalizeOutcome persists FailureContext based on real tool history",
     async () => {
       const baseDir = createRepoTestDir("agentfs-enrich");
@@ -128,45 +131,42 @@ describe("AgentFS enrichment (docker + sdk)", () => {
     }
   );
 
-  it.skipIf(!(dockerOk && imageOk))(
-    "persists structured handoff to KV",
-    async () => {
-      const baseDir = createRepoTestDir("agentfs-handoff");
-      dirs.push(baseDir);
+  it.skipIf(!dockerReady)("persists structured handoff to KV", async () => {
+    const baseDir = createRepoTestDir("agentfs-handoff");
+    dirs.push(baseDir);
 
-      const runId = `agentfs-handoff-${Date.now().toString(36)}`;
-      const agentId = `agent-${Math.random().toString(36).slice(2, 8)}`;
+    const runId = `agentfs-handoff-${Date.now().toString(36)}`;
+    const agentId = `agent-${Math.random().toString(36).slice(2, 8)}`;
 
-      const relBase = path.relative(repoRoot, baseDir);
-      const dbRel = path.join(relBase, ".agentfs", runId, "agentfs.db");
+    const relBase = path.relative(repoRoot, baseDir);
+    const dbRel = path.join(relBase, ".agentfs", runId, "agentfs.db");
 
-      const workspace = new AgentFSWorkspace(agentId, runId, repoRoot, {
-        authz: AUTHZ,
-        dbPath: dbRel,
-        image: IMAGE,
-      });
-      cleanupFns.push(() => workspace.cleanup());
+    const workspace = new AgentFSWorkspace(agentId, runId, repoRoot, {
+      authz: AUTHZ,
+      dbPath: dbRel,
+      image: IMAGE,
+    });
+    cleanupFns.push(() => workspace.cleanup());
 
-      await workspace.initialize();
-      const agent = workspace.getAgent();
+    await workspace.initialize();
+    const agent = workspace.getAgent();
 
-      const handoff: StructuredHandoff = {
-        blockers: [],
-        decisions: [],
-        filesCreated: [],
-        filesDeleted: [],
-        filesModified: ["a.txt"],
-        fromWaveId: "wave-1",
-        summary: "did things",
-        toWaveId: "wave-2",
-        toolsAvoided: [],
-        ts: Date.now(),
-      };
+    const handoff: StructuredHandoff = {
+      blockers: [],
+      decisions: [],
+      filesCreated: [],
+      filesDeleted: [],
+      filesModified: ["a.txt"],
+      fromWaveId: "wave-1",
+      summary: "did things",
+      toWaveId: "wave-2",
+      toolsAvoided: [],
+      ts: Date.now(),
+    };
 
-      await persistStructuredHandoff(agent, "wave-1", handoff);
-      const stored = await getStructuredHandoff(agent, "wave-1");
-      expect(stored?.fromWaveId).toBe("wave-1");
-      expect(stored?.filesModified).toEqual(["a.txt"]);
-    }
-  );
+    await persistStructuredHandoff(agent, "wave-1", handoff);
+    const stored = await getStructuredHandoff(agent, "wave-1");
+    expect(stored?.fromWaveId).toBe("wave-1");
+    expect(stored?.filesModified).toEqual(["a.txt"]);
+  });
 });

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 
 import { HomeAssistant, type HomeAssistantError } from "./homeassistant";
 
@@ -6,16 +6,6 @@ const mockBaseUrl = "http://homeassistant.local:8123";
 const mockToken = "test-token-12345";
 
 describe("HomeAssistant client", () => {
-  let originalFetch: typeof globalThis.fetch;
-
-  beforeEach(() => {
-    originalFetch = globalThis.fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
   describe("getStates", () => {
     it("returns all entity states", async () => {
       const mockStates = [
@@ -40,11 +30,10 @@ describe("HomeAssistant client", () => {
           new Response(JSON.stringify(mockStates), { status: 200 })
         );
       });
-      globalThis.fetch = fetchMock as typeof globalThis.fetch;
-
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,
+        fetch: fetchMock as typeof fetch,
       });
       const result = await client.getStates();
 
@@ -65,11 +54,10 @@ describe("HomeAssistant client", () => {
           new Response(JSON.stringify(mockStates), { status: 200 })
         )
       );
-      globalThis.fetch = fetchMock as typeof globalThis.fetch;
-
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,
+        fetch: fetchMock as typeof fetch,
       });
       const result = await client.getStates("light");
 
@@ -92,11 +80,10 @@ describe("HomeAssistant client", () => {
           new Response(JSON.stringify(mockState), { status: 200 })
         );
       });
-      globalThis.fetch = fetchMock as typeof globalThis.fetch;
-
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,
+        fetch: fetchMock as typeof fetch,
       });
       const result = await client.getState("light.living_room");
 
@@ -114,11 +101,10 @@ describe("HomeAssistant client", () => {
           })
         )
       );
-      globalThis.fetch = fetchMock as typeof globalThis.fetch;
-
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,
+        fetch: fetchMock as typeof fetch,
       });
 
       try {
@@ -150,11 +136,10 @@ describe("HomeAssistant client", () => {
           new Response(JSON.stringify(mockResult), { status: 200 })
         );
       });
-      globalThis.fetch = fetchMock as typeof globalThis.fetch;
-
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,
+        fetch: fetchMock as typeof fetch,
       });
       const result = await client.callService("light", "turn_on", {
         entity_id: "light.living_room",
@@ -168,11 +153,10 @@ describe("HomeAssistant client", () => {
       const fetchMock = mock(() =>
         Promise.resolve(new Response("", { status: 200 }))
       );
-      globalThis.fetch = fetchMock as typeof globalThis.fetch;
-
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,
+        fetch: fetchMock as typeof fetch,
       });
       const result = await client.callService("script", "run_script", {});
 

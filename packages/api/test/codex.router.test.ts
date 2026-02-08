@@ -22,6 +22,20 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   },
 }));
 
+mock.module("@alfred/agent/environment/agentfs", () => ({
+  AgentFSWorkspace: class {
+    containerCw = "/workspace";
+    containerName = "alfred-agentfs-test";
+    dbPath = ".agentfs/test/agentfs.db";
+    root: string;
+    constructor(_id: string, _runId: string, repoRoot: string) {
+      this.root = repoRoot;
+    }
+    async initialize() {}
+    async cleanup() {}
+  },
+}));
+
 mock.module("@alfred/agent/src/metrics", () => ({
   recordCodexExecRun: vi.fn(),
   recordCodexError: vi.fn(),
@@ -95,6 +109,9 @@ describe("codex router stream", () => {
       await new Promise((r) => setTimeout(r, 1));
     }
     expect(toolCodexExecuteMock).toHaveBeenCalledTimes(1);
+    const callInput = toolCodexExecuteMock.mock.calls[0]?.[0]?.input;
+    expect(callInput?.containerName).toBe("alfred-agentfs-test");
+    expect(callInput?.containerCw).toBe("/workspace");
 
     subscription.unsubscribe();
     await executionStopped;
@@ -111,9 +128,10 @@ describe("codex router run", () => {
     await caller.codex.run({ prompt: "short task" });
 
     expect(toolCodexExecuteMock).toHaveBeenCalledTimes(1);
-    expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input?.timeoutSec).toBe(
-      ELEVATED_TIMEOUT_THRESHOLD_SEC
-    );
+    const input = toolCodexExecuteMock.mock.calls[0]?.[0]?.input;
+    expect(input?.timeoutSec).toBe(ELEVATED_TIMEOUT_THRESHOLD_SEC);
+    expect(input?.containerName).toBe("alfred-agentfs-test");
+    expect(input?.containerCw).toBe("/workspace");
   });
 
   it("accepts explicit timeout at the threshold", async () => {
@@ -124,9 +142,10 @@ describe("codex router run", () => {
       timeoutSec: ELEVATED_TIMEOUT_THRESHOLD_SEC,
     });
 
-    expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input?.timeoutSec).toBe(
-      ELEVATED_TIMEOUT_THRESHOLD_SEC
-    );
+    const input = toolCodexExecuteMock.mock.calls[0]?.[0]?.input;
+    expect(input?.timeoutSec).toBe(ELEVATED_TIMEOUT_THRESHOLD_SEC);
+    expect(input?.containerName).toBe("alfred-agentfs-test");
+    expect(input?.containerCw).toBe("/workspace");
   });
 
   it("returns PRECONDITION_FAILED when Codex requires elevation for timeout", async () => {

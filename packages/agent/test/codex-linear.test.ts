@@ -1,24 +1,25 @@
+import * as graphRepo from "@alfred/db/repo/graph";
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
   expect,
   it,
-  mock,
   vi,
 } from "bun:test";
 
-// Mock the graph repo to avoid DB dependency
-mock.module("@alfred/db/repo/graph", () => ({
-  upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue([]),
-}));
+import * as linearApi from "../src/orchestrator/linear";
 
 const emitLinearActivityMock = vi.fn().mockResolvedValue({ ok: true });
 
-mock.module("../src/orchestrator/linear", () => ({
-  emitLinearActivity: emitLinearActivityMock,
-}));
+const upsertNodesSpy = vi
+  .spyOn(graphRepo, "upsertNodes")
+  .mockResolvedValue(new Map());
+const upsertEdgesSpy = vi.spyOn(graphRepo, "upsertEdges").mockResolvedValue([]);
+const emitLinearActivitySpy = vi
+  .spyOn(linearApi, "emitLinearActivity")
+  .mockImplementation((...args) => emitLinearActivityMock(...args));
 
 const histogramStub = {
   startTimer: () => vi.fn(),
@@ -45,10 +46,7 @@ const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 describe("codex-linear", () => {
-  const originalEnv = process.env.DATABASE_URL;
-
   beforeEach(() => {
-    process.env.DATABASE_URL = "postgresql://test";
     resetCodexLinearLimiter();
     emitLinearActivityMock.mockClear();
     activitiesEmittedStub.inc.mockClear();
@@ -64,11 +62,6 @@ describe("codex-linear", () => {
   });
 
   afterEach(() => {
-    if (originalEnv === undefined) {
-      process.env.DATABASE_URL = undefined;
-    } else {
-      process.env.DATABASE_URL = originalEnv;
-    }
     resetCodexLinearLimiter();
     setCodexLinearTimingConfig();
   });
@@ -212,4 +205,10 @@ describe("codex-linear", () => {
       warnSpy.mockRestore();
     });
   });
+});
+
+afterAll(() => {
+  upsertNodesSpy.mockRestore();
+  upsertEdgesSpy.mockRestore();
+  emitLinearActivitySpy.mockRestore();
 });

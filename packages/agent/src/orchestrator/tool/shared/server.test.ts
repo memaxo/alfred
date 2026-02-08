@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   __internals,
   ensureServer,
-  resolveExecProfile,
   stopAllServers,
   stopServer,
 } from "./server.js";
@@ -77,21 +76,5 @@ describe("tool/shared/server registry", () => {
     expect(stopA).toHaveBeenCalledTimes(1);
     expect(stopB).toHaveBeenCalledTimes(1);
     expect(__internals.size()).toBe(0);
-  });
-});
-
-describe("tool/shared/server resolveExecProfile", () => {
-  it("defaults to server inside AgentFS container when unset", () => {
-    expect(resolveExecProfile(undefined, "alfred-agentfs-123")).toBe("server");
-  });
-
-  it("defaults to default outside AgentFS containers when unset", () => {
-    expect(resolveExecProfile()).toBe("default");
-    expect(resolveExecProfile(undefined, "container-123")).toBe("default");
-  });
-
-  it("respects explicit profiles regardless of container name", () => {
-    expect(resolveExecProfile("default", "alfred-agentfs-123")).toBe("default");
-    expect(resolveExecProfile("server")).toBe("server");
   });
 });

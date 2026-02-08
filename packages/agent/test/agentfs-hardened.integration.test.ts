@@ -21,10 +21,15 @@ const IMAGE = "alfred-agentfs:codex";
 const AUTHZ = "test-authz";
 
 const dockerOk = isDockerAvailable();
-const _imageOk = dockerOk && isImageAvailable(IMAGE);
+const imageOk = dockerOk && isImageAvailable(IMAGE);
+const dockerReady =
+  dockerOk &&
+  imageOk &&
+  runCmd(["docker", "run", "--rm", IMAGE, "true"]).exitCode === 0;
+const hardenedOk =
+  dockerReady && process.env.ALFRED_RUN_AGENTFS_HARDENED === "1";
 
 describe("AgentFS Hardening (RO Isolation + CoW)", () => {
-  const _repoRoot = process.cwd();
   const cleanupFns: (() => Promise<void> | void)[] = [];
   const dirs: string[] = [];
 
@@ -39,7 +44,7 @@ describe("AgentFS Hardening (RO Isolation + CoW)", () => {
     }
   });
 
-  it(
+  it.skipIf(!hardenedOk)(
     "prevents mutations to host repo while allowing changes in CoW workspace",
     async () => {
       const testDir = createRepoTestDir("agentfs-hardened");

@@ -22,6 +22,8 @@ describe("v6 tool registry guards", () => {
     const parsed = opencodeInputSchema.parse({
       action: "exec",
       auto: "read",
+      containerCw: "/workspace",
+      containerName: "alfred-agentfs-test",
       execProfile: "server",
       prompt: "hi",
       transport: "http",
@@ -35,6 +37,8 @@ describe("v6 tool registry guards", () => {
     const parsed = codexInputSchema.parse({
       action: "exec",
       auto: "read",
+      containerCw: "/workspace",
+      containerName: "alfred-agentfs-test",
       execProfile: "server",
       out: "text",
       prompt: "hi",

@@ -22,15 +22,17 @@ const { LinearActivityService } =
 
 describe("LinearActivityService", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    linearMocks.emitLinearActivity.mockResolvedValue({ ok: true });
-    linearMocks.setLinearDelegate.mockResolvedValue();
-    linearMocks.setLinearStarted.mockResolvedValue();
-    linearMocks.setLinearCompleted.mockResolvedValue();
-    linearMocks.setLinearCancelled.mockResolvedValue();
-    linearMocks.setLinearSessionExternalUrl.mockResolvedValue();
-    linearMocks.commentOnLinearIssue.mockResolvedValue();
-    linearMocks.extractIssueIdFromSession.mockReturnValue("ISS-123");
+    loggerMocks.warn.mockReset();
+    linearMocks.emitLinearActivity.mockReset().mockResolvedValue({ ok: true });
+    linearMocks.setLinearDelegate.mockReset().mockResolvedValue();
+    linearMocks.setLinearStarted.mockReset().mockResolvedValue();
+    linearMocks.setLinearCompleted.mockReset().mockResolvedValue();
+    linearMocks.setLinearCancelled.mockReset().mockResolvedValue();
+    linearMocks.setLinearSessionExternalUrl.mockReset().mockResolvedValue();
+    linearMocks.commentOnLinearIssue.mockReset().mockResolvedValue();
+    linearMocks.extractIssueIdFromSession
+      .mockReset()
+      .mockReturnValue("ISS-123");
   });
 
   describe("constructor", () => {

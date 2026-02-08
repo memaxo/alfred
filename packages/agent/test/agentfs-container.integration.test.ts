@@ -13,6 +13,7 @@ import {
   createRepoTestDir,
   isDockerAvailable,
   isImageAvailable,
+  runCmd,
   toPosixPath,
 } from "./utils/infra";
 
@@ -21,6 +22,8 @@ const AUTHZ = "test-authz";
 
 const dockerOk = isDockerAvailable();
 const imageOk = dockerOk && isImageAvailable(IMAGE);
+const dockerReady =
+  imageOk && runCmd(["docker", "run", "--rm", IMAGE, "true"]).exitCode === 0;
 
 function createWorkspace(args: {
   repoRoot: string;
@@ -68,7 +71,7 @@ describe("AgentFSWorkspace (docker + sdk)", () => {
     }
   });
 
-  it.skipIf(!(dockerOk && imageOk))(
+  it.skipIf(!dockerReady)(
     "initializes container + executes inside it",
     async () => {
       const baseDir = createRepoTestDir("agentfs-container");
@@ -111,33 +114,30 @@ describe("AgentFSWorkspace (docker + sdk)", () => {
     }
   );
 
-  it.skipIf(!(dockerOk && imageOk))(
-    "respects exec cwd under /workspace",
-    async () => {
-      const baseDir = createRepoTestDir("agentfs-container-cwd");
-      dirs.push(baseDir);
+  it.skipIf(!dockerReady)("respects exec cwd under /workspace", async () => {
+    const baseDir = createRepoTestDir("agentfs-container-cwd");
+    dirs.push(baseDir);
 
-      const runId = `agentfs-container-cwd-${Date.now().toString(36)}`;
-      const agentId = `agent-${Math.random().toString(36).slice(2, 8)}`;
+    const runId = `agentfs-container-cwd-${Date.now().toString(36)}`;
+    const agentId = `agent-${Math.random().toString(36).slice(2, 8)}`;
 
-      const { workspace } = createWorkspace({
-        repoRoot,
-        baseDir,
-        runId,
-        agentId,
-      });
-      cleanupFns.push(() => workspace.cleanup());
+    const { workspace } = createWorkspace({
+      repoRoot,
+      baseDir,
+      runId,
+      agentId,
+    });
+    cleanupFns.push(() => workspace.cleanup());
 
-      await workspace.initialize();
+    await workspace.initialize();
 
-      const rel = toPosixPath(path.relative(repoRoot, baseDir));
-      const res = await workspace.exec("pwd", { cwd: rel });
-      expect(res.exitCode).toBe(0);
-      expect(res.stdout.trim()).toBe(`/workspace/${rel}`);
-    }
-  );
+    const rel = toPosixPath(path.relative(repoRoot, baseDir));
+    const res = await workspace.exec("pwd", { cwd: rel });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout.trim()).toBe(`/workspace/${rel}`);
+  });
 
-  it.skipIf(!(dockerOk && imageOk))(
+  it.skipIf(!dockerReady)(
     "checkpoints and restores AgentFS state",
     async () => {
       const baseDir = createRepoTestDir("agentfs-container-checkpoint");
@@ -166,7 +166,7 @@ describe("AgentFSWorkspace (docker + sdk)", () => {
     }
   );
 
-  it.skipIf(!(dockerOk && imageOk))(
+  it.skipIf(!dockerReady)(
     "reuses container across workspaces in same run",
     async () => {
       const baseDir = createRepoTestDir("agentfs-container-reuse");

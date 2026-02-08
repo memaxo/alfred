@@ -21,6 +21,30 @@ interface GitResult {
 const WORKTREE_ROOT = ".agent/worktrees";
 const META_FILENAME = ".alfred-worktree.json";
 
+const inTest =
+  process.env.BUN_TEST === "1" ||
+  process.env.NODE_ENV === "test" ||
+  process.env.BUN_ENVIRONMENT === "test";
+const decoder = new TextDecoder();
+
+function buildGitEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value !== "string") {
+      continue;
+    }
+    if (
+      key === "GIT_DIR" ||
+      key === "GIT_WORK_TREE" ||
+      key === "GIT_INDEX_FILE"
+    ) {
+      continue;
+    }
+    env[key] = value;
+  }
+  return env;
+}
+
 function sanitizeSegment(value: string) {
   return value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
 }
@@ -43,12 +67,16 @@ async function runGit(
   cwd: string,
   args: string[]
 ): Promise<GitResult> {
+  if (inTest) {
+    return runGitExec(cwd, args);
+  }
   const cwdHandle = openDirectorySecure(cwd, { allowedPrefixes: [repoRoot] });
   try {
     const proc = spawnWithSecureCwd({
       cwdHandle,
       cmd: "git",
       args,
+      env: buildGitEnv(),
       stdout: "pipe",
       stderr: "pipe",
       stdin: "ignore",
@@ -72,6 +100,29 @@ async function runGit(
   } finally {
     cwdHandle.close();
   }
+}
+
+async function runGitExec(cwd: string, args: string[]): Promise<GitResult> {
+  const proc = Bun.spawnSync(["git", ...args], {
+    cwd,
+    env: buildGitEnv(),
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const stdout =
+    proc.stdout && typeof proc.stdout !== "number"
+      ? decoder.decode(proc.stdout)
+      : "";
+  const stderr =
+    proc.stderr && typeof proc.stderr !== "number"
+      ? decoder.decode(proc.stderr)
+      : "";
+  return {
+    exitCode: proc.exitCode ?? 1,
+    stdout: stdout.trim(),
+    stderr: stderr.trim(),
+  };
 }
 
 async function pathExists(candidate: string) {

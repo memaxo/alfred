@@ -1,10 +1,12 @@
+import * as graphRepo from "@alfred/db/repo/graph";
+import * as knowledge from "@alfred/knowledge";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, vi } from "bun:test";
 
 import type {
   KnowledgeConnectInput,
@@ -17,38 +19,63 @@ import type {
 installAuthTokenMock();
 installLoggerMock();
 
-const mockExtract = mock();
-const mockToKnowledge = mock();
-mock.module("@alfred/knowledge", () => ({
-  extract: mockExtract,
-  toKnowledge: mockToKnowledge,
-  semanticQuery: mock(),
-}));
+const mockExtract = vi.fn();
+const mockToKnowledge = vi.fn();
+const mockSemanticQuery = vi.fn();
+const extractSpy = vi
+  .spyOn(knowledge, "extract")
+  .mockImplementation((...args) => mockExtract(...args));
+const toKnowledgeSpy = vi
+  .spyOn(knowledge, "toKnowledge")
+  .mockImplementation((...args) => mockToKnowledge(...args));
+const semanticQuerySpy = vi
+  .spyOn(knowledge, "semanticQuery")
+  .mockImplementation((...args) => mockSemanticQuery(...args));
 
-const mockFindNodesByKind = mock();
-const mockGetNode = mock();
-const mockFindNodeByHash = mock();
-const mockGetOutboundEdges = mock();
-const mockGetEdge = mock();
-const mockUpsertNodes = mock();
-const mockUpsertEdges = mock();
-const mockUpdateNode = mock();
-const mockArchiveNodes = mock();
-const mockCreateCorrection = mock();
-const mockRecordAccessBatch = mock();
-mock.module("@alfred/db/repo/graph", () => ({
-  findNodesByKind: mockFindNodesByKind,
-  getNode: mockGetNode,
-  findNodeByHash: mockFindNodeByHash,
-  getOutboundEdges: mockGetOutboundEdges,
-  getEdge: mockGetEdge,
-  upsertNodes: mockUpsertNodes,
-  upsertEdges: mockUpsertEdges,
-  updateNode: mockUpdateNode,
-  archiveNodes: mockArchiveNodes,
-  createCorrection: mockCreateCorrection,
-  recordAccessBatch: mockRecordAccessBatch,
-}));
+const mockFindNodesByKind = vi.fn();
+const mockGetNode = vi.fn();
+const mockFindNodeByHash = vi.fn();
+const mockGetOutboundEdges = vi.fn();
+const mockGetEdge = vi.fn();
+const mockUpsertNodes = vi.fn();
+const mockUpsertEdges = vi.fn();
+const mockUpdateNode = vi.fn();
+const mockArchiveNodes = vi.fn();
+const mockCreateCorrection = vi.fn();
+const mockRecordAccessBatch = vi.fn();
+const findNodesByKindSpy = vi
+  .spyOn(graphRepo, "findNodesByKind")
+  .mockImplementation((...args) => mockFindNodesByKind(...args));
+const getNodeSpy = vi
+  .spyOn(graphRepo, "getNode")
+  .mockImplementation((...args) => mockGetNode(...args));
+const findNodeByHashSpy = vi
+  .spyOn(graphRepo, "findNodeByHash")
+  .mockImplementation((...args) => mockFindNodeByHash(...args));
+const getOutboundEdgesSpy = vi
+  .spyOn(graphRepo, "getOutboundEdges")
+  .mockImplementation((...args) => mockGetOutboundEdges(...args));
+const getEdgeSpy = vi
+  .spyOn(graphRepo, "getEdge")
+  .mockImplementation((...args) => mockGetEdge(...args));
+const upsertNodesSpy = vi
+  .spyOn(graphRepo, "upsertNodes")
+  .mockImplementation((...args) => mockUpsertNodes(...args));
+const upsertEdgesSpy = vi
+  .spyOn(graphRepo, "upsertEdges")
+  .mockImplementation((...args) => mockUpsertEdges(...args));
+const updateNodeSpy = vi
+  .spyOn(graphRepo, "updateNode")
+  .mockImplementation((...args) => mockUpdateNode(...args));
+const archiveNodesSpy = vi
+  .spyOn(graphRepo, "archiveNodes")
+  .mockImplementation((...args) => mockArchiveNodes(...args));
+const createCorrectionSpy = vi
+  .spyOn(graphRepo, "createCorrection")
+  .mockImplementation((...args) => mockCreateCorrection(...args));
+const recordAccessBatchSpy = vi
+  .spyOn(graphRepo, "recordAccessBatch")
+  .mockImplementation((...args) => mockRecordAccessBatch(...args));
 
 // Import tools after mocking
 const {
@@ -866,5 +893,18 @@ describe("Knowledge Graph Tools", () => {
 });
 
 afterAll(() => {
-  mock.restore();
+  extractSpy.mockRestore();
+  toKnowledgeSpy.mockRestore();
+  semanticQuerySpy.mockRestore();
+  findNodesByKindSpy.mockRestore();
+  getNodeSpy.mockRestore();
+  findNodeByHashSpy.mockRestore();
+  getOutboundEdgesSpy.mockRestore();
+  getEdgeSpy.mockRestore();
+  upsertNodesSpy.mockRestore();
+  upsertEdgesSpy.mockRestore();
+  updateNodeSpy.mockRestore();
+  archiveNodesSpy.mockRestore();
+  createCorrectionSpy.mockRestore();
+  recordAccessBatchSpy.mockRestore();
 });

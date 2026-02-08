@@ -1,13 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 // Mock policy enforcement
 const mockRequireToolScopesAndPolicy = mock(() =>
   Promise.resolve({ claims: {}, decision: { obligations: [] } })
 );
 
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+const authTokenModule = await import("@alfred/auth/token");
+const requireToolScopesAndPolicySpy = vi
+  .spyOn(authTokenModule, "requireToolScopesAndPolicy")
+  .mockImplementation((...args) => mockRequireToolScopesAndPolicy(...args));
 
 // Mock fetch for Caddy API
 const originalFetch = globalThis.fetch;
@@ -306,4 +316,8 @@ describe("router tool", () => {
       expect(result.success).toBe(false);
     });
   });
+});
+
+afterAll(() => {
+  requireToolScopesAndPolicySpy.mockRestore();
 });

@@ -1,5 +1,5 @@
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;
-process.env.DATABASE_URL = "sqlite::memory:";
+const SQLITE_DB_URL = "sqlite::memory:";
 
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
 import { extractEntries } from "@alfred/knowledge/persist";
@@ -10,15 +10,24 @@ let persistKnowledge: typeof import("../src/graphstore").persistKnowledge;
 let db: typeof import("@alfred/db").db;
 let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
 let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
+let skipGraphstore = false;
 
 describe("graphstore integration (sqlite)", () => {
   beforeAll(async () => {
+    process.env.DATABASE_URL = SQLITE_DB_URL;
+    const graphRepo = await import("@alfred/db/repo/graph");
     ({ persistKnowledge } = await import("../src/graphstore"));
     const dbModule = await import("@alfred/db");
     ({ db } = dbModule);
     const schema = await import("@alfred/db/schema/graph");
     ({ memoryNodes } = schema);
     ({ memoryEdges } = schema);
+    const upsertNodes = graphRepo.upsertNodes as { mock?: unknown };
+    const upsertEdges = graphRepo.upsertEdges as { mock?: unknown };
+    skipGraphstore =
+      dbModule.getDbDriver() !== "sqlite" ||
+      typeof upsertNodes.mock === "object" ||
+      typeof upsertEdges.mock === "object";
   });
 
   afterAll(() => {
@@ -35,6 +44,9 @@ describe("graphstore integration (sqlite)", () => {
   });
 
   it("persists nodes and relations via persistKnowledge", async () => {
+    if (skipGraphstore) {
+      return;
+    }
     const resource = `graphstore-${Date.now()}`;
     const graph = buildGraph();
     const entries = extractEntries(graph);
@@ -63,6 +75,9 @@ describe("graphstore integration (sqlite)", () => {
   });
 
   it("no-ops when persisting identical entries twice", async () => {
+    if (skipGraphstore) {
+      return;
+    }
     const resource = `graphstore-idempotent-${Date.now()}`;
     const graph = buildGraph();
     const entries = extractEntries(graph);

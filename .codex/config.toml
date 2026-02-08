@@ -1,5 +1,10 @@
+model = "gpt-5.3-codex"
+web_search = "live" # Use live web search (replaces deprecated features.web_search_request)
+
+# File opener for citations (Cursor IDE)
+file_opener = "cursor"
+
 [features]
-web_search_request = true
 rmcp_client = true # Enable OAuth support for streamable HTTP MCP servers
 
 [mcp_servers.context7]

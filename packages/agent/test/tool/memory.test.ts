@@ -6,72 +6,108 @@
 
 import type { HookContext } from "@alfred/type";
 
+import * as conversationRepo from "@alfred/db/repo/conversation";
+import * as graphDsa from "@alfred/db/repo/graph/dsa-bfs";
+import * as graphRead from "@alfred/db/repo/graph/read";
+import * as graphWrite from "@alfred/db/repo/graph/write";
 import { createHookRegistry } from "@alfred/hooks";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import * as rag from "@alfred/rag";
+import { afterAll, beforeEach, describe, expect, it, vi } from "bun:test";
+
+import * as metrics from "../../src/metrics";
 
 // Mock the graph repo functions before importing tools
-const mockGetNode = mock(() => Promise.resolve(null));
-const mockGetNeighbors = mock(() => Promise.resolve([]));
-const mockRecordAccess = mock(() => Promise.resolve());
-const mockRecordAccessBatch = mock(() => Promise.resolve());
-const mockUpdateNode = mock(() => Promise.resolve(null));
-const mockUpdateNodeConfidence = mock(() => Promise.resolve(null));
-const mockArchiveNodes = mock(() => Promise.resolve(0));
-const mockDeleteNode = mock(() => Promise.resolve(0));
-const mockDsaBfs = mock(() => Promise.resolve(null));
-const mockEmbedMany = mock(() => Promise.resolve([[0.1, 0.2, 0.3]]));
-const mockGetConversation = mock(() => Promise.resolve(null));
-const mockGetConversations = mock(() => Promise.resolve([]));
-const mockGetConversationHistory = mock(() => Promise.resolve(null));
-const mockGetMessages = mock(() => Promise.resolve([]));
-const mockMessageRowToUIMessage = mock((row: any) => ({
+const mockGetNode = vi.fn(() => Promise.resolve(null));
+const mockGetNeighbors = vi.fn(() => Promise.resolve([]));
+const mockRecordAccess = vi.fn(() => Promise.resolve());
+const mockRecordAccessBatch = vi.fn(() => Promise.resolve());
+const mockUpdateNode = vi.fn(() => Promise.resolve(null));
+const mockUpdateNodeConfidence = vi.fn(() => Promise.resolve(null));
+const mockArchiveNodes = vi.fn(() => Promise.resolve(0));
+const mockDeleteNode = vi.fn(() => Promise.resolve(0));
+const mockTouchNodes = vi.fn(() => Promise.resolve(0));
+const mockDsaBfs = vi.fn(() => Promise.resolve(null));
+const mockEmbedMany = vi.fn(() => Promise.resolve([[0.1, 0.2, 0.3]]));
+const mockGetConversation = vi.fn(() => Promise.resolve(null));
+const mockGetConversations = vi.fn(() => Promise.resolve([]));
+const mockGetConversationHistory = vi.fn(() => Promise.resolve(null));
+const mockGetMessages = vi.fn(() => Promise.resolve([]));
+const mockMessageRowToUIMessage = vi.fn((row: any) => ({
   id: row.id,
   role: row.role,
   parts: row.parts ?? [],
 }));
 
-// Mock modules
-mock.module("@alfred/db/repo/graph/read", () => ({
-  getNode: mockGetNode,
-  getNeighbors: mockGetNeighbors,
-  recordAccess: mockRecordAccess,
-  recordAccessBatch: mockRecordAccessBatch,
-}));
+const getNodeSpy = vi
+  .spyOn(graphRead, "getNode")
+  .mockImplementation((...args) => mockGetNode(...args));
+const getNeighborsSpy = vi
+  .spyOn(graphRead, "getNeighbors")
+  .mockImplementation((...args) => mockGetNeighbors(...args));
+const recordAccessSpy = vi
+  .spyOn(graphRead, "recordAccess")
+  .mockImplementation((...args) => mockRecordAccess(...args));
+const recordAccessBatchSpy = vi
+  .spyOn(graphRead, "recordAccessBatch")
+  .mockImplementation((...args) => mockRecordAccessBatch(...args));
+const updateNodeSpy = vi
+  .spyOn(graphWrite, "updateNode")
+  .mockImplementation((...args) => mockUpdateNode(...args));
+const updateNodeConfidenceSpy = vi
+  .spyOn(graphWrite, "updateNodeConfidence")
+  .mockImplementation((...args) => mockUpdateNodeConfidence(...args));
+const archiveNodesSpy = vi
+  .spyOn(graphWrite, "archiveNodes")
+  .mockImplementation((...args) => mockArchiveNodes(...args));
+const deleteNodeSpy = vi
+  .spyOn(graphWrite, "deleteNode")
+  .mockImplementation((...args) => mockDeleteNode(...args));
+const touchNodesSpy = vi
+  .spyOn(graphWrite, "touchNodes")
+  .mockImplementation((...args) => mockTouchNodes(...args));
+const dsaBfsSpy = vi
+  .spyOn(graphDsa, "dsaBfs")
+  .mockImplementation((...args) => mockDsaBfs(...args));
+const embedManySpy = vi
+  .spyOn(rag, "embedMany")
+  .mockImplementation((...args) => mockEmbedMany(...args));
+const getConversationSpy = vi
+  .spyOn(conversationRepo, "getConversation")
+  .mockImplementation((...args) => mockGetConversation(...args));
+const getConversationsSpy = vi
+  .spyOn(conversationRepo, "getConversations")
+  .mockImplementation((...args) => mockGetConversations(...args));
+const getConversationHistorySpy = vi
+  .spyOn(conversationRepo, "getConversationHistory")
+  .mockImplementation((...args) => mockGetConversationHistory(...args));
+const getMessagesSpy = vi
+  .spyOn(conversationRepo, "getMessages")
+  .mockImplementation((...args) => mockGetMessages(...args));
+const messageRowToUIMessageSpy = vi
+  .spyOn(conversationRepo, "messageRowToUIMessage")
+  .mockImplementation((...args) => mockMessageRowToUIMessage(...args));
 
-mock.module("@alfred/db/repo/graph/write", () => ({
-  updateNode: mockUpdateNode,
-  updateNodeConfidence: mockUpdateNodeConfidence,
-  archiveNodes: mockArchiveNodes,
-  deleteNode: mockDeleteNode,
-  touchNodes: mock(() => Promise.resolve(0)),
-}));
-
-mock.module("@alfred/db/repo/graph/dsa-bfs", () => ({
-  dsaBfs: mockDsaBfs,
-}));
-
-mock.module("@alfred/rag", () => ({
-  embedMany: mockEmbedMany,
-}));
-
-mock.module("@alfred/db/repo/conversation", () => ({
-  getConversation: mockGetConversation,
-  getConversations: mockGetConversations,
-  getConversationHistory: mockGetConversationHistory,
-  getMessages: mockGetMessages,
-  messageRowToUIMessage: mockMessageRowToUIMessage,
-}));
-
-// Mock metrics
-mock.module("../../../../src/metrics", () => ({
-  recordAssistantToolCall: mock(() => {}),
-  recordMemoryToolCall: mock(() => {}),
-  recordMemorySearchLatency: mock(() => {}),
-  recordMemorySearchResults: mock(() => {}),
-  recordMemoryBoost: mock(() => {}),
-  recordMemoryRemoval: mock(() => {}),
-  recordMemoryTraverseDepth: mock(() => {}),
-}));
+const recordAssistantToolCallSpy = vi
+  .spyOn(metrics, "recordAssistantToolCall")
+  .mockImplementation(() => {});
+const recordMemoryToolCallSpy = vi
+  .spyOn(metrics, "recordMemoryToolCall")
+  .mockImplementation(() => {});
+const recordMemorySearchLatencySpy = vi
+  .spyOn(metrics, "recordMemorySearchLatency")
+  .mockImplementation(() => {});
+const recordMemorySearchResultsSpy = vi
+  .spyOn(metrics, "recordMemorySearchResults")
+  .mockImplementation(() => {});
+const recordMemoryBoostSpy = vi
+  .spyOn(metrics, "recordMemoryBoost")
+  .mockImplementation(() => {});
+const recordMemoryRemovalSpy = vi
+  .spyOn(metrics, "recordMemoryRemoval")
+  .mockImplementation(() => {});
+const recordMemoryTraverseDepthSpy = vi
+  .spyOn(metrics, "recordMemoryTraverseDepth")
+  .mockImplementation(() => {});
 
 import { toolMemoryBoost } from "../../assistant/src/tool/memory/boost";
 // Import tools after mocks are set up
@@ -799,4 +835,30 @@ describe("Memory Tools", () => {
       expect(toolMemoryHistory.description).toContain("conversation history");
     });
   });
+});
+
+afterAll(() => {
+  getNodeSpy.mockRestore();
+  getNeighborsSpy.mockRestore();
+  recordAccessSpy.mockRestore();
+  recordAccessBatchSpy.mockRestore();
+  updateNodeSpy.mockRestore();
+  updateNodeConfidenceSpy.mockRestore();
+  archiveNodesSpy.mockRestore();
+  deleteNodeSpy.mockRestore();
+  touchNodesSpy.mockRestore();
+  dsaBfsSpy.mockRestore();
+  embedManySpy.mockRestore();
+  getConversationSpy.mockRestore();
+  getConversationsSpy.mockRestore();
+  getConversationHistorySpy.mockRestore();
+  getMessagesSpy.mockRestore();
+  messageRowToUIMessageSpy.mockRestore();
+  recordAssistantToolCallSpy.mockRestore();
+  recordMemoryToolCallSpy.mockRestore();
+  recordMemorySearchLatencySpy.mockRestore();
+  recordMemorySearchResultsSpy.mockRestore();
+  recordMemoryBoostSpy.mockRestore();
+  recordMemoryRemovalSpy.mockRestore();
+  recordMemoryTraverseDepthSpy.mockRestore();
 });

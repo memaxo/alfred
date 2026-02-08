@@ -35,12 +35,31 @@ if (SHOULD_RUN) {
       execute: toolCodexExecuteMock,
     },
   }));
+
+  mock.module("@alfred/agent/environment/agentfs", () => ({
+    AgentFSWorkspace: class {
+      containerCw = "/workspace";
+      containerName = "alfred-agentfs-test";
+      dbPath = ".agentfs/test/agentfs.db";
+      root: string;
+      constructor(_id: string, _runId: string, repoRoot: string) {
+        this.root = repoRoot;
+      }
+      async initialize() {}
+      async cleanup() {}
+    },
+  }));
 }
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 let issueAccessTokenImpl:
   | typeof import("@alfred/auth/token").issueAccessToken
   | null = null;
+
+const expectContainerInput = (call?: { input?: Record<string, unknown> }) => {
+  expect(call?.input?.containerName).toBe("alfred-agentfs-test");
+  expect(call?.input?.containerCw).toBe("/workspace");
+};
 
 async function ensureSigningKeys() {
   if (
@@ -110,6 +129,7 @@ describeFn("codex-intent router", () => {
     expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input.userId).toBe(
       "test-user"
     );
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("rejects high autonomy when authz is missing", async () => {
@@ -138,6 +158,7 @@ describeFn("codex-intent router", () => {
     expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input.userId).toBe(
       "test-user"
     );
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("rejects non-elevated authz for high autonomy", async () => {
@@ -160,6 +181,7 @@ describeFn("codex-intent router", () => {
     expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input.userId).toBe(
       "test-user"
     );
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("rejects tokens missing required scopes", async () => {

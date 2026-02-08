@@ -52,7 +52,9 @@ describe("Conflict Arbiter (smoke)", () => {
       repoRoot,
       "run-smoke",
       "main",
-      "branch-clean"
+      "branch-clean",
+      "alfred-agentfs-test",
+      "/workspace"
     );
 
     expect(result.status).toBe("resolved");

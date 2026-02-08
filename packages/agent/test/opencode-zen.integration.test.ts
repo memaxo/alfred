@@ -13,6 +13,7 @@ import {
   createRepoTestDir,
   isDockerAvailable,
   isImageAvailable,
+  runCmd,
 } from "./utils/infra";
 
 const IMAGE = "alfred-agentfs:codex";
@@ -20,6 +21,8 @@ const AUTHZ = "test-authz";
 
 const dockerOk = isDockerAvailable();
 const imageOk = dockerOk && isImageAvailable(IMAGE);
+const dockerReady =
+  imageOk && runCmd(["docker", "run", "--rm", IMAGE, "true"]).exitCode === 0;
 
 function hasZenKey(): boolean {
   return (
@@ -34,7 +37,7 @@ function e2eEnabled(): boolean {
 }
 
 describe("OpenCode Zen (grok-code) via ACP (integration)", () => {
-  it.skipIf(!(dockerOk && imageOk && e2eEnabled() && hasZenKey()))(
+  it.skipIf(!(dockerReady && e2eEnabled() && hasZenKey()))(
     "runs a minimal prompt against opencode/grok-code in AgentFS container",
     async () => {
       const repoRoot = process.cwd();

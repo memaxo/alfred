@@ -10,15 +10,7 @@ import { installAuthTokenMock } from "@alfred/test-kit";
 
 installAuthTokenMock();
 
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -59,13 +51,6 @@ const dockerExecuteMock = vi.fn((args: unknown) => {
   }
   return { ok: true as const, details: {} };
 });
-
-mock.module("../src/orchestrator/tool/docker.js", () => ({
-  toolDocker: {
-    execute: (...args: Parameters<typeof dockerExecuteMock>) =>
-      dockerExecuteMock(...args),
-  },
-}));
 
 // Mock the agentfs-sdk module
 const mockAgentFS = {
@@ -109,23 +94,14 @@ const mockAgentFS = {
   close: vi.fn().mockResolvedValue(),
 };
 
-mock.module("agentfs-sdk", () => ({
-  AgentFS: {
-    open: vi.fn().mockResolvedValue(mockAgentFS),
-  },
-}));
-
-// Mock graph repo to avoid DB dependency
-mock.module("@alfred/db/src/repo/graph", () => ({
-  getGraphClient: vi.fn().mockReturnValue({}),
-  upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue(),
-}));
+import * as graphRepo from "@alfred/db/repo/graph";
+import { AgentFS } from "agentfs-sdk";
 
 import {
   AgentFSWorkspace,
   isAgentFSWorkspace,
 } from "../src/environment/agentfs";
+import { toolDocker } from "../src/orchestrator/tool/docker";
 
 // Use a test directory under the repo (allowed by Docker security)
 const REPO_ROOT = process.cwd();
@@ -134,8 +110,26 @@ const TEST_WORKSPACE_BASE = path.join(REPO_ROOT, ".agent", "test-workspaces");
 describe("AgentFSWorkspace", () => {
   let tempDir: string;
   let workspace: AgentFSWorkspace;
+  let dockerExecuteSpy: ReturnType<typeof vi.spyOn> | null = null;
+  let agentfsOpenSpy: ReturnType<typeof vi.spyOn> | null = null;
+  let graphClientSpy: ReturnType<typeof vi.spyOn> | null = null;
+  let graphUpsertNodesSpy: ReturnType<typeof vi.spyOn> | null = null;
+  let graphUpsertEdgesSpy: ReturnType<typeof vi.spyOn> | null = null;
 
   beforeEach(() => {
+    dockerExecuteSpy = vi
+      .spyOn(toolDocker, "execute")
+      .mockImplementation((...args) => dockerExecuteMock(...args));
+    agentfsOpenSpy = vi
+      .spyOn(AgentFS, "open")
+      .mockResolvedValue(mockAgentFS as any);
+    graphClientSpy = vi.spyOn(graphRepo, "getGraphClient").mockReturnValue({});
+    graphUpsertNodesSpy = vi
+      .spyOn(graphRepo, "upsertNodes")
+      .mockResolvedValue(new Map());
+    graphUpsertEdgesSpy = vi
+      .spyOn(graphRepo, "upsertEdges")
+      .mockResolvedValue();
     // Create test workspace under the repo (Docker-allowed path)
     const testId = `agentfs-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     tempDir = path.join(TEST_WORKSPACE_BASE, testId);
@@ -145,11 +139,37 @@ describe("AgentFSWorkspace", () => {
       overlay: false,
     });
 
-    // Reset all mocks
-    vi.clearAllMocks();
+    dockerExecuteMock.mockClear();
+    mockAgentFS.kv.set.mockClear();
+    mockAgentFS.kv.get.mockClear();
+    mockAgentFS.kv.delete.mockClear();
+    mockAgentFS.kv.list.mockClear();
+    mockAgentFS.fs.writeFile.mockClear();
+    mockAgentFS.fs.readFile.mockClear();
+    mockAgentFS.fs.readdir.mockClear();
+    mockAgentFS.fs.deleteFile.mockClear();
+    mockAgentFS.fs.stat.mockClear();
+    mockAgentFS.fs.mkdir.mockClear();
+    mockAgentFS.tools.record.mockClear();
+    mockAgentFS.tools.get.mockClear();
+    mockAgentFS.tools.getByName.mockClear();
+    mockAgentFS.tools.getRecent.mockClear();
+    mockAgentFS.tools.getStats.mockClear();
+    mockAgentFS.getDatabase.mockClear();
+    mockAgentFS.close.mockClear();
   });
 
   afterEach(async () => {
+    dockerExecuteSpy?.mockRestore();
+    dockerExecuteSpy = null;
+    agentfsOpenSpy?.mockRestore();
+    agentfsOpenSpy = null;
+    graphClientSpy?.mockRestore();
+    graphClientSpy = null;
+    graphUpsertNodesSpy?.mockRestore();
+    graphUpsertNodesSpy = null;
+    graphUpsertEdgesSpy?.mockRestore();
+    graphUpsertEdgesSpy = null;
     try {
       await workspace.cleanup();
     } catch {

@@ -4,7 +4,18 @@ import {
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+
+import * as homeassistant from "../src/lib/homeassistant";
 
 // Install shared mocks
 installAuthTokenMock();
@@ -22,21 +33,11 @@ mock.module("../src/metrics", () => ({
 }));
 
 // Mock Home Assistant client
-const mockGetStates = mock();
-const mockGetState = mock();
-const mockListEntities = mock();
-const mockControlEntity = mock();
-const mockCreateHomeAssistantClient = mock();
-
-mock.module("../src/lib/homeassistant", () => ({
-  createHomeAssistantClient: mockCreateHomeAssistantClient,
-  HomeAssistant: class MockHomeAssistant {
-    getStates = mockGetStates;
-    getState = mockGetState;
-    listEntities = mockListEntities;
-    controlEntity = mockControlEntity;
-  },
-}));
+const mockGetStates = vi.fn();
+const mockGetState = vi.fn();
+const mockListEntities = vi.fn();
+const mockControlEntity = vi.fn();
+let createHomeAssistantClientSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 // Import tool after mocking
 const { toolHome } = await import("../assistant/src/tool/home");
@@ -49,7 +50,11 @@ describe("Home Tool", () => {
     mockGetState.mockReset();
     mockListEntities.mockReset();
     mockControlEntity.mockReset();
-    mockCreateHomeAssistantClient.mockReset();
+    createHomeAssistantClientSpy ??= vi.spyOn(
+      homeassistant,
+      "createHomeAssistantClient"
+    );
+    createHomeAssistantClientSpy.mockReset();
 
     // Default policy check pass
     mockRequireToolScopesAndPolicy.mockResolvedValue({
@@ -63,7 +68,7 @@ describe("Home Tool", () => {
     });
 
     // Set up mock client factory
-    mockCreateHomeAssistantClient.mockReturnValue({
+    createHomeAssistantClientSpy.mockReturnValue({
       getStates: mockGetStates,
       getState: mockGetState,
       listEntities: mockListEntities,
@@ -79,6 +84,11 @@ describe("Home Tool", () => {
   afterEach(() => {
     // Restore original env
     process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    createHomeAssistantClientSpy?.mockRestore();
+    createHomeAssistantClientSpy = null;
   });
 
   describe("tool metadata", () => {

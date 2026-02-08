@@ -1,6 +1,9 @@
 import type { HookContext } from "@alfred/type";
 
+import * as graphRepo from "@alfred/db/repo/graph";
+import * as embed from "@alfred/embed";
 import { createHookRegistry } from "@alfred/hooks";
+import * as selfSupervision from "@alfred/learning/self_supervision";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
@@ -8,7 +11,7 @@ import {
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, vi } from "bun:test";
 
 import type {
   LearnMistakeInput,
@@ -24,22 +27,24 @@ installLoggerMock();
 const mockRequireToolScopesAndPolicy =
   authTokenMocks.requireToolScopesAndPolicy;
 
-const mockUpsertNodes = mock();
-mock.module("@alfred/db/repo/graph", () => ({
-  upsertNodes: mockUpsertNodes,
-}));
+const mockUpsertNodes = vi.fn();
+const upsertNodesSpy = vi
+  .spyOn(graphRepo, "upsertNodes")
+  .mockImplementation((...args) => mockUpsertNodes(...args));
 
-const mockSupervise = mock();
-mock.module("@alfred/learning/self_supervision", () => ({
-  supervise: mockSupervise,
-}));
+const mockSupervise = vi.fn();
+const superviseSpy = vi
+  .spyOn(selfSupervision, "supervise")
+  .mockImplementation((...args) => mockSupervise(...args));
 
-const mockEmbedMany = mock();
-const mockCosineSimilarity = mock();
-mock.module("@alfred/embed", () => ({
-  cosineSimilarity: mockCosineSimilarity,
-  embedMany: mockEmbedMany,
-}));
+const mockEmbedMany = vi.fn();
+const mockCosineSimilarity = vi.fn();
+const cosineSimilaritySpy = vi
+  .spyOn(embed, "cosineSimilarity")
+  .mockImplementation((...args) => mockCosineSimilarity(...args));
+const embedManySpy = vi
+  .spyOn(embed, "embedMany")
+  .mockImplementation((...args) => mockEmbedMany(...args));
 
 const { toolLearnMistake, toolLearnPattern, toolLearnRecord } =
   await import("../src/orchestrator/tool/learning");
@@ -415,5 +420,8 @@ describe("Learning Tools", () => {
 });
 
 afterAll(() => {
-  mock.restore();
+  upsertNodesSpy.mockRestore();
+  superviseSpy.mockRestore();
+  cosineSimilaritySpy.mockRestore();
+  embedManySpy.mockRestore();
 });

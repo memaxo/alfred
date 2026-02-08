@@ -23,6 +23,7 @@ export interface HomeAssistantCfg {
   token: string;
   timeoutMs?: number;
   verifySsl?: boolean;
+  fetch?: typeof fetch;
 }
 
 export type HomeAssistantError =
@@ -66,14 +67,21 @@ export interface ServiceCallResult {
 
 export class HomeAssistant {
   private readonly cfg: Required<HomeAssistantCfg>;
+  private readonly fetcher: typeof fetch;
 
   constructor(cfg: HomeAssistantCfg) {
+    const fetcher = cfg.fetch ?? globalThis.fetch;
+    if (!fetcher) {
+      throw new Error("Fetch is unavailable");
+    }
     this.cfg = {
       baseUrl: cfg.baseUrl.replace(/\/$/, ""),
       token: cfg.token,
       timeoutMs: cfg.timeoutMs ?? 5000,
       verifySsl: cfg.verifySsl ?? true,
+      fetch: fetcher,
     };
+    this.fetcher = fetcher;
   }
 
   async getStates(domain?: string): Promise<EntityState[]> {
@@ -172,7 +180,7 @@ export class HomeAssistant {
     const url = `${this.cfg.baseUrl}${path}`;
 
     try {
-      const resp = await fetch(url, {
+      const resp = await this.fetcher(url, {
         method,
         headers: {
           Authorization: `Bearer ${this.cfg.token}`,

@@ -1,6 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import * as fs from "node:fs/promises";
-import path from "node:path";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 
 import {
   executeWithOpenCode,
@@ -67,30 +65,37 @@ function makeFakeProc(args?: {
 }
 
 describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () => {
-  const baseDir = path.join(
-    process.cwd(),
-    ".agent",
-    "test-workspaces",
-    "opencode-acp"
-  );
-
-  beforeEach(async () => {
-    await fs.mkdir(baseDir, { recursive: true });
-  });
-
   afterEach(() => {
     opencodeInternals.resetSpawn();
     opencodeInternals.resetConnection();
   });
 
-  it("implements ACP readTextFile/writeTextFile in host mode", async () => {
-    const cw = path.join(
-      baseDir,
-      `host-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    );
-    await fs.mkdir(cw, { recursive: true });
-
-    opencodeInternals.setSpawn(() => makeFakeProc().proc as any);
+  it("implements ACP readTextFile/writeTextFile in container mode", async () => {
+    const files = new Map<string, string>();
+    opencodeInternals.setSpawn((argv: any) => {
+      const args = Array.isArray(argv) ? argv : [];
+      if (args[0] === "docker" && args[1] === "exec") {
+        const cmd = args[4];
+        if (cmd === "mkdir") {
+          return makeFakeProc().proc as any;
+        }
+        if (cmd === "tee") {
+          const filePath = args[5] ?? "";
+          return makeFakeProc({
+            onStdinText: (text) => {
+              files.set(filePath, text);
+            },
+          }).proc as any;
+        }
+        if (cmd === "cat") {
+          const filePath = args[5] ?? "";
+          return makeFakeProc({
+            stdoutText: files.get(filePath) ?? "",
+          }).proc as any;
+        }
+      }
+      return makeFakeProc().proc as any;
+    });
 
     opencodeInternals.setConnection((factory) => ({
       initialize: async () => {},
@@ -112,34 +117,23 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
       cancel: async () => {},
     }));
 
-    try {
-      const out = await executeWithOpenCode({
-        input: {
-          action: "exec",
-          prompt: "fs",
-          auto: "low",
-          cw,
-        },
-        writer: { write: mock(() => {}) },
-        signal: new AbortController().signal,
-      });
+    const out = await executeWithOpenCode({
+      input: {
+        action: "exec",
+        prompt: "fs",
+        auto: "low",
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      },
+      writer: { write: mock(() => {}) },
+      signal: new AbortController().signal,
+    });
 
-      const realCw = await fs.realpath(cw);
-      const disk = await fs.readFile(path.join(realCw, "hello.txt"), "utf8");
-      expect(disk).toBe("hello");
-      expect(out.result).toBeDefined();
-    } finally {
-      await fs.rm(cw, { recursive: true, force: true });
-    }
+    expect(files.get("/workspace/hello.txt")).toBe("hello");
+    expect(out.result).toBeDefined();
   });
 
-  it("rejects filesystem access outside allowed prefixes in host mode", async () => {
-    const cw = path.join(
-      baseDir,
-      `host-deny-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    );
-    await fs.mkdir(cw, { recursive: true });
-
+  it("rejects filesystem access outside container workspace", async () => {
     opencodeInternals.setSpawn(() => makeFakeProc().proc as any);
 
     opencodeInternals.setConnection((factory) => ({
@@ -156,7 +150,7 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
         } catch (error: any) {
           threw = true;
           expect(String(error?.message ?? error)).toContain(
-            "opencode_fs_path_disallowed"
+            "opencode_container_cwd_invalid"
           );
         }
         expect(threw).toBe(true);
@@ -165,29 +159,20 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
       cancel: async () => {},
     }));
 
-    try {
-      await executeWithOpenCode({
-        input: {
-          action: "exec",
-          prompt: "deny",
-          auto: "low",
-          cw,
-        },
-        writer: { write: mock(() => {}) },
-        signal: new AbortController().signal,
-      });
-    } finally {
-      await fs.rm(cw, { recursive: true, force: true });
-    }
+    await executeWithOpenCode({
+      input: {
+        action: "exec",
+        prompt: "deny",
+        auto: "low",
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      },
+      writer: { write: mock(() => {}) },
+      signal: new AbortController().signal,
+    });
   });
 
   it("captures agent_thought_chunk + plan and surfaces diff content as artifacts", async () => {
-    const cw = path.join(
-      baseDir,
-      `events-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    );
-    await fs.mkdir(cw, { recursive: true });
-
     opencodeInternals.setSpawn(() => makeFakeProc().proc as any);
 
     const writerChunks: unknown[] = [];
@@ -241,37 +226,34 @@ describe("toolOpenCode ACP client parity (filesystem + thought/plan/diff)", () =
       cancel: async () => {},
     }));
 
-    try {
-      const out = await executeWithOpenCode({
-        input: {
-          action: "exec",
-          prompt: "events",
-          auto: "low",
-          cw,
-        },
-        writer,
-        signal: new AbortController().signal,
-      });
+    const out = await executeWithOpenCode({
+      input: {
+        action: "exec",
+        prompt: "events",
+        auto: "low",
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      },
+      writer,
+      signal: new AbortController().signal,
+    });
 
-      expect(out.artifacts?.some((a) => a.path === "file.txt")).toBe(true);
-      expect(
-        writerChunks.some(
-          (c: any) => c?.type === "stdout" && c?.event?.type === "thought"
-        )
-      ).toBe(true);
-      expect(
-        writerChunks.some(
-          (c: any) => c?.type === "notice" && c?.message === "opencode_plan"
-        )
-      ).toBe(true);
-      expect(
-        writerChunks.some(
-          (c: any) => c?.type === "stdout" && c?.event?.type === "artifact"
-        )
-      ).toBe(true);
-    } finally {
-      await fs.rm(cw, { recursive: true, force: true });
-    }
+    expect(out.artifacts?.some((a) => a.path === "file.txt")).toBe(true);
+    expect(
+      writerChunks.some(
+        (c: any) => c?.type === "stdout" && c?.event?.type === "thought"
+      )
+    ).toBe(true);
+    expect(
+      writerChunks.some(
+        (c: any) => c?.type === "notice" && c?.message === "opencode_plan"
+      )
+    ).toBe(true);
+    expect(
+      writerChunks.some(
+        (c: any) => c?.type === "stdout" && c?.event?.type === "artifact"
+      )
+    ).toBe(true);
   });
 
   it("proxies ACP filesystem ops through docker exec when containerName is set", async () => {

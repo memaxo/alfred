@@ -30,7 +30,16 @@ export function runCmd(argv: string[]): CmdResult {
 }
 
 export function isDockerAvailable(): boolean {
-  return runCmd(["docker", "info"]).exitCode === 0;
+  const dockerCmd = process.env.DOCKER_BIN ?? "docker";
+  const info = runCmd([dockerCmd, "info"]);
+  if (info.exitCode !== 0) {
+    return false;
+  }
+  const version = runCmd([dockerCmd, "--version"]);
+  if (version.exitCode !== 0) {
+    return false;
+  }
+  return version.stdout.toLowerCase().includes("docker");
 }
 
 export function isImageAvailable(tag: string): boolean {

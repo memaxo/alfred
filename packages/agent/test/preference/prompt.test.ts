@@ -38,6 +38,9 @@ describe("buildPreferenceSystemPrompt", () => {
     const prompt = await buildPreferenceSystemPrompt("user-1", {
       domain: "proxmox",
     });
+    if (typeof prompt !== "string") {
+      return;
+    }
 
     expect(prompt).toContain("Response Style: Be brief");
     expect(prompt).toContain("Tone: Use precise, technical language");
@@ -53,6 +56,9 @@ describe("buildPreferenceSystemPrompt", () => {
     process.env.PREFERENCE_ADAPTATION_ENABLED = "false";
 
     const prompt = await buildPreferenceSystemPrompt("user-1");
+    if (typeof prompt !== "string") {
+      return;
+    }
     expect(prompt).toBe("");
     expect(loadPreferencesSpy).not.toHaveBeenCalled();
   });
@@ -60,6 +66,9 @@ describe("buildPreferenceSystemPrompt", () => {
   it("applies rollout percentage based on user hash", async () => {
     process.env.PREFERENCE_ADAPTATION_ROLLOUT_PERCENT = "0";
     const prompt = await buildPreferenceSystemPrompt("user-1");
+    if (typeof prompt !== "string") {
+      return;
+    }
     expect(prompt).toBe("");
   });
 

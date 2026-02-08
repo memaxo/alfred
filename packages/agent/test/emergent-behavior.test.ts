@@ -1,4 +1,6 @@
-import { beforeAll, describe, expect, it, mock } from "bun:test";
+import * as graphRepo from "@alfred/db/repo/graph";
+import * as rag from "@alfred/rag";
+import { afterAll, beforeAll, describe, expect, it, vi } from "bun:test";
 
 const graphFixture = new Map<
   string,
@@ -46,7 +48,7 @@ const graphFixture = new Map<
   ["reuters", { concept: "News", path: ["Reuters", "News"], depth: 1 }],
 ]);
 
-const findNearestConceptMock = mock(
+const findNearestConceptMock = vi.fn(
   (
     label: string | undefined,
     targetConcepts: string[],
@@ -78,17 +80,17 @@ const findNearestConceptMock = mock(
   }
 );
 
-mock.module("@alfred/db/repo/graph", () => ({
-  findNearestConcept: findNearestConceptMock,
-}));
+const findNearestConceptSpy = vi
+  .spyOn(graphRepo, "findNearestConcept")
+  .mockImplementation((...args) => findNearestConceptMock(...args));
 
-const embedManyMock = mock((labels: string[]) =>
+const embedManyMock = vi.fn((labels: string[]) =>
   Promise.resolve(labels.map((label) => buildDeterministicVector(label)))
 );
 
-mock.module("@alfred/rag", () => ({
-  embedMany: embedManyMock,
-}));
+const embedManySpy = vi
+  .spyOn(rag, "embedMany")
+  .mockImplementation((...args) => embedManyMock(...args));
 
 const { getPersonaInstruction } = await import("../src/assistant/src/adapter");
 const { linkEntities } = await import("../src/services/entity-linker");
@@ -252,6 +254,11 @@ describe("Emergent Behavior & Entity Linking", () => {
   it("should return null instruction for empty domains", () => {
     expect(getPersonaInstruction([])).toBeNull();
   });
+});
+
+afterAll(() => {
+  findNearestConceptSpy.mockRestore();
+  embedManySpy.mockRestore();
 });
 
 function buildDeterministicVector(label: string): number[] {

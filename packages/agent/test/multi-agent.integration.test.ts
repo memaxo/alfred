@@ -2,14 +2,29 @@ import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { OrchestratorContext } from "@alfred/runtime/src/orchestrator/types";
 import type { ContextBundle, WorkflowEvent } from "@alfred/type/plan";
 
+import { WorkspaceFactory } from "@alfred/agent/environment/factory";
+import * as mergeExecutor from "@alfred/agent/orchestrator/multi/merge-executor";
 import {
   plansPath,
   rootPlanPath,
   runPlansDir,
   subtaskPlanPath,
 } from "@alfred/agent/orchestrator/plans";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
+import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
 import { withWorkflowRuntime } from "@alfred/test-kit/workflow/runtime-fixture";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,34 +32,25 @@ import { dirname, join, resolve } from "node:path";
 
 const agentScripts = new Map<string, WriterChunk[]>();
 
-mock.module("@alfred/agent/environment/factory", () => ({
-  WorkspaceFactory: {
-    create: async (
-      _env: string,
-      agentId: string,
-      runId: string,
-      workspace: string
-    ) => ({
-      checkpoint: async () => {},
-      cleanup: async () => {},
-      id: `${runId}-${agentId}`,
-      initialize: async () => {},
-      restore: async () => {},
-      root: workspace,
-    }),
-  },
-}));
+const workspaceCreateMock = vi.fn(
+  async (_env: string, agentId: string, runId: string, workspace: string) => ({
+    checkpoint: async () => {},
+    cleanup: async () => {},
+    id: `${runId}-${agentId}`,
+    initialize: async () => {},
+    restore: async () => {},
+    root: workspace,
+  })
+);
 
-mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
-  toolCodex: {
-    execute: async ({ input, writer }: { input: { sessionId: string } }) => {
-      const script = agentScripts.get(input.sessionId) ?? defaultScript();
-      for (const chunk of script) {
-        await writer.write(chunk);
-      }
-    },
-  },
-}));
+const toolCodexExecuteMock = vi.fn(
+  async ({ input, writer }: { input: { sessionId: string }; writer: any }) => {
+    const script = agentScripts.get(input.sessionId) ?? defaultScript();
+    for (const chunk of script) {
+      await writer.write(chunk);
+    }
+  }
+);
 
 const mergeExecutorMock = mock(() =>
   Promise.resolve({
@@ -53,10 +59,6 @@ const mergeExecutorMock = mock(() =>
     targetBranch: "main",
   })
 );
-
-mock.module("@alfred/agent/orchestrator/multi/merge-executor", () => ({
-  executeMergePlan: mergeExecutorMock,
-}));
 
 const toolRunnerExecute = mock(() =>
   Promise.resolve({
@@ -67,12 +69,6 @@ const toolRunnerExecute = mock(() =>
   })
 );
 
-mock.module("@alfred/agent/orchestrator/tool/runner", () => ({
-  toolRunner: {
-    execute: toolRunnerExecute,
-  },
-}));
-
 const smokeVerifyMock = mock(() =>
   Promise.resolve({
     message: "ok",
@@ -80,11 +76,29 @@ const smokeVerifyMock = mock(() =>
   })
 );
 
-mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
-  smokeTester: {
-    verify: smokeVerifyMock,
-  },
-}));
+let workspaceCreateSpy: ReturnType<typeof vi.spyOn> | null = null;
+let toolCodexExecuteSpy: ReturnType<typeof vi.spyOn> | null = null;
+let mergeExecutorSpy: ReturnType<typeof vi.spyOn> | null = null;
+let toolRunnerExecuteSpy: ReturnType<typeof vi.spyOn> | null = null;
+let smokeVerifySpy: ReturnType<typeof vi.spyOn> | null = null;
+
+beforeAll(() => {
+  workspaceCreateSpy = vi
+    .spyOn(WorkspaceFactory, "create")
+    .mockImplementation((...args) => workspaceCreateMock(...args));
+  toolCodexExecuteSpy = vi
+    .spyOn(toolCodex, "execute")
+    .mockImplementation((...args) => toolCodexExecuteMock(...args));
+  mergeExecutorSpy = vi
+    .spyOn(mergeExecutor, "executeMergePlan")
+    .mockImplementation((...args) => mergeExecutorMock(...args));
+  toolRunnerExecuteSpy = vi
+    .spyOn(toolRunner, "execute")
+    .mockImplementation((...args) => toolRunnerExecute(...args));
+  smokeVerifySpy = vi
+    .spyOn(smokeTester, "verify")
+    .mockImplementation((...args) => smokeVerifyMock(...args));
+});
 
 const { runWaves } = await import("../../runtime/src/orchestrator/waves.ts");
 const { runMergePhase, runMergeAnalysis } =
@@ -120,6 +134,8 @@ const tempDirs: string[] = [];
 
 beforeEach(() => {
   agentScripts.clear();
+  workspaceCreateMock.mockClear();
+  toolCodexExecuteMock.mockClear();
   mergeExecutorMock.mockClear();
   toolRunnerExecute.mockClear();
   smokeVerifyMock.mockClear();
@@ -131,6 +147,19 @@ afterEach(async () => {
   await Promise.all(
     dirs.map((dir) => rm(dir, { force: true, recursive: true }))
   );
+});
+
+afterAll(() => {
+  workspaceCreateSpy?.mockRestore();
+  workspaceCreateSpy = null;
+  toolCodexExecuteSpy?.mockRestore();
+  toolCodexExecuteSpy = null;
+  mergeExecutorSpy?.mockRestore();
+  mergeExecutorSpy = null;
+  toolRunnerExecuteSpy?.mockRestore();
+  toolRunnerExecuteSpy = null;
+  smokeVerifySpy?.mockRestore();
+  smokeVerifySpy = null;
 });
 
 describe("multi-agent orchestrator integration", () => {
@@ -205,10 +234,10 @@ describe("multi-agent orchestrator integration", () => {
       expect(wavePlanEvents.length).toBeGreaterThan(1);
       expect(
         events.some(
-          (evt) => evt.type === "notice" && evt.message === "wave_wave_1_start"
+          (evt) => evt._ === "notice" && evt.message === "wave_wave_1_start"
         )
       ).toBe(true);
-      expect(result.trackerState.waves).toMatchObject({
+      expect(result.trackerContext.state.waves).toMatchObject({
         wave_0: { status: "completed" },
         wave_1: { status: "completed" },
       });
@@ -311,6 +340,10 @@ describe("multi-agent orchestrator integration", () => {
 
   it("aborts when stuck agents exceed thresholds", async () => {
     await withWorkflowRuntime(async () => {
+      const prevNoProgress = process.env.STUCK_NO_PROGRESS_MS;
+      const prevMaxTransitions = process.env.STUCK_MAX_TRANSITIONS;
+      process.env.STUCK_NO_PROGRESS_MS = "0";
+      process.env.STUCK_MAX_TRANSITIONS = "1";
       const workspace = await createWorkspace();
       const requirement = "Stress test stuck detection";
       const bundle = makeBundle([
@@ -329,12 +362,29 @@ describe("multi-agent orchestrator integration", () => {
         scripts[task.id] = stuckScript;
       }
 
-      const { events, result } = await runScenario({
-        bundle,
-        requirement,
-        scripts,
-        workspace,
-      });
+      let events: WorkflowEvent[] = [];
+      let result: Awaited<ReturnType<typeof runWaves>>;
+      try {
+        const outcome = await runScenario({
+          bundle,
+          requirement,
+          scripts,
+          workspace,
+        });
+        ({ events } = outcome);
+        ({ result } = outcome);
+      } finally {
+        if (prevNoProgress === undefined) {
+          process.env.STUCK_NO_PROGRESS_MS = undefined;
+        } else {
+          process.env.STUCK_NO_PROGRESS_MS = prevNoProgress;
+        }
+        if (prevMaxTransitions === undefined) {
+          process.env.STUCK_MAX_TRANSITIONS = undefined;
+        } else {
+          process.env.STUCK_MAX_TRANSITIONS = prevMaxTransitions;
+        }
+      }
 
       expect(result.aborted).toBe(true);
       expect(events.some((evt) => evt.kind === "wave-aborted")).toBe(true);

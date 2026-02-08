@@ -66,13 +66,15 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
     opencodeInternals.resetConnection();
   });
 
-  it("requires an AgentFS container for server profile", async () => {
+  it("rejects non-AgentFS container names", async () => {
     const writer = { write: mock(() => {}) };
     const input: any = {
       action: "exec",
       execProfile: "server",
-      prompt: "no-container",
+      prompt: "bad-container",
       auto: "low",
+      containerName: "container-123",
+      containerCw: "/workspace",
     };
 
     let threw = false;
@@ -85,7 +87,7 @@ describe("toolOpenCode server profile (ACP stdio)", () => {
     } catch (error: any) {
       threw = true;
       expect(String(error?.message ?? error)).toContain(
-        "opencode_server_requires_container"
+        "opencode_container_name_invalid"
       );
     }
     expect(threw).toBe(true);

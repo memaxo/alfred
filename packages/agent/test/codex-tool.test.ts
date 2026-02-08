@@ -1,10 +1,12 @@
+import * as graphRepo from "@alfred/db/repo/graph";
+import { logger } from "@alfred/metrics";
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
   expect,
   it,
-  mock,
   vi,
 } from "bun:test";
 import {
@@ -25,24 +27,14 @@ import {
   resolve,
 } from "node:path";
 
+import type { CodexToolInput } from "../src/orchestrator/tool/codex/index";
+
+import { __internals } from "../src/orchestrator/tool/codex/index";
 import {
   DirectoryAccessError,
   openDirectorySecure,
   safeRealpath,
 } from "../src/security/filesystem";
-
-// Mock graph repo to avoid pulling DB layer via assistant graphstore
-mock.module("@alfred/db/src/repo/graph", () => ({
-  getGraphClient: vi.fn().mockReturnValue({}),
-  upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue(),
-}));
-
-import { logger } from "@alfred/metrics";
-
-import type { CodexToolInput } from "../src/orchestrator/tool/codex/index";
-
-import { __internals } from "../src/orchestrator/tool/codex/index";
 
 const {
   isWithinBase,
@@ -52,6 +44,16 @@ const {
   validateOutputSchema,
   buildTurnOptions,
 } = __internals;
+
+const getGraphClientSpy = vi
+  .spyOn(graphRepo, "getGraphClient")
+  .mockImplementation(() => ({}) as any);
+const upsertNodesSpy = vi
+  .spyOn(graphRepo, "upsertNodes")
+  .mockResolvedValue(new Map());
+const upsertEdgesSpy = vi
+  .spyOn(graphRepo, "upsertEdges")
+  .mockResolvedValue();
 
 function createTempDir(prefix: string) {
   return mkdtempSync(join(os.tmpdir(), prefix));
@@ -463,4 +465,10 @@ describe("codex tool sandbox helpers", () => {
       ).toThrowError("invalid_output_schema");
     });
   });
+});
+
+afterAll(() => {
+  getGraphClientSpy.mockRestore();
+  upsertNodesSpy.mockRestore();
+  upsertEdgesSpy.mockRestore();
 });

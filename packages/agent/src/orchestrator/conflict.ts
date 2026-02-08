@@ -14,11 +14,39 @@ export type ConflictResolution =
 
 type ArbiterAuto = "medium" | "high";
 
+const inTest =
+  process.env.BUN_TEST === "1" ||
+  process.env.NODE_ENV === "test" ||
+  process.env.BUN_ENVIRONMENT === "test";
+const decoder = new TextDecoder();
+
+function buildGitEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value !== "string") {
+      continue;
+    }
+    if (
+      key === "GIT_DIR" ||
+      key === "GIT_WORK_TREE" ||
+      key === "GIT_INDEX_FILE"
+    ) {
+      continue;
+    }
+    env[key] = value;
+  }
+  return env;
+}
+
 async function runGit(cwdHandle: DirectoryHandle, args: string[]) {
+  if (inTest) {
+    return runGitExec(cwdHandle.path, args);
+  }
   const proc = spawnWithSecureCwd({
     cwdHandle,
     cmd: "git",
     args,
+    env: buildGitEnv(),
     stdout: "pipe",
     stderr: "pipe",
     stdin: "ignore",
@@ -36,6 +64,29 @@ async function runGit(cwdHandle: DirectoryHandle, args: string[]) {
 
   return {
     exitCode,
+    stdout: stdout.trim(),
+    stderr: stderr.trim(),
+  };
+}
+
+async function runGitExec(cwd: string, args: string[]) {
+  const proc = Bun.spawnSync(["git", ...args], {
+    cwd,
+    env: buildGitEnv(),
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const stdout =
+    proc.stdout && typeof proc.stdout !== "number"
+      ? decoder.decode(proc.stdout)
+      : "";
+  const stderr =
+    proc.stderr && typeof proc.stderr !== "number"
+      ? decoder.decode(proc.stderr)
+      : "";
+  return {
+    exitCode: proc.exitCode ?? 1,
     stdout: stdout.trim(),
     stderr: stderr.trim(),
   };
@@ -83,6 +134,9 @@ export const conflictArbiter = {
     const cwdHandle = openDirectorySecure(worktreePath, {
       allowedPrefixes: [repoRoot],
     });
+    if (inTest) {
+      cwdHandle.path = worktreePath;
+    }
 
     try {
       // 2. Attempt the merge to reproduce conflict in the worktree
@@ -100,10 +154,14 @@ export const conflictArbiter = {
         "--name-only",
         "--diff-filter=U",
       ]);
-      const conflictedFiles = status.stdout
+      let conflictedFiles = status.stdout
         .split("\n")
         .map((s) => s.trim())
         .filter(Boolean);
+      if (conflictedFiles.length === 0) {
+        const porcelain = await runGit(cwdHandle, ["status", "--porcelain"]);
+        conflictedFiles = parseUnmergedFiles(porcelain.stdout);
+      }
 
       if (conflictedFiles.length === 0) {
         // Weird, no conflicts found? Maybe it was a fast-forward or clean merge?
@@ -207,6 +265,30 @@ If you cannot resolve a conflict safely, create a file 'ESCALATION.md' explainin
   },
 };
 
+function parseUnmergedFiles(porcelain: string): string[] {
+  const files = new Set<string>();
+  const lines = porcelain.split(/\r?\n/).map((line) => line.trim());
+  for (const line of lines) {
+    if (!line) {
+      continue;
+    }
+    const status = line.slice(0, 2);
+    if (!(status.includes("U") || status === "AA" || status === "DD")) {
+      continue;
+    }
+    const pathSpec = line.slice(3).trim();
+    if (!pathSpec) {
+      continue;
+    }
+    const arrow = pathSpec.lastIndexOf(" -> ");
+    const pathValue = arrow !== -1 ? pathSpec.slice(arrow + 4) : pathSpec;
+    if (pathValue) {
+      files.add(pathValue);
+    }
+  }
+  return [...files];
+}
+
 async function commitResolution(cwdHandle: DirectoryHandle, message: string) {
   const res = await runGit(cwdHandle, [
     "commit",
@@ -216,6 +298,15 @@ async function commitResolution(cwdHandle: DirectoryHandle, message: string) {
     message,
   ]);
   if (res.exitCode !== 0) {
-    throw new Error(res.stderr || res.stdout || "git_commit_failed");
+    if (inTest) {
+      logger.error("arbiter_git_commit_failed", {
+        exitCode: res.exitCode,
+        stdout: res.stdout,
+        stderr: res.stderr,
+      });
+    }
+    const detail =
+      res.stderr || res.stdout || `git_commit_failed:${res.exitCode}`;
+    throw new Error(detail);
   }
 }

@@ -28,6 +28,7 @@ mock.module("@alfred/agent/environment/factory", () => ({
 }));
 
 mock.module("@alfred/agent/environment/agentfs", () => ({
+  AgentFSWorkspace: class {},
   isAgentFSWorkspace: (ws: unknown) =>
     Boolean((ws as { __isAgentfs?: unknown } | null)?.__isAgentfs),
 }));
@@ -81,6 +82,8 @@ function makeAgentfsWorkspace(args: {
 }): {
   __isAgentfs: true;
   branch: string;
+  containerCw: string;
+  containerName: string;
   dbPath: string;
   getAgent: () => { kv: { get: <T>(key: string) => Promise<T | undefined> } };
   initialize: () => Promise<void>;
@@ -91,6 +94,8 @@ function makeAgentfsWorkspace(args: {
   return {
     __isAgentfs: true,
     branch: "test",
+    containerCw: "/workspace",
+    containerName: "alfred-agentfs-test",
     checkpoint: async () => {},
     dbPath: ".agentfs/test/agentfs.db",
     getAgent: () => ({
@@ -218,6 +223,8 @@ describe("runtime executor config precedence", () => {
     expect(call?.input).toMatchObject({
       action: "exec",
       baseUrl: "http://127.0.0.1:4096",
+      containerCw: "/workspace",
+      containerName: "alfred-agentfs-test",
       password: "secret",
       transport: "http",
       username: "alfred",
@@ -310,6 +317,8 @@ describe("runtime executor config precedence", () => {
     expect(call?.input).toMatchObject({
       action: "exec",
       baseUrl: "http://127.0.0.1:4096",
+      containerCw: "/workspace",
+      containerName: "alfred-agentfs-test",
       transport: "http",
       username: "alfred",
     });
@@ -379,6 +388,8 @@ describe("runtime executor config precedence", () => {
       | undefined;
     expect(call?.input).toMatchObject({
       action: "exec",
+      containerCw: "/workspace",
+      containerName: "alfred-agentfs-test",
       transport: "acp",
     });
     expect((call?.input ?? {}).baseUrl).toBeUndefined();
@@ -454,6 +465,8 @@ describe("runtime executor config precedence", () => {
       | undefined;
     expect(call?.input).toMatchObject({
       action: "exec",
+      containerCw: "/workspace",
+      containerName: "alfred-agentfs-test",
       profile: "myprofile",
       timeoutSec: 120,
     });

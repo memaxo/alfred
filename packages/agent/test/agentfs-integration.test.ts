@@ -12,24 +12,29 @@ import { installAuthTokenMock } from "@alfred/test-kit";
 
 installAuthTokenMock();
 
+import * as graphRepo from "@alfred/db/repo/graph";
 import {
   afterEach,
+  afterAll,
   beforeAll,
   beforeEach,
   describe,
   expect,
   it,
-  mock,
+  vi,
 } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 
-// Mock graph repo to avoid DB dependency
-mock.module("@alfred/db/src/repo/graph", () => ({
-  getGraphClient: () => ({}),
-  upsertNodes: async () => new Map(),
-  upsertEdges: async () => {},
-}));
+const getGraphClientSpy = vi
+  .spyOn(graphRepo, "getGraphClient")
+  .mockImplementation(() => ({}) as any);
+const upsertNodesSpy = vi
+  .spyOn(graphRepo, "upsertNodes")
+  .mockImplementation(async () => new Map());
+const upsertEdgesSpy = vi
+  .spyOn(graphRepo, "upsertEdges")
+  .mockImplementation(async () => {});
 
 import {
   extractMistakes,
@@ -440,4 +445,10 @@ describe("AgentFS Integration", () => {
       await workspace.cleanup();
     });
   });
+});
+
+afterAll(() => {
+  getGraphClientSpy.mockRestore();
+  upsertNodesSpy.mockRestore();
+  upsertEdgesSpy.mockRestore();
 });

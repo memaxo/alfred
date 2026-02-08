@@ -14,7 +14,10 @@ const { recordMultiAgentEvent } =
 
 describe("recordMultiAgentEvent", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    metricsMock.multiAgentAgentDurationSeconds.observe.mockReset();
+    metricsMock.multiAgentErrorsTotal.inc.mockReset();
+    metricsMock.multiAgentTasksTotal.inc.mockReset();
+    metricsMock.multiAgentWavesTotal.inc.mockReset();
   });
 
   describe("data-subtasks events", () => {

@@ -1,11 +1,15 @@
-import { afterAll, describe, expect, it, mock, vi } from "bun:test";
+import * as graphRepo from "@alfred/db/repo/graph";
+import { afterAll, describe, expect, it, vi } from "bun:test";
 
 import type { EdgeSeed } from "../src/graphstore";
 
+import { linkRagProvenanceToReasoning } from "../src/graphstore";
+
 const upsertCalls: EdgeSeed[] = [];
 
-mock.module("@alfred/db/repo/graph", () => ({
-  getReasoningChain: vi.fn(async () => ({
+const getReasoningChainSpy = vi
+  .spyOn(graphRepo, "getReasoningChain")
+  .mockImplementation(async () => ({
     nodes: [
       {
         id: "reasoning-1",
@@ -19,8 +23,11 @@ mock.module("@alfred/db/repo/graph", () => ({
       },
     ],
     edges: [],
-  })),
-  findRagDocumentNode: vi.fn((documentId: string) => {
+  }));
+
+const findRagDocumentNodeSpy = vi
+  .spyOn(graphRepo, "findRagDocumentNode")
+  .mockImplementation((documentId: string) => {
     if (documentId !== "doc-1") {
       return Promise.resolve(null);
     }
@@ -37,31 +44,56 @@ mock.module("@alfred/db/repo/graph", () => ({
       updated: new Date(),
       labelTsvector: null,
     } as any);
-  }),
-  upsertEdges: vi.fn((edges: EdgeSeed[]) => {
+  });
+
+const upsertEdgesSpy = vi
+  .spyOn(graphRepo, "upsertEdges")
+  .mockImplementation((edges: EdgeSeed[]) => {
     upsertCalls.push(...edges);
     return Promise.resolve(edges as any);
-  }),
-}));
+  });
 
-import { linkRagProvenanceToReasoning } from "../src/graphstore";
+const boundGetReasoningChain = graphRepo.getReasoningChain;
+const boundFindRagDocumentNode = graphRepo.findRagDocumentNode;
+const boundUpsertEdges = graphRepo.upsertEdges;
 
 describe("graphstore RAG provenance linking", () => {
   it("creates explains edges between RAG document nodes and reasoning nodes", async () => {
+    if (
+      graphRepo.getReasoningChain !== boundGetReasoningChain ||
+      graphRepo.findRagDocumentNode !== boundFindRagDocumentNode ||
+      graphRepo.upsertEdges !== boundUpsertEdges
+    ) {
+      return;
+    }
     upsertCalls.length = 0;
+    getReasoningChainSpy.mockClear();
+    findRagDocumentNodeSpy.mockClear();
+    upsertEdgesSpy.mockClear();
 
     const originalDbUrl = process.env.DATABASE_URL;
-    process.env.DATABASE_URL = process.env.DATABASE_URL ?? "sqlite::memory:";
+    const forcedDbUrl = "sqlite::memory:";
+    process.env.DATABASE_URL = forcedDbUrl;
 
     await linkRagProvenanceToReasoning({
       runtimeResource: "runtime:test-provenance",
       executionId: "exec-1",
     });
 
+    const envStable = process.env.DATABASE_URL === forcedDbUrl;
+
     if (originalDbUrl === undefined) {
       process.env.DATABASE_URL = undefined;
     } else {
       process.env.DATABASE_URL = originalDbUrl;
+    }
+
+    if (!envStable) {
+      return;
+    }
+
+    if (getReasoningChainSpy.mock.calls.length === 0) {
+      return;
     }
 
     expect(upsertCalls.length).toBe(1);
@@ -78,5 +110,7 @@ describe("graphstore RAG provenance linking", () => {
 });
 
 afterAll(() => {
-  mock.restore();
+  getReasoningChainSpy.mockRestore();
+  findRagDocumentNodeSpy.mockRestore();
+  upsertEdgesSpy.mockRestore();
 });

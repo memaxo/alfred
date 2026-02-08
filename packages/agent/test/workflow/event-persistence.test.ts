@@ -2,18 +2,14 @@ import type { WorkflowEvent } from "@alfred/type";
 
 // Install shared logger mock first
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
-import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+
+import {
+  installWorkflowRepoMock,
+  workflowRepoMocks,
+} from "./workflow-repo.mock";
 
 installLoggerMock();
-
-// Create mocks with default exports pattern for better mock isolation
-const workflowRepoMock = {
-  appendEvent: vi.fn(),
-  getRun: vi.fn(),
-  createRun: vi.fn(),
-  updateRun: vi.fn(),
-  listEvents: vi.fn(),
-};
 
 const envelopeMock = {
   unwrapEventEnvelope: vi.fn((data: unknown) => data),
@@ -34,9 +30,7 @@ const redactionMock = {
   })),
 };
 
-// Register all mocks before importing the module under test
-// Implementation uses: import * as workflowRepo from "@alfred/db/repo/workflow"
-mock.module("@alfred/db/repo/workflow", () => workflowRepoMock);
+installWorkflowRepoMock();
 mock.module("../../src/utils/envelope", () => envelopeMock);
 mock.module("../../src/utils/normalize", () => normalizeMock);
 mock.module("../../src/utils/redaction", () => redactionMock);
@@ -44,15 +38,15 @@ mock.module("../../src/utils/redaction", () => redactionMock);
 const { persistWorkflowEvent, persistEventSafe } =
   await import("../../src/workflow/event-persistence");
 
-afterAll(() => {
-  mock.restore();
-});
-
 describe("event-persistence", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    workflowRepoMock.appendEvent.mockResolvedValue();
-    normalizeMock.eventToUiMessages.mockReturnValue(null);
+    installWorkflowRepoMock();
+    workflowRepoMocks.appendEvent.mockReset().mockResolvedValue();
+    loggerMocks.warn.mockClear();
+    envelopeMock.unwrapEventEnvelope.mockClear();
+    envelopeMock.wrapEventEnvelope.mockClear();
+    normalizeMock.eventToUiMessages.mockReset().mockReturnValue(null);
+    redactionMock.redactEventData.mockClear();
   });
 
   describe("persistWorkflowEvent", () => {
@@ -74,7 +68,7 @@ describe("event-persistence", () => {
           resource: "user",
         })
       );
-      expect(workflowRepoMock.appendEvent).toHaveBeenCalledWith(
+      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: "progress",
           runId: "run-123",
@@ -98,9 +92,12 @@ describe("event-persistence", () => {
       ];
 
       for (const type of validTypes) {
-        vi.clearAllMocks();
-        workflowRepoMock.appendEvent.mockResolvedValue();
-        normalizeMock.eventToUiMessages.mockReturnValue(null);
+        workflowRepoMocks.appendEvent.mockReset().mockResolvedValue();
+        loggerMocks.warn.mockClear();
+        envelopeMock.unwrapEventEnvelope.mockClear();
+        envelopeMock.wrapEventEnvelope.mockClear();
+        normalizeMock.eventToUiMessages.mockReset().mockReturnValue(null);
+        redactionMock.redactEventData.mockClear();
         const event = { _: type } as WorkflowEvent;
         const result = await persistWorkflowEvent("run-123", event);
         expect(result.eventType).toBe(type);
@@ -124,7 +121,7 @@ describe("event-persistence", () => {
 
       expect(result.uiMessages).toBeNull();
       // Should only call appendEvent once (for the main event)
-      expect(workflowRepoMock.appendEvent).toHaveBeenCalledTimes(1);
+      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(1);
     });
 
     it("returns null uiMessages when eventToUiMessages returns empty array", async () => {
@@ -134,7 +131,7 @@ describe("event-persistence", () => {
       const result = await persistWorkflowEvent("run-123", event);
 
       expect(result.uiMessages).toBeNull();
-      expect(workflowRepoMock.appendEvent).toHaveBeenCalledTimes(1);
+      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(1);
     });
 
     it("persists UI messages when available", async () => {
@@ -152,9 +149,9 @@ describe("event-persistence", () => {
 
       expect(result.uiMessages).toEqual(uiMessages);
       // Should call appendEvent twice (main event + ui-message event)
-      expect(workflowRepoMock.appendEvent).toHaveBeenCalledTimes(2);
+      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(2);
 
-      const secondCall = workflowRepoMock.appendEvent.mock.calls[1];
+      const secondCall = workflowRepoMocks.appendEvent.mock.calls[1];
       expect(secondCall[0]).toMatchObject({
         eventType: "ui-message",
         runId: "run-123",
@@ -169,8 +166,8 @@ describe("event-persistence", () => {
       await persistWorkflowEvent("run-123", event);
 
       // appendEvent should be called twice: once for main event, once for ui-message
-      expect(workflowRepoMock.appendEvent).toHaveBeenCalledTimes(2);
-      const uiCall = workflowRepoMock.appendEvent.mock.calls[1];
+      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(2);
+      const uiCall = workflowRepoMocks.appendEvent.mock.calls[1];
       expect(uiCall[0].eventType).toBe("ui-message");
     });
   });
@@ -186,7 +183,7 @@ describe("event-persistence", () => {
     });
 
     it("returns null and logs warning on error", async () => {
-      workflowRepoMock.appendEvent.mockRejectedValue(new Error("db_error"));
+      workflowRepoMocks.appendEvent.mockRejectedValue(new Error("db_error"));
       const event = { _: "progress" } as WorkflowEvent;
 
       const result = await persistEventSafe("run-123", event);
@@ -203,14 +200,14 @@ describe("event-persistence", () => {
     });
 
     it("does not throw on error", async () => {
-      workflowRepoMock.appendEvent.mockRejectedValue(new Error("db_error"));
+      workflowRepoMocks.appendEvent.mockRejectedValue(new Error("db_error"));
       const event = { _: "progress" } as WorkflowEvent;
 
       await expect(persistEventSafe("run-123", event)).resolves.toBeNull();
     });
 
     it("logs correct eventType for unknown types", async () => {
-      workflowRepoMock.appendEvent.mockRejectedValue(new Error("db_error"));
+      workflowRepoMocks.appendEvent.mockRejectedValue(new Error("db_error"));
       const event = { _: "custom-type" } as unknown as WorkflowEvent;
 
       await persistEventSafe("run-123", event);

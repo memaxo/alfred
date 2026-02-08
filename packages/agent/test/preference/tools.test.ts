@@ -1,10 +1,22 @@
+import * as userRepo from "@alfred/db/repo/user";
 // Use shared test utilities - import BEFORE any other imports
 import {
   authTokenMocks,
   installAuthTokenMock,
   resetAuthTokenMocks,
 } from "@alfred/test-kit/auth/token";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "bun:test";
+
+import * as metrics from "../../src/metrics";
+import * as preferenceLoader from "../../src/preference/loader";
 
 // Install shared mocks
 installAuthTokenMock();
@@ -15,27 +27,23 @@ const mockRequireToolScopesAndPolicy =
 
 const originalRedisUrl = process.env.REDIS_URL;
 
-const mockGetPreferences = mock();
-const mockSetPreference = mock();
-mock.module("@alfred/db/repo/user", () => ({
-  getPreferences: mockGetPreferences,
-  setPreference: mockSetPreference,
-}));
+const mockGetPreferences = vi.fn();
+const mockSetPreference = vi.fn();
+const getPreferencesSpy = vi
+  .spyOn(userRepo, "getPreferences")
+  .mockImplementation((...args) => mockGetPreferences(...args));
+const setPreferenceSpy = vi
+  .spyOn(userRepo, "setPreference")
+  .mockImplementation((...args) => mockSetPreference(...args));
 
-const mockInvalidatePreferenceCache = mock();
-mock.module("../../../src/preference/loader", () => ({
-  invalidatePreferenceCache: mockInvalidatePreferenceCache,
-}));
-mock.module("../../../src/preference/loader.ts", () => ({
-  invalidatePreferenceCache: mockInvalidatePreferenceCache,
-}));
+const mockInvalidatePreferenceCache = vi.fn();
+const invalidatePreferenceCacheSpy = vi
+  .spyOn(preferenceLoader, "invalidatePreferenceCache")
+  .mockImplementation((...args) => mockInvalidatePreferenceCache(...args));
 
-mock.module("../../../src/metrics", () => ({
-  recordAssistantToolCall: () => {},
-}));
-mock.module("../../../src/metrics.ts", () => ({
-  recordAssistantToolCall: () => {},
-}));
+const recordAssistantToolCallSpy = vi
+  .spyOn(metrics, "recordAssistantToolCall")
+  .mockImplementation(() => {});
 
 const { toolPreferenceGet, toolPreferenceSet } =
   await import("../../assistant/src/tool/preference");
@@ -61,6 +69,13 @@ describe("Preference Tools", () => {
   });
   afterEach(() => {
     process.env.REDIS_URL = originalRedisUrl;
+  });
+
+  afterAll(() => {
+    getPreferencesSpy.mockRestore();
+    setPreferenceSpy.mockRestore();
+    invalidatePreferenceCacheSpy.mockRestore();
+    recordAssistantToolCallSpy.mockRestore();
   });
 
   describe("preference_get", () => {

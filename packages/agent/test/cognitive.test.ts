@@ -4,7 +4,16 @@ import {
   installAuthTokenMock,
 } from "@alfred/test-kit/auth/token";
 import { installLoggerMock } from "@alfred/test-kit/logger";
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 import type { CognitiveStateInput } from "../src/orchestrator/tool/cognitive";
 
@@ -15,13 +24,10 @@ installLoggerMock();
 const mockGetLatestSnapshot = mock();
 const mockGetEventsSince = mock();
 const mockGetAllEvents = mock();
-mock.module("@alfred/db", () => ({
-  cognitiveRepo: {
-    getAllEvents: mockGetAllEvents,
-    getEventsSince: mockGetEventsSince,
-    getLatestSnapshot: mockGetLatestSnapshot,
-  },
-}));
+const dbModule = await import("@alfred/db");
+let getLatestSnapshotSpy: ReturnType<typeof vi.spyOn> | null = null;
+let getEventsSinceSpy: ReturnType<typeof vi.spyOn> | null = null;
+let getAllEventsSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 // Note: Pure functions (idle, initialAutonomy, applyTransition, unwrapEventEnvelope)
 // are NOT mocked - we use real implementations to test actual behavior
@@ -31,6 +37,18 @@ const { toolCognitiveState } =
   await import("../src/orchestrator/tool/cognitive");
 
 describe("Cognitive State Tool", () => {
+  beforeAll(() => {
+    getLatestSnapshotSpy = vi
+      .spyOn(dbModule.cognitiveRepo, "getLatestSnapshot")
+      .mockImplementation((...args) => mockGetLatestSnapshot(...args));
+    getEventsSinceSpy = vi
+      .spyOn(dbModule.cognitiveRepo, "getEventsSince")
+      .mockImplementation((...args) => mockGetEventsSince(...args));
+    getAllEventsSpy = vi
+      .spyOn(dbModule.cognitiveRepo, "getAllEvents")
+      .mockImplementation((...args) => mockGetAllEvents(...args));
+  });
+
   beforeEach(() => {
     authTokenMocks.requireToolScopesAndPolicy.mockReset();
     mockGetLatestSnapshot.mockReset();
@@ -45,6 +63,15 @@ describe("Cognitive State Tool", () => {
       },
       decision: { allow: true },
     });
+  });
+
+  afterAll(() => {
+    getLatestSnapshotSpy?.mockRestore();
+    getLatestSnapshotSpy = null;
+    getEventsSinceSpy?.mockRestore();
+    getEventsSinceSpy = null;
+    getAllEventsSpy?.mockRestore();
+    getAllEventsSpy = null;
   });
 
   describe("cognitive_state", () => {

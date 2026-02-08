@@ -84,7 +84,7 @@ describe("toolRalph (container-aware Codex)", () => {
     expect(captured[1]?.input?.containerCw).toBe("/workspace");
   });
 
-  it("retries with execProfile=default when server start fails (non-strict)", async () => {
+  it("retries with container inputs when server start fails (non-strict)", async () => {
     let calls = 0;
     const captured: any[] = [];
     toolCodex.execute = mock((args: any) => {
@@ -119,7 +119,8 @@ describe("toolRalph (container-aware Codex)", () => {
 
     expect(result.completed).toBe(true);
     expect(calls).toBe(2);
-    expect(captured[1]?.input?.execProfile).toBe("default");
+    expect(captured[1]?.input?.containerName).toBe("alfred-agentfs-test");
+    expect(captured[1]?.input?.containerCw).toBe("/workspace");
     expect(notices).toContain("executor_server_fallback_default");
   });
 
@@ -145,6 +146,8 @@ describe("toolRalph (container-aware Codex)", () => {
         config: { maxIterations: 2 },
         auto: "read",
         cw: "/tmp",
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
       },
       writer: { write: () => {} },
       signal: controller.signal,

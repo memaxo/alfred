@@ -1,7 +1,16 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
-const memoryNodes = Symbol("memoryNodes");
-const memoryEdges = Symbol("memoryEdges");
+const dbModule = await import("@alfred/db");
 
 interface Call {
   table: unknown | null;
@@ -46,25 +55,27 @@ const selectMock = mock((_shape?: unknown) => {
   return builder(call);
 });
 
-mock.module("@alfred/db/schema/graph", () => ({
-  memoryNodes,
-  memoryEdges,
-}));
-
-mock.module("@alfred/db", () => ({
-  db: {
-    select: selectMock,
-  },
-}));
+let dbSelectSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 const { toolMindscapeRead } = await import("../assistant/src/tool/mindscape");
 
 describe("mindscape tool", () => {
+  beforeAll(() => {
+    dbSelectSpy = vi
+      .spyOn(dbModule.db, "select")
+      .mockImplementation((...args) => selectMock(...args));
+  });
+
   beforeEach(() => {
     calls.length = 0;
     nodeRows = [];
     edgeRows = [];
     selectMock.mockClear();
+  });
+
+  afterAll(() => {
+    dbSelectSpy?.mockRestore();
+    dbSelectSpy = null;
   });
 
   it("bounds node and edge reads without a query", async () => {

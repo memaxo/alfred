@@ -1,14 +1,21 @@
 import { describe, expect, it } from "bun:test";
 
-import { dockerRun, isDockerAvailable, isImageAvailable } from "./utils/infra";
+import {
+  dockerRun,
+  isDockerAvailable,
+  isImageAvailable,
+  runCmd,
+} from "./utils/infra";
 
 const IMAGE = "alfred-agentfs:codex";
 
 const dockerOk = isDockerAvailable();
 const imageOk = dockerOk && isImageAvailable(IMAGE);
+const dockerReady =
+  imageOk && runCmd(["docker", "run", "--rm", IMAGE, "true"]).exitCode === 0;
 
 describe("AgentFS image", () => {
-  it.skipIf(!(dockerOk && imageOk))(
+  it.skipIf(!dockerReady)(
     "includes required runtime tools without executing them",
     () => {
       const res = dockerRun(

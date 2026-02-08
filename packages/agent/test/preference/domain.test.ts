@@ -15,6 +15,9 @@ mock.module("@alfred/embed", () => ({
 mock.module("@alfred/logger", () => ({
   logger: {
     debug: mock(),
+    info: mock(),
+    warn: mock(),
+    error: mock(),
   },
 }));
 

@@ -19,6 +19,8 @@ describe("toolOpenCode policy", () => {
       prompt: "hi",
       auto: "low",
       authz: "Bearer token",
+      containerName: "alfred-agentfs-test",
+      containerCw: "/workspace",
     });
 
     expect(requireToolScopesAndPolicyMock).toHaveBeenCalledTimes(1);
@@ -35,6 +37,8 @@ describe("toolOpenCode policy", () => {
     const parsed = opencodeInputSchema.parse({
       action: "exec",
       prompt: "hello",
+      containerName: "alfred-agentfs-test",
+      containerCw: "/workspace",
     });
     expect(parsed.action).toBe("exec");
     expect(parsed.prompt).toBe("hello");

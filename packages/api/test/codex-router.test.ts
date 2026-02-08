@@ -29,11 +29,29 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   },
 }));
 
+mock.module("@alfred/agent/environment/agentfs", () => ({
+  AgentFSWorkspace: class {
+    containerCw = "/workspace";
+    containerName = "alfred-agentfs-test";
+    dbPath = ".agentfs/test/agentfs.db";
+    root: string;
+    constructor(_id: string, _runId: string, repoRoot: string) {
+      this.root = repoRoot;
+    }
+    async initialize() {}
+    async cleanup() {}
+  },
+}));
+
 mock.module("../src/routers/droids", () => ({
   droidsRouter: router({}),
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
+const expectContainerInput = (call?: { input?: Record<string, unknown> }) => {
+  expect(call?.input?.containerName).toBe("alfred-agentfs-test");
+  expect(call?.input?.containerCw).toBe("/workspace");
+};
 
 beforeAll(async () => {
   caller = await createTestCaller();
@@ -63,6 +81,7 @@ describe("codex router", () => {
 
     expect(response.result).toContain("line-one");
     expect(response.result).toContain("line-two");
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("surfaces timeout errors during run", async () => {
@@ -72,6 +91,7 @@ describe("codex router", () => {
       caller.codex.run({ prompt: "long task", timeoutSec: 120 })
     ).rejects.toThrow(/timeout/i);
     expect(toolCodexExecuteMock).toHaveBeenCalledTimes(1);
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("emits timeout notices over the stream API", async () => {
@@ -112,6 +132,7 @@ describe("codex router", () => {
     const errorEvent = events.find((event) => event.type === "error");
     const errorMessage = String(errorEvent?.message ?? "").toLowerCase();
     expect(errorMessage).toContain("timed out");
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("emits codex_session_forbidden when a second user reuses a session via stream", async () => {
@@ -150,6 +171,8 @@ describe("codex router", () => {
     const errorEvent = events.find((event) => event.type === "error");
     expect(errorEvent?.message).toContain("codex_session_forbidden");
     expect(toolCodexExecuteMock).toHaveBeenCalledTimes(2);
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
+    expectContainerInput(toolCodexExecuteMock.mock.calls[1]?.[0]);
     expect(toolCodexExecuteMock.mock.calls[1]?.[0]?.input?.userId).toBe(
       "stream-intruder"
     );
@@ -186,6 +209,7 @@ describe("codex router", () => {
 
     expect(completed).toBe(true);
     expect(toolCodexExecuteMock).toHaveBeenCalledTimes(1);
+    expectContainerInput(toolCodexExecuteMock.mock.calls[0]?.[0]);
   });
 
   it("rejects empty prompts", async () => {

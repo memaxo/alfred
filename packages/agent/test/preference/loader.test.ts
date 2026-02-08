@@ -1,10 +1,12 @@
+import * as userRepo from "@alfred/db/repo/user";
+import * as metrics from "@alfred/metrics";
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
   expect,
   it,
-  mock,
   vi,
 } from "bun:test";
 
@@ -23,17 +25,18 @@ const getPreferencesMock = vi.fn(() =>
   Promise.resolve([createPreferenceRow()])
 );
 
-mock.module("@alfred/db/repo/user", () => ({
-  getPreferences: getPreferencesMock,
-}));
-
-mock.module("@alfred/metrics", () => ({
-  logger: {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-  },
-}));
+const getPreferencesSpy = vi
+  .spyOn(userRepo, "getPreferences")
+  .mockImplementation((...args) => getPreferencesMock(...args));
+const loggerInfoSpy = vi
+  .spyOn(metrics.logger, "info")
+  .mockImplementation(() => {});
+const loggerWarnSpy = vi
+  .spyOn(metrics.logger, "warn")
+  .mockImplementation(() => {});
+const loggerErrorSpy = vi
+  .spyOn(metrics.logger, "error")
+  .mockImplementation(() => {});
 
 process.env.REDIS_URL = "false";
 
@@ -52,6 +55,13 @@ beforeEach(() => {
 
 afterEach(() => {
   resetPreferenceCache();
+});
+
+afterAll(() => {
+  getPreferencesSpy.mockRestore();
+  loggerInfoSpy.mockRestore();
+  loggerWarnSpy.mockRestore();
+  loggerErrorSpy.mockRestore();
 });
 
 describe("loadPreferences", () => {

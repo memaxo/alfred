@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
-const workflowRepoMocks = {
-  listRunsByStatuses: vi.fn().mockResolvedValue([]),
-  updateRun: vi.fn().mockResolvedValue(),
-};
+import {
+  installWorkflowRepoMock,
+  workflowRepoMocks,
+} from "./workflow-repo.mock";
 
-mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
+installWorkflowRepoMock();
 
 const runRegistryMocks = {
   register: vi.fn().mockResolvedValue(),
@@ -20,6 +20,7 @@ describe("workflow session recovery", () => {
   const originalRunRegistryBackend = process.env.RUN_REGISTRY_BACKEND;
 
   beforeEach(() => {
+    installWorkflowRepoMock();
     workflowRepoMocks.listRunsByStatuses.mockReset().mockResolvedValue([]);
     workflowRepoMocks.updateRun.mockReset().mockResolvedValue();
     runRegistryMocks.register.mockReset().mockResolvedValue();

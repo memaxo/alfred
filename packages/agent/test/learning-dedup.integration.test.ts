@@ -10,25 +10,34 @@
  * for task_learning, findRelevantHeuristics for heuristics) and do not
  * semantically overlap because they serve different purposes.
  */
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 
 import { buildDreamHeuristic } from "../src/orchestrator/dreaming";
 
-// Mock modules to avoid DB and embedding dependencies
-mock.module("@alfred/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({ where: () => ({ orderBy: () => ({ limit: () => [] }) }) }),
-    }),
-  },
-  graphRepo: {
-    createNode: mock(() => Promise.resolve({ id: "mock-node-id" })),
-  },
-}));
+const dbModule = await import("@alfred/db");
+const ragModule = await import("@alfred/rag");
+let dbSelectSpy: ReturnType<typeof vi.spyOn> | null = null;
+let graphCreateNodeSpy: ReturnType<typeof vi.spyOn> | null = null;
+let embedManySpy: ReturnType<typeof vi.spyOn> | null = null;
 
-mock.module("@alfred/rag", () => ({
-  embedMany: mock(() => Promise.resolve([])),
-}));
+beforeAll(() => {
+  dbSelectSpy = vi.spyOn(dbModule.db, "select").mockImplementation(() => ({
+    from: () => ({ where: () => ({ orderBy: () => ({ limit: () => [] }) }) }),
+  }));
+  graphCreateNodeSpy = vi
+    .spyOn(dbModule.graphRepo, "createNode")
+    .mockImplementation(mock(() => Promise.resolve({ id: "mock-node-id" })));
+  embedManySpy = vi.spyOn(ragModule, "embedMany").mockResolvedValue([]);
+});
+
+afterAll(() => {
+  dbSelectSpy?.mockRestore();
+  dbSelectSpy = null;
+  graphCreateNodeSpy?.mockRestore();
+  graphCreateNodeSpy = null;
+  embedManySpy?.mockRestore();
+  embedManySpy = null;
+});
 
 describe("learning dedup: ReflectionObserver vs dreaming", () => {
   it("produces different kind values for the same failure", () => {

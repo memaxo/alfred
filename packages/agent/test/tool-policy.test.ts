@@ -137,34 +137,17 @@ describe("Tool Policy & Security", () => {
   });
 
   describe("droid assertAllowedDirectory", () => {
-    it("blocks symlink escapes", () => {
-      const sandbox = ensureWorkspaceSandbox("droid-direct");
-      const outside = makeExternalDir("droid-outside-");
-      const link = path.join(sandbox, "link");
-      fs.symlinkSync(outside, link);
-
-      expect(() => assertDroidAllowedDirectory(link)).toThrow(
-        "droid_invalid_cwd"
+    it("accepts container workspace paths", () => {
+      expect(assertDroidAllowedDirectory("/workspace")).toBe("/workspace");
+      expect(assertDroidAllowedDirectory("workspace/subdir")).toBe(
+        "/workspace/subdir"
       );
-
-      fs.rmSync(outside, { recursive: true, force: true });
     });
 
-    it("detects swaps after initial access", () => {
-      const sandbox = ensureWorkspaceSandbox("droid-swap");
-      const target = path.join(sandbox, "workspace");
-      fs.mkdirSync(target, { recursive: true });
-      expect(assertDroidAllowedDirectory(target)).toBe(target);
-
-      fs.rmSync(target, { recursive: true, force: true });
-      const outside = makeExternalDir("droid-swap-out-");
-      fs.symlinkSync(outside, target);
-
-      expect(() => assertDroidAllowedDirectory(target)).toThrow(
-        "droid_invalid_cwd"
+    it("rejects paths outside the container workspace", () => {
+      expect(() => assertDroidAllowedDirectory("/tmp")).toThrow(
+        "droid_container_cwd_invalid"
       );
-
-      fs.rmSync(outside, { recursive: true, force: true });
     });
   });
 

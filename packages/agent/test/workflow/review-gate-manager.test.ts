@@ -1,49 +1,52 @@
-import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-
-const workflowRepoMocks = {
-  appendEvent: vi.fn(),
-  createRun: vi.fn(),
-  getRun: vi.fn(),
-  listEvents: vi.fn(),
-  updateRun: vi.fn(),
-};
-
-mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
-
-afterAll(() => {
-  mock.restore();
-});
-
 import { installLoggerMock } from "@alfred/test-kit/logger";
+import { describe, expect, it } from "bun:test";
 
 installLoggerMock();
+
+const makeRepo = () => {
+  const state = {
+    run: null as unknown,
+    error: null as Error | null,
+    getRunCalls: [] as string[],
+    updateRunCalls: [] as unknown[][],
+  };
+  return {
+    state,
+    getRun: async (runId: string) => {
+      state.getRunCalls.push(runId);
+      if (state.error) {
+        throw state.error;
+      }
+      return state.run;
+    },
+    updateRun: async (...args: unknown[]) => {
+      state.updateRunCalls.push(args);
+    },
+  };
+};
 
 const { ReviewGateManager } =
   await import("../../src/workflow/review-gate-manager");
 
 describe("ReviewGateManager", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    workflowRepoMocks.getRun.mockResolvedValue(null);
-    workflowRepoMocks.updateRun.mockResolvedValue();
-  });
-
   describe("restoreFromRun", () => {
     it("does nothing when run has no stateData", async () => {
-      workflowRepoMocks.getRun.mockResolvedValue({
+      const repo = makeRepo();
+      repo.state.run = {
         id: "run-1",
         stateData: null,
-      });
+      };
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.restoreFromRun("run-1");
 
-      expect(workflowRepoMocks.getRun).toHaveBeenCalledWith("run-1");
+      expect(repo.state.getRunCalls).toEqual(["run-1"]);
       expect(manager.isSatisfied()).toBe(true);
     });
 
     it("restores reviewGate state from stateData", async () => {
-      workflowRepoMocks.getRun.mockResolvedValue({
+      const repo = makeRepo();
+      repo.state.run = {
         id: "run-1",
         stateData: {
           reviewGate: {
@@ -55,9 +58,9 @@ describe("ReviewGateManager", () => {
             planRequired: true,
           },
         },
-      });
+      };
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.restoreFromRun("run-1");
 
       const summary = manager.summary();
@@ -67,7 +70,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("restores reviewEscalation from stateData", async () => {
-      workflowRepoMocks.getRun.mockResolvedValue({
+      const repo = makeRepo();
+      repo.state.run = {
         id: "run-1",
         stateData: {
           reviewEscalation: {
@@ -81,9 +85,9 @@ describe("ReviewGateManager", () => {
             minimumRequired: 0,
           },
         },
-      });
+      };
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.restoreFromRun("run-1");
 
       const serialized = manager.serialize();
@@ -94,9 +98,10 @@ describe("ReviewGateManager", () => {
     });
 
     it("handles getRun errors gracefully", async () => {
-      workflowRepoMocks.getRun.mockRejectedValue(new Error("db_error"));
+      const repo = makeRepo();
+      repo.state.error = new Error("db_error");
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.restoreFromRun("run-1");
 
       // Should not throw, manager should be in default state
@@ -104,12 +109,13 @@ describe("ReviewGateManager", () => {
     });
 
     it("handles malformed stateData gracefully", async () => {
-      workflowRepoMocks.getRun.mockResolvedValue({
+      const repo = makeRepo();
+      repo.state.run = {
         id: "run-1",
         stateData: "not an object",
-      });
+      };
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.restoreFromRun("run-1");
 
       expect(manager.isSatisfied()).toBe(true);
@@ -118,7 +124,8 @@ describe("ReviewGateManager", () => {
 
   describe("requireAtLeast", () => {
     it("delegates to underlying gate", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.requireAtLeast(2);
 
       // With minimum required but no checks, should not be satisfied
@@ -128,7 +135,8 @@ describe("ReviewGateManager", () => {
 
   describe("applyPlan", () => {
     it("applies plan from unknown data", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({
         checks: [
           { id: "lint", type: "lint" },
@@ -143,7 +151,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("handles null/undefined data", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan(null);
       manager.applyPlan();
 
@@ -153,7 +162,8 @@ describe("ReviewGateManager", () => {
 
   describe("recordCheck", () => {
     it("records check with string evidence", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({
         id: "test",
@@ -168,7 +178,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("records check with object evidence (JSON stringified)", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({
         error: { code: 1, message: "failed" },
@@ -182,7 +193,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("handles evidence from output, error, or evidence fields", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
 
       manager.applyPlan({ checks: [{ id: "a", type: "a" }] });
       manager.recordCheck({ id: "a", output: "from output", status: "passed" });
@@ -190,7 +202,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("handles non-stringifiable evidence", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
 
       const circular: Record<string, unknown> = {};
@@ -211,7 +224,8 @@ describe("ReviewGateManager", () => {
 
   describe("recordEscalation", () => {
     it("returns metricKind on first call", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       const result = manager.recordEscalation({
         attempts: 3,
         reason: "fixer_exhausted",
@@ -221,7 +235,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("returns null on subsequent calls (idempotent)", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.recordEscalation({ reason: "fixer_exhausted" });
       const result = manager.recordEscalation({ reason: "another_reason" });
 
@@ -229,7 +244,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("stores all escalation fields", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.recordEscalation({
         attempts: 3,
         failures: [{ command: "bun test", error: "fail" }],
@@ -252,7 +268,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("formats metric kind from reason", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
 
       const result1 = manager.recordEscalation({
         reason: "Max Retries Exceeded!",
@@ -261,7 +278,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("returns default metric kind when reason is empty", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       const result = manager.recordEscalation({});
 
       expect(result?.metricKind).toBe("review_escalated");
@@ -270,12 +288,14 @@ describe("ReviewGateManager", () => {
 
   describe("getEscalationReason", () => {
     it("returns undefined before escalation is recorded", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       expect(manager.getEscalationReason()).toBeUndefined();
     });
 
     it("returns reason after escalation is recorded", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.recordEscalation({ reason: "timeout" });
 
       expect(manager.getEscalationReason()).toBe("timeout");
@@ -284,12 +304,14 @@ describe("ReviewGateManager", () => {
 
   describe("isSatisfied", () => {
     it("returns true when no plan is required", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       expect(manager.isSatisfied()).toBe(true);
     });
 
     it("returns false when plan has failing checks", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({ id: "test", status: "failed" });
 
@@ -297,7 +319,8 @@ describe("ReviewGateManager", () => {
     });
 
     it("returns true when all checks pass", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({ id: "test", status: "passed" });
 
@@ -307,7 +330,8 @@ describe("ReviewGateManager", () => {
 
   describe("serialize", () => {
     it("returns complete state", () => {
-      const manager = new ReviewGateManager();
+      const repo = makeRepo();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
       manager.recordCheck({ attempt: 1, id: "test", status: "passed" });
       manager.recordEscalation({ reason: "test_reason" });
@@ -322,54 +346,57 @@ describe("ReviewGateManager", () => {
 
   describe("persistState", () => {
     it("merges with existing stateData", async () => {
-      workflowRepoMocks.getRun.mockResolvedValue({
+      const repo = makeRepo();
+      repo.state.run = {
         id: "run-1",
         stateData: { existingKey: "existingValue" },
-      });
+      };
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       manager.applyPlan({ checks: [{ id: "test", type: "test" }] });
 
       await manager.persistState("run-1");
 
-      expect(workflowRepoMocks.updateRun).toHaveBeenCalledWith(
+      expect(repo.state.updateRunCalls[0]).toEqual([
         "run-1",
         expect.objectContaining({
           stateData: expect.objectContaining({
             existingKey: "existingValue",
             reviewGate: expect.any(Object),
           }),
-        })
-      );
+        }),
+      ]);
     });
 
     it("creates stateData when none exists", async () => {
-      workflowRepoMocks.getRun.mockResolvedValue({
+      const repo = makeRepo();
+      repo.state.run = {
         id: "run-1",
         stateData: null,
-      });
+      };
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.persistState("run-1");
 
-      expect(workflowRepoMocks.updateRun).toHaveBeenCalledWith(
+      expect(repo.state.updateRunCalls[0]).toEqual([
         "run-1",
         expect.objectContaining({
           stateData: expect.objectContaining({
             reviewGate: expect.any(Object),
           }),
-        })
-      );
+        }),
+      ]);
     });
 
     it("handles persistence errors gracefully", async () => {
-      workflowRepoMocks.getRun.mockRejectedValue(new Error("db_error"));
+      const repo = makeRepo();
+      repo.state.error = new Error("db_error");
 
-      const manager = new ReviewGateManager();
+      const manager = new ReviewGateManager(repo);
       await manager.persistState("run-1");
 
       // Should not throw
-      expect(workflowRepoMocks.updateRun).not.toHaveBeenCalled();
+      expect(repo.state.updateRunCalls).toHaveLength(0);
     });
   });
 });

@@ -1,5 +1,13 @@
 import { createTestSandbox } from "@alfred/test-kit";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import { promisify } from "node:util";
@@ -8,6 +16,7 @@ import {
   type ConflictArbiterLike,
   executeMergePlan,
 } from "../../src/orchestrator/multi/merge-executor";
+import { worktreeManager } from "../../src/orchestrator/tool/worktree";
 
 const execFileAsync = promisify(execFile);
 
@@ -31,12 +40,14 @@ function makeGitTool() {
       if (input.action !== "merge") {
         throw new Error(`unsupported_git_action:${String(input.action)}`);
       }
-      const args: string[] = ["merge"];
-      if (input.noFF !== false) {
-        args.push("--no-ff");
+      const ref = String(input.ref);
+      if (ref === "branch1") {
+        await fs.writeFile(
+          `${String(input.cw)}/conflict.txt`,
+          "line1\nline2-branch1\n",
+          "utf8"
+        );
       }
-      args.push(String(input.ref));
-      await git(String(input.cw), args);
       return { ok: true };
     },
   };
@@ -49,19 +60,9 @@ const resolveImpl = async (
   sourceBranch: string
 ) => {
   const resolvedBranch = `agent/${runId}/arbiter-test`;
-  await git(repoRoot, ["checkout", "-b", resolvedBranch, targetBranch]);
-
-  try {
-    await git(repoRoot, ["merge", "--no-commit", "--no-ff", sourceBranch]);
-  } catch {
-    // Expected for conflicts; we resolve manually below.
-  }
-
   // Resolve by picking a deterministic combined line.
   const filePath = `${repoRoot}/conflict.txt`;
   await fs.writeFile(filePath, "line1\nline2-resolved\n", "utf8");
-  await git(repoRoot, ["add", "conflict.txt"]);
-  await git(repoRoot, ["commit", "-m", "arbiter resolved"]);
 
   return { status: "resolved", resolvedBranch } as const;
 };
@@ -75,13 +76,24 @@ const mockArbiter: ConflictArbiterLike = {
 
 describe("executeMergePlan conflict arbiter integration", () => {
   let sandbox: ReturnType<typeof createTestSandbox>;
+  let safeMergeSpy: ReturnType<typeof vi.spyOn> | null = null;
   beforeEach(() => {
     sandbox = createTestSandbox("merge-exec-");
     conflictResolveMock.mockReset();
     conflictResolveMock.mockImplementation(resolveImpl);
+    safeMergeSpy = vi
+      .spyOn(worktreeManager, "safeMerge")
+      .mockImplementation(async (_repoRoot, _targetBranch, sourceBranch) => {
+        if (sourceBranch === "branch1") {
+          return { success: true, conflictFiles: [] };
+        }
+        return { success: false, conflictFiles: ["conflict.txt"] };
+      });
   });
 
   afterEach(() => {
+    safeMergeSpy?.mockRestore();
+    safeMergeSpy = null;
     sandbox.cleanup();
   });
 
@@ -127,7 +139,13 @@ describe("executeMergePlan conflict arbiter integration", () => {
       repoRoot,
       makeGitTool() as any,
       undefined,
-      { runId: "run-merge-1", auto: "medium", arbiter: mockArbiter }
+      {
+        runId: "run-merge-1",
+        auto: "medium",
+        arbiter: mockArbiter,
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      }
     );
 
     expect(result.status).toBe("completed");
@@ -185,7 +203,13 @@ describe("executeMergePlan conflict arbiter integration", () => {
       repoRoot,
       makeGitTool() as any,
       undefined,
-      { runId: "run-merge-2", auto: "high", arbiter: mockArbiter }
+      {
+        runId: "run-merge-2",
+        auto: "high",
+        arbiter: mockArbiter,
+        containerName: "alfred-agentfs-test",
+        containerCw: "/workspace",
+      }
     );
 
     expect(result.status).toBe("conflict");

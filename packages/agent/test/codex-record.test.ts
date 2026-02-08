@@ -29,7 +29,7 @@ const originalEnv = {
 
 describe("CodexRunRecorder", () => {
   beforeEach(() => {
-    process.env.DATABASE_URL = "postgresql://test";
+    process.env.DATABASE_URL = "sqlite::memory:";
     process.env.BUN_TEST = undefined;
     process.env.NODE_ENV = "development";
     createRunMock.mockClear();
