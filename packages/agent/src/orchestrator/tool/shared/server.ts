@@ -1,45 +1,10 @@
 import { executorServerRegistryTotal } from "./metrics.js";
 
-export type ExecProfile = "default" | "server";
-
-export function normalizeExecProfile(raw: unknown): ExecProfile {
-  if (typeof raw !== "string") {
-    return "default";
-  }
-  const v = raw.trim().toLowerCase();
-  if (v === "server") {
-    return "server";
-  }
-  return "default";
-}
-
-const AGENTFS_CONTAINER_PREFIX = "alfred-agentfs-";
-
-function isAgentfsContainerName(raw: unknown): boolean {
-  if (typeof raw !== "string") {
-    return false;
-  }
-  const trimmed = raw.trim();
-  return trimmed.length > 0 && trimmed.startsWith(AGENTFS_CONTAINER_PREFIX);
-}
-
-export function resolveExecProfile(
-  execProfile: unknown,
-  containerName: unknown
-): ExecProfile {
-  if (typeof execProfile === "string") {
-    return normalizeExecProfile(execProfile);
-  }
-  return isAgentfsContainerName(containerName) ? "server" : "default";
-}
-
 export function isExecProfileStrict(): boolean {
   return process.env.ORCH_EXEC_PROFILE_STRICT?.trim() === "1";
 }
 
-function parseKey(
-  key: string
-): { executor: string; profile: ExecProfile } | null {
+function parseKey(key: string): { executor: string; profile: "server" } | null {
   if (!key.startsWith("agentfs:")) {
     return null;
   }
@@ -48,8 +13,7 @@ function parseKey(
     return null;
   }
   const executor = parts[2] ?? "unknown";
-  const profile = normalizeExecProfile(parts[3]);
-  return { executor, profile };
+  return { executor, profile: "server" };
 }
 
 function recordOutcome(key: string, outcome: string): void {
@@ -58,7 +22,7 @@ function recordOutcome(key: string, outcome: string): void {
     if (!parsed) {
       executorServerRegistryTotal.inc({
         executor: "unknown",
-        profile: "default",
+        profile: "server",
         outcome,
       });
       return;
@@ -76,9 +40,8 @@ function recordOutcome(key: string, outcome: string): void {
 export function serverKey(args: {
   containerName: string;
   executor: string;
-  profile: ExecProfile;
 }): string {
-  return `agentfs:${args.containerName}:${args.executor}:${args.profile}`;
+  return `agentfs:${args.containerName}:${args.executor}:server`;
 }
 
 export interface ServerHandle {

@@ -10,11 +10,9 @@ import { spawn } from "bun";
 import type { ToolExecuteContext } from "../shared/context.js";
 import type { OpenCodeToolInput, OpenCodeToolOutput } from "./definition.js";
 
-import { resolveExecProfile } from "../shared/server.js";
 import {
   ensureOpenCodeHttpServer,
   type OpenCodeHttpServerHandle,
-  startOpenCodeHttpServer,
 } from "./server.js";
 
 type Writer = ToolExecuteContext<OpenCodeToolInput>["writer"];
@@ -529,7 +527,7 @@ export async function executeWithOpenCodeHttp({
   writer,
   signal,
 }: ToolExecuteContext<OpenCodeToolInput>): Promise<OpenCodeToolOutput> {
-  const profile = resolveExecProfile(input.execProfile, input.containerName);
+  const profile = "server" as const;
   const { timeoutSec } = input;
 
   const ctrl = new AbortController();
@@ -542,10 +540,7 @@ export async function executeWithOpenCodeHttp({
   }
 
   try {
-    const handle =
-      profile === "server"
-        ? await ensureOpenCodeHttpServer({ input, profile })
-        : await startOpenCodeHttpServer({ input, profile });
+    const handle = await ensureOpenCodeHttpServer({ input, profile });
 
     const sessionId = await ensureSession({
       handle,
@@ -559,14 +554,6 @@ export async function executeWithOpenCodeHttp({
       signal: ctrl.signal,
       writer,
     });
-
-    if (profile === "default") {
-      try {
-        await handle.stop("default_profile_complete");
-      } catch {
-        // ignore
-      }
-    }
 
     return out;
   } catch (error) {

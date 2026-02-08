@@ -7,7 +7,6 @@ import { spawn } from "bun";
 import type { OpenCodeToolInput } from "./definition.js";
 
 import {
-  type ExecProfile,
   ensureServer,
   type ServerHandle,
   serverKey,
@@ -111,7 +110,7 @@ async function dockerExecText(args: {
 }
 
 export type OpenCodeHttpServerHandle = ServerHandle & {
-  readonly profile: ExecProfile;
+  readonly profile: "server";
   readonly containerName: string;
   readonly containerCw: string;
   readonly baseUrl: string;
@@ -140,7 +139,7 @@ async function waitForReady(args: {
 
 async function startInContainer(args: {
   input: OpenCodeToolInput;
-  profile: ExecProfile;
+  profile: "server";
 }): Promise<OpenCodeHttpServerHandle> {
   const { containerName } = args.input;
   if (!containerName) {
@@ -246,7 +245,7 @@ async function startInContainer(args: {
 
 async function startExternal(args: {
   input: OpenCodeToolInput;
-  profile: ExecProfile;
+  profile: "server";
 }): Promise<OpenCodeHttpServerHandle> {
   const { containerName } = args.input;
   const containerCw = normalizeContainerCw(args.input.containerCw);
@@ -289,7 +288,7 @@ async function startExternal(args: {
 
 export function startOpenCodeHttpServer(args: {
   input: OpenCodeToolInput;
-  profile: ExecProfile;
+  profile: "server";
 }): Promise<OpenCodeHttpServerHandle> {
   if (args.input.containerName) {
     return startInContainer(args);
@@ -299,12 +298,8 @@ export function startOpenCodeHttpServer(args: {
 
 export async function ensureOpenCodeHttpServer(args: {
   input: OpenCodeToolInput;
-  profile: ExecProfile;
+  profile: "server";
 }): Promise<OpenCodeHttpServerHandle> {
-  if (args.profile !== "server") {
-    return startOpenCodeHttpServer(args);
-  }
-
   const { containerName } = args.input;
   if (!containerName) {
     throw new Error("opencode_server_requires_container");
@@ -313,7 +308,6 @@ export async function ensureOpenCodeHttpServer(args: {
   const key = serverKey({
     containerName,
     executor: "opencode-http",
-    profile: "server",
   });
 
   const healthy = async (handle: ServerHandle) => {

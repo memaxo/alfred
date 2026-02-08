@@ -30,7 +30,6 @@ import { executorServerFallbackTotal } from "../shared/metrics.js";
 import {
   ensureServer,
   isExecProfileStrict,
-  resolveExecProfile,
   type ServerHandle,
   serverKey,
 } from "../shared/server.js";
@@ -943,7 +942,7 @@ export async function executeWithOpenCode({
   writer,
   signal,
 }: ToolExecuteContext<OpenCodeToolInput>): Promise<OpenCodeToolOutput> {
-  const profile = resolveExecProfile(input.execProfile, input.containerName);
+  const profile = "server" as const;
   if (profile !== "server") {
     return execOnce({ input, signal, writer });
   }
@@ -956,7 +955,6 @@ export async function executeWithOpenCode({
   const key = serverKey({
     containerName: input.containerName,
     executor: "opencode",
-    profile,
   });
 
   let server: OpenCodeServer;

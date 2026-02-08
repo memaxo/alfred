@@ -16,7 +16,7 @@ To verify: run `rg 'process\.cwd\(\)' packages/agent/src/orchestrator/tool/` and
 
 - [x] Milestone 1: Make `containerName` required at the schema boundary
 - [x] Milestone 2: Route direct API callers through Docker
-- [ ] Milestone 3: Remove host spawn paths from Codex executor
+- [x] Milestone 3: Remove host spawn paths from Codex executor
 - [ ] Milestone 4: Remove host spawn paths from OpenCode executor
 - [ ] Milestone 5: Remove host spawn path from Droid executor
 - [ ] Milestone 6: Delete `persistArtifact` and all call sites

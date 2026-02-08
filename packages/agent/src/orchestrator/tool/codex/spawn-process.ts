@@ -1,9 +1,7 @@
 /**
  * Codex process spawner
  *
- * Handles spawn function creation for different execution modes:
- * - Docker container execution (production)
- * - Direct host execution (development/testing)
+ * Handles spawn function creation for Docker container execution.
  *
  * Note: Poof sandbox execution has been removed.
  * Use AgentFS for filesystem isolation with audit trails.
@@ -115,53 +113,25 @@ function createDockerSpawn(
   };
 }
 
-function createHostSpawn(
-  cwdHandle: AllowedDirectoryHandle,
-  agentfsDbPath?: string
-): SpawnFn {
-  return ({ cmd, args, env: childEnv }) => {
-    // Include AgentFS db path in environment if provided
-    const envWithAgentFS = agentfsDbPath
-      ? { ...childEnv, AGENTFS_DB_PATH: agentfsDbPath }
-      : childEnv;
-
-    const proc = spawnWithSecureCwd({
-      cwdHandle,
-      cmd,
-      args,
-      env: envWithAgentFS,
-      stdout: "pipe",
-      stderr: "pipe",
-      stdin: "ignore",
-    });
-
-    return wrapProcess(proc);
-  };
-}
-
 export function createCodexSpawn(
   input: SpawnInput,
   cwdHandle: AllowedDirectoryHandle
 ): Promise<SpawnFn> {
-  if (input.containerName) {
-    if (!input.containerName.startsWith("alfred-agentfs-")) {
-      throw new CodexError(
-        "spawn",
-        "codex_container_name_invalid",
-        "containerName must be an AgentFS workspace container"
-      );
-    }
-    const dockerBin = resolveExecutable("docker");
-    return Promise.resolve(
-      createDockerSpawn(
-        cwdHandle,
-        dockerBin,
-        input.containerName,
-        input.containerCw,
-        input.agentfsDbPath
-      )
+  if (!input.containerName.startsWith("alfred-agentfs-")) {
+    throw new CodexError(
+      "spawn",
+      "codex_container_name_invalid",
+      "containerName must be an AgentFS workspace container"
     );
   }
-
-  return Promise.resolve(createHostSpawn(cwdHandle, input.agentfsDbPath));
+  const dockerBin = resolveExecutable("docker");
+  return Promise.resolve(
+    createDockerSpawn(
+      cwdHandle,
+      dockerBin,
+      input.containerName,
+      input.containerCw,
+      input.agentfsDbPath
+    )
+  );
 }

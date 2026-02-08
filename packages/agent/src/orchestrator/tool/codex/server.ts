@@ -943,7 +943,6 @@ export async function executeWithCodexServer(args: {
   const key = serverKey({
     containerName: args.input.containerName,
     executor: "codex",
-    profile: "server",
   });
   const containerCw = normalizeContainerCw(args.input.containerCw);
   let server: CodexServer;
