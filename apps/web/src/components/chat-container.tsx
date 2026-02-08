@@ -11,14 +11,10 @@
 
 import type { UIMessage } from "@alfred/type/stream";
 
-type AssistantUIMessage = UIMessage;
-
 import { Chat } from "@alfred/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
-
-import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
 
 import { MessageActions } from "@/components/chat/message-actions";
 import {
@@ -30,7 +26,10 @@ import { Button } from "@/components/ui/button";
 import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";
 import { useChatLogic } from "@/hooks/use-chat-logic";
-import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
+import {
+  type FeedbackSurface,
+  useCognitiveFeedback,
+} from "@/hooks/use-cognitive-feedback";
 import { useFocusedContext } from "@/hooks/use-focused-context";
 import { useMessageEdit } from "@/hooks/use-message-edit";
 import { useOfflineQueue } from "@/hooks/use-offline-queue";
@@ -43,6 +42,8 @@ import { Controls } from "./controls";
 import { ErrorBoundary } from "./error-boundary";
 import { Load } from "./load";
 import { Queue } from "./queue";
+
+type AssistantUIMessage = UIMessage;
 
 export interface ChatContainerProps {
   agent?: "assistant" | "orchestrator";
@@ -265,6 +266,45 @@ export function ChatContainer({
     [feedbackDraft, resetFeedback, submitFeedback]
   );
 
+  const handleEditChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setEditText(event.target.value);
+    },
+    [setEditText]
+  );
+
+  const handleEditKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelEditing();
+      }
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        saveEdit();
+      }
+    },
+    [cancelEditing, saveEdit]
+  );
+
+  const chatPlaceholder = useMemo(() => {
+    if (currentAgent === "assistant") {
+      return focused.label
+        ? `Ask about ${focused.label}...`
+        : "Ask Alfred how to help…";
+    }
+    return focused.label
+      ? `Ask the orchestrator about ${focused.label}...`
+      : "Ask the orchestrator to plan or coordinate…";
+  }, [currentAgent, focused.label]);
+
+  const handleRetryQueued = useCallback(() => {
+    for (const message of pendingMessages) {
+      handleSend(message.content);
+      removeFromQueue(message.id);
+    }
+  }, [pendingMessages, handleSend, removeFromQueue]);
+
   const renderMessage = useCallback(
     (_index: number, message: UIMessage) => {
       const isEditing = editingMessageId === message.id;
@@ -275,13 +315,8 @@ export function ChatContainer({
             <Textarea
               autoFocus
               className="min-h-[100px] bg-background"
-              onChange={(e) => setEditText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  cancelEditing();
-                }
-              }}
+              onChange={handleEditChange}
+              onKeyDown={handleEditKeyDown}
               placeholder="Edit your message..."
               value={editText}
             />
@@ -315,7 +350,8 @@ export function ChatContainer({
       saveEdit,
       partRenderer,
       renderMessageActions,
-      setEditText,
+      handleEditChange,
+      handleEditKeyDown,
     ]
   );
 
@@ -374,15 +410,7 @@ export function ChatContainer({
                 onSend={handleSendWithQueue}
                 onVoice={toggleVoice}
                 perf
-                placeholder={
-                  currentAgent === "assistant"
-                    ? (focused.label
-                      ? `Ask about ${focused.label}...`
-                      : "Ask Alfred how to help…")
-                    : (focused.label
-                      ? `Ask the orchestrator about ${focused.label}...`
-                      : "Ask the orchestrator to plan or coordinate…")
-                }
+                placeholder={chatPlaceholder}
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}
@@ -407,16 +435,7 @@ export function ChatContainer({
                 {pendingMessages.length} message
                 {pendingMessages.length === 1 ? "" : "s"} queued (offline)
               </p>
-              <Button
-                onClick={() => {
-                  for (const message of pendingMessages) {
-                    handleSend(message.content);
-                    removeFromQueue(message.id);
-                  }
-                }}
-                size="sm"
-                variant="outline"
-              >
+              <Button onClick={handleRetryQueued} size="sm" variant="outline">
                 Retry Now
               </Button>
             </div>
