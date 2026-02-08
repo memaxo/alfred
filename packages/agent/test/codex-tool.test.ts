@@ -51,9 +51,7 @@ const getGraphClientSpy = vi
 const upsertNodesSpy = vi
   .spyOn(graphRepo, "upsertNodes")
   .mockResolvedValue(new Map());
-const upsertEdgesSpy = vi
-  .spyOn(graphRepo, "upsertEdges")
-  .mockResolvedValue();
+const upsertEdgesSpy = vi.spyOn(graphRepo, "upsertEdges").mockResolvedValue();
 
 function createTempDir(prefix: string) {
   return mkdtempSync(join(os.tmpdir(), prefix));

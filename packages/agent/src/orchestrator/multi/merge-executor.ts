@@ -140,7 +140,7 @@ export async function executeMergePlan(
           { runId: options.runId }
         );
         if (!preview.success) {
-          const {runId} = options;
+          const { runId } = options;
           const shouldArbitrate =
             (options.auto === "medium" || options.auto === "high") &&
             typeof runId === "string" &&

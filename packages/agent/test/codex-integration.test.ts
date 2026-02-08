@@ -116,7 +116,7 @@ const executeWithCodexServerSpy = vi
         continue;
       }
 
-      const {item} = (event as { item?: any });
+      const { item } = event as { item?: any };
       if (!item || typeof item !== "object") {
         continue;
       }
