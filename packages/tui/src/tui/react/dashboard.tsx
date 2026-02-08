@@ -218,7 +218,7 @@ export function Dashboard({
   // < 80 cols: Single panel focus mode
   // 80-120 cols: Two column split mode
   // > 120 cols: Multi-panel dashboard mode (default)
-  const layoutMode = width < 80 ? "focus" : (width < 120 ? "split" : "dashboard");
+  const layoutMode = width < 80 ? "focus" : width < 120 ? "split" : "dashboard";
 
   // Calculate layout dimensions
   const headerHeight = 3;

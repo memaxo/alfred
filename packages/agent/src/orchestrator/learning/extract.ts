@@ -31,9 +31,9 @@ export async function seedOntology() {
       label:
         k.data._ === "fact"
           ? k.data.content
-          : (k.data._ === "insight"
+          : k.data._ === "insight"
             ? k.data.conclusion
-            : "unknown"),
+            : "unknown",
       properties: { confidence: SEED_CONFIDENCE, source: "seed" },
     }))
   );

@@ -1,8 +1,16 @@
 import type { Workspace } from "@alfred/agent/environment/types";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
-import type { AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
-import type { RuntimeMcpServer } from "@alfred/mcp";
-import type { ExecutorConfigPublic } from "@alfred/type";
+import type {
+  AgentId,
+  AgentSpec,
+} from "@alfred/agent/orchestrator/multi/spawn";
+import type { AgentOutcome as OrchestratorAgentOutcome } from "@alfred/agent/orchestrator/outcome";
+import type {
+  RuntimeMcpEscalationInput,
+  RuntimeMcpEscalationReceipt,
+  RuntimeMcpServer,
+} from "@alfred/mcp";
+import type { ExecutorConfigPublic, FailureContext } from "@alfred/type";
 import type { WorkflowEvent } from "@alfred/type/plan";
 
 import { isAgentFSWorkspace } from "@alfred/agent/environment/agentfs";
@@ -125,7 +133,7 @@ export interface AgentOutcome {
     branch?: string;
   };
   /** Failure context for non-success outcomes (enrichment system) */
-  failureContext?: import("@alfred/type").FailureContext;
+  failureContext?: FailureContext;
 }
 
 type AgentExecutor = "codex" | "droid" | "opencode";
@@ -164,9 +172,9 @@ function isServerStartFailure(
   const code =
     executor === "codex"
       ? "codex_server_start_failed"
-      : (executor === "opencode"
+      : executor === "opencode"
         ? "opencode_server_start_failed"
-        : undefined);
+        : undefined;
   if (!code) {
     return false;
   }
@@ -268,10 +276,11 @@ export async function runAgent({
       const workflowRepo = await import("@alfred/db/repo/workflow");
       const run = await workflowRepo.getRun(runId);
       if (run?.projectId) {
+        const projectId = run.projectId;
         void import("@alfred/db/repo/project")
-          .then((repo) => repo.updateProjectLastActive(run.projectId!))
+          .then((repo) => repo.updateProjectLastActive(projectId))
           .catch(() => {});
-        return run.projectId;
+        return projectId;
       }
     } catch {
       // ignore
@@ -509,12 +518,12 @@ export async function runAgent({
   const codexCliProfile =
     executor === "codex" && profileRaw.length > 0 && !execProfileExplicit
       ? profileRaw
-      : (executor === "codex" &&
+      : executor === "codex" &&
           executorConfig?.kind === "codex" &&
           typeof executorConfig.profile === "string" &&
           executorConfig.profile.length > 0
         ? executorConfig.profile
-        : undefined);
+        : undefined;
 
   // Runtime MCP: deterministic escalation with immediate tool-call receipt.
   // We use an agent-local AbortController so the MCP server can request abort
@@ -535,8 +544,8 @@ export async function runAgent({
   const agentSignal = agentAbortController.signal;
 
   interface McpEscalationState {
-    input: import("@alfred/mcp").RuntimeMcpEscalationInput;
-    receipt: import("@alfred/mcp").RuntimeMcpEscalationReceipt;
+    input: RuntimeMcpEscalationInput;
+    receipt: RuntimeMcpEscalationReceipt;
   }
   let mcpEscalation: McpEscalationState | undefined;
 
@@ -653,8 +662,7 @@ export async function runAgent({
     let status = "completed";
     let stuck = false;
     let durationSeconds = 0;
-    const agentKey =
-      spec.agentId as import("@alfred/agent/orchestrator/multi/spawn").AgentId;
+    const agentKey = spec.agentId as AgentId;
 
     try {
       if (executor === "codex") {
@@ -1196,7 +1204,7 @@ export async function runAgent({
                 await import("@alfred/agent/orchestrator/outcome");
               return finalizeOutcome(
                 {
-                  ...(outcome as unknown as import("@alfred/agent/orchestrator/outcome").AgentOutcome),
+                  ...(outcome as unknown as OrchestratorAgentOutcome),
                   status: mapped,
                 },
                 workspaceEnv.getAgent()
@@ -1366,9 +1374,9 @@ function buildAgentPrompt(
   const runtimeEscalateTool =
     executor === "codex" || executor === "droid"
       ? "mcp__alfred_runtime__escalate"
-      : (executor === "opencode"
+      : executor === "opencode"
         ? "alfred_runtime_escalate"
-        : "escalate");
+        : "escalate";
 
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
@@ -1507,9 +1515,9 @@ function createAgentWriter(
                 status:
                   inner.status === "failed"
                     ? "failed"
-                    : (inner.status === "completed"
+                    : inner.status === "completed"
                       ? "completed"
-                      : "running"),
+                      : "running",
                 ts,
                 type: "agent/command",
               }

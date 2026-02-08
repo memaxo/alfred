@@ -14,6 +14,7 @@ import {
   toolResultTruncatedTotal,
 } from "@alfred/history/metrics";
 import {
+  type ToolResultRef,
   shouldTruncateToolResult,
   summarizeToolPayload,
   truncateToolPart,
@@ -22,9 +23,17 @@ import { logger } from "@alfred/logger";
 import { createTokenEstimator } from "@alfred/metrics/token";
 import { classifyAiSdkError } from "@alfred/type/aierror";
 import { routerMessageSchema, uiMessageSchema } from "@alfred/type/stream.zod";
-import { consumeStream, generateId, streamText, type UIMessage } from "ai";
+import {
+  consumeStream,
+  generateId,
+  streamText,
+  type ModelMessage,
+  type UIMessage,
+} from "ai";
 import { createHash } from "node:crypto";
 import { z } from "zod";
+
+import type { sseConnectionsCurrent } from "./metrics";
 
 import { triggerPreferenceRefresh } from "./preference/refresh";
 import {
@@ -157,6 +166,66 @@ function isTextPartLike(part: unknown): part is { type: "text"; text: string } {
 }
 
 type StreamArgs = Parameters<typeof streamText>[0];
+type MessageLike = UIMessage | ModelMessage;
+type PrepareStep = NonNullable<StreamArgs["prepareStep"]>;
+type PrepareStepArgs = Parameters<PrepareStep>[0];
+type PrepareStepResult = Awaited<ReturnType<PrepareStep>>;
+type StreamTools = NonNullable<StreamArgs["tools"]>;
+type StreamTool = StreamTools[string];
+type ToolWithExecute = {
+  execute: (input: unknown, ctx: unknown) => Promise<unknown> | unknown;
+} & Record<string, unknown>;
+interface ToolPartInfo {
+  toolName: string;
+  toolCallId: string;
+  payload: unknown;
+}
+
+function isToolWithExecute(value: StreamTool): value is ToolWithExecute {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "execute" in value &&
+    typeof (value as { execute?: unknown }).execute === "function"
+  );
+}
+
+function getToolCallIdFromContext(ctx: unknown): string | undefined {
+  if (!ctx || typeof ctx !== "object" || !("toolCallId" in ctx)) {
+    return;
+  }
+  const id = (ctx as { toolCallId?: unknown }).toolCallId;
+  return typeof id === "string" ? id : undefined;
+}
+
+function getMessagesFromUnknown(value: unknown): MessageLike[] | undefined {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+  const messages = (value as { messages?: unknown }).messages;
+  return Array.isArray(messages) ? (messages as MessageLike[]) : undefined;
+}
+
+function extractToolPartInfo(part: UIMessage["parts"][number]): ToolPartInfo {
+  if (!part || typeof part !== "object") {
+    return { toolName: "unknown", toolCallId: "unknown", payload: null };
+  }
+  const candidate = part as {
+    toolName?: unknown;
+    toolCallId?: unknown;
+    output?: unknown;
+    result?: unknown;
+    input?: unknown;
+  };
+  const toolName =
+    typeof candidate.toolName === "string" ? candidate.toolName : "unknown";
+  const toolCallId =
+    typeof candidate.toolCallId === "string" ? candidate.toolCallId : "unknown";
+  const payload =
+    candidate.output ?? candidate.result ?? candidate.input ?? null;
+  return { toolName, toolCallId, payload };
+}
+
 type AgentDefaults = Pick<
   StreamArgs,
   "model" | "tools" | "stopWhen" | "prepareStep"
@@ -185,9 +254,7 @@ export async function handleStreamRequest(
   let userId: string | null = null;
   let firstChunkSent = false;
   let closeMcp: (() => Promise<void>) | null = null;
-  let sseConnectionsCurrentRef:
-    | (typeof import("./metrics"))["sseConnectionsCurrent"]
-    | null = null;
+  let sseConnectionsCurrentRef: typeof sseConnectionsCurrent | null = null;
 
   try {
     const {
@@ -572,37 +639,33 @@ export async function handleStreamRequest(
     let prepareStepForStream = prepareStep;
 
     if (signalsEnabled) {
-      const signalsToolCalls: import("@alfred/agent/signals/trace").TraceToolCall[] =
-        [];
+      const signalsToolCalls: TraceToolCall[] = [];
 
       let signalsMetrics:
         | {
-            latency: (typeof import("@alfred/metrics"))["signalsJudgeLatencySeconds"];
-            detected: (typeof import("@alfred/metrics"))["signalsDetectedTotal"];
-            interventions: (typeof import("@alfred/metrics"))["signalsInterventionsTotal"];
+            latency: typeof signalsJudgeLatencySeconds;
+            detected: typeof signalsDetectedTotal;
+            interventions: typeof signalsInterventionsTotal;
           }
         | undefined;
 
       toolsForStream = Object.fromEntries(
         Object.entries(mergedTools).map(([name, tool]) => {
-          const t = tool as any;
-          if (!t || typeof t !== "object" || typeof t.execute !== "function") {
+          if (!isToolWithExecute(tool)) {
             return [name, tool];
           }
           return [
             name,
             {
-              ...t,
-              execute: async (input: unknown, ctx: any) => {
+              ...tool,
+              execute: async (input: unknown, ctx: unknown) => {
                 const start = performance.now();
+                const toolCallId = getToolCallIdFromContext(ctx);
                 try {
-                  const out = await t.execute(input, ctx);
+                  const out = await tool.execute(input, ctx);
                   signalsToolCalls.push({
                     toolName: name,
-                    toolCallId:
-                      ctx && typeof ctx === "object" && "toolCallId" in ctx
-                        ? String((ctx as any).toolCallId)
-                        : undefined,
+                    toolCallId,
                     status: "success",
                     durationMs: performance.now() - start,
                   });
@@ -610,10 +673,7 @@ export async function handleStreamRequest(
                 } catch (error) {
                   signalsToolCalls.push({
                     toolName: name,
-                    toolCallId:
-                      ctx && typeof ctx === "object" && "toolCallId" in ctx
-                        ? String((ctx as any).toolCallId)
-                        : undefined,
+                    toolCallId,
                     status: "error",
                     durationMs: performance.now() - start,
                     error:
@@ -628,15 +688,20 @@ export async function handleStreamRequest(
       ) as typeof mergedTools;
 
       const basePrepareStep = prepareStep;
-      prepareStepForStream = async (args: any) => {
+      prepareStepForStream = async (args: PrepareStepArgs) => {
         const base = (await basePrepareStep?.(args)) ?? {};
-        const nextMessages = (base as any).messages ?? args.messages;
+        const baseResult =
+          typeof base === "object" && base !== null ? base : {};
+        const nextMessages =
+          getMessagesFromUnknown(baseResult) ??
+          getMessagesFromUnknown(args) ??
+          [];
         const stepNumber =
           typeof args?.stepNumber === "number"
             ? args.stepNumber
-            : (typeof args?.step === "number"
+            : typeof args?.step === "number"
               ? args.step
-              : 0);
+              : 0;
 
         try {
           if (!signalsMetrics) {
@@ -680,8 +745,8 @@ export async function handleStreamRequest(
               )
               .map((c) => c.error as string),
             budget: {
-              maxCostUsd: parsed.data.maxCostUsd as number | undefined,
-            } as any,
+              maxCostUsd: parsed.data.maxCostUsd,
+            },
           });
 
           const judged = await judgeSignals(
@@ -1029,23 +1094,11 @@ async function persistMessages({
         }
         changed = true;
 
-        const toolName =
-          typeof (part as any)?.toolName === "string"
-            ? String((part as any).toolName)
-            : "unknown";
-        const toolCallId =
-          typeof (part as any)?.toolCallId === "string"
-            ? String((part as any).toolCallId)
-            : "unknown";
-        const payload =
-          (part as any).output ??
-          (part as any).result ??
-          (part as any).input ??
-          null;
+        const { toolName, toolCallId, payload } = extractToolPartInfo(part);
         const key = `toolresult:${toolCallId}:${sha256(payload)}`;
 
         let stored: "agentfs" | "none" = "none";
-        let ref: any = null;
+        let ref: ToolResultRef = null;
         try {
           const a = await getAgentfs();
           if (a) {
@@ -1099,3 +1152,9 @@ async function persistMessages({
 export const __test = {
   persistMessages,
 };
+import type { TraceToolCall } from "@alfred/agent/signals/trace";
+import type {
+  signalsDetectedTotal,
+  signalsInterventionsTotal,
+  signalsJudgeLatencySeconds,
+} from "@alfred/metrics";

@@ -239,9 +239,9 @@ export async function submitReview(
   const status: ReviewStatus =
     verdict === "approve"
       ? "approved"
-      : (verdict === "reject"
+      : verdict === "reject"
         ? "rejected"
-        : "skipped");
+        : "skipped";
 
   const updatedReview = await updateReviewStatus(reviewId, {
     status,
@@ -698,12 +698,15 @@ export async function getBlockedReviews(
   const countMap = new Map(dependencyCounts.map((d) => [d.reviewId, d.count]));
   const now = Date.now();
 
-  return reviews.map((review) => ({
-    ...review,
-    timeBlockedMs: now - new Date(review.createdAt!).getTime(),
-    risk: calculateRisk(review),
-    blockingCount: countMap.get(review.id) ?? 0,
-  }));
+  return reviews.map((review) => {
+    const createdAt = review.createdAt ?? review.updatedAt ?? new Date();
+    return {
+      ...review,
+      timeBlockedMs: now - new Date(createdAt).getTime(),
+      risk: calculateRisk(review),
+      blockingCount: countMap.get(review.id) ?? 0,
+    };
+  });
 }
 
 /**
@@ -823,9 +826,9 @@ export async function getCycleTimeStats(
   const periodMs =
     period === "day"
       ? 24 * 60 * 60 * 1000
-      : (period === "week"
+      : period === "week"
         ? 7 * 24 * 60 * 60 * 1000
-        : 30 * 24 * 60 * 60 * 1000);
+        : 30 * 24 * 60 * 60 * 1000;
 
   const since = new Date(Date.now() - periodMs);
 
@@ -890,10 +893,12 @@ export async function getCycleTimeStats(
       const cycleTime =
         new Date(review.reviewedAt).getTime() -
         new Date(review.createdAt).getTime();
-      if (!trendMap.has(date!)) {
-        trendMap.set(date!, []);
+      const bucket = trendMap.get(date);
+      if (bucket) {
+        bucket.push(cycleTime);
+      } else {
+        trendMap.set(date, [cycleTime]);
       }
-      trendMap.get(date!)!.push(cycleTime);
     }
   }
 
@@ -966,13 +971,15 @@ export async function getActivityFeed(
     >;
     const summary = getSummaryFromSubjectData(review.reviewType, subjectData);
 
+    const timestamp = review.updatedAt ?? review.createdAt ?? new Date();
+
     return {
       agent: (subjectData.agent as string) ?? undefined,
       id: `${review.id}-${review.status}`,
       reviewId: review.id,
       reviewType: review.reviewType,
       summary,
-      timestamp: review.updatedAt ?? review.createdAt!,
+      timestamp,
       type: eventType,
     };
   });
@@ -1458,7 +1465,10 @@ export async function createReviewTemplate(
   // Invalidate template cache
   void invalidateTemplateCache(template.userId);
 
-  return result!;
+  if (!result) {
+    throw new Error("review_template_insert_failed");
+  }
+  return result;
 }
 
 /**

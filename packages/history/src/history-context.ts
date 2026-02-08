@@ -52,6 +52,28 @@ const ROLE_WEIGHTS: Record<string, number> = {
   user: 3,
 };
 
+interface ToolPartInfo {
+  toolName: string;
+  payload: unknown;
+}
+
+function extractToolPartInfo(part: UIMessage["parts"][number]): ToolPartInfo {
+  if (!part || typeof part !== "object") {
+    return { toolName: "unknown", payload: null };
+  }
+  const candidate = part as {
+    toolName?: unknown;
+    output?: unknown;
+    result?: unknown;
+    input?: unknown;
+  };
+  const toolName =
+    typeof candidate.toolName === "string" ? candidate.toolName : "unknown";
+  const payload =
+    candidate.output ?? candidate.result ?? candidate.input ?? null;
+  return { toolName, payload };
+}
+
 function clamp(value: number, min: number, max: number): number {
   if (value < min) {
     return min;
@@ -124,15 +146,7 @@ export async function buildHistoryContext(
           continue;
         }
         msgChanged = true;
-        const toolName =
-          typeof (part as any)?.toolName === "string"
-            ? String((part as any).toolName)
-            : "unknown";
-        const payload =
-          (part as any).output ??
-          (part as any).result ??
-          (part as any).input ??
-          null;
+        const { toolName, payload } = extractToolPartInfo(part);
         toolResultTruncatedTotal.inc({
           source: sourceLabel,
           stored: "none",
@@ -375,9 +389,9 @@ export async function buildHistoryContext(
       const modelMessagesRaw =
         uiMessages.length === 0
           ? []
-          : (options.tools
+          : options.tools
             ? convertToModelMessages(uiMessages, { tools: options.tools })
-            : convertToModelMessages(uiMessages));
+            : convertToModelMessages(uiMessages);
 
       const modelMessages =
         modelMessagesRaw.length === 0

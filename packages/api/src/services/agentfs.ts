@@ -207,9 +207,9 @@ export function compareAgentfsRuns(args: {
   const redactKvValue = (key: string, value: string | null): string | null =>
     value === null
       ? null
-      : (key.startsWith("executor:")
+      : key.startsWith("executor:")
         ? '"[redacted]"'
-        : value);
+        : value;
 
   for (const k of [...allKeys].sort()) {
     const l = leftKvMap.get(k) ?? null;

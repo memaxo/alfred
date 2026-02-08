@@ -121,7 +121,7 @@ function buildPlanPrompt(
     research.external.length > 0
       ? "External Research:\n".concat(
           research.external
-            .map((r: any) => "- ".concat(r.source, ": ").concat(r.summary))
+            .map((r) => "- ".concat(r.source, ": ").concat(r.summary))
             .join("\n"),
           "\n"
         )
@@ -130,14 +130,12 @@ function buildPlanPrompt(
   const internalContext = research.internal
     ? "Internal Context:\n".concat(
         "  Code Patterns: ".concat(
-          research.internal.patterns?.map((p: any) => p.name).join(", ") ||
-            "none",
+          research.internal.patterns?.map((p) => p.name).join(", ") || "none",
           "\n"
         ),
         "  Conventions: ".concat(
-          research.internal.conventions
-            ?.map((c: any) => c.description)
-            .join(", ") || "none",
+          research.internal.conventions?.map((c) => c.description).join(", ") ||
+            "none",
           "\n"
         )
       )
@@ -262,9 +260,9 @@ export async function generatePlan(
   const strategy =
     options?.preferParallel === true
       ? "parallel"
-      : (options?.preferParallel === false
+      : options?.preferParallel === false
         ? "sequential"
-        : raw.resources?.strategy || "sequential");
+        : raw.resources?.strategy || "sequential";
 
   return {
     id,

@@ -202,9 +202,9 @@ export async function findRelevantFiles(
   const liteFusionEnabled = liteFusionRaw.length > 0 && liteFusionRaw !== "0";
   const liteFusionMode =
     liteFusionRaw === "1"
-      ? (isRerankAvailable()
+      ? isRerankAvailable()
         ? "rerank"
-        : "hash")
+        : "hash"
       : liteFusionRaw;
 
   if (liteFusionEnabled && candidates.length > 0) {
@@ -314,17 +314,28 @@ export async function findRelevantFiles(
 
   const keywordTopScore = toRerank[0]?.score ?? 0;
 
+  const rerankDocs = toRerank
+    .map((c) => {
+      const text = index.get(c.path);
+      if (!text) {
+        return null;
+      }
+      return { id: c.path, text: buildRerankText(c.path, text) };
+    })
+    .filter((doc): doc is { id: string; text: string } => doc !== null);
+
   let reranked: { id: string; score: number }[];
   try {
-    reranked = await rerank({
-      documents: toRerank.map((c) => ({
-        id: c.path,
-        text: buildRerankText(c.path, index.get(c.path)!),
-      })),
-      instruction: "Rank code files by relevance to the programming task.",
-      query,
-      topN: topK,
-    });
+    reranked =
+      rerankDocs.length > 0
+        ? await rerank({
+            documents: rerankDocs,
+            instruction:
+              "Rank code files by relevance to the programming task.",
+            query,
+            topN: topK,
+          })
+        : [];
   } catch (error) {
     rerankFallbacksTotal.inc();
     logger.warn("codeprint_rerank_failed", {

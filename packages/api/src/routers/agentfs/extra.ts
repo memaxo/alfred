@@ -225,9 +225,9 @@ export const agentfsExtraProcedures = {
       const resource =
         item?.type === "run"
           ? { kind: "agentfs_quarantine", id: `run:${item.id}` }
-          : (item?.type === "cas"
+          : item?.type === "cas"
             ? { kind: "agentfs_quarantine", id: `cas:${item.id}` }
-            : { kind: "agentfs_quarantine", id: input.id });
+            : { kind: "agentfs_quarantine", id: input.id };
       const runId = item?.type === "run" ? item.id : undefined;
       const sha = item?.type === "cas" ? item.id : undefined;
 

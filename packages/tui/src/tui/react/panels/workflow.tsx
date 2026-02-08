@@ -41,6 +41,9 @@ const STAGES: readonly StageName[] = [
   "summarize",
 ] as const;
 
+const isSuspendedStatus = (status: string): status is "suspended" =>
+  status === "suspended";
+
 function parseStage(value: string | null | undefined): StageName | null {
   if (!value) {
     return null;
@@ -413,7 +416,7 @@ export function WorkflowPanel({
       if (event.name === "p" || event.name === " ") {
         if (workflow.status === "executing") {
           await client.suspendWorkflow(workflow.id);
-        } else if (workflow.status === ("suspended" as any)) {
+        } else if (isSuspendedStatus(workflow.status)) {
           await client.resumeWorkflow(workflow.id);
         }
         return;
@@ -436,8 +439,9 @@ export function WorkflowPanel({
     }
   }, [workflows.length, selectedIndex]);
 
-  if (viewMode === "detail" && workflows[selectedIndex]) {
-    const wf = workflows[selectedIndex]!;
+  const selectedWorkflow = workflows[selectedIndex];
+  if (viewMode === "detail" && selectedWorkflow) {
+    const wf = selectedWorkflow;
     return (
       <box
         border
@@ -611,9 +615,9 @@ export function WorkflowPanel({
               content={
                 action.kind === "error"
                   ? fg(colors.error)(`✗ ${action.message}`)
-                  : (action.kind === "ok"
+                  : action.kind === "ok"
                     ? fg(colors.success)(`✓ ${action.message}`)
-                    : dim(`… ${action.message}`))
+                    : dim(`… ${action.message}`)
               }
             />
           </>

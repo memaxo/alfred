@@ -275,7 +275,7 @@ export const agentfsRouter = router({
 
         return {
           checkpoints: [...merged.values()].sort((a, b) =>
-            a.createdAt < b.createdAt ? 1 : (a.createdAt > b.createdAt ? -1 : 0)
+            a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
           ),
         };
       } finally {
@@ -1310,9 +1310,9 @@ export const agentfsRouter = router({
           const password =
             typeof nextPassword === "string"
               ? nextPassword
-              : (typeof prevPassword === "string"
+              : typeof prevPassword === "string"
                 ? prevPassword
-                : undefined);
+                : undefined;
           passwordSet = typeof password === "string" && password.length > 0;
 
           if (password) {
@@ -1413,9 +1413,9 @@ export const agentfsRouter = router({
         const parsed = raw ? executorConfigPublicSchema.safeParse(raw) : null;
         const issues = parsed?.success
           ? undefined
-          : (parsed
+          : parsed
             ? parsed.error.issues.map((i) => i.message)
-            : undefined);
+            : undefined;
 
         const supports = (() => {
           if (input.kind === "droid") {

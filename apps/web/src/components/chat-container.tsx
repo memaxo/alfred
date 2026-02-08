@@ -178,42 +178,48 @@ export function ChatContainer({
     []
   );
 
+  const handleEditMessage = useCallback(
+    (message: AssistantUIMessage) => {
+      startEditing(message);
+    },
+    [startEditing]
+  );
+
+  const handleFeedbackNegative = useCallback(
+    (message: AssistantUIMessage) => {
+      handleFeedbackIntent(message, "negative");
+    },
+    [handleFeedbackIntent]
+  );
+
+  const handleFeedbackPositive = useCallback(
+    (message: AssistantUIMessage) => {
+      handleFeedbackIntent(message, "positive");
+    },
+    [handleFeedbackIntent]
+  );
+
+  const handleRegenerateMessage = useCallback(
+    (_message: AssistantUIMessage) => {
+      handleRegenerate();
+    },
+    [handleRegenerate]
+  );
+
   const renderMessageActions = useCallback(
     (message: UIMessage) => {
       const isAssistant = message.role === "assistant";
       const isUser = message.role === "user";
+      const allowRegenerate = isAssistant && messages.at(-1)?.id === message.id;
 
       return (
         <MessageActions
           disabled={status === "streaming" || feedbackStatus === "pending"}
-          onEdit={
-            isUser
-              ? () => startEditing(message as AssistantUIMessage)
-              : undefined
-          }
-          onNegative={
-            isAssistant
-              ? () =>
-                  handleFeedbackIntent(
-                    message as AssistantUIMessage,
-                    "negative"
-                  )
-              : undefined
-          }
-          onPositive={
-            isAssistant
-              ? () =>
-                  handleFeedbackIntent(
-                    message as AssistantUIMessage,
-                    "positive"
-                  )
-              : undefined
-          }
-          onRegenerate={
-            isAssistant && messages.at(-1)?.id === message.id
-              ? handleRegenerate
-              : undefined
-          }
+          message={message as AssistantUIMessage}
+          onEdit={isUser ? handleEditMessage : undefined}
+          onNegative={isAssistant ? handleFeedbackNegative : undefined}
+          onPositive={isAssistant ? handleFeedbackPositive : undefined}
+          onRegenerate={allowRegenerate ? handleRegenerateMessage : undefined}
           role={message.role as AssistantUIMessage["role"]}
         />
       );
@@ -221,10 +227,11 @@ export function ChatContainer({
     [
       status,
       feedbackStatus,
-      startEditing,
-      handleFeedbackIntent,
       messages,
-      handleRegenerate,
+      handleEditMessage,
+      handleFeedbackNegative,
+      handleFeedbackPositive,
+      handleRegenerateMessage,
     ]
   );
 

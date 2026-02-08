@@ -349,9 +349,9 @@ export const workflowPhaseExecuteProcedure = authedProcedure
           status:
             status === "completed"
               ? "completed"
-              : (status === "suspended"
+              : status === "suspended"
                 ? "suspended"
-                : "failed"),
+                : "failed",
           suspendedAt: status === "suspended" ? new Date() : null,
         });
       } catch {

@@ -189,9 +189,9 @@ export function AgentFSPanel({
   const hint =
     selectedRunId && !runId
       ? `Selected ${truncate(selectedRunId, 12)} (not attached). Use Workflows panel [r] prepare.`
-      : (selectedRunId && runId && selectedRunId !== runId
+      : selectedRunId && runId && selectedRunId !== runId
         ? `Viewing ${truncate(runId, 12)} (selected ${truncate(selectedRunId, 12)}).`
-        : null);
+        : null;
 
   return (
     <box

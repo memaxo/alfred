@@ -426,9 +426,9 @@ export function useVoiceSessionWeb() {
       supported: webrtc.supported || protocol.supported,
       transport: webrtc.state.sessionId
         ? ("webrtc" as const)
-        : (protocol.state.sessionId
+        : protocol.state.sessionId
           ? ("ws" as const)
-          : null),
+          : null,
       status: webrtc.state.sessionId
         ? webrtc.state.status
         : protocol.state.status,

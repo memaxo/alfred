@@ -13,8 +13,11 @@ import type { ToolCallOptions } from "ai";
 
 import type { ToolExecuteArgs } from "../shared/context.js";
 import type {
+  LearnMistakeOutput,
   LearnMistakeInput,
+  LearnPatternOutput,
   LearnPatternInput,
+  LearnRecordOutput,
   LearnRecordInput,
 } from "./definition.js";
 
@@ -119,7 +122,7 @@ const aiToolLearnRecordBase = {
   parameters: toolLearnRecord.inputSchema,
 };
 
-export const aiToolLearnRecord: AITool<LearnRecordInput, any> =
+export const aiToolLearnRecord: AITool<LearnRecordInput, LearnRecordOutput> =
   withPolicyApproval(aiToolLearnRecordBase, (input: LearnRecordInput) => ({
     action: "learning.record",
     authz: input.authz,
@@ -193,7 +196,7 @@ const aiToolLearnPatternBase = {
   parameters: toolLearnPattern.inputSchema,
 };
 
-export const aiToolLearnPattern: AITool<LearnPatternInput, any> =
+export const aiToolLearnPattern: AITool<LearnPatternInput, LearnPatternOutput> =
   withPolicyApproval(aiToolLearnPatternBase, (input: LearnPatternInput) => ({
     action: "learning.pattern",
     authz: input.authz,
@@ -230,9 +233,9 @@ export const toolLearnMistake = {
       const baseConfidence =
         input.severity === "high"
           ? 0.9
-          : (input.severity === "medium"
+          : input.severity === "medium"
             ? 0.7
-            : 0.5);
+            : 0.5;
 
       const hookEvent: LearnHeuristicProposedEvent = {
         type: "learn:heuristic:proposed",
@@ -274,7 +277,7 @@ const aiToolLearnMistakeBase = {
   parameters: toolLearnMistake.inputSchema,
 };
 
-export const aiToolLearnMistake: AITool<LearnMistakeInput, any> =
+export const aiToolLearnMistake: AITool<LearnMistakeInput, LearnMistakeOutput> =
   withPolicyApproval(aiToolLearnMistakeBase, (input: LearnMistakeInput) => ({
     action: "learning.mistake",
     authz: input.authz,

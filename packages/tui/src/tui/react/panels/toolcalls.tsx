@@ -240,9 +240,9 @@ export function ToolCallsPanel({
             content={`${bold("Status:")} ${
               call.error
                 ? fg(colors.error)("Failed")
-                : (!call.completed_at
+                : !call.completed_at
                   ? fg(colors.warning)("Running")
-                  : fg(colors.success)("Success"))
+                  : fg(colors.success)("Success")
             }`}
           />
           <text
@@ -308,9 +308,9 @@ export function ToolCallsPanel({
   const hint =
     selectedRunId && !runId
       ? `Selected ${truncate(selectedRunId, 12)} (not attached). Use Workflows panel [r] prepare.`
-      : (selectedRunId && runId && selectedRunId !== runId
+      : selectedRunId && runId && selectedRunId !== runId
         ? `Viewing ${truncate(runId, 12)} (selected ${truncate(selectedRunId, 12)}).`
-        : null);
+        : null;
   const headerExtra = hint ? 1 : 0;
 
   return (

@@ -136,15 +136,15 @@ export function createHookRegistry(
                 kind:
                   "command" in entry.config
                     ? "command"
-                    : (entry.config.type === "prompt"
+                    : entry.config.type === "prompt"
                       ? "prompt"
-                      : "handler"),
+                      : "handler",
                 ref:
                   "command" in entry.config
                     ? entry.config.command
-                    : (entry.config.type === "prompt"
+                    : entry.config.type === "prompt"
                       ? entry.config.model
-                      : undefined),
+                      : undefined,
               }
             : { kind: "handler" },
         } satisfies HookExecutedEvent);

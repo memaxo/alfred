@@ -40,6 +40,10 @@ interface TmuxModule {
 }
 
 let tmuxModulePromise: Promise<TmuxModule | null> | null = null;
+const neverExit = (async (): Promise<number> => {
+  await Promise.race([]);
+  return 0;
+})();
 
 function loadTmuxModule(): Promise<TmuxModule | null> {
   if (!tmuxModulePromise) {
@@ -195,7 +199,7 @@ async function spawnViaTmux(
       captureOutput: (lines?: number) =>
         tmux.capturePane(result.paneId, { lines }),
       // Tmux sessions don't exit in the same way.
-      exited: Promise.race<number>([]),
+      exited: neverExit,
       kill: async () => {
         await tmux.stopTmuxSession(runId);
       },

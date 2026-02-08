@@ -6,8 +6,6 @@
 
 import type { UIMessage } from "@alfred/type/stream";
 
-type AssistantUIMessage = UIMessage;
-
 import { useCallback } from "react";
 import { Virtuoso } from "react-virtuoso";
 
@@ -18,12 +16,64 @@ import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { useMessageEdit } from "@/hooks/use-message-edit";
 import { cn } from "@/lib/utils";
 
+type AssistantUIMessage = UIMessage;
+
 interface MessageListProps {
   messages: AssistantUIMessage[];
   onEdit: (id: string, text: string) => void;
   onRegenerate: () => void;
   status: "idle" | "streaming" | "error";
   className?: string;
+}
+
+interface MessageItemProps {
+  message: AssistantUIMessage;
+  isEditing: boolean;
+  isLast: boolean;
+  status: MessageListProps["status"];
+  onCancel: () => void;
+  onSave: (messageId: string, newText: string) => void;
+  renderActions: (message: AssistantUIMessage, isLast: boolean) => JSX.Element;
+  resolveText: (message: AssistantUIMessage) => string;
+}
+
+function MessageItem({
+  message,
+  isEditing,
+  isLast,
+  status,
+  onCancel,
+  onSave,
+  renderActions,
+  resolveText,
+}: MessageItemProps) {
+  const handleSave = useCallback(
+    (newText: string) => {
+      onSave(message.id, newText);
+    },
+    [message.id, onSave]
+  );
+
+  return (
+    <div className="p-4">
+      {isEditing && message.role === "user" ? (
+        <EditMessage
+          disabled={status === "streaming"}
+          initialText={resolveText(message)}
+          onCancel={onCancel}
+          onSave={handleSave}
+        />
+      ) : (
+        <ChatMessage
+          actions={renderActions(message, isLast)}
+          content={message.parts as AssistantPart[]}
+          key={message.id}
+          renderPart={renderPart}
+          role={message.role}
+        />
+      )}
+    </div>
+  );
 }
 
 export function MessageList({
@@ -42,6 +92,13 @@ export function MessageList({
     return textPart && "text" in textPart ? textPart.text : "";
   }, []);
 
+  const handleRegenerate = useCallback(
+    (_message: AssistantUIMessage) => {
+      onRegenerate?.();
+    },
+    [onRegenerate]
+  );
+
   const renderActions = useCallback(
     (message: AssistantUIMessage, isLast: boolean) => {
       const isAssistant = message.role === "assistant";
@@ -50,13 +107,14 @@ export function MessageList({
       return (
         <MessageActions
           disabled={status === "streaming"}
-          onEdit={isUser ? () => startEditing(message) : undefined}
-          onRegenerate={isAssistant && isLast ? onRegenerate : undefined}
+          message={message}
+          onEdit={isUser ? startEditing : undefined}
+          onRegenerate={isAssistant && isLast ? handleRegenerate : undefined}
           role={message.role}
         />
       );
     },
-    [status, onRegenerate, startEditing]
+    [status, handleRegenerate, startEditing]
   );
 
   const handleSaveEdit = useCallback(
@@ -65,6 +123,35 @@ export function MessageList({
       cancelEditing();
     },
     [onEdit, cancelEditing]
+  );
+
+  const renderItem = useCallback(
+    (index: number, message: AssistantUIMessage) => {
+      const isLast = index === messages.length - 1;
+      const isEditingCurrent = isEditing(message.id);
+
+      return (
+        <MessageItem
+          isEditing={isEditingCurrent}
+          isLast={isLast}
+          message={message}
+          onCancel={cancelEditing}
+          onSave={handleSaveEdit}
+          renderActions={renderActions}
+          resolveText={handleMessageText}
+          status={status}
+        />
+      );
+    },
+    [
+      cancelEditing,
+      handleMessageText,
+      handleSaveEdit,
+      isEditing,
+      messages.length,
+      renderActions,
+      status,
+    ]
   );
 
   if (messages.length === 0) {
@@ -89,31 +176,7 @@ export function MessageList({
         data={messages}
         followOutput="smooth"
         initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
-        itemContent={(index, message) => {
-          const isLast = index === messages.length - 1;
-          const isEditingCurrent = isEditing(message.id);
-
-          return (
-            <div className="p-4">
-              {isEditingCurrent && message.role === "user" ? (
-                <EditMessage
-                  disabled={status === "streaming"}
-                  initialText={handleMessageText(message)}
-                  onCancel={cancelEditing}
-                  onSave={(newText) => handleSaveEdit(message.id, newText)}
-                />
-              ) : (
-                <ChatMessage
-                  actions={renderActions(message, isLast)}
-                  content={message.parts as AssistantPart[]}
-                  key={message.id}
-                  renderPart={renderPart}
-                  role={message.role}
-                />
-              )}
-            </div>
-          );
-        }}
+        itemContent={renderItem}
       />
       {/* Streaming indicator */}
       {status === "streaming" && (

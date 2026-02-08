@@ -1,10 +1,13 @@
 import type { UIMessage } from "@alfred/type/stream";
 import type { NodeProps } from "@xyflow/react";
 
-type AssistantUIMessage = UIMessage;
-
 import { MessageSquare, Mic } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import {
+  useCallback,
+  useEffect,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -31,6 +34,8 @@ import { useMessageEdit } from "@/hooks/use-message-edit";
 import { useOfflineQueue } from "@/hooks/use-offline-queue";
 import { useDesktopStore } from "@/store/desktop";
 
+type AssistantUIMessage = UIMessage;
+
 const chatWindowDataSchema = z.object({
   type: z.literal("chat"),
   label: z.string().optional(),
@@ -44,6 +49,62 @@ const chatWindowDataSchema = z.object({
   messages: z.array(z.unknown()).optional(),
   error: z.string().optional(),
 });
+
+interface ChatWindowMessageItemProps {
+  editText: string;
+  isEditing: boolean;
+  message: AssistantUIMessage;
+  onCancel: () => void;
+  onEditTextChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  onEditTextKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSave: () => void;
+  renderActions: (message: AssistantUIMessage) => JSX.Element;
+}
+
+function ChatWindowMessageItem({
+  editText,
+  isEditing,
+  message,
+  onCancel,
+  onEditTextChange,
+  onEditTextKeyDown,
+  onSave,
+  renderActions,
+}: ChatWindowMessageItemProps) {
+  if (isEditing) {
+    return (
+      <div className="mb-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3">
+        <Textarea
+          autoFocus
+          className="min-h-[80px] border-white/10 bg-transparent text-sm"
+          onChange={onEditTextChange}
+          onKeyDown={onEditTextKeyDown}
+          placeholder="Edit your message..."
+          value={editText}
+        />
+        <div className="flex justify-end gap-2">
+          <Button onClick={onCancel} size="sm" variant="ghost">
+            Cancel
+          </Button>
+          <Button disabled={!editText.trim()} onClick={onSave} size="sm">
+            Save
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <ChatMessage
+        actions={renderActions(message)}
+        content={message.parts as AssistantPart[]}
+        renderPart={renderPart}
+        role={message.role as AssistantUIMessage["role"]}
+      />
+    </div>
+  );
+}
 
 export function ChatWindow({ id, data, selected }: NodeProps) {
   const lod = useLOD();
@@ -95,25 +156,30 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     [conversationId, queueMessage, sendToChat]
   );
 
+  const handleRegenerateMessage = useCallback(
+    (_message: AssistantUIMessage) => {
+      handleRegenerate();
+    },
+    [handleRegenerate]
+  );
+
   const renderMessageActions = useCallback(
     (message: AssistantUIMessage) => {
       const isAssistant = message.role === "assistant";
       const isUser = message.role === "user";
+      const allowRegenerate = isAssistant && messages.at(-1)?.id === message.id;
 
       return (
         <MessageActions
           disabled={status === "streaming"}
-          onEdit={isUser ? () => startEditing(message) : undefined}
-          onRegenerate={
-            isAssistant && messages.at(-1)?.id === message.id
-              ? handleRegenerate
-              : undefined
-          }
+          message={message}
+          onEdit={isUser ? startEditing : undefined}
+          onRegenerate={allowRegenerate ? handleRegenerateMessage : undefined}
           role={message.role as AssistantUIMessage["role"]}
         />
       );
     },
-    [status, startEditing, messages, handleRegenerate]
+    [status, startEditing, messages, handleRegenerateMessage]
   );
 
   useEffect(() => {
@@ -138,6 +204,50 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
   }, [pendingMessages, retryAll, sendToChat]);
+
+  const handleEditChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => {
+      setEditText(event.target.value);
+    },
+    [setEditText]
+  );
+
+  const handleEditKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelEditing();
+      }
+    },
+    [cancelEditing]
+  );
+
+  const renderItem = useCallback(
+    (_index: number, message: AssistantUIMessage) => {
+      const isEditingCurrent = isEditing(message.id);
+      return (
+        <ChatWindowMessageItem
+          editText={editText}
+          isEditing={isEditingCurrent}
+          message={message}
+          onCancel={cancelEditing}
+          onEditTextChange={handleEditChange}
+          onEditTextKeyDown={handleEditKeyDown}
+          onSave={saveEdit}
+          renderActions={renderMessageActions}
+        />
+      );
+    },
+    [
+      cancelEditing,
+      editText,
+      handleEditChange,
+      handleEditKeyDown,
+      isEditing,
+      renderMessageActions,
+      saveEdit,
+    ]
+  );
 
   const handleSubmit = useCallback(
     (input: { text: string }) => {
@@ -202,58 +312,7 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
           ) : (
             <Virtuoso
               data={messages}
-              itemContent={(_index, message) => {
-                const isEditingCurrent = isEditing(message.id);
-
-                if (isEditingCurrent) {
-                  return (
-                    <div className="mb-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3">
-                      <Textarea
-                        autoFocus
-                        className="min-h-[80px] border-white/10 bg-transparent text-sm"
-                        onChange={(e) => setEditText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            cancelEditing();
-                          }
-                        }}
-                        placeholder="Edit your message..."
-                        value={editText}
-                      />
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          onClick={cancelEditing}
-                          size="sm"
-                          variant="ghost"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          disabled={!editText.trim()}
-                          onClick={saveEdit}
-                          size="sm"
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="p-4">
-                    <ChatMessage
-                      actions={renderMessageActions(
-                        message as AssistantUIMessage
-                      )}
-                      content={message.parts as AssistantPart[]}
-                      renderPart={renderPart}
-                      role={message.role as AssistantUIMessage["role"]}
-                    />
-                  </div>
-                );
-              }}
+              itemContent={renderItem}
               followOutput="auto"
             />
           )}
