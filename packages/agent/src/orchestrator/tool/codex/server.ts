@@ -606,10 +606,13 @@ async function startServer(args: {
 
       if (req.method === "execCommandApproval") {
         const cmd = parseCommandForApproval(params);
+        if (!hooks.ctx.projectDir) {
+          throw new Error("codex_hook_project_dir_missing");
+        }
         const hookEvent: AgentShellBeforeEvent = {
           type: "agent:shell:before",
           command: cmd,
-          cwd: hooks.ctx.projectDir ?? process.cwd(),
+          cwd: hooks.ctx.projectDir,
         };
 
         const out = await hooks.registry.emit(hookEvent, ctx);

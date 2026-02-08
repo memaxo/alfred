@@ -100,7 +100,11 @@ export async function executeWithCodex({
   writer,
   signal,
 }: CodexExecuteArgs) {
-  const cwdHandle = assertAllowedDirectory(input.cw ?? process.cwd());
+  const repoCw = input.cw?.trim();
+  if (!repoCw) {
+    throw new Error("codex_cw_required");
+  }
+  const cwdHandle = assertAllowedDirectory(repoCw);
   try {
     const output = await executeWithCodexServer({
       cwdHandle,

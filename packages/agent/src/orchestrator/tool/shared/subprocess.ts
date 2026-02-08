@@ -45,7 +45,8 @@ export const OUTPUT_CAP_BYTES =
  * Computed once at module load time
  */
 export const DEFAULT_ALLOW_PREFIXES = (() => {
-  const base = realpathSync(process.cwd());
+  const baseRaw = process.env.PWD?.trim() || "/workspace";
+  const base = realpathSync(baseRaw);
   const raw = process.env.ORCH_ALLOW_CWD_PREFIXES;
   const extras =
     raw && raw.trim().length > 0
