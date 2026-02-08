@@ -81,14 +81,17 @@ function parseWorkflowEvents(events: unknown[]): WorkflowStep[] {
     }
 
     if (eventType === "stage-enter" || eventType === "step-start") {
-      const step: WorkflowStep = {
-        id: stepId,
-        name: String(eventData?.stage ?? eventData?.name ?? stepId),
-        status: "running",
-        startedAt: timestamp,
-      };
-      stepMap.set(stepId, step);
-      steps.push(step);
+      // Only create a new step if it doesn't already exist
+      if (!stepMap.has(stepId)) {
+        const step: WorkflowStep = {
+          id: stepId,
+          name: String(eventData?.stage ?? eventData?.name ?? stepId),
+          status: "running",
+          startedAt: timestamp,
+        };
+        stepMap.set(stepId, step);
+        steps.push(step);
+      }
     } else if (eventType === "stage-exit" || eventType === "step-complete") {
       const step = stepMap.get(stepId);
       if (step) {

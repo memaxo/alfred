@@ -285,8 +285,10 @@ function TimerItem({
         -1,
         true
       );
+    } else {
+      glowOpacity.value = 0.4;
     }
-  }, [glowOpacity, reduceMotion]);
+  }, [reduceMotion]);
 
   const animatedGlowStyle = useAnimatedStyle(() => ({
     shadowOpacity: glowOpacity.value * 0.6,

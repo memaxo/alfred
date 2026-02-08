@@ -114,9 +114,9 @@ export default function NotesListScreen() {
 
   const renderNoteItem = useCallback(
     ({ item }: { item: NoteItem }) => (
-      <MemoizedNoteItem item={item} onDelete={handleDelete} router={router} />
+      <MemoizedNoteItem item={item} onDelete={handleDelete} />
     ),
-    [handleDelete, router]
+    [handleDelete]
   );
 
   // Apply fuzzy search
@@ -309,7 +309,6 @@ export default function NotesListScreen() {
 interface NoteItemProps {
   item: NoteItem;
   onDelete: (id: string) => void;
-  router: ReturnType<typeof useRouter>;
 }
 
 function NoteItem({ item, onDelete }: NoteItemProps) {
@@ -397,8 +396,7 @@ const MemoizedNoteItem = memo(
   (prev, next) =>
     prev.item.id === next.item.id &&
     prev.item === next.item &&
-    prev.onDelete === next.onDelete &&
-    prev.router === next.router
+    prev.onDelete === next.onDelete
 );
 
 const styles = StyleSheet.create({

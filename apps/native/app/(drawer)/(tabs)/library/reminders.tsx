@@ -187,10 +187,9 @@ export default function RemindersListScreen() {
         item={item}
         onDelete={handleDelete}
         onFire={handleFire}
-        router={router}
       />
     ),
-    [handleDelete, handleFire, router]
+    [handleDelete, handleFire]
   );
 
   return (
@@ -408,7 +407,6 @@ interface ReminderItemProps {
   item: ReminderItem;
   onDelete: (id: string) => void;
   onFire: (id: string) => void;
-  router: ReturnType<typeof useRouter>;
 }
 
 function ReminderItem({ item, onDelete, onFire }: ReminderItemProps) {
@@ -561,8 +559,7 @@ const MemoizedReminderItem = memo(
     prev.item.id === next.item.id &&
     prev.item === next.item &&
     prev.onDelete === next.onDelete &&
-    prev.onFire === next.onFire &&
-    prev.router === next.router
+    prev.onFire === next.onFire
 );
 
 const styles = StyleSheet.create({

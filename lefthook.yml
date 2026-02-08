@@ -44,7 +44,7 @@ pre-push:
 pre-commit:
   commands:
     format:
-      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,scss,md,mdx}"
-      run: bun x ultracite fix {staged_files}
+      glob: "*.{ts,tsx,js,jsx}"
+      run: bun scripts/format.ts
       stage_fixed: true
       skip_empty: true
