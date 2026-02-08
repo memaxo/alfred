@@ -19,7 +19,7 @@ To verify: run `rg 'process\.cwd\(\)' packages/agent/src/orchestrator/tool/` and
 - [x] Milestone 3: Remove host spawn paths from Codex executor
 - [x] Milestone 4: Remove host spawn paths from OpenCode executor
 - [x] Milestone 5: Remove host spawn path from Droid executor
-- [ ] Milestone 6: Delete `persistArtifact` and all call sites
+- [x] Milestone 6: Delete `persistArtifact` and all call sites
 - [ ] Milestone 7: Remove `process.cwd()` fallbacks from all executor code
 - [ ] Milestone 8: Fix tests
 - [ ] Milestone 9: Clean up handoff route and dead code
@@ -28,6 +28,7 @@ To verify: run `rg 'process\.cwd\(\)' packages/agent/src/orchestrator/tool/` and
 ## Surprises & Discoveries
 
 - Typecheck surfaced additional containerName omissions in runtime/flow/test-kit call sites beyond the five listed direct callers.
+- `persistArtifact` had already been removed from the Codex executor during Milestone 3, so only OpenCode + Droid still referenced it in Milestone 6.
 
 ## Decision Log
 

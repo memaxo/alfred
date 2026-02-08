@@ -1,9 +1,7 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { logger } from "@alfred/logger";
 import path from "node:path";
 import { z } from "zod";
 
-import { persistArtifact } from "../../artifact/persist.js";
 import {
   appendOutput,
   appendReasoningTrace,
@@ -342,15 +340,6 @@ export const toolDroid = {
     }
 
     const resultText = getAccumulatedOutput(accumulator);
-    void persistArtifact({
-      repoRoot: input.cw?.trim().length ? input.cw : ".",
-      category: "droid",
-      tool: "droid",
-      format: "txt",
-      content: resultText,
-    }).catch((error) =>
-      logger.debug("droid_persist_artifact_error", { error })
-    );
 
     return {
       result: resultText,

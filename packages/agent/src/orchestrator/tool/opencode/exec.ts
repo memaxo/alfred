@@ -18,7 +18,6 @@ import { spawn } from "bun";
 import type { ToolExecuteContext } from "../shared/context.js";
 import type { OpenCodeToolInput, OpenCodeToolOutput } from "./definition.js";
 
-import { persistArtifact } from "../../../artifact/persist.js";
 import { executorServerFallbackTotal } from "../shared/metrics.js";
 import {
   ensureServer,
@@ -816,29 +815,6 @@ async function execOnce(args: ToolExecuteContext<OpenCodeToolInput>) {
     proc.kill();
   }
 
-  void persistArtifact({
-    category: "opencode",
-    content: JSON.stringify(
-      {
-        auto: args.input.auto,
-        model: args.input.model,
-        transport: args.input.transport,
-        execProfile: args.input.execProfile,
-        containerName: args.input.containerName,
-        sessionId: args.input.sessionId,
-        result: text,
-        artifacts,
-      },
-      null,
-      2
-    ),
-    format: "json",
-    repoRoot: resolveRepoRoot(args.input.cw),
-    tool: "opencode",
-  }).catch((error) =>
-    logger.debug("opencode_persist_artifact_error", { error })
-  );
-
   return { artifacts, result: text, stopReason: undefined };
 }
 
@@ -893,31 +869,6 @@ export async function executeWithOpenCode({
       writer,
     });
 
-    const repoRoot = resolveRepoRoot(input.cw);
-    void persistArtifact({
-      category: "opencode",
-      content: JSON.stringify(
-        {
-          auto: input.auto,
-          model: input.model,
-          transport: input.transport,
-          execProfile: input.execProfile,
-          containerName: input.containerName,
-          sessionId: input.sessionId,
-          result: out.result,
-          artifacts: out.artifacts,
-          stopReason: out.stopReason,
-        },
-        null,
-        2
-      ),
-      format: "json",
-      repoRoot,
-      tool: "opencode",
-    }).catch((error) =>
-      logger.debug("opencode_persist_artifact_error", { error })
-    );
-
     return out;
   } catch (error) {
     logger.warn("opencode_server_exec_failed", {
@@ -926,11 +877,6 @@ export async function executeWithOpenCode({
     });
     throw error;
   }
-}
-
-function resolveRepoRoot(cw: string | undefined): string {
-  const trimmed = cw?.trim();
-  return trimmed ? trimmed : ".";
 }
 
 export const __internals = {
