@@ -14,18 +14,11 @@ import {
   type WriteTextFileResponse,
 } from "@alfred/protocol/acp";
 import { spawn } from "bun";
-import * as fs from "node:fs/promises";
-import path from "node:path";
 
 import type { ToolExecuteContext } from "../shared/context.js";
 import type { OpenCodeToolInput, OpenCodeToolOutput } from "./definition.js";
 
 import { persistArtifact } from "../../../artifact/persist.js";
-import {
-  DEFAULT_ALLOW_PREFIXES,
-  isPathAllowed,
-  openDirectorySecure,
-} from "../../../security/filesystem.js";
 import { executorServerFallbackTotal } from "../shared/metrics.js";
 import {
   ensureServer,
@@ -163,8 +156,7 @@ interface ClientCtx {
   addArtifact: (filePath: string, kind: string) => void;
   onPlan: (entries: unknown) => void;
   sessionCw: string;
-  hostCw: string | undefined;
-  containerName: string | undefined;
+  containerName: string;
 }
 
 function createClient(
@@ -188,7 +180,6 @@ function createClient(
       return await readTextFileImpl({
         path: filePath,
         sessionCw: ctx.sessionCw,
-        hostCw: ctx.hostCw,
         containerName: ctx.containerName,
       });
     },
@@ -341,7 +332,6 @@ function createClient(
         path: filePath,
         content,
         sessionCw: ctx.sessionCw,
-        hostCw: ctx.hostCw,
         containerName: ctx.containerName,
       });
     },
@@ -349,20 +339,6 @@ function createClient(
 }
 
 const MAX_FS_BYTES = 5 * 1024 * 1024;
-
-function normalizeHostPath(args: {
-  sessionCw: string;
-  rawPath: string;
-}): string {
-  const p = args.rawPath.trim();
-  if (!p) {
-    throw new Error("opencode_fs_path_missing");
-  }
-  if (path.isAbsolute(p)) {
-    return p;
-  }
-  return path.resolve(args.sessionCw, p);
-}
 
 function normalizeContainerPath(args: {
   sessionCw: string;
@@ -437,110 +413,56 @@ async function dockerExecText(args: {
 async function readTextFileImpl(args: {
   path: string;
   sessionCw: string;
-  hostCw: string | undefined;
-  containerName: string | undefined;
+  containerName: string;
 }): Promise<ReadTextFileResponse> {
-  if (args.containerName) {
-    const filePath = normalizeContainerPath({
-      rawPath: args.path,
-      sessionCw: normalizeContainerCw(args.sessionCw),
-    });
-    const { stdout, exitCode } = await dockerExecText({
-      argv: ["cat", filePath],
-      containerName: args.containerName,
-    });
-    if (exitCode !== 0) {
-      throw new Error("opencode_fs_read_failed");
-    }
-    if (stdout.length > MAX_FS_BYTES) {
-      throw new Error("opencode_fs_read_too_large");
-    }
-    return { content: stdout };
-  }
-
-  const cw = args.hostCw ?? process.cwd();
-  const handle = openDirectorySecure(cw, {
-    allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+  const filePath = normalizeContainerPath({
+    rawPath: args.path,
+    sessionCw: normalizeContainerCw(args.sessionCw),
   });
-  try {
-    const abs = normalizeHostPath({
-      rawPath: args.path,
-      sessionCw: handle.path,
-    });
-    if (
-      !isPathAllowed(abs, DEFAULT_ALLOW_PREFIXES, { noFollowSymlinks: true })
-    ) {
-      throw new Error("opencode_fs_path_disallowed");
-    }
-    const file = Bun.file(abs);
-    if (!(await file.exists())) {
-      throw new Error("opencode_fs_not_found");
-    }
-    const text = await file.text();
-    if (text.length > MAX_FS_BYTES) {
-      throw new Error("opencode_fs_read_too_large");
-    }
-    return { content: text };
-  } finally {
-    handle.close();
+  const { stdout, exitCode } = await dockerExecText({
+    argv: ["cat", filePath],
+    containerName: args.containerName,
+  });
+  if (exitCode !== 0) {
+    throw new Error("opencode_fs_read_failed");
   }
+  if (stdout.length > MAX_FS_BYTES) {
+    throw new Error("opencode_fs_read_too_large");
+  }
+  return { content: stdout };
 }
 
 async function writeTextFileImpl(args: {
   path: string;
   content: string;
   sessionCw: string;
-  hostCw: string | undefined;
-  containerName: string | undefined;
+  containerName: string;
 }): Promise<WriteTextFileResponse> {
   if (args.content.length > MAX_FS_BYTES) {
     throw new Error("opencode_fs_write_too_large");
   }
 
-  if (args.containerName) {
-    const filePath = normalizeContainerPath({
-      rawPath: args.path,
-      sessionCw: normalizeContainerCw(args.sessionCw),
-    });
-    const dir = filePath.split("/").slice(0, -1).join("/") || "/workspace";
-    const mkdirRes = await dockerExecText({
-      argv: ["mkdir", "-p", dir],
-      containerName: args.containerName,
-    });
-    if (mkdirRes.exitCode !== 0) {
-      throw new Error("opencode_fs_write_failed");
-    }
-    const writeRes = await dockerExecText({
-      argv: ["tee", filePath],
-      containerName: args.containerName,
-      stdinText: args.content,
-    });
-    if (writeRes.exitCode !== 0) {
-      throw new Error("opencode_fs_write_failed");
-    }
-    return {};
-  }
-
-  const cw = args.hostCw ?? process.cwd();
-  const handle = openDirectorySecure(cw, {
-    allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+  const filePath = normalizeContainerPath({
+    rawPath: args.path,
+    sessionCw: normalizeContainerCw(args.sessionCw),
   });
-  try {
-    const abs = normalizeHostPath({
-      rawPath: args.path,
-      sessionCw: handle.path,
-    });
-    if (
-      !isPathAllowed(abs, DEFAULT_ALLOW_PREFIXES, { noFollowSymlinks: true })
-    ) {
-      throw new Error("opencode_fs_path_disallowed");
-    }
-    await fs.mkdir(path.dirname(abs), { recursive: true });
-    await Bun.write(abs, args.content);
-    return {};
-  } finally {
-    handle.close();
+  const dir = filePath.split("/").slice(0, -1).join("/") || "/workspace";
+  const mkdirRes = await dockerExecText({
+    argv: ["mkdir", "-p", dir],
+    containerName: args.containerName,
+  });
+  if (mkdirRes.exitCode !== 0) {
+    throw new Error("opencode_fs_write_failed");
   }
+  const writeRes = await dockerExecText({
+    argv: ["tee", filePath],
+    containerName: args.containerName,
+    stdinText: args.content,
+  });
+  if (writeRes.exitCode !== 0) {
+    throw new Error("opencode_fs_write_failed");
+  }
+  return {};
 }
 
 function sinkToWritableStream(sink: FileSink): WritableStream<Uint8Array> {
@@ -564,37 +486,28 @@ interface SpawnSpec {
 }
 
 function resolveSpawnSpec(input: OpenCodeToolInput, cmd: AgentCmd): SpawnSpec {
-  if (input.containerName) {
-    if (!input.containerName.startsWith(AGENTFS_CONTAINER_PREFIX)) {
-      throw new Error("opencode_container_name_invalid");
-    }
-    const containerCw = normalizeContainerCw(input.containerCw);
-    const envKeys = OPENCODE_DOCKER_ENV_ALLOWLIST.filter((key) => {
-      const value = process.env[key];
-      return typeof value === "string" && value.trim().length > 0;
-    });
-    return {
-      argv: [
-        "docker",
-        "exec",
-        "-i",
-        "-w",
-        containerCw,
-        ...envKeys.flatMap((k) => ["-e", k]),
-        input.containerName,
-        cmd.cmd,
-        ...cmd.args,
-      ],
-      cwd: undefined,
-      sessionCw: containerCw,
-    };
+  if (!input.containerName.startsWith(AGENTFS_CONTAINER_PREFIX)) {
+    throw new Error("opencode_container_name_invalid");
   }
-
-  const cwd = input.cw ? pathResolveSafe(input.cw) : undefined;
+  const containerCw = normalizeContainerCw(input.containerCw);
+  const envKeys = OPENCODE_DOCKER_ENV_ALLOWLIST.filter((key) => {
+    const value = process.env[key];
+    return typeof value === "string" && value.trim().length > 0;
+  });
   return {
-    argv: [cmd.cmd, ...cmd.args],
-    cwd,
-    sessionCw: cwd ?? process.cwd(),
+    argv: [
+      "docker",
+      "exec",
+      "-i",
+      "-w",
+      containerCw,
+      ...envKeys.flatMap((k) => ["-e", k]),
+      input.containerName,
+      cmd.cmd,
+      ...cmd.args,
+    ],
+    cwd: undefined,
+    sessionCw: containerCw,
   };
 }
 
@@ -623,10 +536,6 @@ function createPromptLock() {
 async function startOpenCodeServer(args: {
   input: OpenCodeToolInput;
 }): Promise<OpenCodeServer> {
-  if (!args.input.containerName) {
-    throw new Error("opencode_server_requires_container");
-  }
-
   const cmd = resolveAgentCmd(args.input);
   const spec = resolveSpawnSpec(args.input, cmd);
 
@@ -695,9 +604,7 @@ async function startOpenCodeServer(args: {
         };
         const onPlan = (_entries: unknown) => {};
 
-        const sessionCw = input.containerName
-          ? normalizeContainerCw(input.containerCw)
-          : (input.cw ?? process.cwd());
+        const sessionCw = normalizeContainerCw(input.containerCw);
 
         const auto = input.auto ?? "read";
         const session = await connection.newSession({
@@ -715,7 +622,6 @@ async function startOpenCodeServer(args: {
           addArtifact,
           onPlan,
           sessionCw,
-          hostCw: input.cw,
           containerName: input.containerName,
         });
 
@@ -832,7 +738,6 @@ async function execOnce(args: ToolExecuteContext<OpenCodeToolInput>) {
     append,
     auto: args.input.auto,
     containerName: args.input.containerName,
-    hostCw: args.input.cw,
     onPlan,
     sessionCw: spec.sessionCw,
     writer: args.writer,
@@ -928,7 +833,7 @@ async function execOnce(args: ToolExecuteContext<OpenCodeToolInput>) {
       2
     ),
     format: "json",
-    repoRoot: spec.cwd ?? process.cwd(),
+    repoRoot: resolveRepoRoot(args.input.cw),
     tool: "opencode",
   }).catch((error) =>
     logger.debug("opencode_persist_artifact_error", { error })
@@ -945,9 +850,6 @@ export async function executeWithOpenCode({
   const profile = "server" as const;
   if (profile !== "server") {
     return execOnce({ input, signal, writer });
-  }
-  if (!input.containerName) {
-    throw new Error("opencode_server_requires_container");
   }
   // Validate container cwd eagerly so we don't wrap it as a server-start failure.
   normalizeContainerCw(input.containerCw);
@@ -991,7 +893,7 @@ export async function executeWithOpenCode({
       writer,
     });
 
-    const repoRoot = input.cw ? pathResolveSafe(input.cw) : process.cwd();
+    const repoRoot = resolveRepoRoot(input.cw);
     void persistArtifact({
       category: "opencode",
       content: JSON.stringify(
@@ -1026,12 +928,9 @@ export async function executeWithOpenCode({
   }
 }
 
-function pathResolveSafe(cw: string): string {
-  try {
-    return cw.trim().length > 0 ? cw : process.cwd();
-  } catch {
-    return process.cwd();
-  }
+function resolveRepoRoot(cw: string | undefined): string {
+  const trimmed = cw?.trim();
+  return trimmed ? trimmed : ".";
 }
 
 export const __internals = {

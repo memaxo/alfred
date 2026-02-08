@@ -116,7 +116,7 @@ function buildTmuxSpawnOptions(
     cmd: input.cmd ?? process.env.OPENCODE_ACP_CMD ?? "opencode",
     args: input.args,
     containerName: input.containerName,
-    cwd: input.containerCw ?? input.cw,
+    cwd: input.containerCw,
     env: buildEnvMap(input),
     mode: input.transport === "http" ? "http" : "acp",
     port,
@@ -148,32 +148,6 @@ function buildEnvMap(input: OpenCodeToolInput): Record<string, string> {
   }
 
   return env;
-}
-
-/** Spawn opencode directly (legacy behavior) */
-function spawnDirect(argv: string[], cwd: string | undefined): ProcessHandle {
-  const proc = spawn(argv, {
-    cwd,
-    env: process.env,
-    stderr: "pipe",
-    stdin: "pipe",
-    stdout: "pipe",
-  });
-
-  return {
-    exited: proc.exited,
-    kill: () => {
-      try {
-        proc.kill();
-      } catch {
-        // ignore
-      }
-      return Promise.resolve();
-    },
-    stderr: proc.stderr ?? undefined,
-    stdin: proc.stdin ?? undefined,
-    stdout: proc.stdout ?? undefined,
-  };
 }
 
 /** Spawn opencode via tmux */
@@ -216,54 +190,49 @@ async function spawnViaTmux(
 export function buildOpencodeArgv(input: OpenCodeToolInput): string[] {
   const cmd = input.cmd ?? process.env.OPENCODE_ACP_CMD ?? "opencode";
   const args = input.args ?? [];
+  const envKeys = [
+    "CEREBRAS_API_KEY",
+    "OPENCODE_API_KEY",
+    "OPENCODE_CONFIG_CONTENT",
+    "OPENCODE_DISABLE_AUTOUPDATE",
+  ].filter((key) => {
+    const value = process.env[key];
+    return typeof value === "string" && value.trim().length > 0;
+  });
 
-  if (input.containerName) {
-    const envKeys = [
-      "CEREBRAS_API_KEY",
-      "OPENCODE_API_KEY",
-      "OPENCODE_CONFIG_CONTENT",
-      "OPENCODE_DISABLE_AUTOUPDATE",
-    ].filter((key) => {
-      const value = process.env[key];
-      return typeof value === "string" && value.trim().length > 0;
-    });
+  const port = process.env.OPENCODE_PORT
+    ? Number.parseInt(process.env.OPENCODE_PORT, 10)
+    : 4096;
 
-    const port = process.env.OPENCODE_PORT
-      ? Number.parseInt(process.env.OPENCODE_PORT, 10)
-      : 4096;
-
-    if (input.transport === "http") {
-      return [
-        "docker",
-        "exec",
-        "-i",
-        "-w",
-        input.containerCw ?? "/workspace",
-        ...envKeys.flatMap((k) => ["-e", k]),
-        input.containerName,
-        cmd,
-        "serve",
-        "--hostname",
-        "127.0.0.1",
-        "--port",
-        String(port),
-      ];
-    }
-
+  if (input.transport === "http") {
     return [
       "docker",
       "exec",
       "-i",
       "-w",
-      input.containerCw ?? "/workspace",
+      input.containerCw,
       ...envKeys.flatMap((k) => ["-e", k]),
       input.containerName,
       cmd,
-      ...args,
+      "serve",
+      "--hostname",
+      "127.0.0.1",
+      "--port",
+      String(port),
     ];
   }
 
-  return [cmd, ...args];
+  return [
+    "docker",
+    "exec",
+    "-i",
+    "-w",
+    input.containerCw,
+    ...envKeys.flatMap((k) => ["-e", k]),
+    input.containerName,
+    cmd,
+    ...args,
+  ];
 }
 
 /** Spawn opencode with optional tmux integration */
@@ -281,16 +250,33 @@ export async function spawnOpencode(
         error: error instanceof Error ? error.message : String(error),
         runId: options.runId,
       });
-      // Fall back to direct spawn
+      throw error;
     }
   }
-
-  // Direct spawn (legacy behavior)
   const argv = buildOpencodeArgv(input);
-  const handle = spawnDirect(argv, options.cwd);
+  const proc = spawn(argv, {
+    cwd: options.cwd,
+    env: process.env,
+    stderr: "pipe",
+    stdin: "pipe",
+    stdout: "pipe",
+  });
 
   return {
-    handle,
+    handle: {
+      exited: proc.exited,
+      kill: () => {
+        try {
+          proc.kill();
+        } catch {
+          // ignore
+        }
+        return Promise.resolve();
+      },
+      stderr: proc.stderr ?? undefined,
+      stdin: proc.stdin ?? undefined,
+      stdout: proc.stdout ?? undefined,
+    },
     useTmux: false,
   };
 }
