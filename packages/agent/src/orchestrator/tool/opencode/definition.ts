@@ -89,14 +89,12 @@ export const opencodeInputSchema = z.object({
     .string()
     .min(1)
     .max(255)
-    .optional()
     .describe("AgentFS container name/id to run inside via docker exec."),
   /** Workdir inside the container (must be under /workspace) */
   containerCw: z
     .string()
     .min(1)
     .max(1024)
-    .optional()
     .describe("Working directory inside the container (posix path)."),
   /** ACP stdio command (defaults to OPENCODE_ACP_CMD or 'opencode') */
   cmd: z

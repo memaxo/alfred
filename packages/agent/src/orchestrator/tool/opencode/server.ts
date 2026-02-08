@@ -112,8 +112,8 @@ async function dockerExecText(args: {
 
 export type OpenCodeHttpServerHandle = ServerHandle & {
   readonly profile: ExecProfile;
-  readonly containerName?: string;
-  readonly containerCw?: string;
+  readonly containerName: string;
+  readonly containerCw: string;
   readonly baseUrl: string;
   readonly username?: string;
   readonly password?: string;
@@ -248,6 +248,8 @@ async function startExternal(args: {
   input: OpenCodeToolInput;
   profile: ExecProfile;
 }): Promise<OpenCodeHttpServerHandle> {
+  const { containerName } = args.input;
+  const containerCw = normalizeContainerCw(args.input.containerCw);
   const baseUrl =
     args.input.baseUrl?.trim() || process.env.OPENCODE_SERVER_BASE_URL?.trim();
   if (!baseUrl) {
@@ -268,6 +270,8 @@ async function startExternal(args: {
   return {
     baseUrl,
     client,
+    containerCw,
+    containerName,
     mcpInstalled: new Map(),
     password,
     profile: args.profile,

@@ -58,6 +58,18 @@ export const droidInputSchema = z.object({
     .max(MAX_TIMEOUT_SEC)
     .optional(),
   env: z.record(z.string(), z.string()).optional(),
+  /** Docker container name to run droid inside (AgentFSWorkspace container) */
+  containerName: z
+    .string()
+    .min(1)
+    .max(255)
+    .describe("AgentFS container name/id to run inside via docker exec."),
+  /** Workdir inside the container (must be under /workspace) */
+  containerCw: z
+    .string()
+    .min(1)
+    .max(1024)
+    .describe("Working directory inside the container (posix path)."),
   /** Ralph Wiggum loop configuration for iterative execution */
   ralph: z
     .object({

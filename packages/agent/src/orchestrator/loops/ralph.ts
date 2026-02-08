@@ -610,11 +610,9 @@ export const ralphInputSchema = z.object({
     .describe("ACP agent args override (OpenCode executor only)"),
   containerName: z
     .string()
-    .optional()
     .describe("AgentFS container name/id (Codex/OpenCode executors only)"),
   containerCw: z
     .string()
-    .optional()
     .describe("Workdir inside the container (Codex/OpenCode executors only)"),
 });
 

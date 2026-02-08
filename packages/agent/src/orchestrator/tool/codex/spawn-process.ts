@@ -24,8 +24,8 @@ interface AllowedDirectoryHandle {
 }
 
 interface SpawnInput {
-  containerName?: string;
-  containerCw?: string;
+  containerName: string;
+  containerCw: string;
   /** AgentFS database path for audit trail (optional) */
   agentfsDbPath?: string;
 }

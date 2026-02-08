@@ -14,7 +14,7 @@ To verify: run `rg 'process\.cwd\(\)' packages/agent/src/orchestrator/tool/` and
 
 ## Progress
 
-- [ ] Milestone 1: Make `containerName` required at the schema boundary
+- [x] Milestone 1: Make `containerName` required at the schema boundary
 - [ ] Milestone 2: Route direct API callers through Docker
 - [ ] Milestone 3: Remove host spawn paths from Codex executor
 - [ ] Milestone 4: Remove host spawn paths from OpenCode executor
@@ -27,7 +27,7 @@ To verify: run `rg 'process\.cwd\(\)' packages/agent/src/orchestrator/tool/` and
 
 ## Surprises & Discoveries
 
-(none yet)
+- Typecheck surfaced additional containerName omissions in runtime/flow/test-kit call sites beyond the five listed direct callers.
 
 ## Decision Log
 

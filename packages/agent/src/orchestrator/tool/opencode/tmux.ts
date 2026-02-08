@@ -14,8 +14,8 @@ interface TmuxSpawnOptions {
   runId: string;
   cmd: string;
   args?: string[];
-  containerName?: string;
-  cwd?: string;
+  containerName: string;
+  cwd: string;
   env: Record<string, string>;
   mode: "acp" | "http";
   port: number;
