@@ -14,7 +14,7 @@ dependencies = [
   # Qwen3-VL-Embedding multimodal support
   "transformers>=4.57.0",
   "qwen-vl-utils>=0.0.14",
-  "pillow>=10.0.0",
+  "pillow>=12.2.0",
   "requests>=2.31.0",
   # Note: ROCm PyTorch is configured via environment variable EMBED_DEVICE=rocm
   # For ROCm builds, use packages/embed/pyproject.rocm.toml or set EMBED_DEVICE=rocm
