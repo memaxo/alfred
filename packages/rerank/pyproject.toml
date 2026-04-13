@@ -13,7 +13,7 @@ dependencies = [
   "huggingface-hub>=0.20.0",
   "numpy>=1.24.0",
   "accelerate>=0.26.0",
-  "pillow>=10.0.0",
+  "pillow>=12.2.0",
 ]
 
 [tool.uv]
